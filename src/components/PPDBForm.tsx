@@ -175,7 +175,7 @@ export default function PPDBForm() {
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-[#082b59]">Pilihan Program</h3>
               <div className="space-y-3">
-                {["SMP Boarding", "SMP Full Day (Non Boarding)"].map((prog) => (
+                {["SMP Boarding", "SMP Full Day (Non Boarding)", "SMA Boarding"].map((prog) => (
                   <label key={prog} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition-all ${
                     data.program === prog ? "border-[#1767b1] bg-[#1767b1]/5" : "border-[#dce3ed] hover:border-[#1767b1]/30"
                   }`}>
