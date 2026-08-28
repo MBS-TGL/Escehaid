@@ -22,11 +22,9 @@ interface CustomSelectProps extends SelectBaseProps {
 }
 
 const chevron = (
-  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-    <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-    </svg>
-  </div>
+  <svg className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+  </svg>
 );
 
 const baseInputClass = "w-full rounded-xl border bg-white px-4 py-2.5 text-sm text-[#172033] outline-none transition-colors focus:ring-2";
@@ -71,12 +69,11 @@ function CustomSelect({ label, required, error, options, value, onChange, placeh
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className={`${error ? errorClass : normalClass} flex w-full cursor-pointer items-center justify-between text-left`}
+        className={`${error ? errorClass : normalClass} w-full cursor-pointer text-left`}
       >
         <span className={selectedLabel ? "text-[#172033]" : "text-slate-400"}>
           {selectedLabel || placeholder || "Pilih..."}
         </span>
-        {chevron}
       </button>
       {open && (
         <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-[#dce3ed] bg-white shadow-lg">
