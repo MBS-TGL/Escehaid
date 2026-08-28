@@ -35,4 +35,6 @@ export {
   MedalMilitary,
   House,
   Building,
+  ArrowLeft,
+  ArrowRight,
 } from "@phosphor-icons/react";

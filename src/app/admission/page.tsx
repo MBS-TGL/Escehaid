@@ -1,4 +1,4 @@
-import { FileText, CheckCircle, Clock, Warning, GraduationCap } from "@/components/icons";
+import { FileText, CheckCircle, Clock, Warning, GraduationCap, BookOpen, House, Download } from "@/components/icons";
 import Link from "next/link";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/animations";
 
@@ -22,7 +22,35 @@ export default function PPDBPage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-6 py-16">
+        {/* Program Unggulan */}
+        <FadeIn>
+          <div className="mb-16">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Program Unggulan</p>
+            <h2 className="mt-3 mb-8 text-2xl font-bold text-[#082b59]">Pilihan Program Pendidikan</h2>
+            <StaggerChildren stagger={0.1} className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {[
+                { icon: BookOpen, title: "Program Kepesantrenan", desc: "Tahfidz Qur'an 30 Juz, Baca Kitab Kuning, Muhadhoroh 3 Bahasa, dan Golden Habit.", color: "bg-[#082b59]/10 text-[#082b59]" },
+                { icon: House, title: "Boarding School (MBS)", desc: "Program asrama penuh sejak 2018/2019. Siswa dibimbing 24 jam oleh ustadz kompeten.", color: "bg-[#1767b1]/10 text-[#1767b1]" },
+                { icon: GraduationCap, title: "Full Day School", desc: "Pembelajaran Senin-Sabtu pukul 07.30-15.00 meliputi mapel umum dan keagamaan.", color: "bg-[#f4d21f]/20 text-[#082b59]" },
+              ].map((item) => (
+                <StaggerItem key={item.title}>
+                  <div className="flex h-full gap-4 rounded-2xl border border-[#dce3ed] bg-white p-5 transition-all hover:shadow-lg hover:shadow-[#082b59]/5">
+                    <div className={`${item.color} flex h-11 w-11 shrink-0 items-center justify-center rounded-xl`}>
+                      <item.icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-[#082b59]">{item.title}</h3>
+                      <p className="mt-1 text-sm leading-relaxed text-slate-500">{item.desc}</p>
+                    </div>
+                  </div>
+                </StaggerItem>
+              ))}
+            </StaggerChildren>
+          </div>
+        </FadeIn>
+
         <div className="grid gap-12 lg:grid-cols-2">
+          {/* Jalur Pendaftaran */}
           <FadeIn>
             <div>
               <h2 className="mb-6 text-2xl font-bold text-[#082b59]">Jalur Pendaftaran</h2>
@@ -50,35 +78,62 @@ export default function PPDBPage() {
             </div>
           </FadeIn>
 
+          {/* Biaya & Pendaftaran */}
           <FadeIn direction="left">
             <div>
-              <h2 className="mb-6 text-2xl font-bold text-[#082b59]">Jadwal Penting</h2>
+              <h2 className="mb-6 text-2xl font-bold text-[#082b59]">Informasi Biaya</h2>
               <div className="rounded-2xl border border-[#dce3ed] bg-white p-6 shadow-sm">
-                <div className="space-y-4">
-                  {[
-                    ["Pendaftaran Dibuka", "1 Juli - 31 Agustus 2026"],
-                    ["Seleksi", "1 - 15 September 2026"],
-                    ["Pengumuman", "20 September 2026"],
-                  ].map(([title, date], i) => (
-                    <div key={title} className={`flex items-center gap-4 ${i < 2 ? "border-b border-[#dce3ed] pb-4" : ""}`}>
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1767b1]/10">
-                        <Clock className="h-5 w-5 text-[#1767b1]" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-[#082b59]">{title}</div>
-                        <div className="text-sm text-slate-500">{date}</div>
-                      </div>
-                    </div>
-                  ))}
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1767b1]/10">
+                    <Clock className="h-5 w-5 text-[#1767b1]" />
+                  </div>
+                  <div>
+                    <div className="font-medium text-[#082b59]">Gelombang Inden</div>
+                    <div className="text-sm text-slate-500">20 Oktober - 30 Desember 2025</div>
+                  </div>
                 </div>
+                <p className="mb-4 text-sm leading-relaxed text-slate-500">
+                  Rincian biaya pendidikan, boarding, dan kegiatan dapat dilihat pada brosur resmi sekolah.
+                </p>
+                <a
+                  href="https://smpmuh4tanggul.sch.id/info-spmb/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1767b1] hover:text-[#082b59]"
+                >
+                  Lihat Brosur Lengkap <FileText className="h-4 w-4" />
+                </a>
               </div>
 
-              <Link
-                href="/admission/register"
-                className="mt-6 block w-full rounded-xl bg-[#082b59] py-3.5 text-center text-sm font-bold text-white transition-all hover:bg-[#1767b1] hover:shadow-lg"
-              >
-                Daftar Sekarang
-              </Link>
+              <h2 className="mb-6 mt-8 text-2xl font-bold text-[#082b59]">Cara Mendaftar</h2>
+              <div className="space-y-3">
+                <Link
+                  href="/admission/register"
+                  className="flex items-center gap-3 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm transition-all hover:border-[#1767b1]/30 hover:shadow-lg"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#082b59] text-white">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-[#082b59]">Daftar Online</div>
+                    <div className="text-xs text-slate-500">Isi formulir pendaftaran</div>
+                  </div>
+                </Link>
+                <a
+                  href="https://docs.google.com/document/d/1SEownLgB4jmY9nIfZhTSSg-Y1LtfL0eH/edit?usp=sharing&ouid=109565226300801463501&rtpof=true&sd=true"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm transition-all hover:border-[#1767b1]/30 hover:shadow-lg"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1767b1] text-white">
+                    <Download className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-[#082b59]">Unduh Formulir Offline</div>
+                    <div className="text-xs text-slate-500">Isi dan kumpulkan di Kantor MBS Tanggul</div>
+                  </div>
+                </a>
+              </div>
             </div>
           </FadeIn>
         </div>
