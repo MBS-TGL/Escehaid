@@ -213,8 +213,8 @@ export default function PPDBForm() {
                 <Input label="NIK" required placeholder="Nomor Induk Kependudukan" value={data.nik} onChange={(e) => update("nik", e.target.value)} />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <Input label="Tinggi Badan (cm)" required placeholder="170" value={data.height} onChange={(e) => update("height", e.target.value)} />
-                <Input label="Berat Badan (kg)" required placeholder="60" value={data.weight} onChange={(e) => update("weight", e.target.value)} />
+                <Input label="Tinggi Badan (cm)" required placeholder="Contoh: 150" value={data.height} onChange={(e) => update("height", e.target.value)} />
+                <Input label="Berat Badan (kg)" required placeholder="Contoh: 40" value={data.weight} onChange={(e) => update("weight", e.target.value)} />
               </div>
               <Input label="Bahasa Sehari-hari" required placeholder="Bahasa Indonesia" value={data.language} onChange={(e) => update("language", e.target.value)} />
               <div className="grid gap-4 md:grid-cols-2">
