@@ -1,10 +1,64 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { CheckCircle, Clock, ArrowLeft, ArrowRight, FileText } from "@/components/icons";
 import { supabase } from "@/lib/supabase";
 
 const steps = ["Program", "Data Siswa", "Data Orang Tua", "Selesai"];
+
+const KOTA_KABUPATEN = [
+  "Kabupaten Jember","Kota Jember","Kabupaten Surabaya","Kota Surabaya","Kabupaten Malang","Kota Malang",
+  "Kabupaten Sidoarjo","Kota Sidoarjo","Kabupaten Gresik","Kota Gresik","Kabupaten Banyuwangi","Kota Banyuwangi",
+  "Kabupaten Probolinggo","Kota Probolinggo","Kabupaten Lumajang","Kabupaten Situbondo","Kabupaten Bondowoso",
+  "Kabupaten Ponorogo","Kota Pasuruan","Kabupaten Pasuruan","Kabupaten Lamongan","Kabupaten Tuban",
+  "Kabupaten Bojonegoro","Kabupaten Madiun","Kota Madiun","Kabupaten Nganjuk","Kabupaten Kediri","Kota Kediri",
+  "Kabupaten Blitar","Kota Blitar","Kabupaten Tulungagung","Kabupaten Trenggalek","Kabupaten Ngawi",
+  "Kabupaten Magetan","Kabupaten Pacitan","Kabupaten Bondowoso","Kabupaten Karanganyar","Kabupaten Sragen",
+  "Kabupaten Sukoharjo","Kota Solo","Kabupaten Klaten","Kabupaten Sleman","Kota Yogyakarta","Kabupaten Bantul",
+  "Kabupaten Gunung Kidul","Kabupaten Kulon Progo","Kabupaten Semarang","Kota Semarang","Kabupaten Demak",
+  "Kabupaten Kudus","Kabupaten Jepara","Kabupaten Pati","Kabupaten Rembang","Kabupaten Blora","Kabupaten Grobogan",
+  "Kabupaten Purworejo","Kabupaten Wonosobo","Kabupaten Magelang","Kota Magelang","Kabupaten Temanggung",
+  "Kabupaten Boyolali","Kabupaten Banjarnegara","Kabupaten Purbalingga","Kabupaten Banyumas","Kota Cilacap",
+  "Kabupaten Cilacap","Kabupaten Brebes","Kabupaten Tegal","Kota Tegal","Kabupaten Pemalang","Kabupaten Batang",
+  "Kabupaten Kendal","Kabupaten Semarang","Kabupaten Grobogan","Kabupaten Sragen","Kabupaten Karanganyar",
+  "Kabupaten Wonogiri","Kabupaten Klaten","Kabupaten Sukoharjo","Kabupaten Boyolali","Kabupaten Sleman",
+  "Kota Jakarta","Kabupaten Bogor","Kota Bogor","Kabupaten Bekasi","Kota Bekasi","Kabupaten Tangerang",
+  "Kota Tangerang","Kota Tangerang Selatan","Kabupaten Bandung","Kota Bandung","Kabupaten Cimahi","Kota Cimahi",
+  "Kabupaten Garut","Kabupaten Tasikmalaya","Kota Tasikmalaya","Kabupaten Ciamis","Kabupaten Kuningan",
+  "Kabupaten Cirebon","Kota Cirebon","Kabupaten Indramayu","Kabupaten Subang","Kabupaten Purwakarta",
+  "Kabupaten Karawang","Kabupaten Bekasi","Kabupaten Sukabumi","Kota Sukabumi","Kabupaten Cianjur",
+  "Kabupaten Serang","Kota Serang","Kota Cilegon","Kabupaten Pandeglang","Kabupaten Lebak","Kabupaten Tanggamus",
+  "Kabupaten Lampung Selatan","Kabupaten Lampung Timur","Kota Bandar Lampung","Kota Metro",
+  "Kabupaten Palembang","Kota Palembang","Kabupaten Banyuasin","Kabupaten Ogan Komering Ilir",
+  "Kabupaten Musi Banyuasin","Kabupaten Lahat","Kabupaten Muara Enim","Kabupaten Prabumulih","Kota Prabumulih",
+  "Kabupaten Pali","Kabupaten Empat Lawang","Kabupaten Lubuklinggau","Kota Lubuklinggau",
+  "Kabupaten Bogor","Kota Sukabumi","Kabupaten Cianjur","Kabupaten Garut","Kabupaten Tasikmalaya",
+  "Kabupaten Ciamis","Kabupaten Kuningan","Kabupaten Majalengka","Kabupaten Sumedang","Kabupaten Indramayu",
+  "Kabupaten Subang","Kabupaten Purwakarta","Kabupaten Karawang","Kabupaten Bekasi","Kabupaten Tangerang",
+  "Kabupaten Lebak","Kabupaten Serang","Kabupaten Pandeglang","Kabupaten Pandeglang","Kabupaten Cilegon",
+  "Kabupaten Semarang","Kabupaten Demak","Kabupaten Kudus","Kabupaten Jepara","Kabupaten Pati","Kabupaten Rembang",
+  "Kabupaten Blora","Kabupaten Grobogan","Kabupaten Purworejo","Kabupaten Wonosobo","Kabupaten Magelang",
+  "Kabupaten Temanggung","Kabupaten Boyolali","Kabupaten Banjarnegara","Kabupaten Purbalingga","Kabupaten Banyumas",
+  "Kabupaten Cilacap","Kabupaten Brebes","Kabupaten Tegal","Kabupaten Pemalang","Kabupaten Batang","Kabupaten Kendal",
+  "Kabupaten Tuban","Kabupaten Lamongan","Kabupaten Gresik","Kabupaten Sidoarjo","Kabupaten Mojokerto","Kabupaten Jombang",
+  "Kabupaten Nganju","Kabupaten Madiun","Kabupaten Magetan","Kabupaten Ngawi","Kabupaten Pacitan",
+  "Kabupaten Trenggalek","Kabupaten Tulungagung","Kabupaten Blitar","Kabupaten Kediri","Kabupaten Lumajang",
+  "Kabupaten Situbondo","Kabupaten Bondowoso","Kabupaten Ponorogo","Kabupaten Bangkalan","Kabupaten Sampang",
+  "Kabupaten Pamekasan","Kabupaten Sumenep","Kota Batu","Kabupaten Karanganyar","Kabupaten Sragen",
+  "Kabupaten Wonogiri","Kabupaten Sukoharjo","Kabupaten Klaten","Kabupaten Sleman","Kabupaten Bantul",
+  "Kabupaten Gunung Kidul","Kabupaten Kulon Progo","Kota Yogyakarta","Kabupaten Magelang","Kota Magelang",
+  "Kabupaten Boyolali","Kabupaten Sragen","Kabupaten Karanganyar","Kabupaten Wonogiri","Kabupaten Sukoharjo",
+  "Kabupaten Klaten","Kabupaten Sleman","Kabupaten Bantul","Kabupaten Gunung Kidul","Kabupaten Kulon Progo",
+  "Kota Yogyakarta","Kabupaten Magelang","Kota Magelang","Kabupaten Boyolali","Kabupaten Sragen",
+  "Kabupaten Karanganyar","Kabupaten Wonogiri","Kabupaten Sukoharjo","Kabupaten Klaten","Kabupaten Sleman",
+  "Kabupaten Bantul","Kabupaten Gunung Kidul","Kabupaten Kulon Progo","Kota Yogyakarta",
+  "Kabupaten Banyuwangi","Kota Banyuwangi","Kabupaten Bondowoso","Kabupaten Situbondo","Kabupaten Lumajang",
+  "Kabupaten Probolinggo","Kota Probolinggo","Kabupaten Malang","Kota Malang","Kota Batu",
+  "Kabupaten Pasuruan","Kota Pasuruan","Kabupaten Sidoarjo","Kota Sidoarjo","Kabupaten Gresik","Kota Gresik",
+  "Kabupaten Lamongan","Kabupaten Tuban","Kabupaten Bojonegoro","Kabupaten Nganjuk","Kabupaten Kediri","Kota Kediri",
+  "Kabupaten Blitar","Kota Blitar","Kabupaten Tulungagung","Kabupaten Trenggalek","Kabupaten Ngawi","Kabupaten Magetan",
+  "Kabupaten Ponorogo","Kabupaten Madiun","Kota Madiun","Kabupaten Pacitan",
+].filter((v, i, a) => a.indexOf(v) === i).sort();
 
 type FormData = {
   program: string;
@@ -102,6 +156,66 @@ function Select({ label, required, children, ...props }: { label: string; requir
       >
         {children}
       </select>
+    </div>
+  );
+}
+
+function SearchableSelect({ label, required, options, value, onChange, placeholder }: { label: string; required?: boolean; options: string[]; value: string; onChange: (val: string) => void; placeholder?: string }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  const filtered = options.filter((o) => o.toLowerCase().includes(query.toLowerCase()));
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <label className="mb-1.5 block text-sm font-medium text-[#082b59]">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <input
+        type="text"
+        readOnly
+        value={value || ""}
+        placeholder={placeholder || "Pilih atau ketik..."}
+        onClick={() => setOpen(true)}
+        className="w-full cursor-pointer rounded-xl border border-[#dce3ed] bg-white px-4 py-2.5 text-sm text-[#172033] outline-none transition-colors focus:border-[#1767b1] focus:ring-2 focus:ring-[#1767b1]/10"
+      />
+      {open && (
+        <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-[#dce3ed] bg-white shadow-lg">
+          <div className="sticky top-0 border-b border-[#dce3ed] bg-white p-2">
+            <input
+              type="text"
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Ketik untuk mencari..."
+              className="w-full rounded-lg border border-[#dce3ed] bg-[#f4f7fb] px-3 py-2 text-sm outline-none focus:border-[#1767b1]"
+            />
+          </div>
+          {filtered.length > 0 ? (
+            filtered.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => { onChange(opt); setOpen(false); setQuery(""); }}
+                className={`w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-[#f4f7fb] ${value === opt ? "bg-[#1767b1]/10 font-medium text-[#082b59]" : "text-[#172033]"}`}
+              >
+                {opt}
+              </button>
+            ))
+          ) : (
+            <div className="px-4 py-3 text-sm text-slate-400">Tidak ditemukan</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -209,7 +323,7 @@ export default function PPDBForm() {
                 <Input label="Golongan Darah" placeholder="(contoh: A/B/AB/O)" value={data.blood_type} onChange={(e) => update("blood_type", e.target.value)} />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <Input label="Tempat Lahir" required placeholder="Kota/Kabupaten Lahir" value={data.birth_place} onChange={(e) => update("birth_place", e.target.value)} />
+                <SearchableSelect label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.birth_place} onChange={(val) => update("birth_place", val)} placeholder="Pilih kota/kabupaten" />
                 <Input label="Tanggal Lahir" required type="date" value={data.birth_date} onChange={(e) => update("birth_date", e.target.value)} />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
@@ -249,7 +363,7 @@ export default function PPDBForm() {
                 <div className="space-y-4">
                   <Input label="Nama Ayah Kandung" required placeholder="Nama Ayah" value={data.father_name} onChange={(e) => update("father_name", e.target.value)} />
                   <div className="grid gap-4 md:grid-cols-2">
-                    <Input label="Tempat Lahir" required placeholder="Kota/Kabupaten" value={data.father_birth_place} onChange={(e) => update("father_birth_place", e.target.value)} />
+                    <SearchableSelect label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.father_birth_place} onChange={(val) => update("father_birth_place", val)} placeholder="Pilih kota/kabupaten" />
                     <Input label="Tanggal Lahir" required type="date" value={data.father_birth_date} onChange={(e) => update("father_birth_date", e.target.value)} />
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
@@ -264,7 +378,7 @@ export default function PPDBForm() {
                 <div className="space-y-4">
                   <Input label="Nama Ibu Kandung" required placeholder="Nama Ibu" value={data.mother_name} onChange={(e) => update("mother_name", e.target.value)} />
                   <div className="grid gap-4 md:grid-cols-2">
-                    <Input label="Tempat Lahir" required placeholder="Kota/Kabupaten" value={data.mother_birth_place} onChange={(e) => update("mother_birth_place", e.target.value)} />
+                    <SearchableSelect label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.mother_birth_place} onChange={(val) => update("mother_birth_place", val)} placeholder="Pilih kota/kabupaten" />
                     <Input label="Tanggal Lahir" required type="date" value={data.mother_birth_date} onChange={(e) => update("mother_birth_date", e.target.value)} />
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
