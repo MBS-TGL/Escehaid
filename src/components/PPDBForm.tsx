@@ -216,7 +216,7 @@ export default function PPDBForm() {
                 <Input label="Tinggi Badan (cm)" required placeholder="Contoh: 150" value={data.height} onChange={(e) => update("height", e.target.value)} />
                 <Input label="Berat Badan (kg)" required placeholder="Contoh: 40" value={data.weight} onChange={(e) => update("weight", e.target.value)} />
               </div>
-              <Input label="Bahasa Sehari-hari" required placeholder="Bahasa Indonesia" value={data.language} onChange={(e) => update("language", e.target.value)} />
+              <Input label="Bahasa Sehari-hari" required placeholder="Contoh: Bahasa Indonesia, Jawa" value={data.language} onChange={(e) => update("language", e.target.value)} />
               <div className="grid gap-4 md:grid-cols-2">
                 <Input label="Hobi" required placeholder="Contoh: Membaca, Olahraga" value={data.hobby} onChange={(e) => update("hobby", e.target.value)} />
                 <Input label="Cita-cita" required placeholder="Contoh: Guru, Dokter" value={data.ambition} onChange={(e) => update("ambition", e.target.value)} />
