@@ -237,7 +237,6 @@ export default function PPDBForm() {
         ["child_order", "Anak Ke-"],
         ["previous_school", "Asal Sekolah"],
         ["address", "Alamat Lengkap"],
-        ["phone", "No. HP/WA"],
       ];
       for (const [key, label] of required) {
         if (!data[key]) e[key] = `${label} wajib diisi`;
@@ -254,6 +253,7 @@ export default function PPDBForm() {
         ["mother_name", "Nama Ibu"],
         ["mother_birth_place", "Tempat Lahir Ibu"],
         ["mother_birth_date", "Tanggal Lahir Ibu"],
+        ["phone", "No. HP/WA"],
       ];
       for (const [key, label] of required) {
         if (!data[key]) e[key] = `${label} wajib diisi`;
@@ -399,7 +399,6 @@ export default function PPDBForm() {
               </div>
               <div data-field="previous_school"><Input label="Asal Sekolah" required placeholder="Nama Sekolah Asal" value={data.previous_school} onChange={(e) => update("previous_school", e.target.value)} error={errors.previous_school} /></div>
               <div data-field="address"><Input label="Alamat Lengkap" required placeholder="Alamat Domisili" value={data.address} onChange={(e) => update("address", e.target.value)} error={errors.address} /></div>
-              <div data-field="phone"><Input label="No. HP/WA" required placeholder="08xxxxxxxxxx" value={data.phone} onChange={(e) => update("phone", e.target.value)} error={errors.phone} /></div>
             </div>
           )}
 
@@ -435,6 +434,10 @@ export default function PPDBForm() {
                   </div>
                   <Input label="Penghasilan (Perbulan)" placeholder="Rp (contoh: 2.000.000)" value={data.mother_income} onChange={(e) => update("mother_income", e.target.value)} />
                 </div>
+              </div>
+              <div>
+                <h3 className="mb-4 text-lg font-bold text-[#082b59]">Kontak Orang Tua</h3>
+                <div data-field="phone"><Input label="No. HP/WA" required placeholder="08xxxxxxxxxx" value={data.phone} onChange={(e) => update("phone", e.target.value)} error={errors.phone} /></div>
               </div>
             </div>
           )}
