@@ -11,9 +11,9 @@ const KOTA_KABUPATEN = [
   "Situbondo","Bondowoso","Ponorogo","Pasuruan","Lamongan","Tuban","Bojonegoro","Nganjuk",
   "Kediri","Blitar","Tulungagung","Trenggalek","Ngawi","Magetan","Pacitan","Madiun",
   "Solo","Sukoharjo","Klaten","Boyolali","Sragen","Karanganyar","Wonogiri","Purbalingga",
-  "Banyumas","Cilacap","Purbalingga","Banjarnegara","Kebumen","Purworejo","Wonosobo",
+  "Banyumas","Cilacap","Banjarnegara","Kebumen","Purworejo","Wonosobo",
   "Magelang","Temanggung","Semarang","Demak","Kudus","Jepara","Pati","Rembang","Blora",
-  "Grobogan","Tegal","Pemalang","Batang","Kendal","Brebes","Pekalongan","Batang",
+  "Grobogan","Tegal","Pemalang","Batang","Kendal","Brebes","Pekalongan",
   "Bandung","Cimahi","Garut","Tasikmalaya","Ciamis","Kuningan","Cirebon","Majalengka",
   "Sumedang","Indramayu","Subang","Purwakarta","Karawang","Bekasi","Bogor","Sukabumi",
   "Cianjur","Tangerang","Serang","Cilegon","Pandeglang","Lebak","Jakarta",
@@ -21,8 +21,7 @@ const KOTA_KABUPATEN = [
   "Bandar Lampung","Metro","Lampung Selatan","Lampung Timur","Lampung Barat",
   "Palembang","Banyuasin","Ogan Komering Ilir","Musi Banyuasin","Lahat","Muara Enim",
   "Prabumulih","Lubuklinggau","Pali","Empat Lawang",
-  "Bangkalan","Sampang","Pamekasan","Sumenep",
-  "Batu",
+  "Bangkalan","Sampang","Pamekasan","Sumenep","Batu",
 ].filter((v, i, a) => a.indexOf(v) === i).sort();
 
 type FormData = {
@@ -95,7 +94,7 @@ const initialData: FormData = {
   mother_income: "",
 };
 
-function Input({ label, required, ...props }: { label: string; required?: boolean } & React.InputHTMLAttributes<HTMLInputElement>) {
+function Input({ label, required, error, ...props }: { label: string; required?: boolean; error?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div>
       <label className="mb-1.5 block text-sm font-medium text-[#082b59]">
@@ -103,13 +102,16 @@ function Input({ label, required, ...props }: { label: string; required?: boolea
       </label>
       <input
         {...props}
-        className="w-full rounded-xl border border-[#dce3ed] bg-white px-4 py-2.5 text-sm text-[#172033] outline-none transition-colors focus:border-[#1767b1] focus:ring-2 focus:ring-[#1767b1]/10"
+        className={`w-full rounded-xl border bg-white px-4 py-2.5 text-sm text-[#172033] outline-none transition-colors focus:ring-2 ${
+          error ? "border-red-400 focus:border-red-500 focus:ring-red-500/10" : "border-[#dce3ed] focus:border-[#1767b1] focus:ring-[#1767b1]/10"
+        }`}
       />
+      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
     </div>
   );
 }
 
-function Select({ label, required, children, ...props }: { label: string; required?: boolean; children: React.ReactNode } & React.SelectHTMLAttributes<HTMLSelectElement>) {
+function Select({ label, required, error, children, ...props }: { label: string; required?: boolean; error?: string; children: React.ReactNode } & React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <div>
       <label className="mb-1.5 block text-sm font-medium text-[#082b59]">
@@ -118,7 +120,9 @@ function Select({ label, required, children, ...props }: { label: string; requir
       <div className="relative">
         <select
           {...props}
-          className="w-full appearance-none rounded-xl border border-[#dce3ed] bg-white px-4 py-2.5 pr-10 text-sm text-[#172033] outline-none transition-colors focus:border-[#1767b1] focus:ring-2 focus:ring-[#1767b1]/10"
+          className={`w-full appearance-none rounded-xl border bg-white px-4 py-2.5 pr-10 text-sm text-[#172033] outline-none transition-colors focus:ring-2 ${
+            error ? "border-red-400 focus:border-red-500 focus:ring-red-500/10" : "border-[#dce3ed] focus:border-[#1767b1] focus:ring-[#1767b1]/10"
+          }`}
         >
           {children}
         </select>
@@ -128,11 +132,12 @@ function Select({ label, required, children, ...props }: { label: string; requir
           </svg>
         </div>
       </div>
+      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
     </div>
   );
 }
 
-function SearchableSelect({ label, required, options, value, onChange, placeholder }: { label: string; required?: boolean; options: string[]; value: string; onChange: (val: string) => void; placeholder?: string }) {
+function SearchableSelect({ label, required, error, options, value, onChange, placeholder }: { label: string; required?: boolean; error?: string; options: string[]; value: string; onChange: (val: string) => void; placeholder?: string }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -158,7 +163,9 @@ function SearchableSelect({ label, required, options, value, onChange, placehold
         value={value || ""}
         placeholder={placeholder || "Pilih atau ketik..."}
         onClick={() => setOpen(true)}
-        className="w-full cursor-pointer rounded-xl border border-[#dce3ed] bg-white px-4 py-2.5 text-sm text-[#172033] outline-none transition-colors focus:border-[#1767b1] focus:ring-2 focus:ring-[#1767b1]/10"
+        className={`w-full cursor-pointer rounded-xl border bg-white px-4 py-2.5 text-sm text-[#172033] outline-none transition-colors focus:ring-2 ${
+          error ? "border-red-400 focus:border-red-500 focus:ring-red-500/10" : "border-[#dce3ed] focus:border-[#1767b1] focus:ring-[#1767b1]/10"
+        }`}
       />
       {open && (
         <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-[#dce3ed] bg-white shadow-lg">
@@ -188,6 +195,7 @@ function SearchableSelect({ label, required, options, value, onChange, placehold
           )}
         </div>
       )}
+      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
     </div>
   );
 }
@@ -199,6 +207,8 @@ export default function PPDBForm() {
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const formRef = useRef<HTMLDivElement>(null);
+
   const update = (field: keyof FormData, value: string) => {
     setData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
@@ -206,17 +216,65 @@ export default function PPDBForm() {
 
   function validateStep(s: number): boolean {
     const e: Record<string, string> = {};
+
+    if (s === 0) {
+      if (!data.program) e.program = "Pilih program terlebih dahulu";
+    }
+
     if (s === 1) {
+      const required: [keyof FormData, string][] = [
+        ["full_name", "Nama Lengkap"],
+        ["nickname", "Nama Panggilan"],
+        ["birth_place", "Tempat Lahir"],
+        ["birth_date", "Tanggal Lahir"],
+        ["nisn", "NISN"],
+        ["nik", "NIK"],
+        ["height", "Tinggi Badan"],
+        ["weight", "Berat Badan"],
+        ["language", "Bahasa Sehari-hari"],
+        ["hobby", "Hobi"],
+        ["ambition", "Cita-cita"],
+        ["child_order", "Anak Ke-"],
+        ["previous_school", "Asal Sekolah"],
+        ["address", "Alamat Lengkap"],
+        ["phone", "No. HP/WA"],
+      ];
+      for (const [key, label] of required) {
+        if (!data[key]) e[key] = `${label} wajib diisi`;
+      }
       if (data.nisn && !/^\d{10}$/.test(data.nisn)) e.nisn = "NISN harus 10 digit angka";
       if (data.nik && !/^\d{16}$/.test(data.nik)) e.nik = "NIK harus 16 digit angka";
     }
+
+    if (s === 2) {
+      const required: [keyof FormData, string][] = [
+        ["father_name", "Nama Ayah"],
+        ["father_birth_place", "Tempat Lahir Ayah"],
+        ["father_birth_date", "Tanggal Lahir Ayah"],
+        ["mother_name", "Nama Ibu"],
+        ["mother_birth_place", "Tempat Lahir Ibu"],
+        ["mother_birth_date", "Tanggal Lahir Ibu"],
+      ];
+      for (const [key, label] of required) {
+        if (!data[key]) e[key] = `${label} wajib diisi`;
+      }
+    }
+
     setErrors(e);
+
+    if (Object.keys(e).length > 0) {
+      const firstErrorField = Object.keys(e)[0];
+      const el = formRef.current?.querySelector(`[data-field="${firstErrorField}"]`);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
     return Object.keys(e).length === 0;
   }
 
   function handleNext() {
-    if (step === 1 && !validateStep(1)) return;
+    if (!validateStep(step)) return;
     setStep((s) => Math.min(s + 1, steps.length - 1));
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function handleSubmit() {
@@ -239,7 +297,7 @@ export default function PPDBForm() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-2xl" ref={formRef}>
       {/* Progress */}
       <div className="mb-8 flex items-center justify-between">
         {steps.map((s, i) => (
@@ -277,6 +335,7 @@ export default function PPDBForm() {
           {step === 0 && (
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-[#082b59]">Pilihan Program</h3>
+              {errors.program && <p className="text-sm text-red-500">{errors.program}</p>}
               <div className="space-y-3">
                 {["SMP Boarding", "SMP Full Day (Non Boarding)", "SMA Boarding"].map((prog) => (
                   <label key={prog} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition-all ${
@@ -301,8 +360,8 @@ export default function PPDBForm() {
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-[#082b59]">Data Siswa</h3>
               <div className="grid gap-4 md:grid-cols-2">
-                <Input label="Nama Lengkap" required placeholder="Nama Lengkap Siswa" value={data.full_name} onChange={(e) => update("full_name", e.target.value)} />
-                <Input label="Nama Panggilan" required placeholder="Nama Panggilan" value={data.nickname} onChange={(e) => update("nickname", e.target.value)} />
+                <div data-field="full_name"><Input label="Nama Lengkap" required placeholder="Nama Lengkap Siswa" value={data.full_name} onChange={(e) => update("full_name", e.target.value)} error={errors.full_name} /></div>
+                <div data-field="nickname"><Input label="Nama Panggilan" required placeholder="Nama Panggilan" value={data.nickname} onChange={(e) => update("nickname", e.target.value)} error={errors.nickname} /></div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <Select label="Jenis Kelamin" required value={data.gender} onChange={(e) => update("gender", e.target.value)}>
@@ -312,30 +371,24 @@ export default function PPDBForm() {
                 <Input label="Golongan Darah" placeholder="(contoh: A/B/AB/O)" value={data.blood_type} onChange={(e) => update("blood_type", e.target.value)} />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <SearchableSelect label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.birth_place} onChange={(val) => update("birth_place", val)} placeholder="Pilih kota/kabupaten" />
-                <Input label="Tanggal Lahir" required type="date" value={data.birth_date} onChange={(e) => update("birth_date", e.target.value)} />
+                <div data-field="birth_place"><SearchableSelect label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.birth_place} onChange={(val) => update("birth_place", val)} placeholder="Pilih kota/kabupaten" error={errors.birth_place} /></div>
+                <div data-field="birth_date"><Input label="Tanggal Lahir" required type="date" value={data.birth_date} onChange={(e) => update("birth_date", e.target.value)} error={errors.birth_date} /></div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Input label="NISN" required placeholder="10 digit angka" value={data.nisn} onChange={(e) => update("nisn", e.target.value)} />
-                  {errors.nisn && <p className="mt-1 text-xs text-red-500">{errors.nisn}</p>}
-                </div>
-                <div>
-                  <Input label="NIK" required placeholder="16 digit angka" value={data.nik} onChange={(e) => update("nik", e.target.value)} />
-                  {errors.nik && <p className="mt-1 text-xs text-red-500">{errors.nik}</p>}
-                </div>
+                <div data-field="nisn"><Input label="NISN" required placeholder="10 digit angka" value={data.nisn} onChange={(e) => update("nisn", e.target.value)} error={errors.nisn} /></div>
+                <div data-field="nik"><Input label="NIK" required placeholder="16 digit angka" value={data.nik} onChange={(e) => update("nik", e.target.value)} error={errors.nik} /></div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <Input label="Tinggi Badan (cm)" required placeholder="Contoh: 150" value={data.height} onChange={(e) => update("height", e.target.value)} />
-                <Input label="Berat Badan (kg)" required placeholder="Contoh: 40" value={data.weight} onChange={(e) => update("weight", e.target.value)} />
+                <div data-field="height"><Input label="Tinggi Badan (cm)" required placeholder="Contoh: 150" value={data.height} onChange={(e) => update("height", e.target.value)} error={errors.height} /></div>
+                <div data-field="weight"><Input label="Berat Badan (kg)" required placeholder="Contoh: 40" value={data.weight} onChange={(e) => update("weight", e.target.value)} error={errors.weight} /></div>
               </div>
-              <Input label="Bahasa Sehari-hari" required placeholder="Contoh: Bahasa Indonesia, Bahasa Jawa, Bahasa Inggris" value={data.language} onChange={(e) => update("language", e.target.value)} />
+              <div data-field="language"><Input label="Bahasa Sehari-hari" required placeholder="Contoh: Bahasa Indonesia, Bahasa Jawa, Bahasa Inggris" value={data.language} onChange={(e) => update("language", e.target.value)} error={errors.language} /></div>
               <div className="grid gap-4 md:grid-cols-2">
-                <Input label="Hobi" required placeholder="Contoh: Membaca, Olahraga" value={data.hobby} onChange={(e) => update("hobby", e.target.value)} />
-                <Input label="Cita-cita" required placeholder="Contoh: Guru, Dokter" value={data.ambition} onChange={(e) => update("ambition", e.target.value)} />
+                <div data-field="hobby"><Input label="Hobi" required placeholder="Contoh: Membaca, Olahraga" value={data.hobby} onChange={(e) => update("hobby", e.target.value)} error={errors.hobby} /></div>
+                <div data-field="ambition"><Input label="Cita-cita" required placeholder="Contoh: Guru, Dokter" value={data.ambition} onChange={(e) => update("ambition", e.target.value)} error={errors.ambition} /></div>
               </div>
               <div className="grid gap-4 md:grid-cols-3">
-                <Input label="Anak Ke-" required placeholder="Contoh: 2" value={data.child_order} onChange={(e) => update("child_order", e.target.value)} />
+                <div data-field="child_order"><Input label="Anak Ke-" required placeholder="Contoh: 2" value={data.child_order} onChange={(e) => update("child_order", e.target.value)} error={errors.child_order} /></div>
                 <Input label="Jumlah Saudara" placeholder="Contoh: 3" value={data.siblings} onChange={(e) => update("siblings", e.target.value)} />
                 <Select label="Yatim/Piatu" value={data.orphan_status} onChange={(e) => update("orphan_status", e.target.value)}>
                   <option value="tidak">Tidak</option>
@@ -344,9 +397,9 @@ export default function PPDBForm() {
                   <option value="yatim_piatu">Yatim Piatu</option>
                 </Select>
               </div>
-              <Input label="Asal Sekolah" required placeholder="Nama Sekolah Asal" value={data.previous_school} onChange={(e) => update("previous_school", e.target.value)} />
-              <Input label="Alamat Lengkap" required placeholder="Alamat Domisili" value={data.address} onChange={(e) => update("address", e.target.value)} />
-              <Input label="No. HP/WA" required placeholder="08xxxxxxxxxx" value={data.phone} onChange={(e) => update("phone", e.target.value)} />
+              <div data-field="previous_school"><Input label="Asal Sekolah" required placeholder="Nama Sekolah Asal" value={data.previous_school} onChange={(e) => update("previous_school", e.target.value)} error={errors.previous_school} /></div>
+              <div data-field="address"><Input label="Alamat Lengkap" required placeholder="Alamat Domisili" value={data.address} onChange={(e) => update("address", e.target.value)} error={errors.address} /></div>
+              <div data-field="phone"><Input label="No. HP/WA" required placeholder="08xxxxxxxxxx" value={data.phone} onChange={(e) => update("phone", e.target.value)} error={errors.phone} /></div>
             </div>
           )}
 
@@ -356,10 +409,10 @@ export default function PPDBForm() {
               <div>
                 <h3 className="mb-4 text-lg font-bold text-[#082b59]">Data Ayah</h3>
                 <div className="space-y-4">
-                  <Input label="Nama Ayah Kandung" required placeholder="Nama Ayah" value={data.father_name} onChange={(e) => update("father_name", e.target.value)} />
+                  <div data-field="father_name"><Input label="Nama Ayah Kandung" required placeholder="Nama Ayah" value={data.father_name} onChange={(e) => update("father_name", e.target.value)} error={errors.father_name} /></div>
                   <div className="grid gap-4 md:grid-cols-2">
-                    <SearchableSelect label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.father_birth_place} onChange={(val) => update("father_birth_place", val)} placeholder="Pilih kota/kabupaten" />
-                    <Input label="Tanggal Lahir" required type="date" value={data.father_birth_date} onChange={(e) => update("father_birth_date", e.target.value)} />
+                    <div data-field="father_birth_place"><SearchableSelect label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.father_birth_place} onChange={(val) => update("father_birth_place", val)} placeholder="Pilih kota/kabupaten" error={errors.father_birth_place} /></div>
+                    <div data-field="father_birth_date"><Input label="Tanggal Lahir" required type="date" value={data.father_birth_date} onChange={(e) => update("father_birth_date", e.target.value)} error={errors.father_birth_date} /></div>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <Input label="Pendidikan Terakhir" placeholder="Contoh: SMA, SMK, S1" value={data.father_education} onChange={(e) => update("father_education", e.target.value)} />
@@ -371,10 +424,10 @@ export default function PPDBForm() {
               <div>
                 <h3 className="mb-4 text-lg font-bold text-[#082b59]">Data Ibu</h3>
                 <div className="space-y-4">
-                  <Input label="Nama Ibu Kandung" required placeholder="Nama Ibu" value={data.mother_name} onChange={(e) => update("mother_name", e.target.value)} />
+                  <div data-field="mother_name"><Input label="Nama Ibu Kandung" required placeholder="Nama Ibu" value={data.mother_name} onChange={(e) => update("mother_name", e.target.value)} error={errors.mother_name} /></div>
                   <div className="grid gap-4 md:grid-cols-2">
-                    <SearchableSelect label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.mother_birth_place} onChange={(val) => update("mother_birth_place", val)} placeholder="Pilih kota/kabupaten" />
-                    <Input label="Tanggal Lahir" required type="date" value={data.mother_birth_date} onChange={(e) => update("mother_birth_date", e.target.value)} />
+                    <div data-field="mother_birth_place"><SearchableSelect label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.mother_birth_place} onChange={(val) => update("mother_birth_place", val)} placeholder="Pilih kota/kabupaten" error={errors.mother_birth_place} /></div>
+                    <div data-field="mother_birth_date"><Input label="Tanggal Lahir" required type="date" value={data.mother_birth_date} onChange={(e) => update("mother_birth_date", e.target.value)} error={errors.mother_birth_date} /></div>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <Input label="Pendidikan Terakhir" placeholder="Contoh: SMA, SMK, S1" value={data.mother_education} onChange={(e) => update("mother_education", e.target.value)} />
@@ -416,12 +469,12 @@ export default function PPDBForm() {
           {/* Navigation */}
           <div className="mt-6 flex items-center justify-between">
             {step > 0 ? (
-              <button onClick={() => setStep(step - 1)} className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-[#082b59]">
+              <button onClick={() => { setErrors({}); setStep(step - 1); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-[#082b59]">
                 <ArrowLeft className="h-4 w-4" /> Kembali
               </button>
             ) : <div />}
             {step < 3 ? (
-              <button onClick={handleNext} disabled={step === 0 && !data.program} className="flex items-center gap-2 rounded-xl bg-[#082b59] px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-[#1767b1] disabled:opacity-50">
+              <button onClick={handleNext} className="flex items-center gap-2 rounded-xl bg-[#082b59] px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-[#1767b1]">
                 Selanjutnya <ArrowRight className="h-4 w-4" />
               </button>
             ) : (
