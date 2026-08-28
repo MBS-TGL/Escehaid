@@ -111,6 +111,41 @@ function Input({ label, required, error, ...props }: { label: string; required?:
   );
 }
 
+function InputRupiah({ label, required, error, value, onChange, placeholder }: { label: string; required?: boolean; error?: string; value: string; onChange: (val: string) => void; placeholder?: string }) {
+  function formatRupiah(v: string): string {
+    const nums = v.replace(/\D/g, "");
+    if (!nums) return "";
+    return nums.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value.replace(/\D/g, "");
+    onChange(raw);
+  }
+
+  return (
+    <div>
+      <label className="mb-1.5 block text-sm font-medium text-[#082b59]">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="relative">
+        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-sm text-slate-400">Rp</span>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={formatRupiah(value)}
+          onChange={handleChange}
+          placeholder={placeholder || "0"}
+          className={`w-full rounded-xl border bg-white py-2.5 pl-10 pr-4 text-sm text-[#172033] outline-none transition-colors focus:ring-2 ${
+            error ? "border-red-400 focus:border-red-500 focus:ring-red-500/10" : "border-[#dce3ed] focus:border-[#1767b1] focus:ring-[#1767b1]/10"
+          }`}
+        />
+      </div>
+      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+    </div>
+  );
+}
+
 function Select({ label, required, error, children, ...props }: { label: string; required?: boolean; error?: string; children: React.ReactNode } & React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <div>
@@ -417,7 +452,7 @@ export default function PPDBForm() {
                     <Input label="Pendidikan Terakhir" placeholder="Contoh: SMA, SMK, S1" value={data.father_education} onChange={(e) => update("father_education", e.target.value)} />
                     <Input label="Pekerjaan" placeholder="Contoh: Wiraswasta, Karyawan" value={data.father_job} onChange={(e) => update("father_job", e.target.value)} />
                   </div>
-                  <Input label="Penghasilan (Perbulan)" placeholder="Rp (contoh: 3.000.000)" value={data.father_income} onChange={(e) => update("father_income", e.target.value)} />
+                  <InputRupiah label="Penghasilan (Perbulan)" placeholder="0" value={data.father_income} onChange={(val) => update("father_income", val)} />
                 </div>
               </div>
               <div>
@@ -432,7 +467,7 @@ export default function PPDBForm() {
                     <Input label="Pendidikan Terakhir" placeholder="Contoh: SMA, SMK, S1" value={data.mother_education} onChange={(e) => update("mother_education", e.target.value)} />
                     <Input label="Pekerjaan" placeholder="Contoh: Ibu Rumah Tangga, Guru" value={data.mother_job} onChange={(e) => update("mother_job", e.target.value)} />
                   </div>
-                  <Input label="Penghasilan (Perbulan)" placeholder="Rp (contoh: 2.000.000)" value={data.mother_income} onChange={(e) => update("mother_income", e.target.value)} />
+                  <InputRupiah label="Penghasilan (Perbulan)" placeholder="0" value={data.mother_income} onChange={(val) => update("mother_income", val)} />
                 </div>
               </div>
               <div>
