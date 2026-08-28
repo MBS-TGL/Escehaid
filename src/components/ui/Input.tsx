@@ -4,7 +4,8 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: string;
 }
 
-export function Input({ label, required, error, ...props }: InputProps) {
+export function Input({ label, required, error, type, ...props }: InputProps) {
+  const isDate = type === "date";
   const baseClass = "w-full rounded-xl border bg-white px-4 py-2.5 text-sm text-[#172033] outline-none transition-colors focus:ring-2";
   const normalClass = `${baseClass} border-[#dce3ed] focus:border-[#1767b1] focus:ring-[#1767b1]/10`;
   const errorClass = `${baseClass} border-red-400 focus:border-red-500 focus:ring-red-500/10`;
@@ -14,10 +15,18 @@ export function Input({ label, required, error, ...props }: InputProps) {
       <label className="mb-1.5 block text-sm font-medium text-[#082b59]">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
-      <input
-        {...props}
-        className={error ? errorClass : normalClass}
-      />
+      <div className="relative">
+        <input
+          type={type}
+          {...props}
+          className={`${error ? errorClass : normalClass} ${isDate ? "pr-10" : ""}`}
+        />
+        {isDate && (
+          <svg className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        )}
+      </div>
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
     </div>
   );
