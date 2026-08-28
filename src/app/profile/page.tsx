@@ -14,11 +14,14 @@ export default async function ProfilPage() {
   return (
     <div>
       {/* Hero */}
-      <section className="bg-[#082b59] py-20 text-white">
-        <div className="mx-auto max-w-7xl px-6 text-center">
+      <section className="relative overflow-hidden bg-[#082b59] py-12 text-white md:py-16">
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
+        </div>
+        <div className="relative mx-auto max-w-7xl px-6 text-center">
           <FadeIn>
-            <h1 className="text-4xl font-bold md:text-5xl">Profil Sekolah</h1>
-            <p className="mt-4 text-lg text-white/70">Mengenal {profil?.school_name || "SMP Muhammadiyah 4 Tanggul"} lebih dekat</p>
+            <h1 className="text-3xl font-bold md:text-4xl">Profil Sekolah</h1>
+            <p className="mt-3 text-base text-white/70">Mengenal {profil?.school_name || "SMP Muhammadiyah 4 Tanggul"} lebih dekat</p>
           </FadeIn>
         </div>
       </section>

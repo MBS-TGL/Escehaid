@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MagnifyingGlass, Download, Eye, CheckCircle, XCircle, Clock } from "@/components/icons";
+import { MagnifyingGlass, Download, Eye, CheckCircle, XCircle, Clock, FileText, Users } from "@/components/icons";
 import { supabase } from "@/lib/supabase";
 import type { PPDBRegistration } from "@/lib/supabase";
 
@@ -52,31 +52,42 @@ export default function AdminPPDBPage() {
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-12">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-[#082b59]">Kelola PPDB</h1>
-          <p className="text-gray-600">{data.length} pendaftar terdaftar</p>
+    <div>
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-12 text-white md:py-16">
+        <div className="absolute inset-0 opacity-[0.04]">
+          <FileText className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
+          <Users className="absolute -left-10 bottom-0 h-48 w-48 -rotate-12" weight="fill" />
         </div>
-        <button className="flex items-center gap-2 bg-[#082b59] text-white px-4 py-2 rounded-xl hover:bg-[#1767b1] transition-colors">
-          <Download className="h-4 w-4" />
-          Export Excel
-        </button>
-      </div>
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
+        </div>
+        <div className="relative mx-auto max-w-7xl px-6 text-center">
+          <h1 className="text-3xl font-bold md:text-4xl">Kelola PPDB</h1>
+          <p className="mt-3 text-base text-white/70">{data.length} pendaftar terdaftar</p>
+        </div>
+      </section>
 
-      <div className="bg-white rounded-xl shadow-sm border border-[#dce3ed]">
-        <div className="p-4 border-b border-[#dce3ed]">
-          <div className="relative">
-            <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Cari nama siswa..."
-              className="w-full md:w-96 border border-[#dce3ed] rounded-xl pl-10 pr-4 py-2"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+      <div className="mx-auto max-w-7xl px-6 py-12">
+        <div className="mb-6 flex items-center justify-end">
+          <button className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#1767b1]">
+            <Download className="h-4 w-4" />
+            Export Excel
+          </button>
         </div>
+
+        <div className="overflow-hidden rounded-2xl border border-[#dce3ed] bg-white shadow-sm">
+          <div className="border-b border-[#dce3ed] p-4">
+            <div className="relative">
+              <MagnifyingGlass className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Cari nama siswa..."
+                className="w-full rounded-xl border border-[#dce3ed] py-2 pl-10 pr-4 md:w-96"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          </div>
 
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -153,6 +164,7 @@ export default function AdminPPDBPage() {
               )}
             </tbody>
           </table>
+        </div>
         </div>
       </div>
     </div>
