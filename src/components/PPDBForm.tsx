@@ -259,10 +259,7 @@ export default function PPDBForm() {
                 <div data-field="nickname"><Input label="Nama Panggilan" required placeholder="Nama Panggilan" value={data.nickname} onChange={(e) => update("nickname", e.target.value)} error={errors.nickname} /></div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <Select label="Jenis Kelamin" required value={data.gender} onChange={(e) => update("gender", e.target.value)}>
-                  <option value="L">Laki-Laki</option>
-                  <option value="P">Perempuan</option>
-                </Select>
+                <Select label="Jenis Kelamin" required options={["Laki-Laki", "Perempuan"]} value={data.gender === "L" ? "Laki-Laki" : "Perempuan"} onChange={(val) => update("gender", val === "Laki-Laki" ? "L" : "P")} />
                 <Input label="Golongan Darah" placeholder="(contoh: A/B/AB/O)" value={data.blood_type} onChange={(e) => update("blood_type", e.target.value)} />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
@@ -285,12 +282,7 @@ export default function PPDBForm() {
               <div className="grid gap-4 md:grid-cols-3">
                 <div data-field="child_order"><Input label="Anak Ke-" required placeholder="Contoh: 2" value={data.child_order} onChange={(e) => update("child_order", e.target.value)} error={errors.child_order} /></div>
                 <Input label="Jumlah Saudara" placeholder="Contoh: 3" value={data.siblings} onChange={(e) => update("siblings", e.target.value)} />
-                <Select label="Yatim/Piatu" value={data.orphan_status} onChange={(e) => update("orphan_status", e.target.value)}>
-                  <option value="tidak">Tidak</option>
-                  <option value="yatim">Yatim</option>
-                  <option value="piatu">Piatu</option>
-                  <option value="yatim_piatu">Yatim Piatu</option>
-                </Select>
+                <Select label="Yatim/Piatu" options={["Tidak", "Yatim", "Piatu", "Yatim Piatu"]} value={data.orphan_status === "tidak" ? "Tidak" : data.orphan_status === "yatim" ? "Yatim" : data.orphan_status === "piatu" ? "Piatu" : "Yatim Piatu"} onChange={(val) => update("orphan_status", val === "Tidak" ? "tidak" : val === "Yatim" ? "yatim" : val === "Piatu" ? "piatu" : "yatim_piatu")} />
               </div>
               <div data-field="previous_school"><Input label="Asal Sekolah" required placeholder="Nama Sekolah Asal" value={data.previous_school} onChange={(e) => update("previous_school", e.target.value)} error={errors.previous_school} /></div>
               <div data-field="address"><Input label="Alamat Lengkap" required placeholder="Alamat Domisili" value={data.address} onChange={(e) => update("address", e.target.value)} error={errors.address} /></div>

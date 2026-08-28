@@ -2,26 +2,24 @@
 
 import { useState, useRef, useEffect } from "react";
 
+interface SelectOption {
+  label: string;
+  value: string;
+}
+
 interface SelectBaseProps {
   label: string;
   required?: boolean;
   error?: string;
 }
 
-interface SelectProps extends SelectBaseProps, React.SelectHTMLAttributes<HTMLSelectElement> {
-  searchable?: false;
-  children: React.ReactNode;
-}
-
-interface SearchableSelectProps extends SelectBaseProps {
-  searchable: true;
-  options: string[];
+interface CustomSelectProps extends SelectBaseProps {
+  options: (string | SelectOption)[];
   value: string;
   onChange: (val: string) => void;
   placeholder?: string;
+  searchable?: boolean;
 }
-
-type Props = SelectProps | SearchableSelectProps;
 
 const chevron = (
   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
@@ -43,30 +41,21 @@ function Label({ label, required }: { label: string; required?: boolean }) {
   );
 }
 
-function NativeSelect({ label, required, error, children, ...props }: SelectProps) {
-  return (
-    <div>
-      <Label label={label} required={required} />
-      <div className="relative">
-        <select
-          {...props}
-          className={`${error ? errorClass : normalClass} w-full appearance-none pr-10`}
-        >
-          {children}
-        </select>
-        {chevron}
-      </div>
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-    </div>
-  );
+function normalizeOption(opt: string | SelectOption): SelectOption {
+  return typeof opt === "string" ? { label: opt, value: opt } : opt;
 }
 
-function SearchableSelect({ label, required, error, options, value, onChange, placeholder }: SearchableSelectProps) {
+function CustomSelect({ label, required, error, options, value, onChange, placeholder, searchable }: CustomSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
-  const filtered = options.filter((o) => o.toLowerCase().includes(query.toLowerCase()));
+  const normalized = options.map(normalizeOption);
+  const filtered = searchable
+    ? normalized.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()))
+    : normalized;
+
+  const selectedLabel = normalized.find((o) => o.value === value)?.label || "";
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -79,35 +68,39 @@ function SearchableSelect({ label, required, error, options, value, onChange, pl
   return (
     <div ref={ref} className="relative">
       <Label label={label} required={required} />
-      <input
-        type="text"
-        readOnly
-        value={value || ""}
-        placeholder={placeholder || "Pilih atau ketik..."}
-        onClick={() => setOpen(true)}
-        className={`${error ? errorClass : normalClass} cursor-pointer`}
-      />
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`${error ? errorClass : normalClass} flex w-full cursor-pointer items-center justify-between text-left`}
+      >
+        <span className={selectedLabel ? "text-[#172033]" : "text-slate-400"}>
+          {selectedLabel || placeholder || "Pilih..."}
+        </span>
+        {chevron}
+      </button>
       {open && (
         <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-[#dce3ed] bg-white shadow-lg">
-          <div className="sticky top-0 border-b border-[#dce3ed] bg-white p-2">
-            <input
-              type="text"
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Ketik untuk mencari..."
-              className="w-full rounded-lg border border-[#dce3ed] bg-[#f4f7fb] px-3 py-2 text-sm outline-none focus:border-[#1767b1]"
-            />
-          </div>
+          {searchable && (
+            <div className="sticky top-0 border-b border-[#dce3ed] bg-white p-2">
+              <input
+                type="text"
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Ketik untuk mencari..."
+                className="w-full rounded-lg border border-[#dce3ed] bg-[#f4f7fb] px-3 py-2 text-sm outline-none focus:border-[#1767b1]"
+              />
+            </div>
+          )}
           {filtered.length > 0 ? (
             filtered.map((opt) => (
               <button
-                key={opt}
+                key={opt.value}
                 type="button"
-                onClick={() => { onChange(opt); setOpen(false); setQuery(""); }}
-                className={`w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-[#f4f7fb] ${value === opt ? "bg-[#1767b1]/10 font-medium text-[#082b59]" : "text-[#172033]"}`}
+                onClick={() => { onChange(opt.value); setOpen(false); setQuery(""); }}
+                className={`w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-[#f4f7fb] ${value === opt.value ? "bg-[#1767b1]/10 font-medium text-[#082b59]" : "text-[#172033]"}`}
               >
-                {opt}
+                {opt.label}
               </button>
             ))
           ) : (
@@ -120,9 +113,6 @@ function SearchableSelect({ label, required, error, options, value, onChange, pl
   );
 }
 
-export function Select(props: Props) {
-  if (props.searchable) {
-    return <SearchableSelect {...props} />;
-  }
-  return <NativeSelect {...(props as SelectProps)} />;
+export function Select(props: CustomSelectProps) {
+  return <CustomSelect {...props} />;
 }
