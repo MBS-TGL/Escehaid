@@ -115,12 +115,19 @@ function Select({ label, required, children, ...props }: { label: string; requir
       <label className="mb-1.5 block text-sm font-medium text-[#082b59]">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
-      <select
-        {...props}
-        className="w-full rounded-xl border border-[#dce3ed] bg-white px-4 py-2.5 text-sm text-[#172033] outline-none transition-colors focus:border-[#1767b1] focus:ring-2 focus:ring-[#1767b1]/10"
-      >
-        {children}
-      </select>
+      <div className="relative">
+        <select
+          {...props}
+          className="w-full appearance-none rounded-xl border border-[#dce3ed] bg-white px-4 py-2.5 pr-10 text-sm text-[#172033] outline-none transition-colors focus:border-[#1767b1] focus:ring-2 focus:ring-[#1767b1]/10"
+        >
+          {children}
+        </select>
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+          <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </div>
     </div>
   );
 }
