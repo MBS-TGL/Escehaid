@@ -190,10 +190,27 @@ export default function PPDBForm() {
   const [data, setData] = useState<FormData>(initialData);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const update = (field: keyof FormData, value: string) => {
     setData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
   };
+
+  function validateStep(s: number): boolean {
+    const e: Record<string, string> = {};
+    if (s === 1) {
+      if (data.nisn && !/^\d{10}$/.test(data.nisn)) e.nisn = "NISN harus 10 digit angka";
+      if (data.nik && !/^\d{16}$/.test(data.nik)) e.nik = "NIK harus 16 digit angka";
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  function handleNext() {
+    if (step === 1 && !validateStep(1)) return;
+    setStep((s) => Math.min(s + 1, steps.length - 1));
+  }
 
   async function handleSubmit() {
     setLoading(true);
@@ -292,8 +309,14 @@ export default function PPDBForm() {
                 <Input label="Tanggal Lahir" required type="date" value={data.birth_date} onChange={(e) => update("birth_date", e.target.value)} />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <Input label="NISN" required placeholder="Nomor Induk Siswa Nasional" value={data.nisn} onChange={(e) => update("nisn", e.target.value)} />
-                <Input label="NIK" required placeholder="Nomor Induk Kependudukan" value={data.nik} onChange={(e) => update("nik", e.target.value)} />
+                <div>
+                  <Input label="NISN" required placeholder="10 digit angka" value={data.nisn} onChange={(e) => update("nisn", e.target.value)} />
+                  {errors.nisn && <p className="mt-1 text-xs text-red-500">{errors.nisn}</p>}
+                </div>
+                <div>
+                  <Input label="NIK" required placeholder="16 digit angka" value={data.nik} onChange={(e) => update("nik", e.target.value)} />
+                  {errors.nik && <p className="mt-1 text-xs text-red-500">{errors.nik}</p>}
+                </div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <Input label="Tinggi Badan (cm)" required placeholder="Contoh: 150" value={data.height} onChange={(e) => update("height", e.target.value)} />
@@ -391,7 +414,7 @@ export default function PPDBForm() {
               </button>
             ) : <div />}
             {step < 3 ? (
-              <button onClick={() => setStep(step + 1)} disabled={step === 0 && !data.program} className="flex items-center gap-2 rounded-xl bg-[#082b59] px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-[#1767b1] disabled:opacity-50">
+              <button onClick={handleNext} disabled={step === 0 && !data.program} className="flex items-center gap-2 rounded-xl bg-[#082b59] px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-[#1767b1] disabled:opacity-50">
                 Selanjutnya <ArrowRight className="h-4 w-4" />
               </button>
             ) : (
