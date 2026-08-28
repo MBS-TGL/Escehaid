@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { CheckCircle, Clock, ArrowLeft, ArrowRight, FileText } from "@/components/icons";
+import { useState, useRef } from "react";
+import { CheckCircle, ArrowLeft, ArrowRight, FileText } from "@/components/icons";
 import { supabase } from "@/lib/supabase";
+import { Input, InputRupiah, Select } from "@/components/ui";
 
 const steps = ["Program", "Data Siswa", "Data Orang Tua", "Selesai"];
 
@@ -93,147 +94,6 @@ const initialData: FormData = {
   mother_job: "",
   mother_income: "",
 };
-
-function Input({ label, required, error, ...props }: { label: string; required?: boolean; error?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-sm font-medium text-[#082b59]">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      <input
-        {...props}
-        className={`w-full rounded-xl border bg-white px-4 py-2.5 text-sm text-[#172033] outline-none transition-colors focus:ring-2 ${
-          error ? "border-red-400 focus:border-red-500 focus:ring-red-500/10" : "border-[#dce3ed] focus:border-[#1767b1] focus:ring-[#1767b1]/10"
-        }`}
-      />
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-    </div>
-  );
-}
-
-function InputRupiah({ label, required, error, value, onChange, placeholder }: { label: string; required?: boolean; error?: string; value: string; onChange: (val: string) => void; placeholder?: string }) {
-  function formatRupiah(v: string): string {
-    const nums = v.replace(/\D/g, "");
-    if (!nums) return "";
-    return nums.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  }
-
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const raw = e.target.value.replace(/\D/g, "");
-    onChange(raw);
-  }
-
-  return (
-    <div>
-      <label className="mb-1.5 block text-sm font-medium text-[#082b59]">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      <div className="relative">
-        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-sm text-slate-400">Rp</span>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={formatRupiah(value)}
-          onChange={handleChange}
-          placeholder={placeholder || "0"}
-          className={`w-full rounded-xl border bg-white py-2.5 pl-10 pr-4 text-sm text-[#172033] outline-none transition-colors focus:ring-2 ${
-            error ? "border-red-400 focus:border-red-500 focus:ring-red-500/10" : "border-[#dce3ed] focus:border-[#1767b1] focus:ring-[#1767b1]/10"
-          }`}
-        />
-      </div>
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-    </div>
-  );
-}
-
-function Select({ label, required, error, children, ...props }: { label: string; required?: boolean; error?: string; children: React.ReactNode } & React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-sm font-medium text-[#082b59]">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      <div className="relative">
-        <select
-          {...props}
-          className={`w-full appearance-none rounded-xl border bg-white px-4 py-2.5 pr-10 text-sm text-[#172033] outline-none transition-colors focus:ring-2 ${
-            error ? "border-red-400 focus:border-red-500 focus:ring-red-500/10" : "border-[#dce3ed] focus:border-[#1767b1] focus:ring-[#1767b1]/10"
-          }`}
-        >
-          {children}
-        </select>
-        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-          <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-        </div>
-      </div>
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-    </div>
-  );
-}
-
-function SearchableSelect({ label, required, error, options, value, onChange, placeholder }: { label: string; required?: boolean; error?: string; options: string[]; value: string; onChange: (val: string) => void; placeholder?: string }) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
-
-  const filtered = options.filter((o) => o.toLowerCase().includes(query.toLowerCase()));
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  return (
-    <div ref={ref} className="relative">
-      <label className="mb-1.5 block text-sm font-medium text-[#082b59]">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      <input
-        type="text"
-        readOnly
-        value={value || ""}
-        placeholder={placeholder || "Pilih atau ketik..."}
-        onClick={() => setOpen(true)}
-        className={`w-full cursor-pointer rounded-xl border bg-white px-4 py-2.5 text-sm text-[#172033] outline-none transition-colors focus:ring-2 ${
-          error ? "border-red-400 focus:border-red-500 focus:ring-red-500/10" : "border-[#dce3ed] focus:border-[#1767b1] focus:ring-[#1767b1]/10"
-        }`}
-      />
-      {open && (
-        <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-[#dce3ed] bg-white shadow-lg">
-          <div className="sticky top-0 border-b border-[#dce3ed] bg-white p-2">
-            <input
-              type="text"
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Ketik untuk mencari..."
-              className="w-full rounded-lg border border-[#dce3ed] bg-[#f4f7fb] px-3 py-2 text-sm outline-none focus:border-[#1767b1]"
-            />
-          </div>
-          {filtered.length > 0 ? (
-            filtered.map((opt) => (
-              <button
-                key={opt}
-                type="button"
-                onClick={() => { onChange(opt); setOpen(false); setQuery(""); }}
-                className={`w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-[#f4f7fb] ${value === opt ? "bg-[#1767b1]/10 font-medium text-[#082b59]" : "text-[#172033]"}`}
-              >
-                {opt}
-              </button>
-            ))
-          ) : (
-            <div className="px-4 py-3 text-sm text-slate-400">Tidak ditemukan</div>
-          )}
-        </div>
-      )}
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-    </div>
-  );
-}
 
 export default function PPDBForm() {
   const [step, setStep] = useState(0);
@@ -406,7 +266,7 @@ export default function PPDBForm() {
                 <Input label="Golongan Darah" placeholder="(contoh: A/B/AB/O)" value={data.blood_type} onChange={(e) => update("blood_type", e.target.value)} />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <div data-field="birth_place"><SearchableSelect label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.birth_place} onChange={(val) => update("birth_place", val)} placeholder="Pilih kota/kabupaten" error={errors.birth_place} /></div>
+                <div data-field="birth_place"><Select searchable label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.birth_place} onChange={(val) => update("birth_place", val)} placeholder="Pilih kota/kabupaten" error={errors.birth_place} /></div>
                 <div data-field="birth_date"><Input label="Tanggal Lahir" required type="date" value={data.birth_date} onChange={(e) => update("birth_date", e.target.value)} error={errors.birth_date} /></div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
@@ -445,7 +305,7 @@ export default function PPDBForm() {
                 <div className="space-y-4">
                   <div data-field="father_name"><Input label="Nama Ayah Kandung" required placeholder="Nama Ayah" value={data.father_name} onChange={(e) => update("father_name", e.target.value)} error={errors.father_name} /></div>
                   <div className="grid gap-4 md:grid-cols-2">
-                    <div data-field="father_birth_place"><SearchableSelect label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.father_birth_place} onChange={(val) => update("father_birth_place", val)} placeholder="Pilih kota/kabupaten" error={errors.father_birth_place} /></div>
+                    <div data-field="father_birth_place"><Select searchable label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.father_birth_place} onChange={(val) => update("father_birth_place", val)} placeholder="Pilih kota/kabupaten" error={errors.father_birth_place} /></div>
                     <div data-field="father_birth_date"><Input label="Tanggal Lahir" required type="date" value={data.father_birth_date} onChange={(e) => update("father_birth_date", e.target.value)} error={errors.father_birth_date} /></div>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
@@ -460,7 +320,7 @@ export default function PPDBForm() {
                 <div className="space-y-4">
                   <div data-field="mother_name"><Input label="Nama Ibu Kandung" required placeholder="Nama Ibu" value={data.mother_name} onChange={(e) => update("mother_name", e.target.value)} error={errors.mother_name} /></div>
                   <div className="grid gap-4 md:grid-cols-2">
-                    <div data-field="mother_birth_place"><SearchableSelect label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.mother_birth_place} onChange={(val) => update("mother_birth_place", val)} placeholder="Pilih kota/kabupaten" error={errors.mother_birth_place} /></div>
+                    <div data-field="mother_birth_place"><Select searchable label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.mother_birth_place} onChange={(val) => update("mother_birth_place", val)} placeholder="Pilih kota/kabupaten" error={errors.mother_birth_place} /></div>
                     <div data-field="mother_birth_date"><Input label="Tanggal Lahir" required type="date" value={data.mother_birth_date} onChange={(e) => update("mother_birth_date", e.target.value)} error={errors.mother_birth_date} /></div>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
