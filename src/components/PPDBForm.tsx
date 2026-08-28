@@ -28,12 +28,14 @@ type FormData = {
   address: string;
   phone: string;
   father_name: string;
-  father_birth: string;
+  father_birth_place: string;
+  father_birth_date: string;
   father_education: string;
   father_job: string;
   father_income: string;
   mother_name: string;
-  mother_birth: string;
+  mother_birth_place: string;
+  mother_birth_date: string;
   mother_education: string;
   mother_job: string;
   mother_income: string;
@@ -61,12 +63,14 @@ const initialData: FormData = {
   address: "",
   phone: "",
   father_name: "",
-  father_birth: "",
+  father_birth_place: "",
+  father_birth_date: "",
   father_education: "",
   father_job: "",
   father_income: "",
   mother_name: "",
-  mother_birth: "",
+  mother_birth_place: "",
+  mother_birth_date: "",
   mother_education: "",
   mother_job: "",
   mother_income: "",
@@ -244,7 +248,10 @@ export default function PPDBForm() {
                 <h3 className="mb-4 text-lg font-bold text-[#082b59]">Data Ayah</h3>
                 <div className="space-y-4">
                   <Input label="Nama Ayah Kandung" required placeholder="Nama Ayah" value={data.father_name} onChange={(e) => update("father_name", e.target.value)} />
-                  <Input label="Tempat, Tanggal Lahir" required placeholder="Kota, DD Bulan Tahun" value={data.father_birth} onChange={(e) => update("father_birth", e.target.value)} />
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Input label="Tempat Lahir" required placeholder="Kota/Kabupaten" value={data.father_birth_place} onChange={(e) => update("father_birth_place", e.target.value)} />
+                    <Input label="Tanggal Lahir" required type="date" value={data.father_birth_date} onChange={(e) => update("father_birth_date", e.target.value)} />
+                  </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <Input label="Pendidikan Terakhir" placeholder="Contoh: SMA, SMK, S1" value={data.father_education} onChange={(e) => update("father_education", e.target.value)} />
                     <Input label="Pekerjaan" placeholder="Contoh: Wiraswasta, Karyawan" value={data.father_job} onChange={(e) => update("father_job", e.target.value)} />
@@ -256,7 +263,10 @@ export default function PPDBForm() {
                 <h3 className="mb-4 text-lg font-bold text-[#082b59]">Data Ibu</h3>
                 <div className="space-y-4">
                   <Input label="Nama Ibu Kandung" required placeholder="Nama Ibu" value={data.mother_name} onChange={(e) => update("mother_name", e.target.value)} />
-                  <Input label="Tempat, Tanggal Lahir" required placeholder="Kota, DD Bulan Tahun" value={data.mother_birth} onChange={(e) => update("mother_birth", e.target.value)} />
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Input label="Tempat Lahir" required placeholder="Kota/Kabupaten" value={data.mother_birth_place} onChange={(e) => update("mother_birth_place", e.target.value)} />
+                    <Input label="Tanggal Lahir" required type="date" value={data.mother_birth_date} onChange={(e) => update("mother_birth_date", e.target.value)} />
+                  </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <Input label="Pendidikan Terakhir" placeholder="Contoh: SMA, SMK, S1" value={data.mother_education} onChange={(e) => update("mother_education", e.target.value)} />
                     <Input label="Pekerjaan" placeholder="Contoh: Ibu Rumah Tangga, Guru" value={data.mother_job} onChange={(e) => update("mother_job", e.target.value)} />
