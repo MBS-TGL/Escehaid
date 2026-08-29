@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { CheckCircle, ArrowLeft, ArrowRight, FileText } from "@/components/icons";
 import { supabase } from "@/lib/supabase";
 import { Input, InputRupiah, Select, DatePicker, FileUpload } from "@/components/ui";
@@ -111,6 +111,9 @@ const initialDocs: Documents = {
   bukti_transfer: null,
 };
 
+const STORAGE_KEY = "spmb_form_data";
+const STORAGE_STEP_KEY = "spmb_form_step";
+
 export default function PPDBForm() {
   const [step, setStep] = useState(0);
   const [data, setData] = useState<FormData>(initialData);
@@ -120,6 +123,32 @@ export default function PPDBForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const formRef = useRef<HTMLDivElement>(null);
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedData = localStorage.getItem(STORAGE_KEY);
+      const savedStep = localStorage.getItem(STORAGE_STEP_KEY);
+      if (savedData) {
+        setData(JSON.parse(savedData));
+        setStep(savedStep ? parseInt(savedStep, 10) : 0);
+      }
+    } catch {}
+  }, []);
+
+  // Save to localStorage on every change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(STORAGE_STEP_KEY, step.toString());
+    } catch {}
+  }, [data, step]);
+
+  // Clear localStorage on successful submit
+  function clearStorage() {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_STEP_KEY);
+  }
 
   const update = (field: keyof FormData, value: string) => {
     setData((prev) => ({ ...prev, [field]: value }));
@@ -308,7 +337,10 @@ export default function PPDBForm() {
     });
 
     setLoading(false);
-    if (!error) setSuccess(true);
+    if (!error) {
+      clearStorage();
+      setSuccess(true);
+    }
   }
 
   return (
@@ -568,7 +600,8 @@ export default function PPDBForm() {
                       <tr><td className="py-1.5 text-slate-400">Nama Panggilan</td><td className="py-1.5 font-medium text-[#082b59]">{data.nickname || "-"}</td></tr>
                       <tr className="border-t border-[#f0f3f8]"><td className="py-1.5 text-slate-400">Jenis Kelamin</td><td className="py-1.5 font-medium text-[#082b59]">{data.gender === "L" ? "Laki-Laki" : "Perempuan"}</td></tr>
                       <tr><td className="py-1.5 text-slate-400">Golongan Darah</td><td className="py-1.5 font-medium text-[#082b59]">{data.blood_type || "-"}</td></tr>
-                      <tr className="border-t border-[#f0f3f8]"><td className="py-1.5 text-slate-400">Tempat, Tanggal Lahir</td><td className="py-1.5 font-medium text-[#082b59]">{data.birth_place}, {data.birth_date}</td></tr>
+                      <tr className="border-t border-[#f0f3f8]"><td className="py-1.5 text-slate-400">Tempat Lahir</td><td className="py-1.5 font-medium text-[#082b59]">{data.birth_place || "-"}</td></tr>
+                      <tr><td className="py-1.5 text-slate-400">Tanggal Lahir</td><td className="py-1.5 font-medium text-[#082b59]">{data.birth_date || "-"}</td></tr>
                       <tr><td className="py-1.5 text-slate-400">NISN</td><td className="py-1.5 font-mono font-medium text-[#082b59]">{data.nisn || "-"}</td></tr>
                       <tr className="border-t border-[#f0f3f8]"><td className="py-1.5 text-slate-400">NIK</td><td className="py-1.5 font-mono font-medium text-[#082b59]">{data.nik || "-"}</td></tr>
                       <tr><td className="py-1.5 text-slate-400">Tinggi / Berat Badan</td><td className="py-1.5 font-medium text-[#082b59]">{data.height} cm / {data.weight} kg</td></tr>
@@ -600,7 +633,8 @@ export default function PPDBForm() {
                     <table className="w-full text-sm">
                       <tbody>
                         <tr><td className="w-36 py-1 text-slate-400">Nama</td><td className="py-1 font-medium text-[#082b59]">{data.father_name || "-"}</td></tr>
-                        <tr><td className="py-1 text-slate-400">Tempat, Tanggal Lahir</td><td className="py-1 font-medium text-[#082b59]">{data.father_birth_place}, {data.father_birth_date}</td></tr>
+                        <tr><td className="py-1 text-slate-400">Tempat Lahir</td><td className="py-1 font-medium text-[#082b59]">{data.father_birth_place || "-"}</td></tr>
+                        <tr><td className="py-1 text-slate-400">Tanggal Lahir</td><td className="py-1 font-medium text-[#082b59]">{data.father_birth_date || "-"}</td></tr>
                         <tr><td className="py-1 text-slate-400">Pendidikan</td><td className="py-1 font-medium text-[#082b59]">{data.father_education || "-"}</td></tr>
                         <tr><td className="py-1 text-slate-400">Pekerjaan</td><td className="py-1 font-medium text-[#082b59]">{data.father_job || "-"}</td></tr>
                         <tr><td className="py-1 text-slate-400">Penghasilan/bulan</td><td className="py-1 font-medium text-[#082b59]">{data.father_income ? `Rp ${data.father_income}` : "-"}</td></tr>
@@ -616,7 +650,8 @@ export default function PPDBForm() {
                     <table className="w-full text-sm">
                       <tbody>
                         <tr><td className="w-36 py-1 text-slate-400">Nama</td><td className="py-1 font-medium text-[#082b59]">{data.mother_name || "-"}</td></tr>
-                        <tr><td className="py-1 text-slate-400">Tempat, Tanggal Lahir</td><td className="py-1 font-medium text-[#082b59]">{data.mother_birth_place}, {data.mother_birth_date}</td></tr>
+                        <tr><td className="py-1 text-slate-400">Tempat Lahir</td><td className="py-1 font-medium text-[#082b59]">{data.mother_birth_place || "-"}</td></tr>
+                        <tr><td className="py-1 text-slate-400">Tanggal Lahir</td><td className="py-1 font-medium text-[#082b59]">{data.mother_birth_date || "-"}</td></tr>
                         <tr><td className="py-1 text-slate-400">Pendidikan</td><td className="py-1 font-medium text-[#082b59]">{data.mother_education || "-"}</td></tr>
                         <tr><td className="py-1 text-slate-400">Pekerjaan</td><td className="py-1 font-medium text-[#082b59]">{data.mother_job || "-"}</td></tr>
                         <tr><td className="py-1 text-slate-400">Penghasilan/bulan</td><td className="py-1 font-medium text-[#082b59]">{data.mother_income ? `Rp ${data.mother_income}` : "-"}</td></tr>
