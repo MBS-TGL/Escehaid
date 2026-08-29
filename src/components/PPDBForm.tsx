@@ -323,16 +323,16 @@ export default function PPDBForm() {
       </button>
 
       {/* Progress */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex items-center justify-center gap-2 md:gap-4">
         {steps.map((s, i) => (
-          <div key={s} className="flex items-center gap-0">
-            <div className={`flex aspect-square h-8 min-w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold leading-none transition-colors ${
+          <div key={s} className="flex items-center gap-2 md:gap-4">
+            <div className={`flex aspect-square h-8 shrink-0 items-center justify-center rounded-full text-xs font-bold leading-none transition-colors ${
               i < step ? "bg-green-500 text-white" : i === step ? "bg-[#082b59] text-white" : "bg-[#dce3ed] text-slate-500"
             }`}>
               {i < step ? <CheckCircle className="h-5 w-5" /> : i + 1}
             </div>
-            <span className={`ml-2 text-sm whitespace-nowrap ${i === step ? "font-semibold text-[#082b59]" : "text-slate-400"}`}>{s}</span>
-            {i < steps.length - 1 && <div className="mx-3 h-px w-4 shrink-0 bg-[#dce3ed] md:w-8" />}
+            <span className={`text-sm whitespace-nowrap ${i === step ? "font-semibold text-[#082b59]" : "text-slate-400"}`}>{s}</span>
+            {i < steps.length - 1 && <div className="h-px w-4 shrink-0 bg-[#dce3ed] md:w-8" />}
           </div>
         ))}
       </div>
