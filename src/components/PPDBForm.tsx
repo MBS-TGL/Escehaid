@@ -389,7 +389,7 @@ export default function PPDBForm() {
         <div className="rounded-2xl border border-[#dce3ed] bg-white p-6 shadow-sm md:p-8">
           {/* Step 0: Program */}
           {step === 0 && (
-            <div className="space-y-4">
+            <div className="step-enter space-y-4">
               <h3 className="text-lg font-bold text-[#082b59]">Pilihan Program</h3>
               {errors.program && <p className="text-sm text-red-500">{errors.program}</p>}
               <div className="space-y-3">
@@ -413,7 +413,7 @@ export default function PPDBForm() {
 
           {/* Step 1: Data Siswa */}
           {step === 1 && (
-            <div className="space-y-4">
+            <div className="step-enter space-y-4">
               <h3 className="text-lg font-bold text-[#082b59]">Data Siswa</h3>
               <div className="grid gap-4 md:grid-cols-2">
                 <div data-field="full_name"><Input label="Nama Lengkap" required placeholder="Nama Lengkap Siswa" value={data.full_name} onChange={(e) => update("full_name", e.target.value)} error={errors.full_name} /></div>
@@ -452,7 +452,7 @@ export default function PPDBForm() {
 
           {/* Step 2: Data Orang Tua */}
           {step === 2 && (
-            <div className="space-y-6">
+            <div className="step-enter space-y-6">
               <div>
                 <h3 className="mb-4 text-lg font-bold text-[#082b59]">Data Ayah</h3>
                 <div className="space-y-4">
@@ -492,7 +492,7 @@ export default function PPDBForm() {
 
           {/* Step 3: Upload Berkas */}
           {step === 3 && (
-            <div className="space-y-5">
+            <div className="step-enter space-y-5">
               <h3 className="text-lg font-bold text-[#082b59]">Upload Berkas Persyaratan</h3>
               <p className="text-sm text-slate-500">Format: PDF, JPG, PNG. Maksimal 1 MB per file.</p>
 
@@ -550,7 +550,7 @@ export default function PPDBForm() {
 
           {/* Step 4: Konfirmasi */}
           {step === 4 && (
-            <div className="space-y-5">
+            <div className="step-enter space-y-5">
               <div>
                 <h3 className="text-lg font-bold text-[#082b59]">Konfirmasi Data</h3>
                 <p className="mt-1 text-sm text-slate-500">Pastikan semua data sudah benar sebelum mengirim pendaftaran.</p>
@@ -595,23 +595,23 @@ export default function PPDBForm() {
                 </div>
                 <div className="p-4">
                   <table className="w-full text-sm">
-                    <tbody>
+                    <tbody className="divide-y divide-[#f0f3f8]">
                       <tr><td className="w-40 py-1.5 text-slate-400">Nama Lengkap</td><td className="py-1.5 font-medium text-[#082b59]">{data.full_name || "-"}</td></tr>
                       <tr><td className="py-1.5 text-slate-400">Nama Panggilan</td><td className="py-1.5 font-medium text-[#082b59]">{data.nickname || "-"}</td></tr>
-                      <tr className="border-t border-[#f0f3f8]"><td className="py-1.5 text-slate-400">Jenis Kelamin</td><td className="py-1.5 font-medium text-[#082b59]">{data.gender === "L" ? "Laki-Laki" : "Perempuan"}</td></tr>
+                      <tr><td className="py-1.5 text-slate-400">Jenis Kelamin</td><td className="py-1.5 font-medium text-[#082b59]">{data.gender === "L" ? "Laki-Laki" : "Perempuan"}</td></tr>
                       <tr><td className="py-1.5 text-slate-400">Golongan Darah</td><td className="py-1.5 font-medium text-[#082b59]">{data.blood_type || "-"}</td></tr>
-                      <tr className="border-t border-[#f0f3f8]"><td className="py-1.5 text-slate-400">Tempat Lahir</td><td className="py-1.5 font-medium text-[#082b59]">{data.birth_place || "-"}</td></tr>
+                      <tr><td className="py-1.5 text-slate-400">Tempat Lahir</td><td className="py-1.5 font-medium text-[#082b59]">{data.birth_place || "-"}</td></tr>
                       <tr><td className="py-1.5 text-slate-400">Tanggal Lahir</td><td className="py-1.5 font-medium text-[#082b59]">{data.birth_date || "-"}</td></tr>
                       <tr><td className="py-1.5 text-slate-400">NISN</td><td className="py-1.5 font-mono font-medium text-[#082b59]">{data.nisn || "-"}</td></tr>
-                      <tr className="border-t border-[#f0f3f8]"><td className="py-1.5 text-slate-400">NIK</td><td className="py-1.5 font-mono font-medium text-[#082b59]">{data.nik || "-"}</td></tr>
+                      <tr><td className="py-1.5 text-slate-400">NIK</td><td className="py-1.5 font-mono font-medium text-[#082b59]">{data.nik || "-"}</td></tr>
                       <tr><td className="py-1.5 text-slate-400">Tinggi / Berat Badan</td><td className="py-1.5 font-medium text-[#082b59]">{data.height} cm / {data.weight} kg</td></tr>
-                      <tr className="border-t border-[#f0f3f8]"><td className="py-1.5 text-slate-400">Anak Ke-</td><td className="py-1.5 font-medium text-[#082b59]">{data.child_order} dari {data.siblings} bersaudara</td></tr>
+                      <tr><td className="py-1.5 text-slate-400">Anak Ke-</td><td className="py-1.5 font-medium text-[#082b59]">{data.child_order} dari {data.siblings} bersaudara</td></tr>
                       <tr><td className="py-1.5 text-slate-400">Bahasa Sehari-hari</td><td className="py-1.5 font-medium text-[#082b59]">{data.language || "-"}</td></tr>
-                      <tr className="border-t border-[#f0f3f8]"><td className="py-1.5 text-slate-400">Hobi</td><td className="py-1.5 font-medium text-[#082b59]">{data.hobby || "-"}</td></tr>
+                      <tr><td className="py-1.5 text-slate-400">Hobi</td><td className="py-1.5 font-medium text-[#082b59]">{data.hobby || "-"}</td></tr>
                       <tr><td className="py-1.5 text-slate-400">Cita-cita</td><td className="py-1.5 font-medium text-[#082b59]">{data.ambition || "-"}</td></tr>
-                      <tr className="border-t border-[#f0f3f8]"><td className="py-1.5 text-slate-400">Yatim/Piatu</td><td className="py-1.5 font-medium text-[#082b59]">{data.orphan_status === "tidak" ? "Tidak" : data.orphan_status === "yatim" ? "Yatim" : data.orphan_status === "piatu" ? "Piatu" : "Yatim Piatu"}</td></tr>
-                      <tr className="border-t border-[#f0f3f8]"><td className="py-1.5 text-slate-400">Asal Sekolah</td><td className="py-1.5 font-medium text-[#082b59]">{data.previous_school || "-"}</td></tr>
-                      <tr><td className="py-1.5 align-top text-slate-400">Alamat</td><td className="py-1.5 font-medium text-[#082b59]">{data.address || "-"}</td></tr>
+                      <tr><td className="py-1.5 text-slate-400">Yatim/Piatu</td><td className="py-1.5 font-medium text-[#082b59]">{data.orphan_status === "tidak" ? "Tidak" : data.orphan_status === "yatim" ? "Yatim" : data.orphan_status === "piatu" ? "Piatu" : "Yatim Piatu"}</td></tr>
+                      <tr><td className="py-1.5 text-slate-400">Asal Sekolah</td><td className="py-1.5 font-medium text-[#082b59]">{data.previous_school || "-"}</td></tr>
+                      <tr><td className="py-1.5 text-slate-400">Alamat</td><td className="py-1.5 font-medium text-[#082b59]">{data.address || "-"}</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -727,7 +727,16 @@ export default function PPDBForm() {
               </button>
             ) : (
               <button onClick={handleSubmit} disabled={loading} className="flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-green-700 disabled:opacity-50">
-                {loading ? "Mengirim..." : "Kirim Pendaftaran"} <FileText className="h-4 w-4" />
+                {loading ? (
+                  <>
+                    <div className="spinner" />
+                    Mengirim...
+                  </>
+                ) : (
+                  <>
+                    Kirim Pendaftaran <FileText className="h-4 w-4" />
+                  </>
+                )}
               </button>
             )}
           </div>
