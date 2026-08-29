@@ -15,7 +15,7 @@ export default function PPDBPage() {
         </div>
         <div className="relative mx-auto max-w-7xl px-6 text-center">
           <FadeIn>
-            <h1 className="text-3xl font-bold md:text-4xl">PPDB Online</h1>
+            <h1 className="text-3xl font-bold md:text-4xl">SPMB Online</h1>
             <p className="mt-3 text-base text-white/70">Pendaftaran Peserta Didik Baru SMP Muhammadiyah 4 Tanggul</p>
           </FadeIn>
         </div>

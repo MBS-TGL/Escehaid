@@ -46,7 +46,7 @@ export default function Footer() {
             <ul className="mt-2.5 grid grid-cols-2 gap-x-6 gap-y-1.5">
               {[
                 ["/profile", "Profil Sekolah"],
-                ["/admission", "PPDB Online"],
+                ["/admission", "SPMB Online"],
                 ["/news", "Berita"],
                 ["/articles", "Artikel"],
                 ["/achievements", "Prestasi"],

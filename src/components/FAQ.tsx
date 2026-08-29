@@ -8,7 +8,7 @@ import { FadeIn } from "./animations";
 const faqs = [
   {
     q: "Bagaimana cara mendaftarkan anak ke SMP Muhammadiyah 4 Tanggul?",
-    a: "Pendaftaran dapat dilakukan secara online melalui halaman PPDB kami. Isi data calon peserta didik, lengkapi dokumen yang diperlukan, dan ikuti tahapan seleksi yang akan diinformasikan oleh panitia.",
+    a: "Pendaftaran dapat dilakukan secara online melalui halaman SPMB kami. Isi data calon peserta didik, lengkapi dokumen yang diperlukan, dan ikuti tahapan seleksi yang akan diinformasikan oleh panitia.",
   },
   {
     q: "Apa saja program unggulan yang tersedia?",
@@ -16,7 +16,7 @@ const faqs = [
   },
   {
     q: "Berapa biaya masuk dan SPP per bulan?",
-    a: "Informasi lengkap mengenai biaya pendidikan dapat dilihat di halaman PPDB atau menghubungi bagian administrasi sekolah. Kami juga menyediakan beasiswa bagi siswa berprestasi.",
+    a: "Informasi lengkap mengenai biaya pendidikan dapat dilihat di halaman SPMB atau menghubungi bagian administrasi sekolah. Kami juga menyediakan beasiswa bagi siswa berprestasi.",
   },
   {
     q: "Apakah tersedia fasilitas asrama?",

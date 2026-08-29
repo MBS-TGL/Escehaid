@@ -10,7 +10,7 @@ const stats = [
 ];
 
 const menuItems = [
-  { label: "Kelola PPDB", href: "/admin/admission", icon: Users, color: "bg-[#082b59]" },
+  { label: "Kelola SPMB", href: "/admin/admission", icon: Users, color: "bg-[#082b59]" },
   { label: "Kelola Berita", href: "/admin/news", icon: Megaphone, color: "bg-[#1767b1]" },
   { label: "Kelola Gallery", href: "/admin/gallery", icon: ImageSquare, color: "bg-[#0d4a8a]" },
 ];

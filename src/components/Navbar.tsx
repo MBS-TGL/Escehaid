@@ -84,7 +84,7 @@ export default function Navbar() {
               href="/admission"
               className="ml-3 rounded-xl bg-[#f4d21f] px-5 py-2 text-sm font-bold text-[#082b59] transition-all hover:bg-[#e6c41c] hover:shadow-lg hover:shadow-[#f4d21f]/20"
             >
-              PPDB
+              SPMB
             </Link>
           </div>
 
@@ -127,7 +127,7 @@ export default function Navbar() {
             onClick={() => setIsOpen(false)}
             className="mt-2 block rounded-xl bg-[#f4d21f] px-3 py-2.5 text-center text-sm font-bold text-[#082b59] transition-all hover:bg-[#e6c41c]"
           >
-            PPDB
+            SPMB
           </Link>
         </div>
       </div>

@@ -350,7 +350,7 @@ export default async function Home() {
 
           <StaggerChildren stagger={0.12} className="grid gap-6 md:grid-cols-3">
             {([
-              ["PPDB online", "Informasi jalur, jadwal, dan pendaftaran peserta didik baru.", "/admission", FileText],
+              ["SPMB online", "Informasi jalur, jadwal, dan pendaftaran peserta didik baru.", "/admission", FileText],
               ["Berita & pengumuman", "Ikuti kabar, kegiatan, dan pencapaian terbaru sekolah.", "/news", Newspaper],
               ["Galeri sekolah", "Lihat dokumentasi aktivitas dan lingkungan belajar kami.", "/gallery", ImageSquare],
             ] as [string, string, string, typeof FileText][]).map(([title, description, href, Icon]) => (

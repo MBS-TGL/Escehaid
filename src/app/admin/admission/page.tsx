@@ -62,7 +62,7 @@ export default function AdminPPDBPage() {
           <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
         </div>
         <div className="relative mx-auto max-w-7xl px-6 text-center">
-          <h1 className="text-3xl font-bold md:text-4xl">Kelola PPDB</h1>
+          <h1 className="text-3xl font-bold md:text-4xl">Kelola SPMB</h1>
           <p className="mt-3 text-base text-white/70">{data.length} pendaftar terdaftar</p>
         </div>
       </section>

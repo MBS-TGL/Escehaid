@@ -27,7 +27,7 @@ const testimonials = [
   {
     name: "Rina Wati",
     role: "Orang tua siswa kelas 7",
-    text: "Fasilitas lengkap, guru ramah, dan yang paling penting anak saya merasa nyaman belajar di sini. PPDB-nya juga mudah dan transparan.",
+    text: "Fasilitas lengkap, guru ramah, dan yang paling penting anak saya merasa nyaman belajar di sini. SPMB-nya juga mudah dan transparan.",
     avatar: "RW",
   },
 ];

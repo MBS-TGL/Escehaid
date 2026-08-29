@@ -42,7 +42,7 @@ export default function WhatsAppButton() {
             </div>
             <div className="rounded-xl bg-[#f0f7ed] p-3 mb-3">
               <p className="text-sm text-[#172033]">
-                Assalamualaikum! Ada yang bisa kami bantu? Silakan tanyakan informasi seputar PPDB, program sekolah, atau hal lainnya.
+                Assalamualaikum! Ada yang bisa kami bantu? Silakan tanyakan informasi seputar SPMB, program sekolah, atau hal lainnya.
               </p>
             </div>
             <a

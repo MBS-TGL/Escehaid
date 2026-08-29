@@ -18,7 +18,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "SMP Muhammadiyah 4 Tanggul | SIS",
-  description: "Sistem Informasi Sekolah SMP Muhammadiyah 4 Tanggul - PPDB Online, Berita, Gallery, dan Informasi Sekolah",
+  description: "Sistem Informasi Sekolah SMP Muhammadiyah 4 Tanggul - SPMB Online, Berita, Gallery, dan Informasi Sekolah",
   icons: {
     icon: "/images/Logo-Favicon.png",
   },
