@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useToast } from "@/components/ui/Toast";
 
 interface FileUploadProps {
   label: string;
@@ -15,6 +16,7 @@ interface FileUploadProps {
 export function FileUpload({ label, required, error, accept = ".pdf,.jpg,.jpeg,.png", maxSize = 1, value, onChange }: FileUploadProps) {
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   function handleFile(file: File | null) {
     if (!file) {
@@ -22,7 +24,7 @@ export function FileUpload({ label, required, error, accept = ".pdf,.jpg,.jpeg,.
       return;
     }
     if (file.size > maxSize * 1024 * 1024) {
-      alert(`Ukuran file maksimal ${maxSize} MB`);
+      toast(`Ukuran file maksimal ${maxSize} MB`, "error");
       return;
     }
     onChange(file);
