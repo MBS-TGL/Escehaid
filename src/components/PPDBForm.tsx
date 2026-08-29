@@ -379,18 +379,70 @@ export default function PPDBForm() {
 
           {/* Step 3: Selesai */}
           {step === 3 && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <h3 className="text-lg font-bold text-[#082b59]">Konfirmasi Data</h3>
-              <div className="rounded-xl bg-[#f4f7fb] p-4 text-sm">
-                <div className="grid gap-2 md:grid-cols-2">
+
+              {/* Program */}
+              <div className="rounded-xl border border-[#dce3ed] bg-[#f4f7fb] p-4">
+                <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-[#1767b1]">Program</h4>
+                <div className="grid gap-2 text-sm md:grid-cols-2">
                   <div><span className="text-slate-500">Program:</span> <span className="font-medium">{data.program || "-"}</span></div>
-                  <div><span className="text-slate-500">Nama:</span> <span className="font-medium">{data.full_name || "-"}</span></div>
-                  <div><span className="text-slate-500">Asal Sekolah:</span> <span className="font-medium">{data.previous_school || "-"}</span></div>
-                  <div><span className="text-slate-500">Ayah:</span> <span className="font-medium">{data.father_name || "-"}</span></div>
-                  <div><span className="text-slate-500">Ibu:</span> <span className="font-medium">{data.mother_name || "-"}</span></div>
-                  <div><span className="text-slate-500">No. HP:</span> <span className="font-medium">{data.phone || "-"}</span></div>
                 </div>
               </div>
+
+              {/* Data Siswa */}
+              <div className="rounded-xl border border-[#dce3ed] bg-[#f4f7fb] p-4">
+                <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-[#1767b1]">Data Siswa</h4>
+                <div className="grid gap-2 text-sm md:grid-cols-2">
+                  <div><span className="text-slate-500">Nama Lengkap:</span> <span className="font-medium">{data.full_name || "-"}</span></div>
+                  <div><span className="text-slate-500">Nama Panggilan:</span> <span className="font-medium">{data.nickname || "-"}</span></div>
+                  <div><span className="text-slate-500">Jenis Kelamin:</span> <span className="font-medium">{data.gender === "L" ? "Laki-Laki" : "Perempuan"}</span></div>
+                  <div><span className="text-slate-500">Tempat Lahir:</span> <span className="font-medium">{data.birth_place || "-"}</span></div>
+                  <div><span className="text-slate-500">Tanggal Lahir:</span> <span className="font-medium">{data.birth_date || "-"}</span></div>
+                  <div><span className="text-slate-500">Golongan Darah:</span> <span className="font-medium">{data.blood_type || "-"}</span></div>
+                  <div><span className="text-slate-500">NISN:</span> <span className="font-medium">{data.nisn || "-"}</span></div>
+                  <div><span className="text-slate-500">NIK:</span> <span className="font-medium">{data.nik || "-"}</span></div>
+                  <div><span className="text-slate-500">Tinggi Badan:</span> <span className="font-medium">{data.height ? `${data.height} cm` : "-"}</span></div>
+                  <div><span className="text-slate-500">Berat Badan:</span> <span className="font-medium">{data.weight ? `${data.weight} kg` : "-"}</span></div>
+                  <div><span className="text-slate-500">Bahasa Sehari-hari:</span> <span className="font-medium">{data.language || "-"}</span></div>
+                  <div><span className="text-slate-500">Hobi:</span> <span className="font-medium">{data.hobby || "-"}</span></div>
+                  <div><span className="text-slate-500">Cita-cita:</span> <span className="font-medium">{data.ambition || "-"}</span></div>
+                  <div><span className="text-slate-500">Anak Ke-:</span> <span className="font-medium">{data.child_order || "-"}</span></div>
+                  <div><span className="text-slate-500">Jumlah Saudara:</span> <span className="font-medium">{data.siblings || "-"}</span></div>
+                  <div><span className="text-slate-500">Yatim/Piatu:</span> <span className="font-medium">{data.orphan_status === "tidak" ? "Tidak" : data.orphan_status === "yatim" ? "Yatim" : data.orphan_status === "piatu" ? "Piatu" : "Yatim Piatu"}</span></div>
+                  <div className="md:col-span-2"><span className="text-slate-500">Asal Sekolah:</span> <span className="font-medium">{data.previous_school || "-"}</span></div>
+                  <div className="md:col-span-2"><span className="text-slate-500">Alamat:</span> <span className="font-medium">{data.address || "-"}</span></div>
+                </div>
+              </div>
+
+              {/* Data Orang Tua */}
+              <div className="rounded-xl border border-[#dce3ed] bg-[#f4f7fb] p-4">
+                <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-[#1767b1]">Data Orang Tua</h4>
+                <div className="space-y-3 text-sm">
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <div><span className="text-slate-500">Nama Ayah:</span> <span className="font-medium">{data.father_name || "-"}</span></div>
+                    <div><span className="text-slate-500">Tempat Lahir Ayah:</span> <span className="font-medium">{data.father_birth_place || "-"}</span></div>
+                    <div><span className="text-slate-500">Tanggal Lahir Ayah:</span> <span className="font-medium">{data.father_birth_date || "-"}</span></div>
+                    <div><span className="text-slate-500">Pendidikan Ayah:</span> <span className="font-medium">{data.father_education || "-"}</span></div>
+                    <div><span className="text-slate-500">Pekerjaan Ayah:</span> <span className="font-medium">{data.father_job || "-"}</span></div>
+                    <div><span className="text-slate-500">Penghasilan Ayah:</span> <span className="font-medium">{data.father_income ? `Rp ${data.father_income.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}` : "-"}</span></div>
+                  </div>
+                  <div className="border-t border-[#dce3ed] pt-3">
+                    <div className="grid gap-2 md:grid-cols-2">
+                      <div><span className="text-slate-500">Nama Ibu:</span> <span className="font-medium">{data.mother_name || "-"}</span></div>
+                      <div><span className="text-slate-500">Tempat Lahir Ibu:</span> <span className="font-medium">{data.mother_birth_place || "-"}</span></div>
+                      <div><span className="text-slate-500">Tanggal Lahir Ibu:</span> <span className="font-medium">{data.mother_birth_date || "-"}</span></div>
+                      <div><span className="text-slate-500">Pendidikan Ibu:</span> <span className="font-medium">{data.mother_education || "-"}</span></div>
+                      <div><span className="text-slate-500">Pekerjaan Ibu:</span> <span className="font-medium">{data.mother_job || "-"}</span></div>
+                      <div><span className="text-slate-500">Penghasilan Ibu:</span> <span className="font-medium">{data.mother_income ? `Rp ${data.mother_income.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}` : "-"}</span></div>
+                    </div>
+                  </div>
+                  <div className="border-t border-[#dce3ed] pt-3">
+                    <div><span className="text-slate-500">No. HP/WA:</span> <span className="font-medium">{data.phone || "-"}</span></div>
+                  </div>
+                </div>
+              </div>
+
               <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-700">
                 <p className="font-medium">Berkas yang perlu dikumpulkan:</p>
                 <ol className="mt-2 list-decimal space-y-1 pl-4">
