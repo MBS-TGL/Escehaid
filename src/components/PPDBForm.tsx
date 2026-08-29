@@ -520,52 +520,111 @@ export default function PPDBForm() {
           {step === 4 && (
             <div className="space-y-5">
               <h3 className="text-lg font-bold text-[#082b59]">Konfirmasi Data</h3>
+              <p className="text-sm text-slate-500">Pastikan semua data sudah benar sebelum mengirim pendaftaran.</p>
 
-              <div className="rounded-xl border border-[#dce3ed] bg-[#f4f7fb] p-4">
-                <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-[#1767b1]">Program</h4>
-                <div className="text-sm"><span className="font-medium">{data.program || "-"}</span></div>
-              </div>
-
-              <div className="rounded-xl border border-[#dce3ed] bg-[#f4f7fb] p-4">
-                <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-[#1767b1]">Data Siswa</h4>
-                <div className="grid gap-2 text-sm md:grid-cols-2">
-                  <div><span className="text-slate-500">Nama:</span> <span className="font-medium">{data.full_name || "-"}</span></div>
-                  <div><span className="text-slate-500">Panggilan:</span> <span className="font-medium">{data.nickname || "-"}</span></div>
-                  <div><span className="text-slate-500">Lahir:</span> <span className="font-medium">{data.birth_place}, {data.birth_date}</span></div>
-                  <div><span className="text-slate-500">NISN/NIK:</span> <span className="font-medium">{data.nisn} / {data.nik}</span></div>
-                  <div><span className="text-slate-500">Sekolah:</span> <span className="font-medium">{data.previous_school || "-"}</span></div>
-                  <div><span className="text-slate-500">Alamat:</span> <span className="font-medium">{data.address || "-"}</span></div>
+              {/* Program */}
+              <div className="overflow-hidden rounded-xl border border-[#dce3ed] bg-white">
+                <div className="flex items-center gap-2 bg-[#082b59] px-4 py-2.5">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs font-bold text-white">1</div>
+                  <h4 className="text-sm font-bold text-white">Program Pilihan</h4>
+                </div>
+                <div className="p-4">
+                  <div className="inline-flex items-center gap-2 rounded-lg bg-[#f4d21f]/10 px-3 py-1.5 text-sm font-semibold text-[#082b59]">
+                    {data.program || "-"}
+                  </div>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-[#dce3ed] bg-[#f4f7fb] p-4">
-                <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-[#1767b1]">Data Orang Tua</h4>
-                <div className="grid gap-2 text-sm md:grid-cols-2">
-                  <div><span className="text-slate-500">Ayah:</span> <span className="font-medium">{data.father_name || "-"}</span></div>
-                  <div><span className="text-slate-500">Ibu:</span> <span className="font-medium">{data.mother_name || "-"}</span></div>
-                  <div><span className="text-slate-500">HP:</span> <span className="font-medium">{data.phone || "-"}</span></div>
+              {/* Data Siswa */}
+              <div className="overflow-hidden rounded-xl border border-[#dce3ed] bg-white">
+                <div className="flex items-center gap-2 bg-[#082b59] px-4 py-2.5">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs font-bold text-white">2</div>
+                  <h4 className="text-sm font-bold text-white">Data Siswa</h4>
+                </div>
+                <div className="divide-y divide-[#f0f3f8] p-4">
+                  <div className="grid gap-3 pb-3 text-sm md:grid-cols-2">
+                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Nama Lengkap</span><span className="ml-auto font-medium text-[#082b59]">{data.full_name || "-"}</span></div>
+                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Nama Panggilan</span><span className="ml-auto font-medium text-[#082b59]">{data.nickname || "-"}</span></div>
+                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Jenis Kelamin</span><span className="ml-auto font-medium text-[#082b59]">{data.gender === "L" ? "Laki-Laki" : "Perempuan"}</span></div>
+                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Golongan Darah</span><span className="ml-auto font-medium text-[#082b59]">{data.blood_type || "-"}</span></div>
+                  </div>
+                  <div className="grid gap-3 py-3 text-sm md:grid-cols-2">
+                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Tempat, Tanggal Lahir</span><span className="ml-auto text-right font-medium text-[#082b59]">{data.birth_place}, {data.birth_date}</span></div>
+                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">NISN / NIK</span><span className="ml-auto text-right font-medium text-[#082b59]">{data.nisn} / {data.nik}</span></div>
+                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Tinggi / Berat Badan</span><span className="ml-auto font-medium text-[#082b59]">{data.height} cm / {data.weight} kg</span></div>
+                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Anak Ke-</span><span className="ml-auto font-medium text-[#082b59]">{data.child_order} dari {data.siblings} bersaudara</span></div>
+                  </div>
+                  <div className="grid gap-3 py-3 text-sm md:grid-cols-2">
+                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Bahasa Sehari-hari</span><span className="ml-auto font-medium text-[#082b59]">{data.language || "-"}</span></div>
+                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Hobi</span><span className="ml-auto font-medium text-[#082b59]">{data.hobby || "-"}</span></div>
+                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Cita-cita</span><span className="ml-auto font-medium text-[#082b59]">{data.ambition || "-"}</span></div>
+                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Yatim/Piatu</span><span className="ml-auto font-medium text-[#082b59]">{data.orphan_status === "tidak" ? "Tidak" : data.orphan_status === "yatim" ? "Yatim" : data.orphan_status === "piatu" ? "Piatu" : "Yatim Piatu"}</span></div>
+                  </div>
+                  <div className="pt-3 text-sm">
+                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Asal Sekolah</span><span className="ml-auto font-medium text-[#082b59]">{data.previous_school || "-"}</span></div>
+                    <div className="mt-2 flex gap-2"><span className="shrink-0 text-slate-400">Alamat</span><span className="ml-auto text-right font-medium text-[#082b59]">{data.address || "-"}</span></div>
+                  </div>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-[#dce3ed] bg-[#f4f7fb] p-4">
-                <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-[#1767b1]">Berkas ({Object.values(docs).filter(Boolean).length}/5)</h4>
-                <div className="space-y-1 text-sm">
-                  {[
-                    ["kk", "Kartu Keluarga"],
-                    ["akta", "Akta Kelahiran"],
-                    ["surat_sekolah", "Surat Sekolah"],
-                    ["ktp_ortu", "KTP Orang Tua"],
-                    ["bukti_transfer", "Bukti Transfer"],
-                  ].map(([key, label]) => (
-                    <div key={key} className="flex items-center gap-2">
-                      {docs[key as keyof Documents] ? (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <div className="h-4 w-4 rounded-full border-2 border-red-400" />
-                      )}
-                      <span className={docs[key as keyof Documents] ? "text-green-700" : "text-red-600"}>{label}</span>
+              {/* Data Orang Tua */}
+              <div className="overflow-hidden rounded-xl border border-[#dce3ed] bg-white">
+                <div className="flex items-center gap-2 bg-[#082b59] px-4 py-2.5">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs font-bold text-white">3</div>
+                  <h4 className="text-sm font-bold text-white">Data Orang Tua</h4>
+                </div>
+                <div className="divide-y divide-[#f0f3f8] p-4">
+                  <div className="pb-3">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[#1767b1]">Ayah</p>
+                    <div className="grid gap-2 text-sm md:grid-cols-2">
+                      <div className="flex gap-2"><span className="shrink-0 text-slate-400">Nama</span><span className="ml-auto font-medium text-[#082b59]">{data.father_name || "-"}</span></div>
+                      <div className="flex gap-2"><span className="shrink-0 text-slate-400">Lahir</span><span className="ml-auto font-medium text-[#082b59]">{data.father_birth_place}, {data.father_birth_date}</span></div>
+                      <div className="flex gap-2"><span className="shrink-0 text-slate-400">Pendidikan</span><span className="ml-auto font-medium text-[#082b59]">{data.father_education || "-"}</span></div>
+                      <div className="flex gap-2"><span className="shrink-0 text-slate-400">Pekerjaan</span><span className="ml-auto font-medium text-[#082b59]">{data.father_job || "-"}</span></div>
+                      <div className="flex gap-2 md:col-span-2"><span className="shrink-0 text-slate-400">Penghasilan/bln</span><span className="ml-auto font-medium text-[#082b59]">{data.father_income ? `Rp ${data.father_income}` : "-"}</span></div>
                     </div>
-                  ))}
+                  </div>
+                  <div className="pt-3">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[#1767b1]">Ibu</p>
+                    <div className="grid gap-2 text-sm md:grid-cols-2">
+                      <div className="flex gap-2"><span className="shrink-0 text-slate-400">Nama</span><span className="ml-auto font-medium text-[#082b59]">{data.mother_name || "-"}</span></div>
+                      <div className="flex gap-2"><span className="shrink-0 text-slate-400">Lahir</span><span className="ml-auto font-medium text-[#082b59]">{data.mother_birth_place}, {data.mother_birth_date}</span></div>
+                      <div className="flex gap-2"><span className="shrink-0 text-slate-400">Pendidikan</span><span className="ml-auto font-medium text-[#082b59]">{data.mother_education || "-"}</span></div>
+                      <div className="flex gap-2"><span className="shrink-0 text-slate-400">Pekerjaan</span><span className="ml-auto font-medium text-[#082b59]">{data.mother_job || "-"}</span></div>
+                      <div className="flex gap-2 md:col-span-2"><span className="shrink-0 text-slate-400">Penghasilan/bln</span><span className="ml-auto font-medium text-[#082b59]">{data.mother_income ? `Rp ${data.mother_income}` : "-"}</span></div>
+                    </div>
+                  </div>
+                  <div className="pt-3 text-sm">
+                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">No. HP/WA</span><span className="ml-auto font-medium text-[#082b59]">{data.phone || "-"}</span></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Berkas */}
+              <div className="overflow-hidden rounded-xl border border-[#dce3ed] bg-white">
+                <div className="flex items-center gap-2 bg-[#082b59] px-4 py-2.5">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs font-bold text-white">4</div>
+                  <h4 className="text-sm font-bold text-white">Berkas ({Object.values(docs).filter(Boolean).length}/5)</h4>
+                </div>
+                <div className="p-4">
+                  <div className="grid gap-2 text-sm md:grid-cols-2">
+                    {[
+                      ["kk", "Kartu Keluarga"],
+                      ["akta", "Akta Kelahiran"],
+                      ["surat_sekolah", "Surat Keterangan Sekolah"],
+                      ["ktp_ortu", "KTP Orang Tua"],
+                      ["bukti_transfer", "Bukti Transfer"],
+                    ].map(([key, label]) => (
+                      <div key={key} className={`flex items-center gap-2 rounded-lg px-3 py-2 ${docs[key as keyof Documents] ? "bg-green-50" : "bg-red-50"}`}>
+                        {docs[key as keyof Documents] ? (
+                          <CheckCircle className="h-4 w-4 shrink-0 text-green-500" />
+                        ) : (
+                          <div className="h-4 w-4 shrink-0 rounded-full border-2 border-red-400" />
+                        )}
+                        <span className={docs[key as keyof Documents] ? "text-green-700" : "text-red-600"}>{label}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
