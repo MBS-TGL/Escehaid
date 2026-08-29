@@ -3,9 +3,9 @@
 import { useState, useRef } from "react";
 import { CheckCircle, ArrowLeft, ArrowRight, FileText } from "@/components/icons";
 import { supabase } from "@/lib/supabase";
-import { Input, InputRupiah, Select, DatePicker } from "@/components/ui";
+import { Input, InputRupiah, Select, DatePicker, FileUpload } from "@/components/ui";
 
-const steps = ["Program", "Data Siswa", "Data Orang Tua", "Selesai"];
+const steps = ["Program", "Data Siswa", "Data Orang Tua", "Upload Berkas", "Selesai"];
 
 const KOTA_KABUPATEN = [
   "Jember","Surabaya","Malang","Sidoarjo","Gresik","Banyuwangi","Probolinggo","Lumajang",
@@ -95,9 +95,26 @@ const initialData: FormData = {
   mother_income: "",
 };
 
+type Documents = {
+  kk: File | null;
+  akta: File | null;
+  surat_sekolah: File | null;
+  ktp_ortu: File | null;
+  bukti_transfer: File | null;
+};
+
+const initialDocs: Documents = {
+  kk: null,
+  akta: null,
+  surat_sekolah: null,
+  ktp_ortu: null,
+  bukti_transfer: null,
+};
+
 export default function PPDBForm() {
   const [step, setStep] = useState(0);
   const [data, setData] = useState<FormData>(initialData);
+  const [docs, setDocs] = useState<Documents>(initialDocs);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -107,6 +124,11 @@ export default function PPDBForm() {
   const update = (field: keyof FormData, value: string) => {
     setData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
+  };
+
+  const updateDoc = (field: keyof Documents, file: File | null) => {
+    setDocs((prev) => ({ ...prev, [field]: file }));
+    if (errors[`doc_${field}`]) setErrors((prev) => ({ ...prev, [`doc_${field}`]: "" }));
   };
 
   // DEBUG: auto-fill semua field
@@ -194,6 +216,19 @@ export default function PPDBForm() {
       }
     }
 
+    if (s === 3) {
+      const requiredDocs: [keyof Documents, string][] = [
+        ["kk", "Scan Kartu Keluarga"],
+        ["akta", "Scan Akta Kelahiran"],
+        ["surat_sekolah", "Scan Surat Keterangan Aktif"],
+        ["ktp_ortu", "Scan KTP Ayah dan Ibu"],
+        ["bukti_transfer", "Bukti Transfer Pendaftaran"],
+      ];
+      for (const [key, label] of requiredDocs) {
+        if (!docs[key]) e[`doc_${key}`] = `${label} wajib diupload`;
+      }
+    }
+
     setErrors(e);
 
     if (Object.keys(e).length > 0) {
@@ -211,8 +246,42 @@ export default function PPDBForm() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  async function uploadFile(file: File, path: string): Promise<string | null> {
+    const { data: uploadData, error } = await supabase.storage
+      .from("ppdb-documents")
+      .upload(path, file, { contentType: file.type, upsert: true });
+
+    if (error) return null;
+
+    const { data: urlData } = supabase.storage
+      .from("ppdb-documents")
+      .getPublicUrl(uploadData.path);
+
+    return urlData.publicUrl;
+  }
+
   async function handleSubmit() {
     setLoading(true);
+
+    const nisn = data.nisn || Date.now().toString();
+    const folder = `ppdb-${new Date().getFullYear()}/${nisn}`;
+
+    const [kkUrl, aktaUrl, suratUrl, ktpUrl, transferUrl] = await Promise.all([
+      docs.kk ? uploadFile(docs.kk, `${folder}/kk.${docs.kk.name.split(".").pop()}`) : Promise.resolve(null),
+      docs.akta ? uploadFile(docs.akta, `${folder}/akta.${docs.akta.name.split(".").pop()}`) : Promise.resolve(null),
+      docs.surat_sekolah ? uploadFile(docs.surat_sekolah, `${folder}/surat.${docs.surat_sekolah.name.split(".").pop()}`) : Promise.resolve(null),
+      docs.ktp_ortu ? uploadFile(docs.ktp_ortu, `${folder}/ktp.${docs.ktp_ortu.name.split(".").pop()}`) : Promise.resolve(null),
+      docs.bukti_transfer ? uploadFile(docs.bukti_transfer, `${folder}/transfer.${docs.bukti_transfer.name.split(".").pop()}`) : Promise.resolve(null),
+    ]);
+
+    const documents = {
+      kk: kkUrl,
+      akta: aktaUrl,
+      surat_sekolah: suratUrl,
+      ktp_ortu: ktpUrl,
+      bukti_transfer: transferUrl,
+    };
+
     const { error } = await supabase.from("ppdb_registrations").insert({
       full_name: data.full_name,
       birth_place: data.birth_place,
@@ -225,7 +294,9 @@ export default function PPDBForm() {
       parent_occupation: data.father_job,
       previous_school: data.previous_school,
       registration_path: data.program.includes("Boarding") ? "reguler" : "reguler",
+      documents,
     });
+
     setLoading(false);
     if (!error) setSuccess(true);
   }
@@ -251,7 +322,7 @@ export default function PPDBForm() {
               {i < step ? <CheckCircle className="h-4 w-4" /> : i + 1}
             </div>
             <span className={`ml-2 text-sm ${i === step ? "font-semibold text-[#082b59]" : "text-slate-400"}`}>{s}</span>
-            {i < steps.length - 1 && <div className="mx-3 h-px w-8 bg-[#dce3ed]" />}
+            {i < steps.length - 1 && <div className="mx-3 h-px w-4 bg-[#dce3ed] md:w-8" />}
           </div>
         ))}
       </div>
@@ -377,81 +448,115 @@ export default function PPDBForm() {
             </div>
           )}
 
-          {/* Step 3: Selesai */}
+          {/* Step 3: Upload Berkas */}
           {step === 3 && (
+            <div className="space-y-5">
+              <h3 className="text-lg font-bold text-[#082b59]">Upload Berkas Persyaratan</h3>
+              <p className="text-sm text-slate-500">Format: PDF, JPG, PNG. Maksimal 1 MB per file.</p>
+
+              <div data-field="doc_kk">
+                <FileUpload
+                  label="Scan Kartu Keluarga"
+                  required
+                  value={docs.kk}
+                  onChange={(file) => updateDoc("kk", file)}
+                  error={errors.doc_kk}
+                />
+              </div>
+
+              <div data-field="doc_akta">
+                <FileUpload
+                  label="Scan Akta Kelahiran"
+                  required
+                  value={docs.akta}
+                  onChange={(file) => updateDoc("akta", file)}
+                  error={errors.doc_akta}
+                />
+              </div>
+
+              <div data-field="doc_surat_sekolah">
+                <FileUpload
+                  label="Scan Surat Keterangan Aktif dari Sekolah Asal"
+                  required
+                  value={docs.surat_sekolah}
+                  onChange={(file) => updateDoc("surat_sekolah", file)}
+                  error={errors.doc_surat_sekolah}
+                />
+              </div>
+
+              <div data-field="doc_ktp_ortu">
+                <FileUpload
+                  label="Scan KTP Ayah dan Ibu"
+                  required
+                  value={docs.ktp_ortu}
+                  onChange={(file) => updateDoc("ktp_ortu", file)}
+                  error={errors.doc_ktp_ortu}
+                />
+              </div>
+
+              <div data-field="doc_bukti_transfer">
+                <FileUpload
+                  label="Bukti Transfer Pendaftaran Rp. 200.000"
+                  required
+                  value={docs.bukti_transfer}
+                  onChange={(file) => updateDoc("bukti_transfer", file)}
+                  error={errors.doc_bukti_transfer}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Konfirmasi */}
+          {step === 4 && (
             <div className="space-y-5">
               <h3 className="text-lg font-bold text-[#082b59]">Konfirmasi Data</h3>
 
-              {/* Program */}
               <div className="rounded-xl border border-[#dce3ed] bg-[#f4f7fb] p-4">
                 <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-[#1767b1]">Program</h4>
-                <div className="grid gap-2 text-sm md:grid-cols-2">
-                  <div><span className="text-slate-500">Program:</span> <span className="font-medium">{data.program || "-"}</span></div>
-                </div>
+                <div className="text-sm"><span className="font-medium">{data.program || "-"}</span></div>
               </div>
 
-              {/* Data Siswa */}
               <div className="rounded-xl border border-[#dce3ed] bg-[#f4f7fb] p-4">
                 <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-[#1767b1]">Data Siswa</h4>
                 <div className="grid gap-2 text-sm md:grid-cols-2">
-                  <div><span className="text-slate-500">Nama Lengkap:</span> <span className="font-medium">{data.full_name || "-"}</span></div>
-                  <div><span className="text-slate-500">Nama Panggilan:</span> <span className="font-medium">{data.nickname || "-"}</span></div>
-                  <div><span className="text-slate-500">Jenis Kelamin:</span> <span className="font-medium">{data.gender === "L" ? "Laki-Laki" : "Perempuan"}</span></div>
-                  <div><span className="text-slate-500">Tempat Lahir:</span> <span className="font-medium">{data.birth_place || "-"}</span></div>
-                  <div><span className="text-slate-500">Tanggal Lahir:</span> <span className="font-medium">{data.birth_date || "-"}</span></div>
-                  <div><span className="text-slate-500">Golongan Darah:</span> <span className="font-medium">{data.blood_type || "-"}</span></div>
-                  <div><span className="text-slate-500">NISN:</span> <span className="font-medium">{data.nisn || "-"}</span></div>
-                  <div><span className="text-slate-500">NIK:</span> <span className="font-medium">{data.nik || "-"}</span></div>
-                  <div><span className="text-slate-500">Tinggi Badan:</span> <span className="font-medium">{data.height ? `${data.height} cm` : "-"}</span></div>
-                  <div><span className="text-slate-500">Berat Badan:</span> <span className="font-medium">{data.weight ? `${data.weight} kg` : "-"}</span></div>
-                  <div><span className="text-slate-500">Bahasa Sehari-hari:</span> <span className="font-medium">{data.language || "-"}</span></div>
-                  <div><span className="text-slate-500">Hobi:</span> <span className="font-medium">{data.hobby || "-"}</span></div>
-                  <div><span className="text-slate-500">Cita-cita:</span> <span className="font-medium">{data.ambition || "-"}</span></div>
-                  <div><span className="text-slate-500">Anak Ke-:</span> <span className="font-medium">{data.child_order || "-"}</span></div>
-                  <div><span className="text-slate-500">Jumlah Saudara:</span> <span className="font-medium">{data.siblings || "-"}</span></div>
-                  <div><span className="text-slate-500">Yatim/Piatu:</span> <span className="font-medium">{data.orphan_status === "tidak" ? "Tidak" : data.orphan_status === "yatim" ? "Yatim" : data.orphan_status === "piatu" ? "Piatu" : "Yatim Piatu"}</span></div>
-                  <div className="md:col-span-2"><span className="text-slate-500">Asal Sekolah:</span> <span className="font-medium">{data.previous_school || "-"}</span></div>
-                  <div className="md:col-span-2"><span className="text-slate-500">Alamat:</span> <span className="font-medium">{data.address || "-"}</span></div>
+                  <div><span className="text-slate-500">Nama:</span> <span className="font-medium">{data.full_name || "-"}</span></div>
+                  <div><span className="text-slate-500">Panggilan:</span> <span className="font-medium">{data.nickname || "-"}</span></div>
+                  <div><span className="text-slate-500">Lahir:</span> <span className="font-medium">{data.birth_place}, {data.birth_date}</span></div>
+                  <div><span className="text-slate-500">NISN/NIK:</span> <span className="font-medium">{data.nisn} / {data.nik}</span></div>
+                  <div><span className="text-slate-500">Sekolah:</span> <span className="font-medium">{data.previous_school || "-"}</span></div>
+                  <div><span className="text-slate-500">Alamat:</span> <span className="font-medium">{data.address || "-"}</span></div>
                 </div>
               </div>
 
-              {/* Data Orang Tua */}
               <div className="rounded-xl border border-[#dce3ed] bg-[#f4f7fb] p-4">
                 <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-[#1767b1]">Data Orang Tua</h4>
-                <div className="space-y-3 text-sm">
-                  <div className="grid gap-2 md:grid-cols-2">
-                    <div><span className="text-slate-500">Nama Ayah:</span> <span className="font-medium">{data.father_name || "-"}</span></div>
-                    <div><span className="text-slate-500">Tempat Lahir Ayah:</span> <span className="font-medium">{data.father_birth_place || "-"}</span></div>
-                    <div><span className="text-slate-500">Tanggal Lahir Ayah:</span> <span className="font-medium">{data.father_birth_date || "-"}</span></div>
-                    <div><span className="text-slate-500">Pendidikan Ayah:</span> <span className="font-medium">{data.father_education || "-"}</span></div>
-                    <div><span className="text-slate-500">Pekerjaan Ayah:</span> <span className="font-medium">{data.father_job || "-"}</span></div>
-                    <div><span className="text-slate-500">Penghasilan Ayah:</span> <span className="font-medium">{data.father_income ? `Rp ${data.father_income.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}` : "-"}</span></div>
-                  </div>
-                  <div className="border-t border-[#dce3ed] pt-3">
-                    <div className="grid gap-2 md:grid-cols-2">
-                      <div><span className="text-slate-500">Nama Ibu:</span> <span className="font-medium">{data.mother_name || "-"}</span></div>
-                      <div><span className="text-slate-500">Tempat Lahir Ibu:</span> <span className="font-medium">{data.mother_birth_place || "-"}</span></div>
-                      <div><span className="text-slate-500">Tanggal Lahir Ibu:</span> <span className="font-medium">{data.mother_birth_date || "-"}</span></div>
-                      <div><span className="text-slate-500">Pendidikan Ibu:</span> <span className="font-medium">{data.mother_education || "-"}</span></div>
-                      <div><span className="text-slate-500">Pekerjaan Ibu:</span> <span className="font-medium">{data.mother_job || "-"}</span></div>
-                      <div><span className="text-slate-500">Penghasilan Ibu:</span> <span className="font-medium">{data.mother_income ? `Rp ${data.mother_income.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}` : "-"}</span></div>
-                    </div>
-                  </div>
-                  <div className="border-t border-[#dce3ed] pt-3">
-                    <div><span className="text-slate-500">No. HP/WA:</span> <span className="font-medium">{data.phone || "-"}</span></div>
-                  </div>
+                <div className="grid gap-2 text-sm md:grid-cols-2">
+                  <div><span className="text-slate-500">Ayah:</span> <span className="font-medium">{data.father_name || "-"}</span></div>
+                  <div><span className="text-slate-500">Ibu:</span> <span className="font-medium">{data.mother_name || "-"}</span></div>
+                  <div><span className="text-slate-500">HP:</span> <span className="font-medium">{data.phone || "-"}</span></div>
                 </div>
               </div>
 
-              <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-700">
-                <p className="font-medium">Berkas yang perlu dikumpulkan:</p>
-                <ol className="mt-2 list-decimal space-y-1 pl-4">
-                  <li>Scan Kartu Keluarga</li>
-                  <li>Scan Akta Kelahiran</li>
-                  <li>Scan Surat Keterangan Aktif dari Sekolah Asal</li>
-                  <li>Scan KTP Ayah dan Ibu</li>
-                  <li>Bukti Transfer Pendaftaran Rp. 200.000</li>
-                </ol>
+              <div className="rounded-xl border border-[#dce3ed] bg-[#f4f7fb] p-4">
+                <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-[#1767b1]">Berkas ({Object.values(docs).filter(Boolean).length}/5)</h4>
+                <div className="space-y-1 text-sm">
+                  {[
+                    ["kk", "Kartu Keluarga"],
+                    ["akta", "Akta Kelahiran"],
+                    ["surat_sekolah", "Surat Sekolah"],
+                    ["ktp_ortu", "KTP Orang Tua"],
+                    ["bukti_transfer", "Bukti Transfer"],
+                  ].map(([key, label]) => (
+                    <div key={key} className="flex items-center gap-2">
+                      {docs[key as keyof Documents] ? (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <div className="h-4 w-4 rounded-full border-2 border-red-400" />
+                      )}
+                      <span className={docs[key as keyof Documents] ? "text-green-700" : "text-red-600"}>{label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -463,7 +568,7 @@ export default function PPDBForm() {
                 <ArrowLeft className="h-4 w-4" /> Kembali
               </button>
             ) : <div />}
-            {step < 3 ? (
+            {step < 4 ? (
               <button onClick={handleNext} className="flex items-center gap-2 rounded-xl bg-[#082b59] px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-[#1767b1]">
                 Selanjutnya <ArrowRight className="h-4 w-4" />
               </button>

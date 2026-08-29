@@ -36,7 +36,7 @@ export interface PPDBRegistration {
   previous_school: string;
   registration_path: "reguler" | "prestasi" | "beasiswa";
   status: "pending" | "accepted" | "rejected";
-  documents_url: string;
+  documents: Record<string, string> | null;
   admin_notes: string;
   created_at: string;
   updated_at: string;

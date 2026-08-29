@@ -105,7 +105,7 @@ create table if not exists ppdb_registrations (
   previous_school text default '',
   registration_path text not null default 'reguler' check (registration_path in ('reguler', 'prestasi', 'beasiswa')),
   status text not null default 'pending' check (status in ('pending', 'accepted', 'rejected')),
-  documents_url text default '',
+  documents jsonb default '{}',
   admin_notes text default '',
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -132,8 +132,7 @@ insert into teachers (name, subject, position, sort_order) values
   ('Rudi Hartono, S.Pd', 'Bahasa Inggris', 'Guru Bahasa Inggris', 3),
   ('Jimi Priyo Assiddiq, S.Pd., M.Pd', 'TIK', 'Guru TIK', 4),
   ('Muhammad Arif, S.Pd., M.Pd', 'IPA', 'Guru IPA', 5),
-  ('Khoirul Anwar, S.Pd', 'Administrasi', 'Operator Sekolah', 6),
-  ('Dr. Burhanudin Harahap, S.Pd, M.Pd', 'Kepala Sekolah', 'Kepala Sekolah', 0)
+  ('Khoirul Anwar, S.Pd', 'Administrasi', 'Operator Sekolah', 6)
 on conflict do nothing;
 
 -- ============================================================
@@ -258,3 +257,34 @@ create index if not exists idx_articles_slug on articles(slug);
 create index if not exists idx_articles_published on articles(is_published, published_at desc);
 create index if not exists idx_teachers_active on teachers(is_active);
 create index if not exists idx_facilities_active on facilities(is_active);
+
+-- ============================================================
+-- 10. SUPABASE STORAGE - PPDB Documents Bucket
+-- ============================================================
+-- Create storage bucket (run in Supabase Dashboard > Storage > New Bucket)
+-- Bucket name: ppdb-documents
+-- Public: yes (or configure RLS policies below)
+--
+-- SQL to create bucket via SQL Editor:
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'ppdb-documents',
+  'ppdb-documents',
+  true,
+  1048576,
+  array['application/pdf', 'image/jpeg', 'image/png']
+)
+on conflict (id) do nothing;
+
+-- Storage RLS policies
+create policy "Public read ppdb documents"
+  on storage.objects for select
+  using (bucket_id = 'ppdb-documents');
+
+create policy "Public insert ppdb documents"
+  on storage.objects for insert
+  with check (bucket_id = 'ppdb-documents');
+
+create policy "Admin manage ppdb documents"
+  on storage.objects for all
+  using (bucket_id = 'ppdb-documents' and auth.role() = 'authenticated');
