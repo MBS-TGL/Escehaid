@@ -519,13 +519,33 @@ export default function PPDBForm() {
           {/* Step 4: Konfirmasi */}
           {step === 4 && (
             <div className="space-y-5">
-              <h3 className="text-lg font-bold text-[#082b59]">Konfirmasi Data</h3>
-              <p className="text-sm text-slate-500">Pastikan semua data sudah benar sebelum mengirim pendaftaran.</p>
+              <div>
+                <h3 className="text-lg font-bold text-[#082b59]">Konfirmasi Data</h3>
+                <p className="mt-1 text-sm text-slate-500">Pastikan semua data sudah benar sebelum mengirim pendaftaran.</p>
+              </div>
+
+              {/* Ringkasan */}
+              <div className="flex items-center gap-3 rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-3">
+                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                  <span>4 Step Selesai</span>
+                </div>
+                <div className="h-4 w-px bg-slate-300" />
+                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                  <span>{Object.values(docs).filter(Boolean).length}/5 Berkas</span>
+                </div>
+                <div className="h-4 w-px bg-slate-300" />
+                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <div className="h-3.5 w-3.5 rounded-full border-2 border-[#1767b1]" />
+                  <span className="font-medium text-[#1767b1]">{data.program}</span>
+                </div>
+              </div>
 
               {/* Program */}
               <div className="overflow-hidden rounded-xl border border-[#dce3ed] bg-white">
-                <div className="flex items-center gap-2 bg-[#082b59] px-4 py-2.5">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs font-bold text-white">1</div>
+                <div className="flex items-center gap-2.5 bg-[#082b59] px-4 py-2.5">
+                  <div className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/20 text-[11px] font-bold text-white">1</div>
                   <h4 className="text-sm font-bold text-white">Program Pilihan</h4>
                 </div>
                 <div className="p-4">
@@ -537,73 +557,91 @@ export default function PPDBForm() {
 
               {/* Data Siswa */}
               <div className="overflow-hidden rounded-xl border border-[#dce3ed] bg-white">
-                <div className="flex items-center gap-2 bg-[#082b59] px-4 py-2.5">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs font-bold text-white">2</div>
+                <div className="flex items-center gap-2.5 bg-[#082b59] px-4 py-2.5">
+                  <div className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/20 text-[11px] font-bold text-white">2</div>
                   <h4 className="text-sm font-bold text-white">Data Siswa</h4>
                 </div>
-                <div className="divide-y divide-[#f0f3f8] p-4">
-                  <div className="grid gap-3 pb-3 text-sm md:grid-cols-2">
-                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Nama Lengkap</span><span className="ml-auto font-medium text-[#082b59]">{data.full_name || "-"}</span></div>
-                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Nama Panggilan</span><span className="ml-auto font-medium text-[#082b59]">{data.nickname || "-"}</span></div>
-                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Jenis Kelamin</span><span className="ml-auto font-medium text-[#082b59]">{data.gender === "L" ? "Laki-Laki" : "Perempuan"}</span></div>
-                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Golongan Darah</span><span className="ml-auto font-medium text-[#082b59]">{data.blood_type || "-"}</span></div>
-                  </div>
-                  <div className="grid gap-3 py-3 text-sm md:grid-cols-2">
-                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Tempat, Tanggal Lahir</span><span className="ml-auto text-right font-medium text-[#082b59]">{data.birth_place}, {data.birth_date}</span></div>
-                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">NISN / NIK</span><span className="ml-auto text-right font-medium text-[#082b59]">{data.nisn} / {data.nik}</span></div>
-                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Tinggi / Berat Badan</span><span className="ml-auto font-medium text-[#082b59]">{data.height} cm / {data.weight} kg</span></div>
-                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Anak Ke-</span><span className="ml-auto font-medium text-[#082b59]">{data.child_order} dari {data.siblings} bersaudara</span></div>
-                  </div>
-                  <div className="grid gap-3 py-3 text-sm md:grid-cols-2">
-                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Bahasa Sehari-hari</span><span className="ml-auto font-medium text-[#082b59]">{data.language || "-"}</span></div>
-                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Hobi</span><span className="ml-auto font-medium text-[#082b59]">{data.hobby || "-"}</span></div>
-                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Cita-cita</span><span className="ml-auto font-medium text-[#082b59]">{data.ambition || "-"}</span></div>
-                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Yatim/Piatu</span><span className="ml-auto font-medium text-[#082b59]">{data.orphan_status === "tidak" ? "Tidak" : data.orphan_status === "yatim" ? "Yatim" : data.orphan_status === "piatu" ? "Piatu" : "Yatim Piatu"}</span></div>
-                  </div>
-                  <div className="pt-3 text-sm">
-                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">Asal Sekolah</span><span className="ml-auto font-medium text-[#082b59]">{data.previous_school || "-"}</span></div>
-                    <div className="mt-2 flex gap-2"><span className="shrink-0 text-slate-400">Alamat</span><span className="ml-auto text-right font-medium text-[#082b59]">{data.address || "-"}</span></div>
-                  </div>
+                <div className="p-4">
+                  <table className="w-full text-sm">
+                    <tbody>
+                      <tr><td className="w-40 py-1.5 text-slate-400">Nama Lengkap</td><td className="py-1.5 font-medium text-[#082b59]">{data.full_name || "-"}</td></tr>
+                      <tr><td className="py-1.5 text-slate-400">Nama Panggilan</td><td className="py-1.5 font-medium text-[#082b59]">{data.nickname || "-"}</td></tr>
+                      <tr className="border-t border-[#f0f3f8]"><td className="py-1.5 text-slate-400">Jenis Kelamin</td><td className="py-1.5 font-medium text-[#082b59]">{data.gender === "L" ? "Laki-Laki" : "Perempuan"}</td></tr>
+                      <tr><td className="py-1.5 text-slate-400">Golongan Darah</td><td className="py-1.5 font-medium text-[#082b59]">{data.blood_type || "-"}</td></tr>
+                      <tr className="border-t border-[#f0f3f8]"><td className="py-1.5 text-slate-400">Tempat, Tanggal Lahir</td><td className="py-1.5 font-medium text-[#082b59]">{data.birth_place}, {data.birth_date}</td></tr>
+                      <tr><td className="py-1.5 text-slate-400">NISN</td><td className="py-1.5 font-mono font-medium text-[#082b59]">{data.nisn || "-"}</td></tr>
+                      <tr className="border-t border-[#f0f3f8]"><td className="py-1.5 text-slate-400">NIK</td><td className="py-1.5 font-mono font-medium text-[#082b59]">{data.nik || "-"}</td></tr>
+                      <tr><td className="py-1.5 text-slate-400">Tinggi / Berat Badan</td><td className="py-1.5 font-medium text-[#082b59]">{data.height} cm / {data.weight} kg</td></tr>
+                      <tr className="border-t border-[#f0f3f8]"><td className="py-1.5 text-slate-400">Anak Ke-</td><td className="py-1.5 font-medium text-[#082b59]">{data.child_order} dari {data.siblings} bersaudara</td></tr>
+                      <tr><td className="py-1.5 text-slate-400">Bahasa Sehari-hari</td><td className="py-1.5 font-medium text-[#082b59]">{data.language || "-"}</td></tr>
+                      <tr className="border-t border-[#f0f3f8]"><td className="py-1.5 text-slate-400">Hobi</td><td className="py-1.5 font-medium text-[#082b59]">{data.hobby || "-"}</td></tr>
+                      <tr><td className="py-1.5 text-slate-400">Cita-cita</td><td className="py-1.5 font-medium text-[#082b59]">{data.ambition || "-"}</td></tr>
+                      <tr className="border-t border-[#f0f3f8]"><td className="py-1.5 text-slate-400">Yatim/Piatu</td><td className="py-1.5 font-medium text-[#082b59]">{data.orphan_status === "tidak" ? "Tidak" : data.orphan_status === "yatim" ? "Yatim" : data.orphan_status === "piatu" ? "Piatu" : "Yatim Piatu"}</td></tr>
+                      <tr className="border-t border-[#f0f3f8]"><td className="py-1.5 text-slate-400">Asal Sekolah</td><td className="py-1.5 font-medium text-[#082b59]">{data.previous_school || "-"}</td></tr>
+                      <tr><td className="py-1.5 align-top text-slate-400">Alamat</td><td className="py-1.5 font-medium text-[#082b59]">{data.address || "-"}</td></tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
               {/* Data Orang Tua */}
               <div className="overflow-hidden rounded-xl border border-[#dce3ed] bg-white">
-                <div className="flex items-center gap-2 bg-[#082b59] px-4 py-2.5">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs font-bold text-white">3</div>
+                <div className="flex items-center gap-2.5 bg-[#082b59] px-4 py-2.5">
+                  <div className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/20 text-[11px] font-bold text-white">3</div>
                   <h4 className="text-sm font-bold text-white">Data Orang Tua</h4>
                 </div>
                 <div className="divide-y divide-[#f0f3f8] p-4">
-                  <div className="pb-3">
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[#1767b1]">Ayah</p>
-                    <div className="grid gap-2 text-sm md:grid-cols-2">
-                      <div className="flex gap-2"><span className="shrink-0 text-slate-400">Nama</span><span className="ml-auto font-medium text-[#082b59]">{data.father_name || "-"}</span></div>
-                      <div className="flex gap-2"><span className="shrink-0 text-slate-400">Lahir</span><span className="ml-auto font-medium text-[#082b59]">{data.father_birth_place}, {data.father_birth_date}</span></div>
-                      <div className="flex gap-2"><span className="shrink-0 text-slate-400">Pendidikan</span><span className="ml-auto font-medium text-[#082b59]">{data.father_education || "-"}</span></div>
-                      <div className="flex gap-2"><span className="shrink-0 text-slate-400">Pekerjaan</span><span className="ml-auto font-medium text-[#082b59]">{data.father_job || "-"}</span></div>
-                      <div className="flex gap-2 md:col-span-2"><span className="shrink-0 text-slate-400">Penghasilan/bln</span><span className="ml-auto font-medium text-[#082b59]">{data.father_income ? `Rp ${data.father_income}` : "-"}</span></div>
+                  {/* Ayah */}
+                  <div className="pb-4">
+                    <div className="mb-2 flex items-center gap-2">
+                      <div className="h-5 w-1 rounded-full bg-[#1767b1]" />
+                      <p className="text-xs font-bold uppercase tracking-wide text-[#1767b1]">Ayah</p>
                     </div>
+                    <table className="w-full text-sm">
+                      <tbody>
+                        <tr><td className="w-36 py-1 text-slate-400">Nama</td><td className="py-1 font-medium text-[#082b59]">{data.father_name || "-"}</td></tr>
+                        <tr><td className="py-1 text-slate-400">Tempat, Tanggal Lahir</td><td className="py-1 font-medium text-[#082b59]">{data.father_birth_place}, {data.father_birth_date}</td></tr>
+                        <tr><td className="py-1 text-slate-400">Pendidikan</td><td className="py-1 font-medium text-[#082b59]">{data.father_education || "-"}</td></tr>
+                        <tr><td className="py-1 text-slate-400">Pekerjaan</td><td className="py-1 font-medium text-[#082b59]">{data.father_job || "-"}</td></tr>
+                        <tr><td className="py-1 text-slate-400">Penghasilan/bulan</td><td className="py-1 font-medium text-[#082b59]">{data.father_income ? `Rp ${data.father_income}` : "-"}</td></tr>
+                      </tbody>
+                    </table>
                   </div>
-                  <div className="pt-3">
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[#1767b1]">Ibu</p>
-                    <div className="grid gap-2 text-sm md:grid-cols-2">
-                      <div className="flex gap-2"><span className="shrink-0 text-slate-400">Nama</span><span className="ml-auto font-medium text-[#082b59]">{data.mother_name || "-"}</span></div>
-                      <div className="flex gap-2"><span className="shrink-0 text-slate-400">Lahir</span><span className="ml-auto font-medium text-[#082b59]">{data.mother_birth_place}, {data.mother_birth_date}</span></div>
-                      <div className="flex gap-2"><span className="shrink-0 text-slate-400">Pendidikan</span><span className="ml-auto font-medium text-[#082b59]">{data.mother_education || "-"}</span></div>
-                      <div className="flex gap-2"><span className="shrink-0 text-slate-400">Pekerjaan</span><span className="ml-auto font-medium text-[#082b59]">{data.mother_job || "-"}</span></div>
-                      <div className="flex gap-2 md:col-span-2"><span className="shrink-0 text-slate-400">Penghasilan/bln</span><span className="ml-auto font-medium text-[#082b59]">{data.mother_income ? `Rp ${data.mother_income}` : "-"}</span></div>
+                  {/* Ibu */}
+                  <div className="pt-4">
+                    <div className="mb-2 flex items-center gap-2">
+                      <div className="h-5 w-1 rounded-full bg-[#1767b1]" />
+                      <p className="text-xs font-bold uppercase tracking-wide text-[#1767b1]">Ibu</p>
                     </div>
+                    <table className="w-full text-sm">
+                      <tbody>
+                        <tr><td className="w-36 py-1 text-slate-400">Nama</td><td className="py-1 font-medium text-[#082b59]">{data.mother_name || "-"}</td></tr>
+                        <tr><td className="py-1 text-slate-400">Tempat, Tanggal Lahir</td><td className="py-1 font-medium text-[#082b59]">{data.mother_birth_place}, {data.mother_birth_date}</td></tr>
+                        <tr><td className="py-1 text-slate-400">Pendidikan</td><td className="py-1 font-medium text-[#082b59]">{data.mother_education || "-"}</td></tr>
+                        <tr><td className="py-1 text-slate-400">Pekerjaan</td><td className="py-1 font-medium text-[#082b59]">{data.mother_job || "-"}</td></tr>
+                        <tr><td className="py-1 text-slate-400">Penghasilan/bulan</td><td className="py-1 font-medium text-[#082b59]">{data.mother_income ? `Rp ${data.mother_income}` : "-"}</td></tr>
+                      </tbody>
+                    </table>
                   </div>
-                  <div className="pt-3 text-sm">
-                    <div className="flex gap-2"><span className="shrink-0 text-slate-400">No. HP/WA</span><span className="ml-auto font-medium text-[#082b59]">{data.phone || "-"}</span></div>
+                  {/* Kontak */}
+                  <div className="pt-4">
+                    <div className="mb-2 flex items-center gap-2">
+                      <div className="h-5 w-1 rounded-full bg-[#1767b1]" />
+                      <p className="text-xs font-bold uppercase tracking-wide text-[#1767b1]">Kontak</p>
+                    </div>
+                    <table className="w-full text-sm">
+                      <tbody>
+                        <tr><td className="w-36 py-1 text-slate-400">No. HP/WA</td><td className="py-1 font-medium text-[#082b59]">{data.phone || "-"}</td></tr>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
 
               {/* Berkas */}
               <div className="overflow-hidden rounded-xl border border-[#dce3ed] bg-white">
-                <div className="flex items-center gap-2 bg-[#082b59] px-4 py-2.5">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs font-bold text-white">4</div>
+                <div className="flex items-center gap-2.5 bg-[#082b59] px-4 py-2.5">
+                  <div className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/20 text-[11px] font-bold text-white">4</div>
                   <h4 className="text-sm font-bold text-white">Berkas ({Object.values(docs).filter(Boolean).length}/5)</h4>
                 </div>
                 <div className="p-4">
@@ -615,7 +653,7 @@ export default function PPDBForm() {
                       ["ktp_ortu", "KTP Orang Tua"],
                       ["bukti_transfer", "Bukti Transfer"],
                     ].map(([key, label]) => (
-                      <div key={key} className={`flex items-center gap-2 rounded-lg px-3 py-2 ${docs[key as keyof Documents] ? "bg-green-50" : "bg-red-50"}`}>
+                      <div key={key} className={`flex items-center gap-2.5 rounded-lg border px-3 py-2.5 ${docs[key as keyof Documents] ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}>
                         {docs[key as keyof Documents] ? (
                           <CheckCircle className="h-4 w-4 shrink-0 text-green-500" />
                         ) : (
