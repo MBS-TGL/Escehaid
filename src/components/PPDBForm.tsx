@@ -325,8 +325,8 @@ export default function PPDBForm() {
       {/* Progress */}
       <div className="mb-8 flex items-center justify-between">
         {steps.map((s, i) => (
-          <div key={s} className="flex items-center">
-            <div className={`flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+          <div key={s} className="flex items-center gap-0">
+            <div className={`flex aspect-square h-8 min-w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold leading-none transition-colors ${
               i < step ? "bg-green-500 text-white" : i === step ? "bg-[#082b59] text-white" : "bg-[#dce3ed] text-slate-500"
             }`}>
               {i < step ? <CheckCircle className="h-5 w-5" /> : i + 1}
