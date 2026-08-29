@@ -167,6 +167,16 @@ export default function PPDBForm() {
       mother_job: "Ibu Rumah Tangga",
       mother_income: "2000000",
     });
+
+    const dummyPdf = new File(["test"], "dummy-kk.pdf", { type: "application/pdf" });
+    const dummyJpg = new File(["test"], "dummy-akta.jpg", { type: "image/jpeg" });
+    setDocs({
+      kk: dummyPdf,
+      akta: dummyJpg,
+      surat_sekolah: dummyPdf,
+      ktp_ortu: dummyJpg,
+      bukti_transfer: dummyPdf,
+    });
     setErrors({});
   }
 
@@ -319,7 +329,7 @@ export default function PPDBForm() {
             <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors ${
               i < step ? "bg-green-500 text-white" : i === step ? "bg-[#082b59] text-white" : "bg-[#dce3ed] text-slate-500"
             }`}>
-              {i < step ? <CheckCircle className="h-4 w-4" /> : i + 1}
+              {i < step ? <CheckCircle className="h-5 w-5" /> : i + 1}
             </div>
             <span className={`ml-2 text-sm ${i === step ? "font-semibold text-[#082b59]" : "text-slate-400"}`}>{s}</span>
             {i < steps.length - 1 && <div className="mx-3 h-px w-4 bg-[#dce3ed] md:w-8" />}
