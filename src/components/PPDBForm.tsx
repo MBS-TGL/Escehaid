@@ -681,22 +681,33 @@ export default function PPDBForm() {
                 </div>
                 <div className="p-4">
                   <div className="grid gap-2 text-sm md:grid-cols-2">
-                    {[
-                      ["kk", "Kartu Keluarga"],
-                      ["akta", "Akta Kelahiran"],
-                      ["surat_sekolah", "Surat Keterangan Sekolah"],
-                      ["ktp_ortu", "KTP Orang Tua"],
-                      ["bukti_transfer", "Bukti Transfer"],
-                    ].map(([key, label]) => (
-                      <div key={key} className={`flex items-center gap-2.5 rounded-lg border px-3 py-2.5 ${docs[key as keyof Documents] ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}>
-                        {docs[key as keyof Documents] ? (
-                          <CheckCircle className="h-4 w-4 shrink-0 text-green-500" />
-                        ) : (
-                          <div className="h-4 w-4 shrink-0 rounded-full border-2 border-red-400" />
-                        )}
-                        <span className={docs[key as keyof Documents] ? "text-green-700" : "text-red-600"}>{label}</span>
-                      </div>
-                    ))}
+                    {([
+                      ["kk", "Kartu Keluarga", "KK"],
+                      ["akta", "Akta Kelahiran", "Akta"],
+                      ["surat_sekolah", "Surat Keterangan Sekolah", "Surat"],
+                      ["ktp_ortu", "KTP Orang Tua", "KTP"],
+                      ["bukti_transfer", "Bukti Transfer", "Transfer"],
+                    ] as [keyof Documents, string, string][]).map(([key, label, abbr]) => {
+                      const file = docs[key];
+                      const sizeKB = file ? (file.size / 1024).toFixed(1) : null;
+                      const ext = file?.name.split(".").pop()?.toUpperCase();
+                      return (
+                        <div key={key} className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 ${file ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}>
+                          <div className={`flex h-9 min-w-9 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold ${file ? "bg-green-100 text-green-700" : "bg-red-100 text-red-500"}`}>
+                            {abbr}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className={`font-medium ${file ? "text-green-700" : "text-red-600"}`}>{label}</div>
+                            {file ? (
+                              <div className="truncate text-[11px] text-slate-400">{file.name} &middot; {sizeKB} KB</div>
+                            ) : (
+                              <div className="text-[11px] text-red-400">Belum diupload</div>
+                            )}
+                          </div>
+                          {file && <CheckCircle className="h-4 w-4 shrink-0 text-green-500" />}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
