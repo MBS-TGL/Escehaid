@@ -264,7 +264,7 @@ export default function PPDBForm() {
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div data-field="birth_place"><Select searchable label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.birth_place} onChange={(val) => update("birth_place", val)} placeholder="Pilih kota/kabupaten" error={errors.birth_place} /></div>
-                <div data-field="birth_date"><Input label="Tanggal Lahir" required type="date" value={data.birth_date} onChange={(e) => update("birth_date", e.target.value)} error={errors.birth_date} /></div>
+                <div data-field="birth_date"><Input label="Tanggal Lahir" required placeholder="dd/mm/yyyy" value={data.birth_date} onChange={(e) => update("birth_date", e.target.value)} error={errors.birth_date} /></div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div data-field="nisn"><Input label="NISN" required placeholder="10 digit angka" value={data.nisn} onChange={(e) => update("nisn", e.target.value)} error={errors.nisn} /></div>
@@ -298,7 +298,7 @@ export default function PPDBForm() {
                   <div data-field="father_name"><Input label="Nama Ayah Kandung" required placeholder="Nama Ayah" value={data.father_name} onChange={(e) => update("father_name", e.target.value)} error={errors.father_name} /></div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div data-field="father_birth_place"><Select searchable label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.father_birth_place} onChange={(val) => update("father_birth_place", val)} placeholder="Pilih kota/kabupaten" error={errors.father_birth_place} /></div>
-                    <div data-field="father_birth_date"><Input label="Tanggal Lahir" required type="date" value={data.father_birth_date} onChange={(e) => update("father_birth_date", e.target.value)} error={errors.father_birth_date} /></div>
+                    <div data-field="father_birth_date"><Input label="Tanggal Lahir" required placeholder="dd/mm/yyyy" value={data.father_birth_date} onChange={(e) => update("father_birth_date", e.target.value)} error={errors.father_birth_date} /></div>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <Input label="Pendidikan Terakhir" placeholder="Contoh: SMA, SMK, S1" value={data.father_education} onChange={(e) => update("father_education", e.target.value)} />
@@ -313,7 +313,7 @@ export default function PPDBForm() {
                   <div data-field="mother_name"><Input label="Nama Ibu Kandung" required placeholder="Nama Ibu" value={data.mother_name} onChange={(e) => update("mother_name", e.target.value)} error={errors.mother_name} /></div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div data-field="mother_birth_place"><Select searchable label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.mother_birth_place} onChange={(val) => update("mother_birth_place", val)} placeholder="Pilih kota/kabupaten" error={errors.mother_birth_place} /></div>
-                    <div data-field="mother_birth_date"><Input label="Tanggal Lahir" required type="date" value={data.mother_birth_date} onChange={(e) => update("mother_birth_date", e.target.value)} error={errors.mother_birth_date} /></div>
+                    <div data-field="mother_birth_date"><Input label="Tanggal Lahir" required placeholder="dd/mm/yyyy" value={data.mother_birth_date} onChange={(e) => update("mother_birth_date", e.target.value)} error={errors.mother_birth_date} /></div>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <Input label="Pendidikan Terakhir" placeholder="Contoh: SMA, SMK, S1" value={data.mother_education} onChange={(e) => update("mother_education", e.target.value)} />
