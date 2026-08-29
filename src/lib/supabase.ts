@@ -22,7 +22,7 @@ export interface SchoolProfile {
   updated_at: string;
 }
 
-export interface PPDBRegistration {
+export interface SpmbRegistration {
   id: string;
   full_name: string;
   birth_place: string;

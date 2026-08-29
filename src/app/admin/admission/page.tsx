@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { MagnifyingGlass, Download, Eye, CheckCircle, XCircle, Clock, FileText, Users } from "@/components/icons";
 import { supabase } from "@/lib/supabase";
-import type { PPDBRegistration } from "@/lib/supabase";
+import type { SpmbRegistration } from "@/lib/supabase";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
@@ -19,7 +19,7 @@ const statusIcons: Record<string, React.ElementType> = {
 
 export default function AdminPPDBPage() {
   const [search, setSearch] = useState("");
-  const [data, setData] = useState<PPDBRegistration[]>([]);
+  const [data, setData] = useState<SpmbRegistration[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export default function AdminPPDBPage() {
 
   async function fetchData() {
     const { data: registrations } = await supabase
-      .from("ppdb_registrations")
+      .from("spmb_registrations")
       .select("*")
       .order("created_at", { ascending: false });
 
@@ -38,7 +38,7 @@ export default function AdminPPDBPage() {
 
   async function updateStatus(id: string, status: "accepted" | "rejected") {
     const { error } = await supabase
-      .from("ppdb_registrations")
+      .from("spmb_registrations")
       .update({ status })
       .eq("id", id);
 

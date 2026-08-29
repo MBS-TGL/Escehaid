@@ -248,13 +248,13 @@ export default function PPDBForm() {
 
   async function uploadFile(file: File, path: string): Promise<string | null> {
     const { data: uploadData, error } = await supabase.storage
-      .from("ppdb-documents")
+      .from("spmb-documents")
       .upload(path, file, { contentType: file.type, upsert: true });
 
     if (error) return null;
 
     const { data: urlData } = supabase.storage
-      .from("ppdb-documents")
+      .from("spmb-documents")
       .getPublicUrl(uploadData.path);
 
     return urlData.publicUrl;
@@ -264,7 +264,7 @@ export default function PPDBForm() {
     setLoading(true);
 
     const nisn = data.nisn || Date.now().toString();
-    const folder = `ppdb-${new Date().getFullYear()}/${nisn}`;
+    const folder = `spmb-${new Date().getFullYear()}/${nisn}`;
 
     const [kkUrl, aktaUrl, suratUrl, ktpUrl, transferUrl] = await Promise.all([
       docs.kk ? uploadFile(docs.kk, `${folder}/kk.${docs.kk.name.split(".").pop()}`) : Promise.resolve(null),
@@ -282,7 +282,7 @@ export default function PPDBForm() {
       bukti_transfer: transferUrl,
     };
 
-    const { error } = await supabase.from("ppdb_registrations").insert({
+    const { error } = await supabase.from("spmb_registrations").insert({
       full_name: data.full_name,
       birth_place: data.birth_place,
       birth_date: data.birth_date,

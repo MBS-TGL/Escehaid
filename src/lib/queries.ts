@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { SchoolProfile, News, Gallery, PPDBRegistration, Teacher, Facility, Article, Achievement, ContactMessage } from "./supabase";
+import type { SchoolProfile, News, Gallery, SpmbRegistration, Teacher, Facility, Article, Achievement, ContactMessage } from "./supabase";
 
 // ============ SCHOOL PROFILE ============
 export async function getSchoolProfile(): Promise<SchoolProfile | null> {
@@ -97,7 +97,7 @@ export async function getGalleryByCategory(category: string): Promise<Gallery[]>
   return data || [];
 }
 
-// ============ PPDB ============
+// ============ SPMB ============
 export async function submitRegistration(registration: {
   full_name: string;
   birth_place?: string;
@@ -111,7 +111,7 @@ export async function submitRegistration(registration: {
   previous_school?: string;
   registration_path: "reguler" | "prestasi" | "beasiswa";
 }): Promise<{ success: boolean; error?: string }> {
-  const { error } = await supabase.from("ppdb_registrations").insert(registration);
+  const { error } = await supabase.from("spmb_registrations").insert(registration);
 
   if (error) {
     console.error("Error submitting registration:", error);
@@ -120,9 +120,9 @@ export async function submitRegistration(registration: {
   return { success: true };
 }
 
-export async function getRegistrationList(): Promise<PPDBRegistration[]> {
+export async function getRegistrationList(): Promise<SpmbRegistration[]> {
   const { data, error } = await supabase
-    .from("ppdb_registrations")
+    .from("spmb_registrations")
     .select("*")
     .order("created_at", { ascending: false });
 
@@ -139,7 +139,7 @@ export async function updateRegistrationStatus(
   notes?: string
 ): Promise<{ success: boolean; error?: string }> {
   const { error } = await supabase
-    .from("ppdb_registrations")
+    .from("spmb_registrations")
     .update({ status, admin_notes: notes })
     .eq("id", id);
 
