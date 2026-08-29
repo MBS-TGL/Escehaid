@@ -109,6 +109,45 @@ export default function PPDBForm() {
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
+  // DEBUG: auto-fill semua field
+  function debugFill() {
+    setData({
+      program: "SMP Boarding",
+      full_name: "Ahmad Fauzi",
+      nickname: "Fauzi",
+      gender: "L",
+      birth_place: "Jember",
+      birth_date: "15/08/2010",
+      nisn: "0012345678",
+      nik: "3509061508100001",
+      height: "155",
+      weight: "45",
+      language: "Bahasa Indonesia",
+      hobby: "Olahraga",
+      ambition: "Dokter",
+      child_order: "2",
+      siblings: "3",
+      blood_type: "O",
+      orphan_status: "tidak",
+      previous_school: "SD Muhammadiyah 01 Tanggul",
+      address: "Jl. Pemandian No. 88, Patemon, Tanggul",
+      phone: "081234567890",
+      father_name: "Budi Santoso",
+      father_birth_place: "Jember",
+      father_birth_date: "10/05/1980",
+      father_education: "S1",
+      father_job: "Wiraswasta",
+      father_income: "5000000",
+      mother_name: "Siti Rahayu",
+      mother_birth_place: "Surabaya",
+      mother_birth_date: "20/08/1982",
+      mother_education: "SMA",
+      mother_job: "Ibu Rumah Tangga",
+      mother_income: "2000000",
+    });
+    setErrors({});
+  }
+
   function validateStep(s: number): boolean {
     const e: Record<string, string> = {};
 
@@ -193,6 +232,15 @@ export default function PPDBForm() {
 
   return (
     <div className="mx-auto max-w-2xl" ref={formRef}>
+      {/* DEBUG BUTTON - hapus sebelum production */}
+      <button
+        type="button"
+        onClick={debugFill}
+        className="mb-4 w-full rounded-xl border border-dashed border-amber-400 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-100"
+      >
+        Debug: Auto Fill Semua Field
+      </button>
+
       {/* Progress */}
       <div className="mb-8 flex items-center justify-between">
         {steps.map((s, i) => (
