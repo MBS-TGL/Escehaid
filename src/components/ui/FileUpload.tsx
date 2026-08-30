@@ -13,6 +13,13 @@ interface FileUploadProps {
   onChange: (file: File | null) => void;
 }
 
+const ALLOWED_TYPES: Record<string, string[]> = {
+  ".pdf": ["application/pdf"],
+  ".jpg": ["image/jpeg"],
+  ".jpeg": ["image/jpeg"],
+  ".png": ["image/png"],
+};
+
 export function FileUpload({ label, required, error, accept = ".pdf,.jpg,.jpeg,.png", maxSize = 1, value, onChange }: FileUploadProps) {
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -23,6 +30,14 @@ export function FileUpload({ label, required, error, accept = ".pdf,.jpg,.jpeg,.
       onChange(null);
       return;
     }
+
+    const ext = "." + file.name.split(".").pop()?.toLowerCase();
+    const allowedMimes = accept.split(",").flatMap((a) => ALLOWED_TYPES[a.trim()] || []);
+    if (allowedMimes.length > 0 && !allowedMimes.includes(file.type)) {
+      toast(`Format tidak didukung. Yang diperbolehkan: ${accept.replace(/\./g, "").toUpperCase()}`, "error");
+      return;
+    }
+
     if (file.size > maxSize * 1024 * 1024) {
       toast(`Ukuran file maksimal ${maxSize} MB`, "error");
       return;
