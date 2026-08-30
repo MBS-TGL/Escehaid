@@ -345,14 +345,6 @@ export default function PPDBForm() {
 
   return (
     <div className="mx-auto max-w-2xl" ref={formRef}>
-      {/* DEBUG BUTTON - hapus sebelum production */}
-      <button
-        type="button"
-        onClick={debugFill}
-        className="mb-4 w-full rounded-xl border border-dashed border-amber-400 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-100"
-      >
-        Debug: Auto Fill Semua Field
-      </button>
 
       {/* Progress */}
       <div className="mb-8 flex items-center justify-center gap-2 md:gap-4">
@@ -720,7 +712,15 @@ export default function PPDBForm() {
               <button onClick={() => { setErrors({}); setStep(step - 1); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-[#082b59]">
                 <ArrowLeft className="h-4 w-4" /> Kembali
               </button>
-            ) : <div />}
+            ) : (
+              <button
+                type="button"
+                onClick={debugFill}
+                className="rounded-lg border border-dashed border-amber-400 bg-amber-50 px-3 py-1.5 text-[11px] font-medium text-amber-600 transition-colors hover:bg-amber-100"
+              >
+                Debug: Auto Fill
+              </button>
+            )}
             {step < 4 ? (
               <button onClick={handleNext} className="flex items-center gap-2 rounded-xl bg-[#082b59] px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-[#1767b1]">
                 Selanjutnya <ArrowRight className="h-4 w-4" />
