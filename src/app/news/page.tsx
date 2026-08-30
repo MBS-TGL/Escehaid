@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight, Newspaper, Clock } from "@/components/icons";
 import { getNewsList } from "@/lib/queries";
-import { FadeIn, StaggerChildren, StaggerItem } from "@/components/animations";
+import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
 import ImageWithLoader from "@/components/ImageWithLoader";
 
 export default async function BeritaPage() {

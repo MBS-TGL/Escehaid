@@ -1,6 +1,6 @@
 import { FileText, CheckCircle, Clock, Warning, GraduationCap, BookOpen, House, Download } from "@/components/icons";
 import Link from "next/link";
-import { FadeIn, StaggerChildren, StaggerItem } from "@/components/animations";
+import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
 
 export default function PPDBPage() {
   return (

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Trophy, MedalMilitary, Medal, Star } from "@/components/icons";
-import { FadeIn, StaggerChildren, StaggerItem } from "@/components/animations";
+import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
 
 const iconMap: Record<string, typeof Trophy> = {
   Akademik: Trophy,

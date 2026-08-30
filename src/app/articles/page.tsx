@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight, BookOpen, FileText } from "@/components/icons";
 import { getArticleList } from "@/lib/queries";
-import { FadeIn, StaggerChildren, StaggerItem } from "@/components/animations";
+import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
 
 export default async function ArtikelPage() {
   const articles = await getArticleList();

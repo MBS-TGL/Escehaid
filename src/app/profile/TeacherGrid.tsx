@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Users } from "@/components/icons";
-import { StaggerChildren, StaggerItem } from "@/components/animations";
+import { StaggerChildren, StaggerItem } from "@/components/Animations";
 import type { Teacher } from "@/lib/supabase";
 
 const CATEGORY_ALL = "Semua";

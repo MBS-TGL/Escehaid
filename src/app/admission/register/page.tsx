@@ -1,5 +1,5 @@
 import SPMBForm from "./SPMBForm";
-import { FadeIn } from "@/components/animations";
+import { FadeIn } from "@/components/Animations";
 import { FileText, CheckCircle, Phone } from "@/components/icons";
 
 export default function SPMBRegisterPage() {

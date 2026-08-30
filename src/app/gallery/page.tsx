@@ -1,6 +1,6 @@
 import { ImageSquare, Star } from "@/components/icons";
 import { getGalleryList } from "@/lib/queries";
-import { FadeIn, StaggerChildren, StaggerItem } from "@/components/animations";
+import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
 import ImageWithLoader from "@/components/ImageWithLoader";
 
 export default async function GalleryPage() {
