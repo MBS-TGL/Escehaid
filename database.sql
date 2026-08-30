@@ -119,6 +119,7 @@ create table if not exists teachers (
   name text not null,
   subject text default '',
   position text default '',
+  categories jsonb default '[]',
   photo_url text default '',
   bio text default '',
   sort_order int default 0,
@@ -126,13 +127,13 @@ create table if not exists teachers (
   created_at timestamptz default now()
 );
 
-insert into teachers (name, subject, position, sort_order) values
-  ('Durrotun Nasyihin, S.Ag', 'Pendidikan Agama Islam', 'Guru PAI', 1),
-  ('Ainul Farhan, S.Pd', 'Matematika', 'Guru Matematika', 2),
-  ('Rudi Hartono, S.Pd', 'Bahasa Inggris', 'Guru Bahasa Inggris', 3),
-  ('Jimi Priyo Assiddiq, S.Pd., M.Pd', 'TIK', 'Guru TIK', 4),
-  ('Muhammad Arif, S.Pd., M.Pd', 'IPA', 'Guru IPA', 5),
-  ('Khoirul Anwar, S.Pd', 'Administrasi', 'Operator Sekolah', 6)
+insert into teachers (name, subject, position, categories, sort_order) values
+  ('Khoirul Anwar, S.Pd', 'Administrasi', 'Kepala Sekolah', '["Kepala Sekolah", "Operator Sekolah"]', 0),
+  ('Durrotun Nasyihin, S.Ag', 'Pendidikan Agama Islam', 'Guru PAI', '["Guru Mapel"]', 1),
+  ('Ainul Farhan, S.Pd', 'Matematika', 'Guru Matematika', '["Guru Mapel"]', 2),
+  ('Rudi Hartono, S.Pd', 'Bahasa Inggris', 'Guru Bahasa Inggris', '["Guru Mapel"]', 3),
+  ('Jimi Priyo Assiddiq, S.Pd., M.Pd', 'TIK', 'Guru TIK', '["Guru Mapel"]', 4),
+  ('Muhammad Arif, S.Pd., M.Pd', 'IPA', 'Guru IPA', '["Guru Mapel"]', 5)
 on conflict do nothing;
 
 -- ============================================================

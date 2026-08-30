@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, FileText, Newspaper, ImageSquare, House, Clock, User } from "@/components/icons";
-import { getNewsList, getTeacherList, getFacilityList, getArticleList } from "@/lib/queries";
+import { getNewsList, getFacilityList, getArticleList } from "@/lib/queries";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/animations";
 import ImageWithLoader from "@/components/ImageWithLoader";
 import FAQ from "@/components/FAQ";

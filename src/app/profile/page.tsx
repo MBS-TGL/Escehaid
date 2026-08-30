@@ -3,6 +3,7 @@ import { MapPin, Phone, Envelope, Users, BookOpen, GraduationCap, Building } fro
 import { getSchoolProfile, getTeacherList, getFacilityList } from "@/lib/queries";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/animations";
 import ImageWithLoader from "@/components/ImageWithLoader";
+import TeacherGrid from "@/components/TeacherGrid";
 
 export default async function ProfilPage() {
   const [profil, teachers, facilities] = await Promise.all([
@@ -208,23 +209,7 @@ export default async function ProfilPage() {
               </div>
             </FadeIn>
           ) : (
-            <StaggerChildren stagger={0.08} className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-6">
-              {teachers
-                .filter((t) => !t.name.includes("Burhanudin"))
-                .map((t) => (
-                <StaggerItem key={t.id}>
-                  <div className="text-center">
-                    <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border-3 border-[#f4f7fb] bg-white">
-                      <span className="text-2xl font-bold text-[#082b59]/30">{t.name.charAt(0)}</span>
-                    </div>
-                    <h3 className="mt-3 text-sm font-semibold text-[#082b59]">{t.name}</h3>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      {t.name.includes("Khoirul Anwar") ? "Kepala Sekolah" : (t.position || t.subject)}
-                    </p>
-                  </div>
-                </StaggerItem>
-              ))}
-            </StaggerChildren>
+            <TeacherGrid teachers={teachers} />
           )}
         </div>
       </section>

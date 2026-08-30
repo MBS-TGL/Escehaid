@@ -73,6 +73,7 @@ export interface Teacher {
   name: string;
   subject: string;
   position: string;
+  categories: string[];
   photo_url: string;
   bio: string;
   sort_order: number;
