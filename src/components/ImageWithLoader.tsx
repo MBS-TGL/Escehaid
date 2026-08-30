@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export default function ImageWithLoader({
   src,
@@ -16,10 +16,16 @@ export default function ImageWithLoader({
   [key: string]: unknown;
 }) {
   const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    if (imgRef.current?.complete) setLoaded(true);
+  }, []);
 
   return (
     <div className={`img-load ${className}`}>
       <img
+        ref={imgRef}
         src={src}
         alt={alt}
         className={`h-full w-full object-cover ${imgClassName} ${loaded ? "loaded" : ""}`}
