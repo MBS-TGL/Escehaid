@@ -1,4 +1,4 @@
-import { ImageSquare, Star } from "@/components/icons";
+import { ImageSquare, Star } from "@/components/Icons";
 import { getGalleryList } from "@/lib/queries";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
 import ImageWithLoader from "@/components/ImageWithLoader";

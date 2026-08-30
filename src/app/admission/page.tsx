@@ -1,4 +1,4 @@
-import { FileText, CheckCircle, Clock, Warning, GraduationCap, BookOpen, House, Download } from "@/components/icons";
+import { FileText, CheckCircle, Clock, Warning, GraduationCap, BookOpen, House, Download } from "@/components/Icons";
 import Link from "next/link";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
 

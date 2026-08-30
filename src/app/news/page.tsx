@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, Newspaper, Clock } from "@/components/icons";
+import { ArrowUpRight, Newspaper, Clock } from "@/components/Icons";
 import { getNewsList } from "@/lib/queries";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
 import ImageWithLoader from "@/components/ImageWithLoader";

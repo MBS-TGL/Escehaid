@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight } from "@/components/icons";
+import { ArrowUpRight } from "@/components/Icons";
 import { getArticleBySlug } from "@/lib/queries";
 
 export default async function ArtikelDetailPage({ params }: { params: Promise<{ slug: string }> }) {

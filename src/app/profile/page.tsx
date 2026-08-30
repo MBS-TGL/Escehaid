@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, Phone, Envelope, Users, BookOpen, GraduationCap, Building } from "@/components/icons";
+import { MapPin, Phone, Envelope, Users, BookOpen, GraduationCap, Building } from "@/components/Icons";
 import { getSchoolProfile, getTeacherList, getFacilityList } from "@/lib/queries";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
 import ImageWithLoader from "@/components/ImageWithLoader";

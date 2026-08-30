@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { submitContactMessage } from "@/lib/queries";
-import { MapPin, Phone, Envelope } from "@/components/icons";
+import { MapPin, Phone, Envelope } from "@/components/Icons";
 
 export default function KontakPage() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: "" });

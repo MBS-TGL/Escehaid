@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, BookOpen, FileText } from "@/components/icons";
+import { ArrowUpRight, BookOpen, FileText } from "@/components/Icons";
 import { getArticleList } from "@/lib/queries";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Users } from "@/components/icons";
+import { Users } from "@/components/Icons";
 import { StaggerChildren, StaggerItem } from "@/components/Animations";
 import type { Teacher } from "@/lib/supabase";
 

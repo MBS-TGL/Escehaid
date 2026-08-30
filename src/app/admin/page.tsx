@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Users, FileText, ImageSquare, Megaphone, ChartBar } from "@/components/icons";
+import { Users, FileText, ImageSquare, Megaphone, ChartBar } from "@/components/Icons";
 
 const stats = [
   { label: "Pendaftar", value: "128", icon: Users, color: "text-[#082b59]" },

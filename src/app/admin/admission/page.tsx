@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MagnifyingGlass, Download, Eye, CheckCircle, XCircle, Clock, FileText, Users } from "@/components/icons";
+import { MagnifyingGlass, Download, Eye, CheckCircle, XCircle, Clock, FileText, Users } from "@/components/Icons";
 import { supabase } from "@/lib/supabase";
 import type { SpmbRegistration } from "@/lib/supabase";
 

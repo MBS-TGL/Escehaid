@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { CheckCircle, ArrowLeft, ArrowRight, FileText } from "@/components/icons";
+import { CheckCircle, ArrowLeft, ArrowRight, FileText } from "@/components/Icons";
 import { supabase } from "@/lib/supabase";
 import { Input, InputRupiah, Select, DatePicker, FileUpload } from "@/components/ui";
 

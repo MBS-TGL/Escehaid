@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Trophy, MedalMilitary, Medal, Star } from "@/components/icons";
+import { Trophy, MedalMilitary, Medal, Star } from "@/components/Icons";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
 
 const iconMap: Record<string, typeof Trophy> = {

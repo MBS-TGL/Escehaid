@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, createContext, useContext, useRef } from "react";
-import { X } from "@/components/icons";
+import { X } from "@/components/Icons";
 
 type ToastType = "error" | "success" | "info";
 
