@@ -37,4 +37,10 @@ export {
   Building,
   ArrowLeft,
   ArrowRight,
+  WhatsappLogo,
+  InstagramLogo,
+  YoutubeLogo,
+  FacebookLogo,
+  SignOut,
+  EyeSlash,
 } from "@phosphor-icons/react";

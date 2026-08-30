@@ -13,6 +13,7 @@ const navLinks = [
   { href: "/news", label: "Berita" },
   { href: "/articles", label: "Artikel" },
   { href: "/gallery", label: "Gallery" },
+  { href: "/contact", label: "Kontak" },
 ];
 
 export default function Navbar() {

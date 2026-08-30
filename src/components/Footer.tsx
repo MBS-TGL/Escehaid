@@ -51,6 +51,7 @@ export default function Footer() {
                 ["/articles", "Artikel"],
                 ["/achievements", "Prestasi"],
                 ["/gallery", "Galeri"],
+                ["/contact", "Kontak"],
               ].map(([href, label]) => (
                 <li key={href}>
                   <Link href={href} className="text-sm text-white/50 transition-colors hover:text-[#f4d21f]">

@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { ToastProvider } from "@/components/ui/Toast";
+import PublicShell from "@/components/PublicShell";
 
 const jakartaSans = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -33,9 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-gray-50">
         <ToastProvider>
-          <Navbar />
-          <main className="flex-1">{children}</main>
-          <Footer />
+          <PublicShell>{children}</PublicShell>
         </ToastProvider>
       </body>
     </html>

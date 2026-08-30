@@ -1,19 +1,21 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, FileText, Newspaper, ImageSquare, House, Clock, User } from "@/components/Icons";
-import { getNewsList, getFacilityList, getArticleList } from "@/lib/queries";
+import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, FileText, Newspaper, ImageSquare, House, Clock } from "@/components/Icons";
+import { getNewsList, getFacilityList, getArticleList, getTeacherList } from "@/lib/queries";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
 import FAQ from "./FAQ";
 import WhatsAppButton from "./WhatsAppButton";
 import HeroCarousel from "./HeroCarousel";
+import TeacherCard from "./TeacherCard";
 
 type NewsItem = { id: string | number; slug: string; title: string; summary: string; category: string; image_url?: string | null; published_at?: string };
 
 export default async function Home() {
-  const [beritaRaw, dbFacilities, articles] = await Promise.all([
+  const [beritaRaw, dbFacilities, articles, teachers] = await Promise.all([
     getNewsList(4) as Promise<NewsItem[]>,
     getFacilityList(),
     getArticleList(4),
+    getTeacherList(),
   ]);
 
   const fallbackFacilities: [string, string, string?, string?][] = [
@@ -114,7 +116,6 @@ export default async function Home() {
       <section className="relative overflow-hidden bg-[#f4f7fb]">
         <div className="mx-auto max-w-[1296px] px-6 py-20 md:px-10 md:py-28">
           <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.3fr] lg:gap-16">
-            {/* Foto Kepala Sekolah */}
             <FadeIn>
               <div className="flex justify-center lg:justify-end">
                 <div className="relative">
@@ -134,7 +135,6 @@ export default async function Home() {
               </div>
             </FadeIn>
 
-            {/* Teks Sambutan */}
             <FadeIn direction="left">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Sambutan Kepala Sekolah</p>
@@ -156,38 +156,6 @@ export default async function Home() {
               </div>
             </FadeIn>
           </div>
-        </div>
-      </section>
-
-      {/* ── GURU & STAFF ────────────────────────────────── */}
-      <section className="bg-white">
-        <div className="mx-auto max-w-[1296px] px-6 py-20 md:px-10 md:py-28">
-          <FadeIn>
-            <div className="mb-12 text-center">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Tim Pengajar</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Guru & Staff</h2>
-            </div>
-          </FadeIn>
-
-          <StaggerChildren stagger={0.1} className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-6">
-            {[
-              ["Durrotun Nasyihin, S.Ag", "Guru PAI"],
-              ["Ainul Farhan, S.Pd", "Guru Matematika"],
-              ["Rudi Hartono, S.Pd", "Guru Bahasa Inggris"],
-              ["Jimi Priyo Assiddiq, S.Pd., M.Pd", "Guru TIK"],
-              ["Muhammad Arif, S.Pd., M.Pd", "Guru IPA"],
-            ].map(([name, role]) => (
-              <StaggerItem key={name}>
-                <div className="group text-center">
-                  <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full border-3 border-[#f4f7fb] bg-[#f4f7fb] transition-all group-hover:border-[#f4d21f] group-hover:bg-[#f4d21f]/10 md:h-32 md:w-32">
-                    <User className="h-12 w-12 text-[#082b59]/40 transition-colors group-hover:text-[#082b59]" weight="light" />
-                  </div>
-                  <h3 className="mt-3 text-sm font-semibold text-[#082b59]">{name}</h3>
-                  <p className="mt-0.5 text-xs text-slate-500">{role}</p>
-                </div>
-              </StaggerItem>
-            ))}
-          </StaggerChildren>
         </div>
       </section>
 
@@ -227,6 +195,26 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* ── GURU & STAFF ────────────────────────────────── */}
+      <section className="bg-white">
+        <div className="mx-auto max-w-[1296px] px-6 py-20 md:px-10 md:py-28">
+          <FadeIn>
+            <div className="mb-12 text-center">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Tim Pengajar</p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Guru & Staff</h2>
+            </div>
+          </FadeIn>
+
+          <StaggerChildren stagger={0.1} className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-5">
+            {teachers.filter((t) => t.position !== "Kepala Sekolah").map((t) => (
+              <StaggerItem key={t.id}>
+                <TeacherCard teacher={t} />
+              </StaggerItem>
+            ))}
+          </StaggerChildren>
+        </div>
+      </section>
+
       {/* ── FASILITAS ─────────────────────────────────────── */}
       <section className="bg-white">
         <div className="mx-auto max-w-[1296px] px-6 py-20 md:px-10 md:py-28">
@@ -244,11 +232,12 @@ export default async function Home() {
               <StaggerItem key={title}>
                 <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] transition-all hover:shadow-lg hover:shadow-[#082b59]/5">
                   <div className="relative h-40 overflow-hidden bg-[#f4f7fb]">
-                    <img
+                    <Image
                       src={image || `https://picsum.photos/seed/${encodeURIComponent(title)}/400/300`}
                       alt={title}
-                      className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 ${pos || ""}`}
-                      loading="lazy"
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      className={`object-cover transition-transform duration-500 group-hover:scale-105 ${pos || ""}`}
                     />
                   </div>
                   <div className="flex flex-1 flex-col p-5">
@@ -256,6 +245,101 @@ export default async function Home() {
                     <p className="mt-2 flex-1 text-[15px] leading-relaxed text-slate-600">{description}</p>
                   </div>
                 </div>
+              </StaggerItem>
+            ))}
+          </StaggerChildren>
+        </div>
+      </section>
+
+      {/* ── BERITA (with images) ──────────────────────────── */}
+      <section className="bg-[#082b59] text-white">
+          <div className="mx-auto max-w-[1296px] px-6 py-20 md:px-10 md:py-28">
+            <FadeIn>
+              <div className="mb-12 flex items-end justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#f4d21f]">Informasi terbaru</p>
+                  <h2 className="mt-3 text-3xl font-semibold md:text-4xl">Berita sekolah</h2>
+                </div>
+                 <Link href="/news" className="text-sm font-semibold text-white/70 hover:text-white transition-colors">
+                  Semua berita <ArrowUpRight className="inline h-4 w-4" />
+                </Link>
+              </div>
+            </FadeIn>
+
+            <StaggerChildren stagger={0.1} className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {beritaRaw.length === 0 ? (
+                <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/5 py-16 text-center">
+                  <Newspaper className="h-12 w-12 text-white/20" />
+                  <p className="mt-4 text-sm text-white/50">Berita masih kosong.</p>
+                  <p className="mt-1 text-xs text-white/30">Nantikan informasi terbaru dari sekolah.</p>
+                </div>
+              ) : beritaRaw.map((item) => (
+                <StaggerItem key={item.id}>
+                  <Link href={`/news/${item.slug}`} className="group block overflow-hidden rounded-2xl border border-white/10 transition-all hover:border-[#f4d21f]/30">
+                    <div className="relative h-36 overflow-hidden bg-white/5">
+                      {item.image_url ? (
+                        <img
+                          src={item.image_url}
+                          alt={item.title}
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <img
+                          src={`https://picsum.photos/seed/${encodeURIComponent(item.title)}/400/300`}
+                          alt={item.title}
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-60"
+                          loading="lazy"
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#082b59]/60 to-transparent" />
+                      <span className="absolute left-3 top-3 rounded-full bg-[#f4d21f] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#082b59]">
+                        {item.category}
+                      </span>
+                    </div>
+                    <div className="p-4">
+                      <h3 className="text-sm font-semibold leading-snug transition-colors group-hover:text-[#f4d21f] line-clamp-2">{item.title}</h3>
+                      <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-white/50">{item.summary}</p>
+                    </div>
+                  </Link>
+                </StaggerItem>
+              ))}
+            </StaggerChildren>
+          </div>
+        </section>
+
+      {/* ── ARTIKEL ──────────────────────────────────────── */}
+      <section className="bg-[#f4f7fb]">
+        <div className="mx-auto max-w-[1296px] px-6 py-20 md:px-10 md:py-28">
+          <FadeIn>
+            <div className="mb-12 flex items-end justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Artikel & Tips</p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Artikel Sekolah</h2>
+              </div>
+               <Link href="/articles" className="text-sm font-semibold text-[#1767b1] transition-colors hover:text-[#082b59]">
+                Semua artikel <ArrowUpRight className="inline h-4 w-4" />
+              </Link>
+            </div>
+          </FadeIn>
+
+          <StaggerChildren stagger={0.1} className="grid gap-6 md:grid-cols-2">
+            {articles.length === 0 ? (
+              <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white py-16 text-center">
+                <BookOpen className="h-12 w-12 text-[#082b59]/20" />
+                <p className="mt-4 text-sm text-slate-500">Artikel masih kosong.</p>
+                <p className="mt-1 text-xs text-slate-400">Nantikan tulisan dan tips dari guru kami.</p>
+              </div>
+            ) : articles.map((item) => (
+              <StaggerItem key={item.slug}>
+                <Link href={`/articles/${item.slug}`} className="group block rounded-2xl border border-[#dce3ed] bg-white p-6 transition-all hover:shadow-lg hover:shadow-[#082b59]/5">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-[#1767b1]/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#1767b1]">{item.category}</span>
+                  </div>
+                  <h3 className="mt-3 text-lg font-semibold text-[#082b59] transition-colors group-hover:text-[#1767b1]">{item.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-500 line-clamp-2">{item.excerpt}</p>
+                  <p className="mt-3 text-xs text-slate-400">oleh {item.author}</p>
+                </Link>
               </StaggerItem>
             ))}
           </StaggerChildren>
@@ -372,101 +456,6 @@ export default async function Home() {
 
       {/* ── FAQ ───────────────────────────────────────────── */}
       <FAQ />
-
-      {/* ── BERITA (with images) ──────────────────────────── */}
-      <section className="bg-[#082b59] text-white">
-          <div className="mx-auto max-w-[1296px] px-6 py-20 md:px-10 md:py-28">
-            <FadeIn>
-              <div className="mb-12 flex items-end justify-between">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#f4d21f]">Informasi terbaru</p>
-                  <h2 className="mt-3 text-3xl font-semibold md:text-4xl">Berita sekolah</h2>
-                </div>
-                 <Link href="/news" className="text-sm font-semibold text-white/70 hover:text-white transition-colors">
-                  Semua berita <ArrowUpRight className="inline h-4 w-4" />
-                </Link>
-              </div>
-            </FadeIn>
-
-            <StaggerChildren stagger={0.1} className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {beritaRaw.length === 0 ? (
-                <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/5 py-16 text-center">
-                  <Newspaper className="h-12 w-12 text-white/20" />
-                  <p className="mt-4 text-sm text-white/50">Berita masih kosong.</p>
-                  <p className="mt-1 text-xs text-white/30">Nantikan informasi terbaru dari sekolah.</p>
-                </div>
-              ) : beritaRaw.map((item) => (
-                <StaggerItem key={item.id}>
-                  <Link href={`/news/${item.slug}`} className="group block overflow-hidden rounded-2xl border border-white/10 transition-all hover:border-[#f4d21f]/30">
-                    <div className="relative h-36 overflow-hidden bg-white/5">
-                      {item.image_url ? (
-                        <img
-                          src={item.image_url}
-                          alt={item.title}
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <img
-                          src={`https://picsum.photos/seed/${encodeURIComponent(item.title)}/400/300`}
-                          alt={item.title}
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-60"
-                          loading="lazy"
-                        />
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#082b59]/60 to-transparent" />
-                      <span className="absolute left-3 top-3 rounded-full bg-[#f4d21f] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#082b59]">
-                        {item.category}
-                      </span>
-                    </div>
-                    <div className="p-4">
-                      <h3 className="text-sm font-semibold leading-snug transition-colors group-hover:text-[#f4d21f] line-clamp-2">{item.title}</h3>
-                      <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-white/50">{item.summary}</p>
-                    </div>
-                  </Link>
-                </StaggerItem>
-              ))}
-            </StaggerChildren>
-          </div>
-        </section>
-
-      {/* ── ARTIKEL ──────────────────────────────────────── */}
-      <section className="bg-[#f4f7fb]">
-        <div className="mx-auto max-w-[1296px] px-6 py-20 md:px-10 md:py-28">
-          <FadeIn>
-            <div className="mb-12 flex items-end justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Artikel & Tips</p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Artikel Sekolah</h2>
-              </div>
-               <Link href="/articles" className="text-sm font-semibold text-[#1767b1] transition-colors hover:text-[#082b59]">
-                Semua artikel <ArrowUpRight className="inline h-4 w-4" />
-              </Link>
-            </div>
-          </FadeIn>
-
-          <StaggerChildren stagger={0.1} className="grid gap-6 md:grid-cols-2">
-            {articles.length === 0 ? (
-              <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white py-16 text-center">
-                <BookOpen className="h-12 w-12 text-[#082b59]/20" />
-                <p className="mt-4 text-sm text-slate-500">Artikel masih kosong.</p>
-                <p className="mt-1 text-xs text-slate-400">Nantikan tulisan dan tips dari guru kami.</p>
-              </div>
-            ) : articles.map((item) => (
-              <StaggerItem key={item.slug}>
-                <Link href={`/articles/${item.slug}`} className="group block rounded-2xl border border-[#dce3ed] bg-white p-6 transition-all hover:shadow-lg hover:shadow-[#082b59]/5">
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-[#1767b1]/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#1767b1]">{item.category}</span>
-                  </div>
-                  <h3 className="mt-3 text-lg font-semibold text-[#082b59] transition-colors group-hover:text-[#1767b1]">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-500 line-clamp-2">{item.excerpt}</p>
-                  <p className="mt-3 text-xs text-slate-400">oleh {item.author}</p>
-                </Link>
-              </StaggerItem>
-            ))}
-          </StaggerChildren>
-        </div>
-      </section>
 
       {/* ── FINAL CTA ─────────────────────────────────────── */}
       <section className="relative overflow-hidden border-t-8 border-[#f4d21f] bg-white">
