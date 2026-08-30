@@ -4,9 +4,9 @@ import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, FileText, News
 import { getNewsList, getFacilityList, getArticleList } from "@/lib/queries";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/animations";
 import ImageWithLoader from "@/components/ImageWithLoader";
-import FAQ from "@/components/FAQ";
-import WhatsAppButton from "@/components/WhatsAppButton";
-import HeroCarousel from "@/components/HeroCarousel";
+import FAQ from "./FAQ";
+import WhatsAppButton from "./WhatsAppButton";
+import HeroCarousel from "./HeroCarousel";
 
 type NewsItem = { id: string | number; slug: string; title: string; summary: string; category: string; image_url?: string | null; published_at?: string };
 

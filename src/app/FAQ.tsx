@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CaretDown } from "@phosphor-icons/react";
-import { FadeIn } from "./animations";
+import { FadeIn } from "@/components/animations";
 
 const faqs = [
   {
