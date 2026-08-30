@@ -3,7 +3,7 @@ import { MapPin, Phone, Envelope, Users, BookOpen, GraduationCap, Building } fro
 import { getSchoolProfile, getTeacherList, getFacilityList } from "@/lib/queries";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/animations";
 import ImageWithLoader from "@/components/ImageWithLoader";
-import TeacherGrid from "@/components/TeacherGrid";
+import TeacherGrid from "./TeacherGrid";
 
 export default async function ProfilPage() {
   const [profil, teachers, facilities] = await Promise.all([

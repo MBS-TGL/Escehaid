@@ -114,7 +114,7 @@ const initialDocs: Documents = {
 const STORAGE_KEY = "spmb_form_data";
 const STORAGE_STEP_KEY = "spmb_form_step";
 
-export default function PPDBForm() {
+export default function SPMBForm() {
   const [step, setStep] = useState(0);
   const [data, setData] = useState<FormData>(initialData);
   const [docs, setDocs] = useState<Documents>(initialDocs);
