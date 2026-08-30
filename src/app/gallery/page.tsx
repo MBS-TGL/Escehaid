@@ -1,7 +1,6 @@
 import { ImageSquare, Star } from "@/components/Icons";
 import { getGalleryList } from "@/lib/queries";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
-import ImageWithLoader from "@/components/ImageWithLoader";
 
 export default async function GalleryPage() {
   const gallery = await getGalleryList();
@@ -39,11 +38,11 @@ export default async function GalleryPage() {
               <StaggerItem key={item.id}>
                 <div className="group relative aspect-square overflow-hidden rounded-2xl border border-[#dce3ed] bg-[#f4f7fb]">
                   {item.media_type === "foto" ? (
-                    <ImageWithLoader
+                    <img
                       src={item.thumbnail_url || item.url}
                       alt={item.title}
-                      className="h-full w-full"
-                      imgClassName="transition-transform duration-500 group-hover:scale-105"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-[#082b59]">

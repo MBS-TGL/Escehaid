@@ -113,21 +113,6 @@ h3 {
   transform: scaleX(1);
 }
 
-/* Smooth image loading */
-.img-load {
-  position: relative;
-  background: #f1f5f9;
-}
-
-.img-load img {
-  opacity: 0;
-  transition: opacity 0.4s ease;
-}
-
-.img-load img.loaded {
-  opacity: 1;
-}
-
 /* Step transition */
 @keyframes stepIn {
   from {

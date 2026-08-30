@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowUpRight, Newspaper, Clock } from "@/components/Icons";
 import { getNewsList } from "@/lib/queries";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
-import ImageWithLoader from "@/components/ImageWithLoader";
 
 export default async function BeritaPage() {
   const berita = await getNewsList();
@@ -47,11 +46,11 @@ export default async function BeritaPage() {
                   >
                     <div className="relative h-64 overflow-hidden lg:h-80">
                       {berita[0].image_url ? (
-                        <ImageWithLoader
+                        <img
                           src={berita[0].image_url}
                           alt={berita[0].title}
-                          className="h-full w-full"
-                          imgClassName="transition-transform duration-700 group-hover:scale-105"
+                          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                          loading="lazy"
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#082b59] to-[#1767b1]">
@@ -89,11 +88,11 @@ export default async function BeritaPage() {
                           >
                             <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-[#f4f7fb]">
                               {item.image_url ? (
-                                <ImageWithLoader
+                                <img
                                   src={item.image_url}
                                   alt={item.title}
-                                  className="h-full w-full"
-                                  imgClassName="transition-transform duration-500 group-hover:scale-105"
+                                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                  loading="lazy"
                                 />
                               ) : (
                                 <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#082b59] to-[#1767b1]">
@@ -131,11 +130,11 @@ export default async function BeritaPage() {
                         >
                           <div className="relative h-36 overflow-hidden bg-[#f4f7fb]">
                             {item.image_url ? (
-                              <ImageWithLoader
+                              <img
                                 src={item.image_url}
                                 alt={item.title}
-                                className="h-full w-full"
-                                imgClassName="transition-transform duration-500 group-hover:scale-105"
+                                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                loading="lazy"
                               />
                             ) : (
                               <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#082b59] to-[#1767b1]">

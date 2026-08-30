@@ -3,7 +3,6 @@ import Image from "next/image";
 import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, FileText, Newspaper, ImageSquare, House, Clock, User } from "@/components/Icons";
 import { getNewsList, getFacilityList, getArticleList } from "@/lib/queries";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
-import ImageWithLoader from "@/components/ImageWithLoader";
 import FAQ from "./FAQ";
 import WhatsAppButton from "./WhatsAppButton";
 import HeroCarousel from "./HeroCarousel";
@@ -121,10 +120,11 @@ export default async function Home() {
                 <div className="relative">
                   <div className="absolute -inset-4 rounded-full bg-gradient-to-br from-[#f4d21f]/30 to-[#1767b1]/20 blur-xl" />
                   <div className="relative h-56 w-56 overflow-hidden rounded-full border-4 border-[#f4d21f] md:h-72 md:w-72">
-                    <ImageWithLoader
+                    <img
                       src="/images/Kepala-Sekolah.jpg"
                       alt="Khoirul Anwar, S.Pd - Kepala Sekolah"
                       className="h-full w-full object-cover object-[center_15%]"
+                      loading="lazy"
                     />
                   </div>
                   <div className="absolute -bottom-2 -right-2 rounded-2xl bg-[#082b59] px-4 py-2 shadow-lg">
@@ -244,11 +244,11 @@ export default async function Home() {
               <StaggerItem key={title}>
                 <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] transition-all hover:shadow-lg hover:shadow-[#082b59]/5">
                   <div className="relative h-40 overflow-hidden bg-[#f4f7fb]">
-                    <ImageWithLoader
+                    <img
                       src={image || `https://picsum.photos/seed/${encodeURIComponent(title)}/400/300`}
                       alt={title}
-                      className="h-full w-full"
-                      imgClassName={`transition-transform duration-500 group-hover:scale-105 ${pos || ""}`}
+                      className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 ${pos || ""}`}
+                      loading="lazy"
                     />
                   </div>
                   <div className="flex flex-1 flex-col p-5">

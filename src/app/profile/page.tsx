@@ -2,7 +2,6 @@ import Link from "next/link";
 import { MapPin, Phone, Envelope, Users, BookOpen, GraduationCap, Building } from "@/components/Icons";
 import { getSchoolProfile, getTeacherList, getFacilityList } from "@/lib/queries";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
-import ImageWithLoader from "@/components/ImageWithLoader";
 import TeacherGrid from "./TeacherGrid";
 
 export default async function ProfilPage() {
@@ -92,11 +91,11 @@ export default async function ProfilPage() {
                 <div className="relative">
                   <div className="absolute -inset-4 rounded-full bg-gradient-to-br from-[#f4d21f]/30 to-[#1767b1]/20 blur-xl" />
                   <div className="relative h-64 w-64 overflow-hidden rounded-full border-4 border-[#f4d21f] md:h-80 md:w-80">
-                    <ImageWithLoader
+                    <img
                       src="/images/Kepala-Sekolah.jpg"
                       alt="Kepala Sekolah"
-                      className="h-full w-full"
-                      imgClassName="object-cover object-[center_20%]"
+                      className="h-full w-full object-cover object-[center_20%]"
+                      loading="lazy"
                     />
                   </div>
                   <div className="absolute -bottom-2 -right-2 rounded-2xl bg-[#082b59] px-4 py-2 shadow-lg">
@@ -237,11 +236,11 @@ export default async function ProfilPage() {
                 <StaggerItem key={f.id}>
                   <div className="group overflow-hidden rounded-2xl border border-[#dce3ed] transition-all hover:shadow-lg hover:shadow-[#082b59]/5">
                     <div className="relative h-48 overflow-hidden bg-[#f4f7fb]">
-                      <ImageWithLoader
+                      <img
                         src={f.image_url || `/images/${encodeURIComponent(f.name)}.jpg`}
                         alt={f.name}
-                        className="h-full w-full"
-                        imgClassName="transition-transform duration-500 group-hover:scale-105"
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
                       />
                     </div>
                     <div className="p-5">
