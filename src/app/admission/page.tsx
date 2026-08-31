@@ -90,7 +90,7 @@ export default function PPDBPage() {
                   </div>
                   <div>
                     <div className="font-medium text-[#082b59]">Gelombang Inden</div>
-                    <div className="text-sm text-slate-500">20 Oktober - 30 Desember 2025</div>
+                    <div className="text-sm text-slate-500">20 Oktober - 30 Desember 2026</div>
                   </div>
                 </div>
                 <p className="mb-4 text-sm leading-relaxed text-slate-500">

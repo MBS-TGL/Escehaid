@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import DashboardLayout from "./DashboardLayout";
 
 export const metadata: Metadata = {
   title: "Admin Panel | SMP Muhammadiyah 4 Tanggul",
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return <DashboardLayout>{children}</DashboardLayout>;
 }

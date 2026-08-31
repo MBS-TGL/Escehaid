@@ -59,7 +59,7 @@ export default async function ArtikelPage() {
                     <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-500 line-clamp-2">{item.excerpt}</p>
                     <div className="mt-4 flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="text-xs text-slate-400">oleh {item.author}</span>
+                        <span className="text-xs text-slate-400">oleh {item.author_name ?? "Tim MBS"}</span>
                       </div>
                       <ArrowUpRight className="h-4 w-4 text-[#1767b1] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </div>

@@ -26,7 +26,7 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
             {article.category}
           </span>
           <h1 className="mb-4 text-3xl font-bold md:text-4xl">{article.title}</h1>
-          <p className="text-white/70">Oleh {article.author}</p>
+          <p className="text-white/70">Oleh {article.author_name ?? "Tim MBS"}</p>
           {article.published_at && (
             <p className="mt-1 text-sm text-white/50">
               {new Date(article.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}

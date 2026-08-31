@@ -30,8 +30,8 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
             </span>
           </div>
           <h1 className="text-3xl font-bold">{berita.title}</h1>
-          {berita.author && (
-            <p className="text-white/60 mt-2">Oleh: {berita.author}</p>
+          {berita.author_name && (
+            <p className="text-white/60 mt-2">Oleh: {berita.author_name}</p>
           )}
         </div>
       </section>
@@ -51,7 +51,12 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
 
         <div className="prose prose-lg max-w-none">
           {berita.content ? (
-            <div dangerouslySetInnerHTML={{ __html: berita.content }} />
+            <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {berita.content.split("\n").map((paragraph, i) => {
+                if (paragraph.trim() === "") return <br key={i} />;
+                return <p key={i} className="mb-4">{paragraph}</p>;
+              })}
+            </div>
           ) : (
             <p className="text-gray-500">Konten belum tersedia.</p>
           )}

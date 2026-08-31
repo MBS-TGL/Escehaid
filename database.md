@@ -1,20 +1,44 @@
-# Database Schema - SMP Muhammadiyah 4 Tanggul
+# Database Schema — SMP Muhammadiyah 4 Tanggul
 
 ## Overview
 
-Database Supabase (PostgreSQL) untuk website Esceha.id. Total **9 tables**.
+Database Supabase (PostgreSQL) dengan RBAC auth system. Total **12 tables**.
 
-## Setup
+- 9 content tables
+- 2 auth tables (`user_profiles`, `user_audit_log`)
+- 3 storage buckets (`spmb-documents`, `images`, `videos`)
+- Full row-level security with role-based policies
+- Auto slug generation with collision handling
+- Anti-privilege escalation trigger
 
-1. Buka **Supabase Dashboard** → **SQL Editor**
-2. Copy seluruh isi `database.sql`
-3. Paste dan klik **Run**
-4. Semua tables, data default, RLS policies, dan indexes akan otomatis dibuat
+## Auth System
 
-## Tables
+### Roles
+| Role | Description |
+|------|-------------|
+| `developer` | Full access (creator) |
+| `admin` | Full access |
+| `publisher` | Content management |
+| `teacher` | Article submission |
+| `student` | Read-only, submit articles |
+
+### Tables
+- `auth.users` — managed by Supabase Auth
+- `user_profiles` — syncs automatically via `on_auth_user_created` trigger
+- `user_audit_log` — tracks all user actions
+
+### Signup Flow
+1. User signs up via Supabase Auth
+2. Trigger `on_auth_user_created` auto-creates `user_profiles` with role `student`
+3. Admin promotes role via SQL or admin panel
+
+### Login Credentials
+- **Developer**: `dev@mbs.id` / `dev`
+
+## Content Tables
 
 ### 1. `school_profile`
-Profil sekolah (hanya 1 baris).
+Single row — school identity.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -24,170 +48,200 @@ Profil sekolah (hanya 1 baris).
 | `phone` | text | Nomor telepon |
 | `email` | text | Email sekolah |
 | `website` | text | URL website |
-| `vision` | text | Visi sekolah |
-| `mission` | text | Misi sekolah |
-| `history` | text | Sejarah sekolah |
+| `vision` | text | Visi |
+| `mission` | text | Misi |
+| `history` | text | Sejarah |
 | `logo_url` | text | URL logo |
 | `banner_url` | text | URL banner |
-| `created_at` | timestamptz | Waktu pembuatan |
-| `updated_at` | timestamptz | Waktu update terakhir |
+| `created_at` | timestamptz | |
+| `updated_at` | timestamptz | |
 
 ### 2. `news`
-Berita, pengumuman, dan agenda sekolah.
+Berita, pengumuman, agenda. **Author FK** → `user_profiles`.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | uuid (PK) | Auto-generated |
-| `title` | text | Judul berita |
-| `slug` | text (UNIQUE) | URL-friendly slug (auto-generated) |
-| `summary` | text | Ringkasan singkat |
-| `content` | text | Konten lengkap (HTML/Markdown) |
+| `id` | uuid (PK) | |
+| `title` | text | |
+| `slug` | text (UNIQUE) | Auto-generated, collision-safe |
+| `summary` | text | |
+| `content` | text | |
 | `category` | text | `berita` \| `pengumuman` \| `agenda` |
-| `image_url` | text | URL gambar |
-| `author` | text | Nama penulis |
-| `is_published` | boolean | Status publikasi |
-| `published_at` | timestamptz | Tanggal publikasi |
-| `created_at` | timestamptz | Waktu pembuatan |
-| `updated_at` | timestamptz | Waktu update terakhir |
+| `image_url` | text | |
+| `author_id` | uuid → user_profiles | |
+| `is_published` | boolean | |
+| `published_at` | timestamptz | |
+| `created_at` | timestamptz | |
+| `updated_at` | timestamptz | |
 
 ### 3. `gallery`
-Foto dan video galeri sekolah.
+Foto & video galeri.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | uuid (PK) | Auto-generated |
-| `title` | text | Judul |
-| `description` | text | Deskripsi |
+| `id` | uuid (PK) | |
+| `title` | text | |
+| `description` | text | |
 | `media_type` | text | `foto` \| `video` |
-| `url` | text | URL media |
-| `thumbnail_url` | text | URL thumbnail |
-| `category` | text | Kategori (umum, kegiatan, dsb) |
-| `created_at` | timestamptz | Waktu pembuatan |
+| `url` | text | |
+| `thumbnail_url` | text | |
+| `category` | text | |
+| `created_at` | timestamptz | |
 
-### 4. `ppdb_registrations`
-Pendaftaran PPDB (Penerimaan Peserta Didik Baru).
+### 4. `spmb_registrations`
+Pendaftaran SPMB (sebelumnya PPDB). Dikunci: public insert → status `pending` saja.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | uuid (PK) | Auto-generated |
-| `full_name` | text | Nama lengkap siswa |
-| `birth_place` | text | Tempat lahir |
-| `birth_date` | date | Tanggal lahir |
-| `gender` | text | `L` (Laki-laki) \| `P` (Perempuan) |
-| `address` | text | Alamat |
-| `phone` | text | No. telepon |
-| `email` | text | Email |
-| `parent_name` | text | Nama orang tua |
-| `parent_occupation` | text | Pekerjaan orang tua |
-| `previous_school` | text | Asal sekolah |
+| `id` | uuid (PK) | |
+| `full_name` | text | |
+| `birth_place` | text | |
+| `birth_date` | date | |
+| `gender` | text | `L` \| `P` |
+| `address` | text | |
+| `phone` | text | |
+| `email` | text | |
+| `parent_name` | text | |
+| `parent_occupation` | text | |
+| `previous_school` | text | |
 | `registration_path` | text | `reguler` \| `prestasi` \| `beasiswa` |
 | `status` | text | `pending` \| `accepted` \| `rejected` |
-| `documents_url` | text | URL dokumen |
-| `admin_notes` | text | Catatan admin |
-| `created_at` | timestamptz | Waktu pendaftaran |
-| `updated_at` | timestamptz | Waktu update terakhir |
+| `documents` | jsonb | |
+| `admin_notes` | text | |
+| `created_at` | timestamptz | |
+| `updated_at` | timestamptz | |
 
 ### 5. `teachers`
-Data guru dan staf sekolah.
+Guru & staff. Kolom `categories jsonb` untuk multi-kategori.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | uuid (PK) | Auto-generated |
-| `name` | text | Nama lengkap |
-| `subject` | text | Mata pelajaran / bidang |
-| `position` | text | Jabatan |
-| `photo_url` | text | URL foto profil |
-| `bio` | text | Biografi singkat |
-| `sort_order` | int | Urutan tampilan |
-| `is_active` | boolean | Status aktif |
-| `created_at` | timestamptz | Waktu pembuatan |
+| `id` | uuid (PK) | |
+| `name` | text | |
+| `subject` | text | |
+| `position` | text | |
+| `categories` | jsonb | `[\"Guru Mapel\"]` dsb |
+| `photo_url` | text | |
+| `bio` | text | |
+| `sort_order` | int | |
+| `is_active` | boolean | |
+| `created_at` | timestamptz | |
 
 ### 6. `facilities`
 Fasilitas sekolah.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | uuid (PK) | Auto-generated |
-| `name` | text | Nama fasilitas |
-| `description` | text | Deskripsi |
-| `image_url` | text | URL foto |
-| `sort_order` | int | Urutan tampilan |
-| `is_active` | boolean | Status aktif |
-| `created_at` | timestamptz | Waktu pembuatan |
+| `id` | uuid (PK) | |
+| `name` | text | |
+| `description` | text | |
+| `image_url` | text | |
+| `sort_order` | int | |
+| `is_active` | boolean | |
+| `created_at` | timestamptz | |
 
 ### 7. `articles`
-Artikel dan tips pendidikan.
+Artikel & tips. **Author FK** → `user_profiles`.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | uuid (PK) | Auto-generated |
-| `title` | text | Judul artikel |
-| `slug` | text (UNIQUE) | URL-friendly slug (auto-generated) |
-| `excerpt` | text | Ringkasan singkat |
-| `content` | text | Konten lengkap |
-| `author` | text | Nama penulis |
-| `category` | text | Kategori artikel |
-| `image_url` | text | URL gambar |
-| `is_published` | boolean | Status publikasi |
-| `published_at` | timestamptz | Tanggal publikasi |
-| `created_at` | timestamptz | Waktu pembuatan |
-| `updated_at` | timestamptz | Waktu update terakhir |
+| `id` | uuid (PK) | |
+| `title` | text | |
+| `slug` | text (UNIQUE) | Auto-generated |
+| `excerpt` | text | |
+| `content` | text | |
+| `author_id` | uuid → user_profiles | |
+| `category` | text | `umum` dll |
+| `image_url` | text | |
+| `is_published` | boolean | |
+| `published_at` | timestamptz | |
+| `created_at` | timestamptz | |
+| `updated_at` | timestamptz | |
 
 ### 8. `achievements`
-Prestasi sekolah dan siswa.
+Prestasi sekolah & siswa.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | uuid (PK) | Auto-generated |
-| `title` | text | Judul prestasi |
-| `description` | text | Deskripsi |
-| `category` | text | Kategori (akademik, non-akademik, dsb) |
-| `year` | int | Tahun pencapaian |
-| `image_url` | text | URL foto/sertifikat |
-| `sort_order` | int | Urutan tampilan |
-| `created_at` | timestamptz | Waktu pembuatan |
+| `id` | uuid (PK) | |
+| `title` | text | |
+| `description` | text | |
+| `category` | text | `akademik` dll |
+| `year` | int | |
+| `image_url` | text | |
+| `sort_order` | int | |
+| `created_at` | timestamptz | |
 
 ### 9. `contact_messages`
 Pesan dari formulir kontak.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | uuid (PK) | Auto-generated |
-| `name` | text | Nama pengirim |
-| `email` | text | Email pengirim |
-| `phone` | text | No. telepon |
-| `subject` | text | Subjek pesan |
-| `message` | text | Isi pesan |
-| `is_read` | boolean | Status dibaca |
-| `created_at` | timestamptz | Waktu pengiriman |
+| `id` | uuid (PK) | |
+| `name` | text | |
+| `email` | text | |
+| `phone` | text | |
+| `subject` | text | |
+| `message` | text | |
+| `is_read` | boolean | |
+| `created_at` | timestamptz | |
 
-## RLS Policies
+### 10. `user_profiles`
+Profil pengguna — auto-synced dari `auth.users`.
 
-| Table | Public Read | Public Insert | Admin Full Access |
-|-------|:-----------:|:-------------:|:-----------------:|
-| `school_profile` | Yes | No | Yes (auth) |
-| `news` | Published only | No | Yes (auth) |
-| `gallery` | Yes | No | Yes (auth) |
-| `ppdb_registrations` | No | Yes | Yes (auth) |
-| `teachers` | Active only | No | Yes (auth) |
-| `facilities` | Active only | No | Yes (auth) |
-| `articles` | Published only | No | Yes (auth) |
-| `achievements` | Yes | No | Yes (auth) |
-| `contact_messages` | No | Yes | Yes (auth) |
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | uuid (PK) → auth.users | |
+| `full_name` | text | |
+| `role` | user_role | `student` (default) |
+| `avatar_url` | text | |
+| `phone` | text | |
+| `is_active` | boolean | |
+| `created_at` | timestamptz | |
+| `updated_at` | timestamptz | |
 
-## Indexes
+### 11. `user_audit_log`
+Log audit trail semua aksi pengguna.
 
-- `news`: slug, is_published + published_at
-- `gallery`: category
-- `ppdb_registrations`: status
-- `articles`: slug, is_published + published_at
-- `teachers`: is_active
-- `facilities`: is_active
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | uuid (PK) | |
+| `user_id` | uuid → auth.users | |
+| `action` | text | |
+| `details` | jsonb | |
+| `created_at` | timestamptz | |
 
-## Notes
+## Storage Buckets
 
-- Semua table menggunakan `uuid` sebagai primary key
-- `slug` fields auto-generated dari title (menggunakan trigger)
-- `is_published` / `is_active` untuk soft delete
-- `created_at` dan `updated_at` otomatis diisi
-- Auth menggunakan Supabase Auth (`auth.role() = 'authenticated'`)
+| Bucket | Public Read | Public Insert | Staff Manage | Size Limit |
+|--------|:-----------:|:-------------:|:------------:|:----------:|
+| `spmb-documents` | ✅ | ✅ | developer, admin | 2 MB |
+| `images` | ✅ | ❌ | developer, admin, publisher | 5 MB |
+| `videos` | ✅ | ❌ | developer, admin, publisher | 50 MB |
+
+## Setup (2026-08-31 update)
+
+The developer user `dev@mbs.id` **already exists** in `auth.users` (UUID: `dd6506f5-af48-4ca2-a541-6fc31615df9b`).
+
+1. Buka **Supabase Dashboard** → **SQL Editor**
+2. Copy seluruh isi `database.sql`
+3. Paste dan klik **Run** (ini akan me-reset database — drop semua tabel lalu buat ulang)
+4. Setelah SQL jalan, buka **Table Editor** → `user_profiles` → **Insert row**:
+   - `id`: `dd6506f5-af48-4ca2-a541-6fc31615df9b`
+   - `full_name`: `Developer`
+   - `role`: `developer`
+   - `is_active`: `true`
+   - (kolom lain kosongkan)
+5. Save, lalu coba login: `dev@mbs.id` / `dev`
+
+**Jika trigger `handle_new_user` sudah membuat profile otomatis**, skip langkah 4 dan cek apakah profile sudah ada.
+
+> Catatan: `database.sql` sudah termasuk Phase 0 cleanup (aman dijalankan berkali-kali).
+
+## Key Features
+
+- **Auto slug** — `generate_unique_slug()` handle collision otomatis (appends `-2`, `-3`, dst)
+- **Anti-escalation** — trigger `prevent_privilege_escalation()` blok user biasa dari mengubah role/is_active
+- **RLS berbasis role** — bukan sekadar `auth.role() = 'authenticated'`, pakai `current_user_role()`
+- **Auto `updated_at`** — `set_updated_at()` trigger di semua tabel
+- **Hardcoded role** — signup trigger selalu set role `student`, gak peduli apa yang dikirim client

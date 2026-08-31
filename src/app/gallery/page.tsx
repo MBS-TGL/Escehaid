@@ -1,6 +1,7 @@
 import { ImageSquare, Star } from "@/components/Icons";
 import { getGalleryList } from "@/lib/queries";
-import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
+import { FadeIn } from "@/components/Animations";
+import GalleryLightbox from "./GalleryLightbox";
 
 export default async function GalleryPage() {
   const gallery = await getGalleryList();
@@ -33,33 +34,9 @@ export default async function GalleryPage() {
             </div>
           </FadeIn>
         ) : (
-          <StaggerChildren stagger={0.08} className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-            {gallery.map((item) => (
-              <StaggerItem key={item.id}>
-                <div className="group relative aspect-square overflow-hidden rounded-2xl border border-[#dce3ed] bg-[#f4f7fb]">
-                  {item.media_type === "foto" ? (
-                    <img
-                      src={item.thumbnail_url || item.url}
-                      alt={item.title}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-[#082b59]">
-                      <span className="text-4xl text-white/80">&#9654;</span>
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#082b59]/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                  <div className="absolute bottom-0 left-0 right-0 p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                    <p className="text-sm font-semibold text-white">{item.title}</p>
-                    {item.category && (
-                      <p className="mt-1 text-xs text-white/70">{item.category}</p>
-                    )}
-                  </div>
-                </div>
-              </StaggerItem>
-            ))}
-          </StaggerChildren>
+          <FadeIn>
+            <GalleryLightbox items={gallery} />
+          </FadeIn>
         )}
       </section>
     </div>

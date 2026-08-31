@@ -2,26 +2,20 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import {
-  getNewsListAll,
-  createNews,
-  updateNews,
-  deleteNews,
-  deleteNewsBulk,
-  togglePublishNews,
-  togglePublishNewsBulk,
-  uploadNewsImage,
+  getAchievementList,
+  createAchievement,
+  updateAchievement,
+  deleteAchievement,
+  deleteAchievementBulk,
+  uploadAchievementImage,
 } from "@/lib/queries";
-import type { News } from "@/lib/supabase";
+import type { Achievement } from "@/lib/supabase";
 import {
-  Megaphone,
+  Trophy,
   MagnifyingGlass,
   Eye,
-  CheckCircle,
-  XCircle,
-  Clock,
   X,
-  FileText,
-  User,
+  Medal,
   CaretLeft,
   CaretRight,
   Plus,
@@ -33,41 +27,39 @@ import {
   ArrowUp,
   ArrowDown,
   SortAscending,
-  Funnel,
   Checks,
 } from "@/components/Icons";
 
 const PAGE_SIZE = 10;
 
 const categoryConfig: Record<string, { label: string; color: string }> = {
-  berita: { label: "Berita", color: "bg-blue-50 text-blue-700 border-blue-200" },
-  pengumuman: { label: "Pengumuman", color: "bg-amber-50 text-amber-700 border-amber-200" },
-  agenda: { label: "Agenda", color: "bg-purple-50 text-purple-700 border-purple-200" },
+  akademik: { label: "Akademik", color: "bg-blue-50 text-blue-700" },
+  "non-akademik": { label: "Non-Akademik", color: "bg-purple-50 text-purple-700" },
+  olahraga: { label: "Olahraga", color: "bg-emerald-50 text-emerald-700" },
+  seni: { label: "Seni", color: "bg-pink-50 text-pink-700" },
 };
 
-type SortField = "created_at" | "title" | "category";
+type SortField = "created_at" | "title" | "category" | "year";
 type SortDir = "asc" | "desc";
 
 interface FormData {
   title: string;
-  summary: string;
-  content: string;
+  description: string;
   category: string;
+  year: number;
   image_url: string;
-  is_published: boolean;
 }
 
 const emptyForm: FormData = {
   title: "",
-  summary: "",
-  content: "",
-  category: "berita",
+  description: "",
+  category: "akademik",
+  year: new Date().getFullYear(),
   image_url: "",
-  is_published: false,
 };
 
-export default function AdminBeritaPage() {
-  const [news, setNews] = useState<News[]>([]);
+export default function AdminAchievementsPage() {
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
@@ -79,60 +71,55 @@ export default function AdminBeritaPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Modals
-  const [viewItem, setViewItem] = useState<News | null>(null);
-  const [deleteItem, setDeleteItem] = useState<News | null>(null);
+  const [viewItem, setViewItem] = useState<Achievement | null>(null);
+  const [deleteItem, setDeleteItem] = useState<Achievement | null>(null);
   const [bulkDelete, setBulkDelete] = useState(false);
 
   // Form panel
   const [formOpen, setFormOpen] = useState(false);
-  const [editItem, setEditItem] = useState<News | null>(null);
+  const [editItem, setEditItem] = useState<Achievement | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
   const [formSaving, setFormSaving] = useState(false);
   const [formError, setFormError] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
 
-  // Fetch
-  const fetchNews = useCallback(async () => {
-    setLoading(true);
-    const data = await getNewsListAll();
-    setNews(data as News[]);
+  const fetchAchievements = useCallback(async () => {
+    const data = await getAchievementList();
+    setAchievements(data);
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchNews(); }, [fetchNews]);
+  useEffect(() => { fetchAchievements(); }, [fetchAchievements]);
 
-  // Filtered + Sorted
+  const categories = useMemo(() => [...new Set(achievements.map((a) => a.category))], [achievements]);
+
   const filtered = useMemo(() => {
-    let result = news.filter((item) => {
-      const matchSearch =
-        item.title.toLowerCase().includes(search.toLowerCase()) ||
-        (item.summary && item.summary.toLowerCase().includes(search.toLowerCase()));
-      const matchFilter =
-        filter === "all" ||
-        (filter === "published" && item.is_published) ||
-        (filter === "draft" && !item.is_published);
-      return matchSearch && matchFilter;
+    let result = achievements.filter((item) => {
+      const matchSearch = item.title.toLowerCase().includes(search.toLowerCase());
+      const matchCategory = filter === "all" || item.category === filter;
+      return matchSearch && matchCategory;
     });
 
     result.sort((a, b) => {
       let cmp = 0;
       if (sortField === "title") cmp = a.title.localeCompare(b.title);
-      else if (sortField === "category") cmp = a.category.localeCompare(b.category);
+      else if (sortField === "category") cmp = (a.category || "").localeCompare(b.category || "");
+      else if (sortField === "year") cmp = (a.year || 0) - (b.year || 0);
       else cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       return sortDir === "asc" ? cmp : -cmp;
     });
 
     return result;
-  }, [news, search, filter, sortField, sortDir]);
+  }, [achievements, search, filter, sortField, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const stats = {
-    total: news.length,
-    published: news.filter((n) => n.is_published).length,
-    draft: news.filter((n) => !n.is_published).length,
+    total: achievements.length,
+    thisYear: achievements.filter((a) => a.year === new Date().getFullYear()).length,
+    categories: categories.length,
   };
 
   const allVisibleSelected = paginated.length > 0 && paginated.every((item) => selectedIds.has(item.id));
@@ -160,7 +147,6 @@ export default function AdminBeritaPage() {
     else { setSortField(field); setSortDir("asc"); }
   }
 
-  // Form handlers
   function openCreate() {
     setEditItem(null);
     setForm(emptyForm);
@@ -170,15 +156,14 @@ export default function AdminBeritaPage() {
     setFormOpen(true);
   }
 
-  function openEdit(item: News) {
+  function openEdit(item: Achievement) {
     setEditItem(item);
     setForm({
       title: item.title,
-      summary: item.summary || "",
-      content: item.content || "",
-      category: item.category,
+      description: item.description || "",
+      category: item.category || "akademik",
+      year: item.year || new Date().getFullYear(),
       image_url: item.image_url || "",
-      is_published: item.is_published,
     });
     setImageFile(null);
     setImagePreview(item.image_url || "");
@@ -201,51 +186,38 @@ export default function AdminBeritaPage() {
     let imageUrl = form.image_url;
     if (imageFile) {
       const tempId = editItem?.id || crypto.randomUUID();
-      const uploaded = await uploadNewsImage(imageFile, tempId);
+      const uploaded = await uploadAchievementImage(imageFile, tempId);
       if (uploaded.url) imageUrl = uploaded.url;
     }
 
     if (editItem) {
-      const { error } = await updateNews(editItem.id, { ...form, image_url: imageUrl });
+      const { error } = await updateAchievement(editItem.id, { ...form, image_url: imageUrl });
       if (error) { setFormError(error); setFormSaving(false); return; }
     } else {
-      const { error } = await createNews({ ...form, image_url: imageUrl });
+      const { error } = await createAchievement({ ...form, image_url: imageUrl });
       if (error) { setFormError(error); setFormSaving(false); return; }
     }
 
     setFormOpen(false);
     setFormSaving(false);
-    fetchNews();
+    fetchAchievements();
   }
 
   async function handleDelete() {
     if (!deleteItem) return;
-    await deleteNews(deleteItem.id);
+    await deleteAchievement(deleteItem.id);
     setDeleteItem(null);
     setSelectedIds((s) => { const n = new Set(s); n.delete(deleteItem.id); return n; });
-    fetchNews();
+    fetchAchievements();
   }
 
   async function handleBulkDelete() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    await deleteNewsBulk(ids);
+    await deleteAchievementBulk(ids);
     setSelectedIds(new Set());
     setBulkDelete(false);
-    fetchNews();
-  }
-
-  async function handleBulkPublish(publish: boolean) {
-    const ids = Array.from(selectedIds);
-    if (ids.length === 0) return;
-    await togglePublishNewsBulk(ids, publish);
-    setSelectedIds(new Set());
-    fetchNews();
-  }
-
-  async function handleTogglePublish(item: News) {
-    await togglePublishNews(item.id, !item.is_published);
-    fetchNews();
+    fetchAchievements();
   }
 
   const SortIcon = ({ field }: { field: SortField }) => {
@@ -260,16 +232,16 @@ export default function AdminBeritaPage() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1767b1]/10">
-            <Megaphone className="h-5 w-5 text-[#1767b1]" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f4d21f]/10">
+            <Trophy className="h-5 w-5 text-[#f4d21f]" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Kelola Berita</h1>
-            <p className="text-sm text-slate-500">Berita, pengumuman, dan agenda sekolah</p>
+            <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Kelola Prestasi</h1>
+            <p className="text-sm text-slate-500">Pencapaian siswa dan sekolah</p>
           </div>
         </div>
         <button onClick={openCreate} className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1]">
-          <Plus className="h-4 w-4" /> Buat Baru
+          <Plus className="h-4 w-4" /> Tambah Prestasi
         </button>
       </div>
 
@@ -277,8 +249,8 @@ export default function AdminBeritaPage() {
       <div className="mb-6 grid grid-cols-3 gap-3">
         {[
           { label: "Total", value: stats.total, color: "text-[#082b59]", bg: "bg-[#082b59]/5 border-[#082b59]/10" },
-          { label: "Diterbitkan", value: stats.published, color: "text-emerald-600", bg: "bg-emerald-50 border-emerald-200" },
-          { label: "Draft", value: stats.draft, color: "text-amber-600", bg: "bg-amber-50 border-amber-200" },
+          { label: "Tahun Ini", value: stats.thisYear, color: "text-emerald-600", bg: "bg-emerald-50 border-emerald-200" },
+          { label: "Kategori", value: stats.categories, color: "text-purple-600", bg: "bg-purple-50 border-purple-200" },
         ].map((s) => (
           <div key={s.label} className={`rounded-xl border p-3 sm:p-4 ${s.bg}`}>
             <p className="text-xl font-bold text-slate-800 sm:text-2xl">{s.value}</p>
@@ -292,32 +264,28 @@ export default function AdminBeritaPage() {
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5">
           <Checks className="h-4 w-4 text-[#082b59]" />
           <span className="text-xs font-semibold text-[#082b59]">{selectedIds.size} dipilih</span>
-          <button onClick={() => handleBulkPublish(true)} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Publish</button>
-          <button onClick={() => handleBulkPublish(false)} className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-600">Unpublish</button>
           <button onClick={() => setBulkDelete(true)} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
           <button onClick={() => setSelectedIds(new Set())} className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
         </div>
       )}
 
-      {/* Filter + Search */}
+      {/* Filters */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
-            {[
-              { key: "all", label: "Semua" },
-              { key: "published", label: "Diterbitkan" },
-              { key: "draft", label: "Draft" },
-            ].map((tab) => (
-              <button key={tab.key} onClick={() => { setFilter(tab.key); setPage(1); setSelectedIds(new Set()); }}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${filter === tab.key ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-                {tab.label}
-              </button>
-            ))}
-          </div>
+        <div className="flex flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
+          <button onClick={() => { setFilter("all"); setPage(1); setSelectedIds(new Set()); }}
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${filter === "all" ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+            Semua
+          </button>
+          {categories.map((cat) => (
+            <button key={cat} onClick={() => { setFilter(cat); setPage(1); setSelectedIds(new Set()); }}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${filter === cat ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+              {categoryConfig[cat]?.label || cat}
+            </button>
+          ))}
         </div>
         <div className="relative">
           <MagnifyingGlass className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input type="text" placeholder="Cari judul, ringkasan..."
+          <input type="text" placeholder="Cari prestasi..."
             className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 sm:w-72"
             value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
         </div>
@@ -340,35 +308,33 @@ export default function AdminBeritaPage() {
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none" onClick={() => toggleSort("category")}>
                   <span className="flex items-center gap-1">Kategori <SortIcon field="category" /></span>
                 </th>
-                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 md:table-cell">Penulis</th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</th>
-                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:table-cell cursor-pointer select-none" onClick={() => toggleSort("created_at")}>
-                  <span className="flex items-center gap-1">Tanggal <SortIcon field="created_at" /></span>
+                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none" onClick={() => toggleSort("year")}>
+                  <span className="flex items-center gap-1">Tahun <SortIcon field="year" /></span>
                 </th>
                 <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={8} className="px-4 py-16 text-center">
+                <tr><td colSpan={6} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
-                    <p className="text-sm text-slate-500">Memuat data berita...</p>
+                    <p className="text-sm text-slate-500">Memuat data prestasi...</p>
                   </div>
                 </td></tr>
               ) : paginated.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-16 text-center">
+                <tr><td colSpan={6} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-                      <Megaphone className="h-8 w-8 text-slate-300" />
+                      <Trophy className="h-8 w-8 text-slate-300" />
                     </div>
                     <div>
                       <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
-                      <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada berita"}</p>
+                      <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada prestasi"}</p>
                     </div>
                     {!search && filter === "all" && (
                       <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[#082b59] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1767b1]">
-                        <Plus className="h-3.5 w-3.5" /> Buat Berita Pertama
+                        <Plus className="h-3.5 w-3.5" /> Tambah Prestasi Pertama
                       </button>
                     )}
                   </div>
@@ -386,43 +352,22 @@ export default function AdminBeritaPage() {
                         {item.image_url ? (
                           <img src={item.image_url} alt="" className="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
                         ) : (
-                          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">
-                            <FileText className="h-5 w-5 text-slate-300" />
+                          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#f4d21f]/10">
+                            <Medal className="h-5 w-5 text-[#f4d21f]" />
                           </div>
                         )}
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-slate-800 line-clamp-1">{item.title}</p>
-                          {item.summary && <p className="mt-0.5 text-xs text-slate-400 line-clamp-1">{item.summary}</p>}
+                          {item.description && <p className="mt-0.5 text-xs text-slate-400 line-clamp-1">{item.description}</p>}
                         </div>
                       </div>
                     </td>
                     <td className="hidden px-4 py-3.5 sm:table-cell">
-                      <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold ${categoryConfig[item.category]?.color || "bg-slate-100 text-slate-600 border-slate-200"}`}>
+                      <span className={`inline-block rounded-md px-2 py-0.5 text-[11px] font-semibold ${categoryConfig[item.category]?.color || "bg-slate-100 text-slate-600"}`}>
                         {categoryConfig[item.category]?.label || item.category}
                       </span>
                     </td>
-                    <td className="hidden px-4 py-3.5 md:table-cell">
-                      <div className="flex items-center gap-1.5">
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100">
-                          <User className="h-3 w-3 text-slate-400" />
-                        </div>
-                        <span className="text-xs text-slate-500">{(item as any).author_name || "-"}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => handleTogglePublish(item)}
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-                          item.is_published
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                            : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
-                        }`}>
-                        {item.is_published ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-                        {item.is_published ? "Publish" : "Draft"}
-                      </button>
-                    </td>
-                    <td className="hidden px-4 py-3.5 text-sm text-slate-500 lg:table-cell">
-                      {new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-                    </td>
+                    <td className="hidden px-4 py-3.5 text-sm text-slate-500 sm:table-cell">{item.year}</td>
                     <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         <button onClick={() => setViewItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat">
@@ -445,7 +390,7 @@ export default function AdminBeritaPage() {
         {!loading && filtered.length > 0 && (
           <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-slate-400">
-              Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} dari {filtered.length} berita
+              Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} dari {filtered.length} prestasi
             </p>
             <div className="flex items-center gap-1">
               <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
@@ -470,48 +415,47 @@ export default function AdminBeritaPage() {
       {/* ── VIEW MODAL ──────────────────────────────── */}
       {viewItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setViewItem(null)}>
-          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f4d21f]/10">
+                  <Medal className="h-5 w-5 text-[#f4d21f]" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800">{viewItem.title}</h2>
+                  <span className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${categoryConfig[viewItem.category]?.color || "bg-slate-100 text-slate-600"}`}>
+                    {categoryConfig[viewItem.category]?.label || viewItem.category}
+                  </span>
+                </div>
+              </div>
+              <button onClick={() => setViewItem(null)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
             {viewItem.image_url && (
-              <div className="h-48 overflow-hidden rounded-t-2xl sm:h-64">
-                <img src={viewItem.image_url} alt={viewItem.title} className="h-full w-full object-cover" />
+              <div className="mb-4 overflow-hidden rounded-xl">
+                <img src={viewItem.image_url} alt={viewItem.title} className="h-40 w-full object-cover" />
               </div>
             )}
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#1767b1]/10">
-                  <FileText className="h-5 w-5 text-[#1767b1]" />
-                </div>
-                <div className="min-w-0">
-                  <h2 className="text-lg font-bold text-slate-800 line-clamp-1">{viewItem.title}</h2>
-                  <div className="mt-1 flex items-center gap-2">
-                    <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold ${categoryConfig[viewItem.category]?.color || "bg-slate-100 text-slate-600 border-slate-200"}`}>
-                      {categoryConfig[viewItem.category]?.label || viewItem.category}
-                    </span>
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${viewItem.is_published ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                      {viewItem.is_published ? "Publish" : "Draft"}
-                    </span>
-                  </div>
-                </div>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between border-b border-slate-100 pb-2">
+                <span className="text-slate-500">Tahun</span>
+                <span className="font-medium text-slate-800">{viewItem.year}</span>
               </div>
-              <button onClick={() => setViewItem(null)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X className="h-5 w-5" /></button>
-            </div>
-            <div className="max-h-[50vh] overflow-y-auto px-6 py-5">
-              <div className="mb-4 flex items-center gap-4 text-xs text-slate-500">
-                <span>Oleh: {(viewItem as any).author_name || "Tidak diketahui"}</span>
-                <span>{viewItem.published_at ? new Date(viewItem.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"}</span>
+              <div className="border-b border-slate-100 pb-2">
+                <span className="text-slate-500">Deskripsi</span>
+                <p className="mt-1 text-slate-700">{viewItem.description || "Tidak ada deskripsi"}</p>
               </div>
-              {viewItem.summary && <p className="mb-4 text-sm text-slate-600 italic border-l-2 border-[#f4d21f] pl-3">{viewItem.summary}</p>}
-              <div className="prose prose-sm max-w-none text-slate-700 leading-relaxed whitespace-pre-wrap">{viewItem.content || "Tidak ada konten"}</div>
             </div>
-            <div className="flex gap-3 border-t border-slate-100 px-6 py-4">
+            <div className="mt-4 flex gap-3">
               <button onClick={() => { setViewItem(null); openEdit(viewItem); }}
                 className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                 <PencilSimple className="h-4 w-4" /> Edit
               </button>
-              <a href={`/news/${viewItem.slug}`} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1]">
-                <Eye className="h-4 w-4" /> Lihat di Website
-              </a>
+              <button onClick={() => { setViewItem(null); setDeleteItem(viewItem); }}
+                className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100">
+                <Trash className="h-4 w-4" /> Hapus
+              </button>
             </div>
           </div>
         </div>
@@ -524,7 +468,7 @@ export default function AdminBeritaPage() {
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto">
               <Warning className="h-6 w-6 text-red-600" />
             </div>
-            <h3 className="text-center text-lg font-bold text-slate-800">Hapus Berita?</h3>
+            <h3 className="text-center text-lg font-bold text-slate-800">Hapus Prestasi?</h3>
             <p className="mt-2 text-center text-sm text-slate-500">&ldquo;{deleteItem.title}&rdquo; akan dihapus permanen.</p>
             <div className="mt-6 flex gap-3">
               <button onClick={() => setDeleteItem(null)} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Batal</button>
@@ -541,8 +485,8 @@ export default function AdminBeritaPage() {
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto">
               <Warning className="h-6 w-6 text-red-600" />
             </div>
-            <h3 className="text-center text-lg font-bold text-slate-800">Hapus {selectedIds.size} Berita?</h3>
-            <p className="mt-2 text-center text-sm text-slate-500">Semua berita yang dipilih akan dihapus permanen.</p>
+            <h3 className="text-center text-lg font-bold text-slate-800">Hapus {selectedIds.size} Prestasi?</h3>
+            <p className="mt-2 text-center text-sm text-slate-500">Semua prestasi yang dipilih akan dihapus permanen.</p>
             <div className="mt-6 flex gap-3">
               <button onClick={() => setBulkDelete(false)} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Batal</button>
               <button onClick={handleBulkDelete} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700">Ya, Hapus</button>
@@ -556,11 +500,10 @@ export default function AdminBeritaPage() {
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !formSaving && setFormOpen(false)} />
           <div className="relative flex h-full w-full max-w-2xl flex-col bg-white shadow-2xl transition-transform">
-            {/* Form header */}
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
               <div>
-                <h2 className="text-lg font-bold text-slate-800">{editItem ? "Edit Berita" : "Buat Berita Baru"}</h2>
-                <p className="text-xs text-slate-400">{editItem ? "Perbarui informasi berita" : "Isi form untuk menerbitkan berita"}</p>
+                <h2 className="text-lg font-bold text-slate-800">{editItem ? "Edit Prestasi" : "Tambah Prestasi Baru"}</h2>
+                <p className="text-xs text-slate-400">{editItem ? "Perbarui informasi prestasi" : "Isi form untuk menambahkan prestasi"}</p>
               </div>
               <button onClick={() => setFormOpen(false)} disabled={formSaving}
                 className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-40">
@@ -568,7 +511,6 @@ export default function AdminBeritaPage() {
               </button>
             </div>
 
-            {/* Form body */}
             <div className="flex-1 overflow-y-auto px-6 py-5">
               {formError && (
                 <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
@@ -577,18 +519,16 @@ export default function AdminBeritaPage() {
               )}
 
               <div className="space-y-5">
-                {/* Title */}
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-slate-700">Judul <span className="text-red-500">*</span></label>
                   <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
                     className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
-                    placeholder="Judul berita" />
+                    placeholder="Judul prestasi" />
                 </div>
 
-                {/* Category */}
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-slate-700">Kategori</label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {Object.entries(categoryConfig).map(([key, cfg]) => (
                       <button key={key} type="button" onClick={() => setForm({ ...form, category: key })}
                         className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
@@ -602,9 +542,15 @@ export default function AdminBeritaPage() {
                   </div>
                 </div>
 
-                {/* Image */}
                 <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Gambar Sampul</label>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tahun</label>
+                  <input type="number" value={form.year} onChange={(e) => setForm({ ...form, year: parseInt(e.target.value) || new Date().getFullYear() })}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                    min={2000} max={2100} />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Gambar</label>
                   {imagePreview ? (
                     <div className="relative mb-3 overflow-hidden rounded-xl border border-slate-200">
                       <img src={imagePreview} alt="Preview" className="h-40 w-full object-cover" />
@@ -622,39 +568,16 @@ export default function AdminBeritaPage() {
                   )}
                 </div>
 
-                {/* Summary */}
                 <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Ringkasan</label>
-                  <textarea value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })}
-                    rows={3}
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Deskripsi</label>
+                  <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    rows={4}
                     className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-none"
-                    placeholder="Ringkasan singkat berita (opsional)" />
-                </div>
-
-                {/* Content */}
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Konten</label>
-                  <textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })}
-                    rows={12}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-y"
-                    placeholder="Tulis konten berita di sini..." />
-                </div>
-
-                {/* Publish toggle */}
-                <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-700">Terbitkan Sekarang</p>
-                    <p className="text-xs text-slate-400">{form.is_published ? "Berita akan langsung tampil di website" : "Berita disimpan sebagai draft"}</p>
-                  </div>
-                  <button type="button" onClick={() => setForm({ ...form, is_published: !form.is_published })}
-                    className={`relative h-6 w-11 rounded-full transition-colors ${form.is_published ? "bg-[#1767b1]" : "bg-slate-300"}`}>
-                    <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_published ? "left-[22px]" : "left-0.5"}`} />
-                  </button>
+                    placeholder="Deskripsi prestasi (opsional)" />
                 </div>
               </div>
             </div>
 
-            {/* Form footer */}
             <div className="flex gap-3 border-t border-slate-200 px-6 py-4">
               <button onClick={() => setFormOpen(false)} disabled={formSaving}
                 className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
@@ -667,7 +590,7 @@ export default function AdminBeritaPage() {
                 ) : (
                   <>
                     <FloppyDisk className="h-4 w-4" />
-                    {editItem ? "Simpan Perubahan" : "Terbitkan"}
+                    {editItem ? "Simpan Perubahan" : "Simpan"}
                   </>
                 )}
               </button>

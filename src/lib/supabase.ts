@@ -5,7 +5,6 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Types
 export interface SchoolProfile {
   id: string;
   school_name: string;
@@ -18,6 +17,13 @@ export interface SchoolProfile {
   history: string;
   logo_url: string;
   banner_url: string;
+  principal_name: string;
+  principal_photo_url: string;
+  principal_quote: string;
+  total_teachers: number;
+  total_students: number;
+  total_classes: number;
+  accreditation: string;
   created_at: string;
   updated_at: string;
 }
@@ -50,7 +56,7 @@ export interface News {
   content: string;
   category: "berita" | "pengumuman" | "agenda";
   image_url: string;
-  author: string;
+  author_id: string | null;
   is_published: boolean;
   published_at: string;
   created_at: string;
@@ -97,7 +103,7 @@ export interface Article {
   slug: string;
   excerpt: string;
   content: string;
-  author: string;
+  author_id: string | null;
   category: string;
   image_url: string;
   is_published: boolean;

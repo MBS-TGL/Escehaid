@@ -319,7 +319,29 @@ export default function SPMBForm() {
       surat_sekolah: suratUrl,
       ktp_ortu: ktpUrl,
       bukti_transfer: transferUrl,
+      nickname: data.nickname,
+      nisn: data.nisn,
+      nik: data.nik,
+      height: data.height,
+      weight: data.weight,
+      language: data.language,
+      hobby: data.hobby,
+      ambition: data.ambition,
+      child_order: data.child_order,
+      siblings: data.siblings,
+      blood_type: data.blood_type,
+      orphan_status: data.orphan_status,
+      father_birth_place: data.father_birth_place,
+      father_birth_date: data.father_birth_date,
+      mother_name: data.mother_name,
+      mother_birth_place: data.mother_birth_place,
+      mother_birth_date: data.mother_birth_date,
+      mother_education: data.mother_education,
+      mother_job: data.mother_job,
+      mother_income: data.mother_income,
     };
+
+    const registrationPath = data.program.includes("Boarding") ? "reguler" : "prestasi";
 
     const { error } = await supabase.from("spmb_registrations").insert({
       full_name: data.full_name,
@@ -332,15 +354,17 @@ export default function SPMBForm() {
       parent_name: `${data.father_name} / ${data.mother_name}`,
       parent_occupation: data.father_job,
       previous_school: data.previous_school,
-      registration_path: data.program.includes("Boarding") ? "reguler" : "reguler",
+      registration_path: registrationPath,
       documents,
     });
 
     setLoading(false);
-    if (!error) {
-      clearStorage();
-      setSuccess(true);
+    if (error) {
+      setErrors({ submit: "Gagal mengirim data. Silakan coba lagi." });
+      return;
     }
+    clearStorage();
+    setSuccess(true);
   }
 
   return (
@@ -713,13 +737,10 @@ export default function SPMBForm() {
                 <ArrowLeft className="h-4 w-4" /> Kembali
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={debugFill}
-                className="rounded-lg border border-dashed border-amber-400 bg-amber-50 px-3 py-1.5 text-[11px] font-medium text-amber-600 transition-colors hover:bg-amber-100"
-              >
-                Debug: Auto Fill
-              </button>
+              <div />
+            )}
+            {errors.submit && (
+              <p className="w-full text-center text-sm font-medium text-red-600">{errors.submit}</p>
             )}
             {step < 4 ? (
               <button onClick={handleNext} className="flex items-center gap-2 rounded-xl bg-[#082b59] px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-[#1767b1]">

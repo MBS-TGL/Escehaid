@@ -33,7 +33,6 @@ export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith("/admin")) {
     // Allow login page
     if (request.nextUrl.pathname === "/admin/login") {
-      // If already logged in, redirect to admin dashboard
       if (user) {
         return NextResponse.redirect(new URL("/admin", request.url));
       }
@@ -45,23 +44,31 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/admin/login", request.url));
     }
 
-    // Check if user is active
+    // Fetch profile for role check
     const { data: profile } = await supabase
       .from("user_profiles")
       .select("is_active, role")
       .eq("id", user.id)
       .single();
 
-    // Redirect if profile not found or inactive
-    if (!profile || !profile.is_active) {
+    // Redirect if profile not found (user needs to be set up)
+    if (!profile) {
+      await supabase.auth.signOut();
+      return NextResponse.redirect(new URL("/admin/login?error=no_profile", request.url));
+    }
+
+    // Redirect if inactive
+    if (!profile.is_active) {
       await supabase.auth.signOut();
       return NextResponse.redirect(new URL("/admin/login?error=inactive", request.url));
     }
 
-    // Developer-only routes
-    const devOnlyRoutes = ["/admin/users"];
-    if (devOnlyRoutes.some((r) => request.nextUrl.pathname.startsWith(r))) {
-      if (profile.role !== "developer") {
+    const role = profile.role;
+
+    // Admin-only routes
+    const adminOnlyRoutes = ["/admin/users"];
+    if (adminOnlyRoutes.some((r) => request.nextUrl.pathname.startsWith(r))) {
+      if (!["developer", "admin"].includes(role)) {
         return NextResponse.redirect(new URL("/admin", request.url));
       }
     }

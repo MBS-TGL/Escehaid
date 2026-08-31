@@ -58,22 +58,22 @@ export default async function ProfilPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="rounded-2xl bg-[#f4f7fb] p-6 text-center">
                   <GraduationCap className="mx-auto h-8 w-8 text-[#f4d21f]" />
-                  <p className="mt-3 text-3xl font-bold text-[#082b59]">A</p>
+                  <p className="mt-3 text-3xl font-bold text-[#082b59]">{profil?.accreditation || "A"}</p>
                   <p className="mt-1 text-sm text-slate-500">Akreditasi</p>
                 </div>
                 <div className="rounded-2xl bg-[#f4f7fb] p-6 text-center">
                   <Users className="mx-auto h-8 w-8 text-[#f4d21f]" />
-                  <p className="mt-3 text-3xl font-bold text-[#082b59]">164</p>
+                  <p className="mt-3 text-3xl font-bold text-[#082b59]">{profil?.total_students || 164}</p>
                   <p className="mt-1 text-sm text-slate-500">Siswa</p>
                 </div>
                 <div className="rounded-2xl bg-[#f4f7fb] p-6 text-center">
                   <BookOpen className="mx-auto h-8 w-8 text-[#f4d21f]" />
-                  <p className="mt-3 text-3xl font-bold text-[#082b59]">14</p>
+                  <p className="mt-3 text-3xl font-bold text-[#082b59]">{profil?.total_teachers || 14}</p>
                   <p className="mt-1 text-sm text-slate-500">Guru</p>
                 </div>
                 <div className="rounded-2xl bg-[#f4f7fb] p-6 text-center">
                   <Building className="mx-auto h-8 w-8 text-[#f4d21f]" />
-                  <p className="mt-3 text-3xl font-bold text-[#082b59]">7</p>
+                  <p className="mt-3 text-3xl font-bold text-[#082b59]">{profil?.total_classes || 7}</p>
                   <p className="mt-1 text-sm text-slate-500">Rombel</p>
                 </div>
               </div>
@@ -92,8 +92,8 @@ export default async function ProfilPage() {
                   <div className="absolute -inset-4 rounded-full bg-gradient-to-br from-[#f4d21f]/30 to-[#1767b1]/20 blur-xl" />
                   <div className="relative h-64 w-64 overflow-hidden rounded-full border-4 border-[#f4d21f] md:h-80 md:w-80">
                     <img
-                      src="/images/Kepala-Sekolah.jpg"
-                      alt="Kepala Sekolah"
+                      src={profil?.principal_photo_url || "/images/Kepala-Sekolah.jpg"}
+                      alt={profil?.principal_name || "Kepala Sekolah"}
                       className="h-full w-full object-cover object-[center_20%]"
                       loading="lazy"
                     />
@@ -109,10 +109,10 @@ export default async function ProfilPage() {
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Kepala Sekolah</p>
                 <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">
-                  Khoirul Anwar, S.Pd
+                  {profil?.principal_name || "Khoirul Anwar, S.Pd"}
                 </h2>
                 <p className="mt-6 text-[15px] leading-relaxed text-slate-600">
-                  Memimpin sekolah dengan visi untuk mencetak kader umat yang berakhlak mulia, cerdas, dan siap menjadi Da&apos;i serta Ulama Hafidz yang bermanfaat bagi masyarakat.
+                  {profil?.principal_quote || "Memimpin sekolah dengan visi untuk mencetak kader umat yang berakhlak mulia, cerdas, dan siap menjadi Da'i serta Ulama Hafidz yang bermanfaat bagi masyarakat."}
                 </p>
                 <div className="mt-6 flex items-center gap-3">
                   <span className="rounded-full bg-[#082b59]/10 px-3 py-1 text-xs font-medium text-[#082b59]">Kurikulum Merdeka</span>

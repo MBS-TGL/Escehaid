@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, FileText, Newspaper, ImageSquare, House, Clock } from "@/components/Icons";
-import { getNewsList, getFacilityList, getArticleList, getTeacherList } from "@/lib/queries";
+import { getNewsList, getFacilityList, getArticleList, getTeacherList, getSchoolProfile } from "@/lib/queries";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
 import FAQ from "./FAQ";
 import WhatsAppButton from "./WhatsAppButton";
@@ -11,11 +11,12 @@ import TeacherCard from "./TeacherCard";
 type NewsItem = { id: string | number; slug: string; title: string; summary: string; category: string; image_url?: string | null; published_at?: string };
 
 export default async function Home() {
-  const [beritaRaw, dbFacilities, articles, teachers] = await Promise.all([
+  const [beritaRaw, dbFacilities, articles, teachers, profile] = await Promise.all([
     getNewsList(4) as Promise<NewsItem[]>,
     getFacilityList(),
     getArticleList(4),
     getTeacherList(),
+    getSchoolProfile(),
   ]);
 
   const fallbackFacilities: [string, string, string?, string?][] = [
@@ -70,10 +71,10 @@ export default async function Home() {
             <FadeIn delay={0.4}>
               <div className="mt-8 flex gap-8">
                 {[
-                  ["A", "Akreditasi"],
-                  ["14", "Guru"],
-                  ["164", "Siswa"],
-                  ["7", "Rombel"],
+                  [profile?.accreditation || "A", "Akreditasi"],
+                  [String(profile?.total_teachers || 14), "Guru"],
+                  [String(profile?.total_students || 164), "Siswa"],
+                  [String(profile?.total_classes || 7), "Rombel"],
                 ].map(([value, label]) => (
                   <div key={label} className="text-center">
                     <p className="text-2xl font-bold text-[#f4d21f] md:text-3xl">{value}</p>
@@ -122,8 +123,8 @@ export default async function Home() {
                   <div className="absolute -inset-4 rounded-full bg-gradient-to-br from-[#f4d21f]/30 to-[#1767b1]/20 blur-xl" />
                   <div className="relative h-56 w-56 overflow-hidden rounded-full border-4 border-[#f4d21f] md:h-72 md:w-72">
                     <img
-                      src="/images/Kepala-Sekolah.jpg"
-                      alt="Khoirul Anwar, S.Pd - Kepala Sekolah"
+                      src={profile?.principal_photo_url || "/images/Kepala-Sekolah.jpg"}
+                      alt={`${profile?.principal_name || "Kepala Sekolah"} - Kepala Sekolah`}
                       className="h-full w-full object-cover object-[center_15%]"
                       loading="lazy"
                     />
@@ -144,12 +145,12 @@ export default async function Home() {
                 <blockquote className="relative mt-6 border-l-2 border-[#f4d21f] pl-6">
                   <div className="absolute -left-3.5 top-0 h-7 w-7 rounded-full border-2 border-[#f4d21f] bg-[#f4f7fb]" />
                   <p className="text-base leading-relaxed text-slate-600 md:text-lg">
-                    &ldquo;Selamat datang di SMP Muhammadiyah 4 Tanggul. Kami berkomitmen mencerdaskan kehidupan bangsa melalui pendidikan berkualitas yang memadukan keunggulan akademik dan pembentukan karakter Islami.&rdquo;
+                    &ldquo;{profile?.principal_quote || "Selamat datang di SMP Muhammadiyah 4 Tanggul. Kami berkomitmen mencerdaskan kehidupan bangsa melalui pendidikan berkualitas yang memadukan keunggulan akademik dan pembentukan karakter Islami."}&rdquo;
                   </p>
                 </blockquote>
                 <footer className="mt-6 flex items-center gap-3 pl-6">
                   <div>
-                    <p className="text-sm font-semibold text-[#082b59]">Khoirul Anwar, S.Pd</p>
+                    <p className="text-sm font-semibold text-[#082b59]">{profile?.principal_name || "Khoirul Anwar, S.Pd"}</p>
                     <p className="text-xs text-slate-500">Kepala Sekolah</p>
                   </div>
                 </footer>
@@ -338,7 +339,7 @@ export default async function Home() {
                   </div>
                   <h3 className="mt-3 text-lg font-semibold text-[#082b59] transition-colors group-hover:text-[#1767b1]">{item.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-slate-500 line-clamp-2">{item.excerpt}</p>
-                  <p className="mt-3 text-xs text-slate-400">oleh {item.author}</p>
+                  <p className="mt-3 text-xs text-slate-400">oleh {item.author_name ?? "Tim MBS"}</p>
                 </Link>
               </StaggerItem>
             ))}

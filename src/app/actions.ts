@@ -1,6 +1,6 @@
 "use server";
 
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase-server";
 
 export async function submitContactMessage(message: {
   name: string;
@@ -9,6 +9,7 @@ export async function submitContactMessage(message: {
   subject?: string;
   message: string;
 }): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
   const { error } = await supabase.from("contact_messages").insert(message);
 
   if (error) {

@@ -1,33 +1,294 @@
 -- ============================================================
--- SMP Muhammadiyah 4 Tanggul - Database Schema
--- Run this in Supabase SQL Editor to create all tables
--- NOTE: RLS auto-enabled by rls_auto_enable event trigger
+-- SMP Muhammadiyah 4 Tanggul — DATABASE RESET v2
+-- Perbaikan dari versi sebelumnya:
+--   1. handle_new_user() TIDAK LAGI percaya role dari client metadata
+--      (dulu: siapapun bisa signup langsung jadi 'developer')
+--   2. Trigger anti self role-escalation di user_profiles
+--      (dulu: user bisa UPDATE role diri sendiri jadi admin)
+--   3. RLS "Admin manage X" beneran cek role, bukan cuma auth.role()='authenticated'
+--      (dulu: student pun full CRUD ke semua tabel konten)
+--   4. Public insert spmb_registrations dikunci status='pending'
+--      (dulu: pendaftar publik bisa insert langsung status='accepted')
+--   5. Slug generator digeneralisasi + auto-handle collision + no double-dash
+--   6. Auto set_updated_at() trigger di semua tabel yang punya kolom itu
+--   7. Bucket "images" ditambahkan (dulu gak ada tempat upload foto konten)
+--   8. Full cleanup di Phase 0 (drop policy dulu) supaya script ini AMAN
+--      dijalankan berkali-kali tanpa error "already exists"
+--
+-- Jalankan di Supabase SQL Editor, project BARU (kosong).
 -- ============================================================
 
--- Enable UUID extension
-create extension if not exists "uuid-ossp";
+-- ============================================================
+-- PHASE 0: FULL CLEANUP — aman dijalankan berkali-kali (idempotent)
+-- ============================================================
+-- auth.users selalu ada di Supabase, jadi ini aman standalone
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+-- Tabel-tabel di bawah ini BELUM TENTU ada (misal project baru/kosong),
+-- dan "DROP TRIGGER IF EXISTS x ON tabel" tetap error kalau tabelnya sendiri
+-- gak ada (IF EXISTS cuma nge-skip triggernya, bukan tabelnya). Makanya
+-- di-cek dulu keberadaan tabel via to_regclass() sebelum drop trigger.
+DO $$
+BEGIN
+  IF to_regclass('public.user_profiles') IS NOT NULL THEN
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_prevent_privilege_escalation ON user_profiles';
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_set_updated_at_user_profiles ON user_profiles';
+  END IF;
+  IF to_regclass('public.school_profile') IS NOT NULL THEN
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_set_updated_at_school_profile ON school_profile';
+  END IF;
+  IF to_regclass('public.news') IS NOT NULL THEN
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_set_updated_at_news ON news';
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_slug_news ON news';
+    EXECUTE 'DROP TRIGGER IF EXISTS trigger_news_slug ON news';
+  END IF;
+  IF to_regclass('public.articles') IS NOT NULL THEN
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_set_updated_at_articles ON articles';
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_slug_articles ON articles';
+    EXECUTE 'DROP TRIGGER IF EXISTS trigger_articles_slug ON articles';
+  END IF;
+  IF to_regclass('public.spmb_registrations') IS NOT NULL THEN
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_set_updated_at_spmb ON spmb_registrations';
+  END IF;
+END $$;
+
+DROP FUNCTION IF EXISTS handle_new_user();
+DROP FUNCTION IF EXISTS prevent_privilege_escalation();
+DROP FUNCTION IF EXISTS set_updated_at();
+DROP FUNCTION IF EXISTS generate_unique_slug();
+DROP FUNCTION IF EXISTS update_news_slug();
+DROP FUNCTION IF EXISTS update_articles_slug();
+DROP FUNCTION IF EXISTS current_user_role();
+
+-- Drop semua policy lama (biar CREATE POLICY di bawah gak pernah bentrok)
+DO $$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT schemaname, tablename, policyname
+    FROM pg_policies
+    WHERE schemaname IN ('public', 'storage')
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I', r.policyname, r.schemaname, r.tablename);
+  END LOOP;
+END $$;
+
+DROP TABLE IF EXISTS user_audit_log CASCADE;
+DROP TABLE IF EXISTS user_profiles CASCADE;
+DROP TABLE IF EXISTS contact_messages CASCADE;
+DROP TABLE IF EXISTS achievements CASCADE;
+DROP TABLE IF EXISTS articles CASCADE;
+DROP TABLE IF EXISTS facilities CASCADE;
+DROP TABLE IF EXISTS teachers CASCADE;
+DROP TABLE IF EXISTS spmb_registrations CASCADE;
+DROP TABLE IF EXISTS ppdb_registrations CASCADE; -- nama lama, jaga-jaga
+DROP TABLE IF EXISTS gallery CASCADE;
+DROP TABLE IF EXISTS news CASCADE;
+DROP TABLE IF EXISTS school_profile CASCADE;
+
+DROP TYPE IF EXISTS user_role CASCADE;
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto"; -- buat gen_random_uuid()
 
 -- ============================================================
--- 1. SCHOOL PROFILE
+-- PHASE 1: ENUM
 -- ============================================================
-create table if not exists school_profile (
-  id uuid primary key default uuid_generate_v4(),
-  school_name text not null default 'SMP Muhammadiyah 4 Tanggul',
-  address text not null default 'Jl. Pemandian No. 88, Patemon, Tanggul, Jember 68154',
-  phone text not null default '0858-5200-4008',
-  email text not null default 'smpm4tangguljember@gmail.com',
-  website text default 'https://esceha.id',
-  vision text not null default '',
-  mission text not null default '',
-  history text default '',
-  logo_url text default '/images/Logo-Sekolah.png',
-  banner_url text default '',
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
+CREATE TYPE user_role AS ENUM ('developer', 'admin', 'publisher', 'teacher', 'student');
+
+-- ============================================================
+-- PHASE 2: AUTH TABLES
+-- ============================================================
+CREATE TABLE user_profiles (
+  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name text NOT NULL DEFAULT '',
+  role user_role NOT NULL DEFAULT 'student',
+  avatar_url text,
+  phone text,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
 );
 
-insert into school_profile (school_name, address, phone, email, website, vision, mission)
-values (
+CREATE TABLE user_audit_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  action text NOT NULL,
+  details jsonb DEFAULT '{}',
+  created_at timestamptz DEFAULT now()
+);
+
+-- ============================================================
+-- PHASE 3: SIGNUP TRIGGER — role SELALU 'student', gak peduli
+-- apa yang dikirim client di raw_user_meta_data.
+-- Promosi role WAJIB manual lewat admin panel / SQL, bukan signup.
+-- ============================================================
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.user_profiles (id, full_name, role, is_active)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
+    'student',   -- HARDCODE, jangan pernah ambil dari metadata client
+    true
+  );
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION handle_new_user();
+
+-- ============================================================
+-- PHASE 4: ANTI PRIVILEGE-ESCALATION
+-- Blok perubahan role/is_active kecuali dilakukan oleh
+-- developer/admin, ATAU dijalankan lewat SQL Editor/service_role
+-- (auth.uid() IS NULL) untuk keperluan bootstrap.
+-- ============================================================
+CREATE OR REPLACE FUNCTION current_user_role()
+RETURNS user_role
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT role FROM user_profiles WHERE id = auth.uid();
+$$;
+
+CREATE OR REPLACE FUNCTION prevent_privilege_escalation()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF (NEW.role IS DISTINCT FROM OLD.role OR NEW.is_active IS DISTINCT FROM OLD.is_active) THEN
+    IF auth.uid() IS NOT NULL
+       AND (current_user_role() IS NULL OR current_user_role() NOT IN ('developer', 'admin')) THEN
+      RAISE EXCEPTION 'Hanya developer/admin yang boleh mengubah role atau status aktif';
+    END IF;
+  END IF;
+  NEW.updated_at := now();
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_prevent_privilege_escalation
+  BEFORE UPDATE ON user_profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION prevent_privilege_escalation();
+
+-- ============================================================
+-- PHASE 5: RLS user_profiles / user_audit_log
+-- ============================================================
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_audit_log ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users read own profile"
+  ON user_profiles FOR SELECT
+  USING (id = auth.uid());
+
+CREATE POLICY "Users update own profile"
+  ON user_profiles FOR UPDATE
+  USING (id = auth.uid())
+  WITH CHECK (id = auth.uid());
+  -- catatan: kolom role/is_active tetap dilindungi oleh trigger di atas,
+  -- bukan oleh policy ini — RLS gak bisa restrict per-kolom.
+
+CREATE POLICY "Admin manage profiles"
+  ON user_profiles FOR ALL
+  USING (current_user_role() IN ('developer', 'admin'))
+  WITH CHECK (current_user_role() IN ('developer', 'admin'));
+
+CREATE POLICY "Audit log admin only"
+  ON user_audit_log FOR ALL
+  USING (current_user_role() IN ('developer', 'admin'));
+
+-- ============================================================
+-- PHASE 6: HELPER TRIGGERS (dipakai berulang di banyak tabel)
+-- ============================================================
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at := now();
+  RETURN NEW;
+END;
+$$;
+
+-- Slug generator generic: lowercase, ganti karakter non-alfanumerik jadi
+-- satu dash, trim dash di ujung, dan auto-append -2, -3, dst kalau bentrok.
+CREATE OR REPLACE FUNCTION generate_unique_slug()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  base_slug text;
+  candidate_slug text;
+  counter int := 1;
+  slug_exists boolean;
+BEGIN
+  IF NEW.slug IS NULL OR NEW.slug = '' THEN
+    base_slug := lower(NEW.title);
+  ELSE
+    base_slug := lower(NEW.slug);
+  END IF;
+
+  base_slug := regexp_replace(base_slug, '[^a-z0-9]+', '-', 'g');
+  base_slug := trim(both '-' from base_slug);
+  IF base_slug = '' THEN
+    base_slug := 'item';
+  END IF;
+
+  candidate_slug := base_slug;
+
+  LOOP
+    EXECUTE format(
+      'SELECT EXISTS (SELECT 1 FROM %I WHERE slug = $1 AND id <> $2)',
+      TG_TABLE_NAME
+    ) INTO slug_exists USING candidate_slug, NEW.id;
+
+    EXIT WHEN NOT slug_exists;
+    counter := counter + 1;
+    candidate_slug := base_slug || '-' || counter;
+  END LOOP;
+
+  NEW.slug := candidate_slug;
+  RETURN NEW;
+END;
+$$;
+
+-- ============================================================
+-- PHASE 7: TABEL KONTEN
+-- ============================================================
+
+-- School Profile (single row)
+CREATE TABLE school_profile (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  school_name text NOT NULL DEFAULT 'SMP Muhammadiyah 4 Tanggul',
+  address text NOT NULL DEFAULT 'Jl. Pemandian No. 88, Patemon, Tanggul, Jember 68154',
+  phone text NOT NULL DEFAULT '0858-5200-4008',
+  email text NOT NULL DEFAULT 'smpm4tangguljember@gmail.com',
+  website text DEFAULT 'https://esceha.id',
+  vision text NOT NULL DEFAULT '',
+  mission text NOT NULL DEFAULT '',
+  history text DEFAULT '',
+  logo_url text DEFAULT '/images/Logo-Sekolah.png',
+  banner_url text DEFAULT '',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+INSERT INTO school_profile (school_name, address, phone, email, website, vision, mission)
+VALUES (
   'SMP Muhammadiyah 4 Tanggul',
   'Jl. Pemandian No. 88, Patemon, Kec. Tanggul, Kab. Jember, Jawa Timur 68154',
   '0858-5200-4008',
@@ -38,254 +299,287 @@ values (
 2. Mengembangkan potensi siswa secara optimal dan seimbang.
 3. Membentuk siswa yang berakhlak mulia dan mandiri.
 4. Mewujudkan pembelajaran yang kreatif, inovatif, dan menyenangkan.'
-)
-on conflict (id) do nothing;
-
--- ============================================================
--- 2. NEWS / BERITA
--- ============================================================
-create table if not exists news (
-  id uuid primary key default uuid_generate_v4(),
-  title text not null,
-  slug text not null unique,
-  summary text not null default '',
-  content text not null default '',
-  category text not null default 'berita' check (category in ('berita', 'pengumuman', 'agenda')),
-  image_url text default '',
-  author text default '',
-  is_published boolean default false,
-  published_at timestamptz default now(),
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
 );
 
-create or replace function update_news_slug()
-returns trigger as $$
-begin
-  if new.slug is null or new.slug = '' then
-    new.slug := lower(replace(replace(replace(new.title, ' ', '-'), '.', ''), ',', ''));
-    new.slug := regexp_replace(new.slug, '[^a-z0-9-]', '', 'g');
-  end if;
-  return new;
-end;
-$$ language plpgsql;
+CREATE TRIGGER trg_set_updated_at_school_profile
+  BEFORE UPDATE ON school_profile
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
-create trigger trigger_news_slug
-  before insert on news
-  for each row execute function update_news_slug();
-
--- ============================================================
--- 3. GALLERY
--- ============================================================
-create table if not exists gallery (
-  id uuid primary key default uuid_generate_v4(),
-  title text not null,
-  description text default '',
-  media_type text not null default 'foto' check (media_type in ('foto', 'video')),
-  url text not null,
-  thumbnail_url text default '',
-  category text not null default 'umum',
-  created_at timestamptz default now()
+-- News
+CREATE TABLE news (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  slug text NOT NULL UNIQUE,
+  summary text NOT NULL DEFAULT '',
+  content text NOT NULL DEFAULT '',
+  category text NOT NULL DEFAULT 'berita' CHECK (category IN ('berita', 'pengumuman', 'agenda')),
+  image_url text DEFAULT '',
+  author_id uuid REFERENCES user_profiles(id) ON DELETE SET NULL,
+  is_published boolean DEFAULT false,
+  published_at timestamptz DEFAULT now(),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
 );
 
--- ============================================================
--- 4. PPDB REGISTRATIONS
--- ============================================================
-create table if not exists ppdb_registrations (
-  id uuid primary key default uuid_generate_v4(),
-  full_name text not null,
-  birth_place text default '',
+CREATE TRIGGER trg_slug_news
+  BEFORE INSERT ON news
+  FOR EACH ROW EXECUTE FUNCTION generate_unique_slug();
+
+CREATE TRIGGER trg_set_updated_at_news
+  BEFORE UPDATE ON news
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- Gallery
+CREATE TABLE gallery (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text DEFAULT '',
+  media_type text NOT NULL DEFAULT 'foto' CHECK (media_type IN ('foto', 'video')),
+  url text NOT NULL,
+  thumbnail_url text DEFAULT '',
+  category text NOT NULL DEFAULT 'umum',
+  created_at timestamptz DEFAULT now()
+);
+
+-- SPMB Registrations
+CREATE TABLE spmb_registrations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  full_name text NOT NULL,
+  birth_place text DEFAULT '',
   birth_date date,
-  gender text not null check (gender in ('L', 'P')),
-  address text default '',
-  phone text default '',
-  email text default '',
-  parent_name text default '',
-  parent_occupation text default '',
-  previous_school text default '',
-  registration_path text not null default 'reguler' check (registration_path in ('reguler', 'prestasi', 'beasiswa')),
-  status text not null default 'pending' check (status in ('pending', 'accepted', 'rejected')),
-  documents jsonb default '{}',
-  admin_notes text default '',
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
+  gender text NOT NULL CHECK (gender IN ('L', 'P')),
+  address text DEFAULT '',
+  phone text DEFAULT '',
+  email text DEFAULT '',
+  parent_name text DEFAULT '',
+  parent_occupation text DEFAULT '',
+  previous_school text DEFAULT '',
+  registration_path text NOT NULL DEFAULT 'reguler' CHECK (registration_path IN ('reguler', 'prestasi', 'beasiswa')),
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected')),
+  documents jsonb DEFAULT '{}',
+  admin_notes text DEFAULT '',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
 );
 
--- ============================================================
--- 5. TEACHERS / GURU
--- ============================================================
-create table if not exists teachers (
-  id uuid primary key default uuid_generate_v4(),
-  name text not null,
-  subject text default '',
-  position text default '',
-  categories jsonb default '[]',
-  photo_url text default '',
-  bio text default '',
-  sort_order int default 0,
-  is_active boolean default true,
-  created_at timestamptz default now()
+CREATE TRIGGER trg_set_updated_at_spmb
+  BEFORE UPDATE ON spmb_registrations
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- Teachers
+CREATE TABLE teachers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  subject text DEFAULT '',
+  position text DEFAULT '',
+  categories jsonb DEFAULT '[]',
+  photo_url text DEFAULT '',
+  bio text DEFAULT '',
+  sort_order int DEFAULT 0,
+  is_active boolean DEFAULT true,
+  created_at timestamptz DEFAULT now()
 );
 
-insert into teachers (name, subject, position, categories, sort_order) values
+INSERT INTO teachers (name, subject, position, categories, sort_order) VALUES
   ('Khoirul Anwar, S.Pd', 'Administrasi', 'Kepala Sekolah', '["Kepala Sekolah", "Operator Sekolah"]', 0),
   ('Durrotun Nasyihin, S.Ag', 'Pendidikan Agama Islam', 'Guru PAI', '["Guru Mapel"]', 1),
   ('Ainul Farhan, S.Pd', 'Matematika', 'Guru Matematika', '["Guru Mapel"]', 2),
   ('Rudi Hartono, S.Pd', 'Bahasa Inggris', 'Guru Bahasa Inggris', '["Guru Mapel"]', 3),
   ('Jimi Priyo Assiddiq, S.Pd., M.Pd', 'TIK', 'Guru TIK', '["Guru Mapel"]', 4),
-  ('Muhammad Arif, S.Pd., M.Pd', 'IPA', 'Guru IPA', '["Guru Mapel"]', 5)
-on conflict do nothing;
+  ('Muhammad Arif, S.Pd., M.Pd', 'IPA', 'Guru IPA', '["Guru Mapel"]', 5);
 
--- ============================================================
--- 6. FACILITIES / FASILITAS
--- ============================================================
-create table if not exists facilities (
-  id uuid primary key default uuid_generate_v4(),
-  name text not null,
-  description text default '',
-  image_url text default '',
-  sort_order int default 0,
-  is_active boolean default true,
-  created_at timestamptz default now()
+-- Facilities
+CREATE TABLE facilities (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  description text DEFAULT '',
+  image_url text DEFAULT '',
+  sort_order int DEFAULT 0,
+  is_active boolean DEFAULT true,
+  created_at timestamptz DEFAULT now()
 );
 
-insert into facilities (name, description, sort_order) values
+INSERT INTO facilities (name, description, sort_order) VALUES
   ('Ruang Kelas', 'Ruang nyaman dengan Projector, Whiteboard, dan IFP interaktif', 1),
   ('Lab Komputer', 'Ruang lab yang nyaman dengan komputer dan internet untuk belajar serta variasi materi', 2),
   ('Masjid', 'Pusat ibadah, kajian keislaman, dan kegiatan tahfidz Qur''an', 3),
-  ('Lapangan Olahraga', 'Lapangan terawat untuk kegiatan olahraga dan aktivitas fisik siswa', 4)
-on conflict do nothing;
+  ('Lapangan Olahraga', 'Lapangan terawat untuk kegiatan olahraga dan aktivitas fisik siswa', 4);
 
--- ============================================================
--- 7. ARTICLES / ARTIKEL
--- ============================================================
-create table if not exists articles (
-  id uuid primary key default uuid_generate_v4(),
-  title text not null,
-  slug text not null unique,
-  excerpt text default '',
-  content text not null default '',
-  author text default '',
-  category text default 'umum',
-  image_url text default '',
-  is_published boolean default false,
-  published_at timestamptz default now(),
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
+-- Articles
+CREATE TABLE articles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  slug text NOT NULL UNIQUE,
+  excerpt text DEFAULT '',
+  content text NOT NULL DEFAULT '',
+  author_id uuid REFERENCES user_profiles(id) ON DELETE SET NULL,
+  category text DEFAULT 'umum',
+  image_url text DEFAULT '',
+  is_published boolean DEFAULT false,
+  published_at timestamptz DEFAULT now(),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
 );
 
-create or replace function update_articles_slug()
-returns trigger as $$
-begin
-  if new.slug is null or new.slug = '' then
-    new.slug := lower(replace(replace(replace(new.title, ' ', '-'), '.', ''), ',', ''));
-    new.slug := regexp_replace(new.slug, '[^a-z0-9-]', '', 'g');
-  end if;
-  return new;
-end;
-$$ language plpgsql;
+CREATE TRIGGER trg_slug_articles
+  BEFORE INSERT ON articles
+  FOR EACH ROW EXECUTE FUNCTION generate_unique_slug();
 
-create trigger trigger_articles_slug
-  before insert on articles
-  for each row execute function update_articles_slug();
+CREATE TRIGGER trg_set_updated_at_articles
+  BEFORE UPDATE ON articles
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
--- ============================================================
--- 8. ACHIEVEMENTS / PRESTASI
--- ============================================================
-create table if not exists achievements (
-  id uuid primary key default uuid_generate_v4(),
-  title text not null,
-  description text default '',
-  category text default 'akademik',
-  year int default extract(year from now()),
-  image_url text default '',
-  sort_order int default 0,
-  created_at timestamptz default now()
+-- Achievements
+CREATE TABLE achievements (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text DEFAULT '',
+  category text DEFAULT 'akademik',
+  year int DEFAULT extract(year FROM now())::int,
+  image_url text DEFAULT '',
+  sort_order int DEFAULT 0,
+  created_at timestamptz DEFAULT now()
 );
 
--- ============================================================
--- 9. CONTACT MESSAGES / PESAN KONTAK
--- ============================================================
-create table if not exists contact_messages (
-  id uuid primary key default uuid_generate_v4(),
-  name text not null,
-  email text not null,
-  phone text default '',
-  subject text default '',
-  message text not null,
-  is_read boolean default false,
-  created_at timestamptz default now()
+-- Contact Messages
+CREATE TABLE contact_messages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  email text NOT NULL,
+  phone text DEFAULT '',
+  subject text DEFAULT '',
+  message text NOT NULL,
+  is_read boolean DEFAULT false,
+  created_at timestamptz DEFAULT now()
 );
 
 -- ============================================================
--- RLS POLICIES
--- rls_auto_enable event trigger handles ENABLE ROW LEVEL SECURITY
--- We just need to create the policies
+-- PHASE 8: RLS — role-based, bukan cuma "authenticated"
+-- ============================================================
+ALTER TABLE school_profile ENABLE ROW LEVEL SECURITY;
+ALTER TABLE news ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gallery ENABLE ROW LEVEL SECURITY;
+ALTER TABLE spmb_registrations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE teachers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE facilities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE articles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE achievements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contact_messages ENABLE ROW LEVEL SECURITY;
+
+-- Public read
+CREATE POLICY "Public read school_profile" ON school_profile FOR SELECT USING (true);
+CREATE POLICY "Public read news" ON news FOR SELECT USING (is_published = true);
+CREATE POLICY "Public read gallery" ON gallery FOR SELECT USING (true);
+CREATE POLICY "Public read teachers" ON teachers FOR SELECT USING (is_active = true);
+CREATE POLICY "Public read facilities" ON facilities FOR SELECT USING (is_active = true);
+CREATE POLICY "Public read articles" ON articles FOR SELECT USING (is_published = true);
+CREATE POLICY "Public read achievements" ON achievements FOR SELECT USING (true);
+
+-- Staff manage (role-checked, bukan sekadar login)
+CREATE POLICY "Staff manage school_profile" ON school_profile FOR ALL
+  USING (current_user_role() IN ('developer', 'admin'))
+  WITH CHECK (current_user_role() IN ('developer', 'admin'));
+
+CREATE POLICY "Staff manage news" ON news FOR ALL
+  USING (current_user_role() IN ('developer', 'admin', 'publisher'))
+  WITH CHECK (current_user_role() IN ('developer', 'admin', 'publisher'));
+
+CREATE POLICY "Staff manage gallery" ON gallery FOR ALL
+  USING (current_user_role() IN ('developer', 'admin', 'publisher'))
+  WITH CHECK (current_user_role() IN ('developer', 'admin', 'publisher'));
+
+CREATE POLICY "Staff manage teachers" ON teachers FOR ALL
+  USING (current_user_role() IN ('developer', 'admin'))
+  WITH CHECK (current_user_role() IN ('developer', 'admin'));
+
+CREATE POLICY "Staff manage facilities" ON facilities FOR ALL
+  USING (current_user_role() IN ('developer', 'admin'))
+  WITH CHECK (current_user_role() IN ('developer', 'admin'));
+
+CREATE POLICY "Staff manage articles" ON articles FOR ALL
+  USING (current_user_role() IN ('developer', 'admin', 'publisher'))
+  WITH CHECK (current_user_role() IN ('developer', 'admin', 'publisher'));
+
+CREATE POLICY "Staff manage achievements" ON achievements FOR ALL
+  USING (current_user_role() IN ('developer', 'admin'))
+  WITH CHECK (current_user_role() IN ('developer', 'admin'));
+
+CREATE POLICY "Staff manage contact_messages" ON contact_messages FOR ALL
+  USING (current_user_role() IN ('developer', 'admin'))
+  WITH CHECK (current_user_role() IN ('developer', 'admin'));
+
+CREATE POLICY "Staff manage spmb_registrations" ON spmb_registrations FOR ALL
+  USING (current_user_role() IN ('developer', 'admin'))
+  WITH CHECK (current_user_role() IN ('developer', 'admin'));
+
+-- Public insert (dikunci: gak bisa set status/is_read sendiri)
+CREATE POLICY "Public insert spmb_registrations" ON spmb_registrations
+  FOR INSERT WITH CHECK (status = 'pending');
+
+CREATE POLICY "Public insert contact_messages" ON contact_messages
+  FOR INSERT WITH CHECK (is_read = false);
+
+-- ============================================================
+-- PHASE 9: INDEXES
+-- ============================================================
+CREATE INDEX idx_news_slug ON news(slug);
+CREATE INDEX idx_news_published ON news(is_published, published_at DESC);
+CREATE INDEX idx_gallery_category ON gallery(category);
+CREATE INDEX idx_gallery_media_type ON gallery(media_type);
+CREATE INDEX idx_spmb_status ON spmb_registrations(status);
+CREATE INDEX idx_spmb_created ON spmb_registrations(created_at DESC);
+CREATE INDEX idx_articles_slug ON articles(slug);
+CREATE INDEX idx_articles_published ON articles(is_published, published_at DESC);
+CREATE INDEX idx_teachers_active ON teachers(is_active);
+CREATE INDEX idx_facilities_active ON facilities(is_active);
+CREATE INDEX idx_contact_unread ON contact_messages(is_read, created_at DESC);
+
+-- ============================================================
+-- PHASE 10: STORAGE BUCKETS
+-- ============================================================
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES
+  ('spmb-documents', 'spmb-documents', true, 2097152, ARRAY['application/pdf', 'image/jpeg', 'image/png']),
+  ('images', 'images', true, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']),
+  ('videos', 'videos', true, 52428800, ARRAY['video/mp4', 'video/webm', 'video/quicktime'])
+ON CONFLICT (id) DO NOTHING;
+
+-- spmb-documents: publik bisa upload (buat form pendaftaran), staff kelola
+CREATE POLICY "Public read spmb documents" ON storage.objects
+  FOR SELECT USING (bucket_id = 'spmb-documents');
+CREATE POLICY "Public upload spmb documents" ON storage.objects
+  FOR INSERT WITH CHECK (bucket_id = 'spmb-documents');
+CREATE POLICY "Staff manage spmb documents" ON storage.objects
+  FOR ALL USING (bucket_id = 'spmb-documents' AND current_user_role() IN ('developer', 'admin'));
+
+-- images: publik cuma baca, upload cuma staff (dipakai admin panel konten)
+CREATE POLICY "Public read images" ON storage.objects
+  FOR SELECT USING (bucket_id = 'images');
+CREATE POLICY "Staff manage images" ON storage.objects
+  FOR ALL USING (bucket_id = 'images' AND current_user_role() IN ('developer', 'admin', 'publisher'));
+
+-- videos: sama seperti images
+CREATE POLICY "Public read videos" ON storage.objects
+  FOR SELECT USING (bucket_id = 'videos');
+CREATE POLICY "Staff manage videos" ON storage.objects
+  FOR ALL USING (bucket_id = 'videos' AND current_user_role() IN ('developer', 'admin', 'publisher'));
+
+-- ============================================================
+-- PHASE 11: DEVELOPER USER (bootstrap manual)
+-- 1. Supabase Dashboard → Authentication → Users → Add user
+--      Email: dev@mbs.id
+--      Password: dev
+--      Auto Confirm: ✅
+-- 2. Supabase Dashboard → Authentication → Users → klik user dev@mbs.id
+--    → Copy UUID (nomor di sebelah kiri detail user)
+-- 3. Supabase Dashboard → Table Editor → user_profiles → Insert row
+--    - id: PASTE_UUID_DI_SINI
+--    - full_name: Developer
+--    - role: developer
+--    - is_active: true
+--    (kolom lain kosongkan atau isi sesuai kebutuhan)
+-- 4. Save. Coba login: dev@mbs.id / dev
 -- ============================================================
 
--- Public read policies
-create policy "Public read school_profile" on school_profile for select using (true);
-create policy "Public read news" on news for select using (is_published = true);
-create policy "Public read gallery" on gallery for select using (true);
-create policy "Public read teachers" on teachers for select using (is_active = true);
-create policy "Public read facilities" on facilities for select using (is_active = true);
-create policy "Public read articles" on articles for select using (is_published = true);
-create policy "Public read achievements" on achievements for select using (true);
-
--- Admin full access (authenticated users)
-create policy "Admin manage school_profile" on school_profile for all using (auth.role() = 'authenticated');
-create policy "Admin manage news" on news for all using (auth.role() = 'authenticated');
-create policy "Admin manage gallery" on gallery for all using (auth.role() = 'authenticated');
-create policy "Admin manage ppdb_registrations" on ppdb_registrations for all using (auth.role() = 'authenticated');
-create policy "Admin manage teachers" on teachers for all using (auth.role() = 'authenticated');
-create policy "Admin manage facilities" on facilities for all using (auth.role() = 'authenticated');
-create policy "Admin manage articles" on articles for all using (auth.role() = 'authenticated');
-create policy "Admin manage achievements" on achievements for all using (auth.role() = 'authenticated');
-create policy "Admin manage contact_messages" on contact_messages for all using (auth.role() = 'authenticated');
-
--- Anonymous insert for public forms
-create policy "Public insert ppdb_registrations" on ppdb_registrations for insert with check (true);
-create policy "Public insert contact_messages" on contact_messages for insert with check (true);
-
--- ============================================================
--- INDEXES
--- ============================================================
-create index if not exists idx_news_slug on news(slug);
-create index if not exists idx_news_published on news(is_published, published_at desc);
-create index if not exists idx_gallery_category on gallery(category);
-create index if not exists idx_ppdb_status on ppdb_registrations(status);
-create index if not exists idx_articles_slug on articles(slug);
-create index if not exists idx_articles_published on articles(is_published, published_at desc);
-create index if not exists idx_teachers_active on teachers(is_active);
-create index if not exists idx_facilities_active on facilities(is_active);
-
--- ============================================================
--- 10. SUPABASE STORAGE - PPDB Documents Bucket
--- ============================================================
--- Create storage bucket (run in Supabase Dashboard > Storage > New Bucket)
--- Bucket name: ppdb-documents
--- Public: yes (or configure RLS policies below)
---
--- SQL to create bucket via SQL Editor:
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values (
-  'ppdb-documents',
-  'ppdb-documents',
-  true,
-  1048576,
-  array['application/pdf', 'image/jpeg', 'image/png']
-)
-on conflict (id) do nothing;
-
--- Storage RLS policies
-create policy "Public read ppdb documents"
-  on storage.objects for select
-  using (bucket_id = 'ppdb-documents');
-
-create policy "Public insert ppdb documents"
-  on storage.objects for insert
-  with check (bucket_id = 'ppdb-documents');
-
-create policy "Admin manage ppdb documents"
-  on storage.objects for all
-  using (bucket_id = 'ppdb-documents' and auth.role() = 'authenticated');
+-- Verify (jalankan setelah insert)
+SELECT id, full_name, role, is_active FROM user_profiles;
