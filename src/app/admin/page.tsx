@@ -15,6 +15,7 @@ import {
   Plus,
   Eye,
 } from "@/components/Icons";
+import { StatCard, StatCardGroup } from "@/components/ui";
 
 const menuItems = [
   { label: "Kelola SPMB", href: "/admin/admission", icon: Users, color: "from-[#082b59] to-[#0a3570]", roles: ["developer", "admin"] },
@@ -66,12 +67,12 @@ export default async function AdminPage() {
   ]);
 
   const stats = [
-    { label: "Total Berita", value: newsCount.count || 0, icon: Megaphone, color: "text-[#1767b1]", bg: "bg-[#1767b1]/10" },
-    { label: "Total Artikel", value: articlesCount.count || 0, icon: Note, color: "text-[#0d4a8a]", bg: "bg-[#0d4a8a]/10" },
-    { label: "Total Gallery", value: galleryCount.count || 0, icon: ImageSquare, color: "text-[#1767b1]", bg: "bg-[#1767b1]/10" },
-    { label: "Pendaftar SPMB", value: spmbCount.count || 0, icon: Users, color: "text-[#082b59]", bg: "bg-[#082b59]/10" },
-    { label: "Prestasi", value: achievementsCount.count || 0, icon: Trophy, color: "text-[#f4d21f]", bg: "bg-[#f4d21f]/10" },
-    { label: "Pesan Masuk", value: contactCount.count || 0, icon: Envelope, color: "text-[#082b59]", bg: "bg-[#082b59]/10" },
+    { label: "Total Berita", value: newsCount.count || 0, icon: Megaphone, variant: "info" as const },
+    { label: "Total Artikel", value: articlesCount.count || 0, icon: Note, variant: "brand" as const },
+    { label: "Total Gallery", value: galleryCount.count || 0, icon: ImageSquare, variant: "info" as const },
+    { label: "Pendaftar SPMB", value: spmbCount.count || 0, icon: Users, variant: "brand" as const },
+    { label: "Prestasi", value: achievementsCount.count || 0, icon: Trophy, variant: "warning" as const },
+    { label: "Pesan Masuk", value: contactCount.count || 0, icon: Envelope, variant: "brand" as const },
   ];
 
   const spmbStatusColor: Record<string, string> = {
@@ -110,20 +111,11 @@ export default async function AdminPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
+      <StatCardGroup>
         {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded-xl border border-slate-200/80 bg-white p-3 shadow-sm sm:p-4"
-          >
-            <div className={`mb-2 flex h-9 w-9 items-center justify-center rounded-lg ${stat.bg} sm:mb-3 sm:h-10 sm:w-10`}>
-              <stat.icon className={`h-4 w-4 ${stat.color} sm:h-5 sm:w-5`} />
-            </div>
-            <p className="text-xl font-bold text-slate-800 sm:text-2xl">{stat.value}</p>
-            <p className="mt-0.5 text-[10px] font-medium text-slate-500 sm:text-xs">{stat.label}</p>
-          </div>
+          <StatCard key={stat.label} label={stat.label} value={stat.value} icon={stat.icon} variant={stat.variant} />
         ))}
-      </div>
+      </StatCardGroup>
 
       {/* Quick Actions */}
       <div className="mb-6">

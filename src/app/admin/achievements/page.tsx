@@ -9,6 +9,7 @@ import {
   deleteAchievementBulk,
   uploadAchievementImage,
 } from "@/lib/queries";
+import { StatCard, StatCardRow, SlideOver } from "@/components/ui";
 import type { Achievement } from "@/lib/supabase";
 import {
   Trophy,
@@ -246,18 +247,11 @@ export default function AdminAchievementsPage() {
       </div>
 
       {/* Stats */}
-      <div className="mb-6 grid grid-cols-3 gap-3">
-        {[
-          { label: "Total", value: stats.total, color: "text-[#082b59]", bg: "bg-[#082b59]/5 border-[#082b59]/10" },
-          { label: "Tahun Ini", value: stats.thisYear, color: "text-emerald-600", bg: "bg-emerald-50 border-emerald-200" },
-          { label: "Kategori", value: stats.categories, color: "text-purple-600", bg: "bg-purple-50 border-purple-200" },
-        ].map((s) => (
-          <div key={s.label} className={`rounded-xl border p-3 sm:p-4 ${s.bg}`}>
-            <p className="text-xl font-bold text-slate-800 sm:text-2xl">{s.value}</p>
-            <p className="text-xs font-medium text-slate-500">{s.label}</p>
-          </div>
-        ))}
-      </div>
+      <StatCardRow>
+        <StatCard label="Total" value={stats.total} variant="brand" />
+        <StatCard label="Tahun Ini" value={stats.thisYear} variant="success" />
+        <StatCard label="Kategori" value={stats.categories} variant="purple" />
+      </StatCardRow>
 
       {/* Bulk actions */}
       {selectedIds.size > 0 && (
@@ -496,108 +490,96 @@ export default function AdminAchievementsPage() {
       )}
 
       {/* ── CREATE/EDIT FORM PANEL ──────────────────── */}
-      {formOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !formSaving && setFormOpen(false)} />
-          <div className="relative flex h-full w-full max-w-2xl flex-col bg-white shadow-2xl transition-transform">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-              <div>
-                <h2 className="text-lg font-bold text-slate-800">{editItem ? "Edit Prestasi" : "Tambah Prestasi Baru"}</h2>
-                <p className="text-xs text-slate-400">{editItem ? "Perbarui informasi prestasi" : "Isi form untuk menambahkan prestasi"}</p>
-              </div>
-              <button onClick={() => setFormOpen(false)} disabled={formSaving}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-40">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-6 py-5">
-              {formError && (
-                <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  <Warning className="h-4 w-4 shrink-0" /> {formError}
-                </div>
+      <SlideOver
+        open={formOpen}
+        onClose={() => { if (!formSaving) setFormOpen(false); }}
+        title={editItem ? "Edit Prestasi" : "Tambah Prestasi Baru"}
+        description={editItem ? "Perbarui informasi prestasi" : "Isi form untuk menambahkan prestasi"}
+        footer={
+          <>
+            <button onClick={() => setFormOpen(false)} disabled={formSaving}
+              className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+              Batal
+            </button>
+            <button onClick={handleSave} disabled={formSaving}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
+              {formSaving ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : (
+                <>
+                  <FloppyDisk className="h-4 w-4" />
+                  {editItem ? "Simpan Perubahan" : "Simpan"}
+                </>
               )}
+            </button>
+          </>
+        }
+      >
+        {formError && (
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <Warning className="h-4 w-4 shrink-0" /> {formError}
+          </div>
+        )}
 
-              <div className="space-y-5">
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Judul <span className="text-red-500">*</span></label>
-                  <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
-                    placeholder="Judul prestasi" />
-                </div>
+        <div className="space-y-5">
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Judul <span className="text-red-500">*</span></label>
+            <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+              placeholder="Judul prestasi" />
+          </div>
 
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Kategori</label>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(categoryConfig).map(([key, cfg]) => (
-                      <button key={key} type="button" onClick={() => setForm({ ...form, category: key })}
-                        className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
-                          form.category === key
-                            ? `${cfg.color} border-current shadow-sm`
-                            : "border-slate-200 text-slate-500 hover:border-slate-300"
-                        }`}>
-                        {cfg.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tahun</label>
-                  <input type="number" value={form.year} onChange={(e) => setForm({ ...form, year: parseInt(e.target.value) || new Date().getFullYear() })}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
-                    min={2000} max={2100} />
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Gambar</label>
-                  {imagePreview ? (
-                    <div className="relative mb-3 overflow-hidden rounded-xl border border-slate-200">
-                      <img src={imagePreview} alt="Preview" className="h-40 w-full object-cover" />
-                      <button onClick={() => { setImageFile(null); setImagePreview(""); setForm({ ...form, image_url: "" }); }}
-                        className="absolute right-2 top-2 rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50">
-                      <ImageIcon className="h-8 w-8 text-slate-300" />
-                      <span className="text-xs text-slate-400">Klik untuk upload gambar</span>
-                      <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                    </label>
-                  )}
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Deskripsi</label>
-                  <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    rows={4}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-none"
-                    placeholder="Deskripsi prestasi (opsional)" />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 border-t border-slate-200 px-6 py-4">
-              <button onClick={() => setFormOpen(false)} disabled={formSaving}
-                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
-                Batal
-              </button>
-              <button onClick={handleSave} disabled={formSaving}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#082b59] py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
-                {formSaving ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <>
-                    <FloppyDisk className="h-4 w-4" />
-                    {editItem ? "Simpan Perubahan" : "Simpan"}
-                  </>
-                )}
-              </button>
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Kategori</label>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(categoryConfig).map(([key, cfg]) => (
+                <button key={key} type="button" onClick={() => setForm({ ...form, category: key })}
+                  className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
+                    form.category === key
+                      ? `${cfg.color} border-current shadow-sm`
+                      : "border-slate-200 text-slate-500 hover:border-slate-300"
+                  }`}>
+                  {cfg.label}
+                </button>
+              ))}
             </div>
           </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tahun</label>
+            <input type="number" value={form.year} onChange={(e) => setForm({ ...form, year: parseInt(e.target.value) || new Date().getFullYear() })}
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+              min={2000} max={2100} />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Gambar</label>
+            {imagePreview ? (
+              <div className="relative mb-3 overflow-hidden rounded-xl border border-slate-200">
+                <img src={imagePreview} alt="Preview" className="h-40 w-full object-cover" />
+                <button onClick={() => { setImageFile(null); setImagePreview(""); setForm({ ...form, image_url: "" }); }}
+                  className="absolute right-2 top-2 rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50">
+                <ImageIcon className="h-8 w-8 text-slate-300" />
+                <span className="text-xs text-slate-400">Klik untuk upload gambar</span>
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+              </label>
+            )}
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Deskripsi</label>
+            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
+              rows={4}
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-none"
+              placeholder="Deskripsi prestasi (opsional)" />
+          </div>
         </div>
-      )}
+      </SlideOver>
     </div>
   );
 }

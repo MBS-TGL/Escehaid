@@ -161,54 +161,6 @@ export default function SPMBForm() {
   };
 
   // DEBUG: auto-fill semua field
-  function debugFill() {
-    setData({
-      program: "SMP Boarding",
-      full_name: "Ahmad Fauzi",
-      nickname: "Fauzi",
-      gender: "L",
-      birth_place: "Jember",
-      birth_date: "15/08/2010",
-      nisn: "0012345678",
-      nik: "3509061508100001",
-      height: "155",
-      weight: "45",
-      language: "Bahasa Indonesia",
-      hobby: "Olahraga",
-      ambition: "Dokter",
-      child_order: "2",
-      siblings: "3",
-      blood_type: "O",
-      orphan_status: "tidak",
-      previous_school: "SD Muhammadiyah 01 Tanggul",
-      address: "Jl. Pemandian No. 88, Patemon, Tanggul",
-      phone: "081234567890",
-      father_name: "Budi Santoso",
-      father_birth_place: "Jember",
-      father_birth_date: "10/05/1980",
-      father_education: "S1",
-      father_job: "Wiraswasta",
-      father_income: "5000000",
-      mother_name: "Siti Rahayu",
-      mother_birth_place: "Surabaya",
-      mother_birth_date: "20/08/1982",
-      mother_education: "SMA",
-      mother_job: "Ibu Rumah Tangga",
-      mother_income: "2000000",
-    });
-
-    const dummyPdf = new File(["test"], "dummy-kk.pdf", { type: "application/pdf" });
-    const dummyJpg = new File(["test"], "dummy-akta.jpg", { type: "image/jpeg" });
-    setDocs({
-      kk: dummyPdf,
-      akta: dummyJpg,
-      surat_sekolah: dummyPdf,
-      ktp_ortu: dummyJpg,
-      bukti_transfer: dummyPdf,
-    });
-    setErrors({});
-  }
-
   function validateStep(s: number): boolean {
     const e: Record<string, string> = {};
 
@@ -350,7 +302,6 @@ export default function SPMBForm() {
       gender: data.gender,
       address: data.address,
       phone: data.phone,
-      email: "",
       parent_name: `${data.father_name} / ${data.mother_name}`,
       parent_occupation: data.father_job,
       previous_school: data.previous_school,

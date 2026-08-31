@@ -8,6 +8,7 @@ import {
   deleteProfile,
   deleteProfileBulk,
 } from "@/lib/queries";
+import { StatCard, StatCardRow, SlideOver } from "@/components/ui";
 import type { UserProfile } from "@/lib/auth";
 import {
   User,
@@ -185,18 +186,11 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Stats */}
-      <div className="mb-6 grid grid-cols-3 gap-3">
-        {[
-          { label: "Total", value: stats.total, color: "text-[#082b59]", bg: "bg-[#082b59]/5 border-[#082b59]/10" },
-          { label: "Aktif", value: stats.active, color: "text-emerald-600", bg: "bg-emerald-50 border-emerald-200" },
-          { label: "Tidak Aktif", value: stats.inactive, color: "text-red-600", bg: "bg-red-50 border-red-200" },
-        ].map((s) => (
-          <div key={s.label} className={`rounded-xl border p-3 sm:p-4 ${s.bg}`}>
-            <p className="text-xl font-bold text-slate-800 sm:text-2xl">{s.value}</p>
-            <p className="text-xs font-medium text-slate-500">{s.label}</p>
-          </div>
-        ))}
-      </div>
+      <StatCardRow>
+        <StatCard label="Total" value={stats.total} variant="brand" />
+        <StatCard label="Aktif" value={stats.active} variant="success" />
+        <StatCard label="Tidak Aktif" value={stats.inactive} variant="danger" />
+      </StatCardRow>
 
       {/* Bulk actions */}
       {selectedIds.size > 0 && (
@@ -356,79 +350,70 @@ export default function AdminUsersPage() {
       </div>
 
       {/* ── EDIT ROLE SLIDE-OVER ──────────────────── */}
-      {editItem && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !editSaving && setEditItem(null)} />
-          <div className="relative flex h-full w-full max-w-md flex-col bg-white shadow-2xl transition-transform">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-              <div>
-                <h2 className="text-lg font-bold text-slate-800">Edit Role</h2>
-                <p className="text-xs text-slate-400">{editItem.full_name}</p>
+      <SlideOver
+        open={!!editItem}
+        onClose={() => setEditItem(null)}
+        title="Edit Role"
+        description={editItem?.full_name}
+
+        footer={
+          <>
+            <button onClick={() => setEditItem(null)} disabled={editSaving}
+              className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+              Batal
+            </button>
+            <button onClick={handleSaveRole} disabled={editSaving}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
+              {editSaving ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : (
+                <>
+                  <FloppyDisk className="h-4 w-4" />
+                  Simpan Role
+                </>
+              )}
+            </button>
+          </>
+        }
+      >
+        {editItem && (
+          <div className="space-y-5">
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Role Pengguna</label>
+              <div className="space-y-2">
+                {Object.entries(roleConfig).map(([key, cfg]) => (
+                  <button key={key} type="button" onClick={() => setEditRole(key)}
+                    className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
+                      editRole === key
+                        ? "border-[#1767b1] bg-[#1767b1]/10 ring-2 ring-[#1767b1]/20"
+                        : "border-slate-200 hover:border-slate-300"
+                    }`}>
+                    <div className={`flex h-8 w-8 items-center justify-center rounded-full ${cfg.bg}`}>
+                      <User className={`h-4 w-4 ${cfg.color}`} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">{cfg.label}</p>
+                      <p className="text-xs text-slate-400">{key}</p>
+                    </div>
+                    {editRole === key && (
+                      <CheckCircle className="ml-auto h-5 w-5 text-[#1767b1]" />
+                    )}
+                  </button>
+                ))}
               </div>
-              <button onClick={() => setEditItem(null)} disabled={editSaving}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-40">
-                <X className="h-5 w-5" />
-              </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-5">
-              <div className="space-y-5">
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Role Pengguna</label>
-                  <div className="space-y-2">
-                    {Object.entries(roleConfig).map(([key, cfg]) => (
-                      <button key={key} type="button" onClick={() => setEditRole(key)}
-                        className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
-                          editRole === key
-                            ? "border-[#1767b1] bg-[#1767b1]/10 ring-2 ring-[#1767b1]/20"
-                            : "border-slate-200 hover:border-slate-300"
-                        }`}>
-                        <div className={`flex h-8 w-8 items-center justify-center rounded-full ${cfg.bg}`}>
-                          <User className={`h-4 w-4 ${cfg.color}`} />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-800">{cfg.label}</p>
-                          <p className="text-xs text-slate-400">{key}</p>
-                        </div>
-                        {editRole === key && (
-                          <CheckCircle className="ml-auto h-5 w-5 text-[#1767b1]" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-slate-200 p-4 space-y-3">
-                  <p className="text-xs font-semibold text-slate-400">Info Pengguna</p>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div><span className="text-slate-500">Nama:</span> <span className="font-medium text-slate-800">{editItem.full_name}</span></div>
-                    <div><span className="text-slate-500">Status:</span> <span className={`font-medium ${editItem.is_active ? "text-emerald-600" : "text-red-600"}`}>{editItem.is_active ? "Aktif" : "Tidak Aktif"}</span></div>
-                    <div className="col-span-2"><span className="text-slate-500">ID:</span> <span className="font-medium text-slate-800 font-mono text-xs">{editItem.id}</span></div>
-                  </div>
-                </div>
+            <div className="rounded-xl border border-slate-200 p-4 space-y-3">
+              <p className="text-xs font-semibold text-slate-400">Info Pengguna</p>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-slate-500">Nama:</span> <span className="font-medium text-slate-800">{editItem.full_name}</span></div>
+                <div><span className="text-slate-500">Status:</span> <span className={`font-medium ${editItem.is_active ? "text-emerald-600" : "text-red-600"}`}>{editItem.is_active ? "Aktif" : "Tidak Aktif"}</span></div>
+                <div className="col-span-2"><span className="text-slate-500">ID:</span> <span className="font-medium text-slate-800 font-mono text-xs">{editItem.id}</span></div>
               </div>
-            </div>
-
-            <div className="flex gap-3 border-t border-slate-200 px-6 py-4">
-              <button onClick={() => setEditItem(null)} disabled={editSaving}
-                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
-                Batal
-              </button>
-              <button onClick={handleSaveRole} disabled={editSaving}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#082b59] py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
-                {editSaving ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <>
-                    <FloppyDisk className="h-4 w-4" />
-                    Simpan Role
-                  </>
-                )}
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </SlideOver>
 
       {/* ── DELETE CONFIRM ──────────────────────────── */}
       {deleteItem && (

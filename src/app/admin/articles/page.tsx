@@ -11,6 +11,7 @@ import {
   togglePublishArticleBulk,
   uploadArticleImage,
 } from "@/lib/queries";
+import { StatCard, StatCardRow, SlideOver } from "@/components/ui";
 import type { Article } from "@/lib/supabase";
 import {
   Note,
@@ -262,18 +263,11 @@ export default function AdminArticlesPage() {
       </div>
 
       {/* Stats */}
-      <div className="mb-6 grid grid-cols-3 gap-3">
-        {[
-          { label: "Total", value: stats.total, color: "text-[#082b59]", bg: "bg-[#082b59]/5 border-[#082b59]/10" },
-          { label: "Diterbitkan", value: stats.published, color: "text-emerald-600", bg: "bg-emerald-50 border-emerald-200" },
-          { label: "Draft", value: stats.draft, color: "text-amber-600", bg: "bg-amber-50 border-amber-200" },
-        ].map((s) => (
-          <div key={s.label} className={`rounded-xl border p-3 sm:p-4 ${s.bg}`}>
-            <p className="text-xl font-bold text-slate-800 sm:text-2xl">{s.value}</p>
-            <p className="text-xs font-medium text-slate-500">{s.label}</p>
-          </div>
-        ))}
-      </div>
+      <StatCardRow>
+        <StatCard label="Total" value={stats.total} variant="brand" />
+        <StatCard label="Diterbitkan" value={stats.published} variant="success" />
+        <StatCard label="Draft" value={stats.draft} variant="warning" />
+      </StatCardRow>
 
       {/* Bulk actions */}
       {selectedIds.size > 0 && (
@@ -540,111 +534,99 @@ export default function AdminArticlesPage() {
       )}
 
       {/* ── CREATE/EDIT FORM PANEL ──────────────────── */}
-      {formOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !formSaving && setFormOpen(false)} />
-          <div className="relative flex h-full w-full max-w-2xl flex-col bg-white shadow-2xl transition-transform">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-              <div>
-                <h2 className="text-lg font-bold text-slate-800">{editItem ? "Edit Artikel" : "Buat Artikel Baru"}</h2>
-                <p className="text-xs text-slate-400">{editItem ? "Perbarui informasi artikel" : "Isi form untuk menerbitkan artikel"}</p>
-              </div>
-              <button onClick={() => setFormOpen(false)} disabled={formSaving}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-40">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-6 py-5">
-              {formError && (
-                <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  <Warning className="h-4 w-4 shrink-0" /> {formError}
-                </div>
+      <SlideOver
+        open={formOpen}
+        onClose={() => !formSaving && setFormOpen(false)}
+        title={editItem ? "Edit Artikel" : "Buat Artikel Baru"}
+        description={editItem ? "Perbarui informasi artikel" : "Isi form untuk menerbitkan artikel"}
+        footer={
+          <>
+            <button onClick={() => setFormOpen(false)} disabled={formSaving}
+              className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+              Batal
+            </button>
+            <button onClick={handleSave} disabled={formSaving}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
+              {formSaving ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : (
+                <>
+                  <FloppyDisk className="h-4 w-4" />
+                  {editItem ? "Simpan Perubahan" : "Terbitkan"}
+                </>
               )}
+            </button>
+          </>
+        }
+      >
+        {formError && (
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <Warning className="h-4 w-4 shrink-0" /> {formError}
+          </div>
+        )}
 
-              <div className="space-y-5">
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Judul <span className="text-red-500">*</span></label>
-                  <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
-                    placeholder="Judul artikel" />
-                </div>
+        <div className="space-y-5">
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Judul <span className="text-red-500">*</span></label>
+            <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+              placeholder="Judul artikel" />
+          </div>
 
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Kategori</label>
-                  <input type="text" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
-                    placeholder="Contoh: Tips, Eduukasi, Opini" />
-                </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Kategori</label>
+            <input type="text" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+              placeholder="Contoh: Tips, Eduukasi, Opini" />
+          </div>
 
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Gambar Sampul</label>
-                  {imagePreview ? (
-                    <div className="relative mb-3 overflow-hidden rounded-xl border border-slate-200">
-                      <img src={imagePreview} alt="Preview" className="h-40 w-full object-cover" />
-                      <button onClick={() => { setImageFile(null); setImagePreview(""); setForm({ ...form, image_url: "" }); }}
-                        className="absolute right-2 top-2 rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50">
-                      <ImageIcon className="h-8 w-8 text-slate-300" />
-                      <span className="text-xs text-slate-400">Klik untuk upload gambar</span>
-                      <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                    </label>
-                  )}
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Ringkasan</label>
-                  <textarea value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })}
-                    rows={3}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-none"
-                    placeholder="Ringkasan singkat artikel (opsional)" />
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Konten</label>
-                  <textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })}
-                    rows={12}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-y"
-                    placeholder="Tulis konten artikel di sini..." />
-                </div>
-
-                <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-700">Terbitkan Sekarang</p>
-                    <p className="text-xs text-slate-400">{form.is_published ? "Artikel akan langsung tampil di website" : "Artikel disimpan sebagai draft"}</p>
-                  </div>
-                  <button type="button" onClick={() => setForm({ ...form, is_published: !form.is_published })}
-                    className={`relative h-6 w-11 rounded-full transition-colors ${form.is_published ? "bg-[#1767b1]" : "bg-slate-300"}`}>
-                    <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_published ? "left-[22px]" : "left-0.5"}`} />
-                  </button>
-                </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Gambar Sampul</label>
+            {imagePreview ? (
+              <div className="relative mb-3 overflow-hidden rounded-xl border border-slate-200">
+                <img src={imagePreview} alt="Preview" className="h-40 w-full object-cover" />
+                <button onClick={() => { setImageFile(null); setImagePreview(""); setForm({ ...form, image_url: "" }); }}
+                  className="absolute right-2 top-2 rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-            </div>
+            ) : (
+              <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50">
+                <ImageIcon className="h-8 w-8 text-slate-300" />
+                <span className="text-xs text-slate-400">Klik untuk upload gambar</span>
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+              </label>
+            )}
+          </div>
 
-            <div className="flex gap-3 border-t border-slate-200 px-6 py-4">
-              <button onClick={() => setFormOpen(false)} disabled={formSaving}
-                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
-                Batal
-              </button>
-              <button onClick={handleSave} disabled={formSaving}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#082b59] py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
-                {formSaving ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <>
-                    <FloppyDisk className="h-4 w-4" />
-                    {editItem ? "Simpan Perubahan" : "Terbitkan"}
-                  </>
-                )}
-              </button>
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Ringkasan</label>
+            <textarea value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })}
+              rows={3}
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-none"
+              placeholder="Ringkasan singkat artikel (opsional)" />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Konten</label>
+            <textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })}
+              rows={12}
+              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-y"
+              placeholder="Tulis konten artikel di sini..." />
+          </div>
+
+          <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4">
+            <div>
+              <p className="text-sm font-semibold text-slate-700">Terbitkan Sekarang</p>
+              <p className="text-xs text-slate-400">{form.is_published ? "Artikel akan langsung tampil di website" : "Artikel disimpan sebagai draft"}</p>
             </div>
+            <button type="button" onClick={() => setForm({ ...form, is_published: !form.is_published })}
+              className={`relative h-6 w-11 rounded-full transition-colors ${form.is_published ? "bg-[#1767b1]" : "bg-slate-300"}`}>
+              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_published ? "left-[22px]" : "left-0.5"}`} />
+            </button>
           </div>
         </div>
-      )}
+      </SlideOver>
     </div>
   );
 }

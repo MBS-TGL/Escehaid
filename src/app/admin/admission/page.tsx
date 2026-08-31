@@ -9,6 +9,7 @@ import {
   deleteRegistration,
   deleteRegistrationBulk,
 } from "@/lib/queries";
+import { StatCard, StatCardRow, SlideOver } from "@/components/ui";
 import type { SpmbRegistration } from "@/lib/supabase";
 import {
   MagnifyingGlass,
@@ -226,19 +227,12 @@ export default function AdminPPDBPage() {
       </div>
 
       {/* Stats */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { label: "Total", value: stats.total, color: "text-[#082b59]", bg: "bg-[#082b59]/5 border-[#082b59]/10" },
-          { label: "Menunggu", value: stats.pending, color: "text-amber-600", bg: "bg-amber-50 border-amber-200" },
-          { label: "Diterima", value: stats.accepted, color: "text-emerald-600", bg: "bg-emerald-50 border-emerald-200" },
-          { label: "Ditolak", value: stats.rejected, color: "text-red-600", bg: "bg-red-50 border-red-200" },
-        ].map((s) => (
-          <div key={s.label} className={`rounded-xl border p-3 sm:p-4 ${s.bg}`}>
-            <p className="text-xl font-bold text-slate-800 sm:text-2xl">{s.value}</p>
-            <p className="text-xs font-medium text-slate-500">{s.label}</p>
-          </div>
-        ))}
-      </div>
+      <StatCardRow className="!grid-cols-2 sm:!grid-cols-4">
+        <StatCard label="Total" value={stats.total} variant="brand" />
+        <StatCard label="Menunggu" value={stats.pending} variant="warning" />
+        <StatCard label="Diterima" value={stats.accepted} variant="success" />
+        <StatCard label="Ditolak" value={stats.rejected} variant="danger" />
+      </StatCardRow>
 
       {/* Bulk actions */}
       {selectedIds.size > 0 && (
@@ -467,46 +461,20 @@ export default function AdminPPDBPage() {
 
       {/* ── EDIT NOTES SLIDE-OVER ──────────────────── */}
       {editItem && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !editSaving && setEditItem(null)} />
-          <div className="relative flex h-full w-full max-w-lg flex-col bg-white shadow-2xl transition-transform">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-              <div>
-                <h2 className="text-lg font-bold text-slate-800">Edit Catatan</h2>
-                <p className="text-xs text-slate-400">{editItem.full_name}</p>
-              </div>
+        <SlideOver
+          open={true}
+          onClose={() => !editSaving && setEditItem(null)}
+          title="Edit Catatan"
+          description={editItem.full_name}
+
+          footer={
+            <>
               <button onClick={() => setEditItem(null)} disabled={editSaving}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-40">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-6 py-5">
-              <div className="space-y-5">
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Catatan Admin</label>
-                  <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)}
-                    rows={8}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-y"
-                    placeholder="Tambahkan catatan untuk pendaftar ini..." />
-                </div>
-                <div className="rounded-xl border border-slate-200 p-4 space-y-3">
-                  <p className="text-xs font-semibold text-slate-400">Info Pendaftar</p>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div><span className="text-slate-500">Jalur:</span> <span className="font-medium text-slate-800">{pathLabels[editItem.registration_path] || editItem.registration_path}</span></div>
-                    <div><span className="text-slate-500">Status:</span> <span className={`font-medium ${statusConfig[editItem.status]?.color}`}>{statusConfig[editItem.status]?.label}</span></div>
-                    <div><span className="text-slate-500">Sekolah:</span> <span className="font-medium text-slate-800">{editItem.previous_school || "-"}</span></div>
-                    <div><span className="text-slate-500">Telepon:</span> <span className="font-medium text-slate-800">{editItem.phone || "-"}</span></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-3 border-t border-slate-200 px-6 py-4">
-              <button onClick={() => setEditItem(null)} disabled={editSaving}
-                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
                 Batal
               </button>
               <button onClick={handleSaveNotes} disabled={editSaving}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#082b59] py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
+                className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
                 {editSaving ? (
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 ) : (
@@ -516,9 +484,28 @@ export default function AdminPPDBPage() {
                   </>
                 )}
               </button>
+            </>
+          }
+        >
+          <div className="space-y-5">
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Catatan Admin</label>
+              <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)}
+                rows={8}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-y"
+                placeholder="Tambahkan catatan untuk pendaftar ini..." />
+            </div>
+            <div className="rounded-xl border border-slate-200 p-4 space-y-3">
+              <p className="text-xs font-semibold text-slate-400">Info Pendaftar</p>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-slate-500">Jalur:</span> <span className="font-medium text-slate-800">{pathLabels[editItem.registration_path] || editItem.registration_path}</span></div>
+                <div><span className="text-slate-500">Status:</span> <span className={`font-medium ${statusConfig[editItem.status]?.color}`}>{statusConfig[editItem.status]?.label}</span></div>
+                <div><span className="text-slate-500">Sekolah:</span> <span className="font-medium text-slate-800">{editItem.previous_school || "-"}</span></div>
+                <div><span className="text-slate-500">Telepon:</span> <span className="font-medium text-slate-800">{editItem.phone || "-"}</span></div>
+              </div>
             </div>
           </div>
-        </div>
+        </SlideOver>
       )}
 
       {/* ── DELETE CONFIRM ──────────────────────────── */}

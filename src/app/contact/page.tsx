@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { submitContactMessage } from "../actions";
+import { submitContactMessage } from "@/lib/queries";
 import { MapPin, Phone, Envelope, Clock, WhatsappLogo, InstagramLogo, YoutubeLogo, FacebookLogo } from "@/components/Icons";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
 

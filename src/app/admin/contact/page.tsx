@@ -9,6 +9,7 @@ import {
   toggleReadContactMessage,
   toggleReadContactMessageBulk,
 } from "@/lib/queries";
+import { SlideOver, StatCard, StatCardRow } from "@/components/ui";
 import type { ContactMessage } from "@/lib/supabase";
 import {
   Envelope,
@@ -183,18 +184,11 @@ export default function AdminContactPage() {
       </div>
 
       {/* Stats */}
-      <div className="mb-6 grid grid-cols-3 gap-3">
-        {[
-          { label: "Total", value: stats.total, color: "text-[#082b59]", bg: "bg-[#082b59]/5 border-[#082b59]/10" },
-          { label: "Belum Dibaca", value: stats.unread, color: "text-amber-600", bg: "bg-amber-50 border-amber-200" },
-          { label: "Sudah Dibaca", value: stats.read, color: "text-emerald-600", bg: "bg-emerald-50 border-emerald-200" },
-        ].map((s) => (
-          <div key={s.label} className={`rounded-xl border p-3 sm:p-4 ${s.bg}`}>
-            <p className="text-xl font-bold text-slate-800 sm:text-2xl">{s.value}</p>
-            <p className="text-xs font-medium text-slate-500">{s.label}</p>
-          </div>
-        ))}
-      </div>
+      <StatCardRow>
+        <StatCard label="Total" value={stats.total} variant="brand" />
+        <StatCard label="Belum Dibaca" value={stats.unread} variant="warning" />
+        <StatCard label="Sudah Dibaca" value={stats.read} variant="success" />
+      </StatCardRow>
 
       {/* Bulk actions */}
       {selectedIds.size > 0 && (
@@ -351,60 +345,24 @@ export default function AdminContactPage() {
       </div>
 
       {/* ── DETAIL SLIDE-OVER ──────────────────────── */}
-      {detailItem && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDetailItem(null)} />
-          <div className="relative flex h-full w-full max-w-lg flex-col bg-white shadow-2xl transition-transform">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#082b59]/10">
-                  <Envelope className="h-5 w-5 text-[#082b59]" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-800">Detail Pesan</h2>
-                  <p className="text-xs text-slate-400">{new Date(detailItem.created_at).toLocaleString("id-ID")}</p>
-                </div>
-              </div>
-              <button onClick={() => setDetailItem(null)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      <SlideOver
+        open={!!detailItem}
+        onClose={() => setDetailItem(null)}
+        title="Detail Pesan"
+        description={detailItem ? new Date(detailItem.created_at).toLocaleString("id-ID") : ""}
 
-            <div className="flex-1 overflow-y-auto space-y-4 px-6 py-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-[11px] font-semibold text-slate-400">Nama</p>
-                  <p className="text-sm font-medium text-slate-800">{detailItem.name}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold text-slate-400">Email</p>
-                  <a href={`mailto:${detailItem.email}`} className="text-sm font-medium text-[#1767b1] hover:underline">{detailItem.email}</a>
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold text-slate-400">Telepon</p>
-                  <p className="text-sm font-medium text-slate-800">{detailItem.phone || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold text-slate-400">Subjek</p>
-                  <p className="text-sm font-medium text-slate-800">{detailItem.subject || "-"}</p>
-                </div>
-              </div>
-              <div className="border-t border-slate-100 pt-4">
-                <p className="text-[11px] font-semibold text-slate-400 mb-1">Pesan</p>
-                <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50 rounded-lg p-3">{detailItem.message}</p>
-              </div>
-            </div>
-
-            <div className="flex gap-3 border-t border-slate-200 px-6 py-4">
+        footer={
+          detailItem ? (
+            <>
               <a href={`mailto:${detailItem.email}?subject=Re: ${detailItem.subject || "Pesan dari Website"}`}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1]">
+                className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1]">
                 <Envelope className="h-4 w-4" />
                 Balas Email
               </a>
               {detailItem.phone && (
                 <a href={`https://wa.me/${detailItem.phone.replace(/[^0-9]/g, "")}`}
                   target="_blank" rel="noopener noreferrer"
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                   <WhatsappLogo className="h-4 w-4 text-emerald-600" />
                   WhatsApp
                 </a>
@@ -413,10 +371,37 @@ export default function AdminContactPage() {
                 className="flex items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100">
                 <Trash className="h-4 w-4" />
               </button>
+            </>
+          ) : undefined
+        }
+      >
+        {detailItem && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-[11px] font-semibold text-slate-400">Nama</p>
+                <p className="text-sm font-medium text-slate-800">{detailItem.name}</p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-slate-400">Email</p>
+                <a href={`mailto:${detailItem.email}`} className="text-sm font-medium text-[#1767b1] hover:underline">{detailItem.email}</a>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-slate-400">Telepon</p>
+                <p className="text-sm font-medium text-slate-800">{detailItem.phone || "-"}</p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-slate-400">Subjek</p>
+                <p className="text-sm font-medium text-slate-800">{detailItem.subject || "-"}</p>
+              </div>
+            </div>
+            <div className="border-t border-slate-100 pt-4">
+              <p className="text-[11px] font-semibold text-slate-400 mb-1">Pesan</p>
+              <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50 rounded-lg p-3">{detailItem.message}</p>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </SlideOver>
 
       {/* ── DELETE CONFIRM ──────────────────────────── */}
       {deleteItem && (
