@@ -25,6 +25,7 @@ export default function KontakPage() {
 
   return (
     <div>
+      <title>Kontak | SMP Muhammadiyah 4 Tanggul</title>
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-12 text-white md:py-16">
         <div className="absolute inset-0 opacity-[0.04]">

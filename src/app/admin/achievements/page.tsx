@@ -11,6 +11,7 @@ import {
 } from "@/lib/queries";
 import { StatCard, StatCardRow, SlideOver } from "@/components/ui";
 import type { Achievement } from "@/lib/supabase";
+import { useToast } from "@/components/ui/Toast";
 import {
   Trophy,
   MagnifyingGlass,
@@ -60,6 +61,7 @@ const emptyForm: FormData = {
 };
 
 export default function AdminAchievementsPage() {
+  const { toast } = useToast();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -121,6 +123,7 @@ export default function AdminAchievementsPage() {
     total: achievements.length,
     thisYear: achievements.filter((a) => a.year === new Date().getFullYear()).length,
     categories: categories.length,
+    otherYears: achievements.filter((a) => a.year !== new Date().getFullYear()).length,
   };
 
   const allVisibleSelected = paginated.length > 0 && paginated.every((item) => selectedIds.has(item.id));
@@ -193,12 +196,13 @@ export default function AdminAchievementsPage() {
 
     if (editItem) {
       const { error } = await updateAchievement(editItem.id, { ...form, image_url: imageUrl });
-      if (error) { setFormError(error); setFormSaving(false); return; }
+      if (error) { setFormError(error); setFormSaving(false); toast(error, "error"); return; }
     } else {
       const { error } = await createAchievement({ ...form, image_url: imageUrl });
-      if (error) { setFormError(error); setFormSaving(false); return; }
+      if (error) { setFormError(error); setFormSaving(false); toast(error, "error"); return; }
     }
 
+    toast(editItem ? "Prestasi berhasil diperbarui" : "Prestasi berhasil ditambahkan", "success");
     setFormOpen(false);
     setFormSaving(false);
     fetchAchievements();
@@ -206,19 +210,31 @@ export default function AdminAchievementsPage() {
 
   async function handleDelete() {
     if (!deleteItem) return;
-    await deleteAchievement(deleteItem.id);
-    setDeleteItem(null);
-    setSelectedIds((s) => { const n = new Set(s); n.delete(deleteItem.id); return n; });
-    fetchAchievements();
+    try {
+      const { error } = await deleteAchievement(deleteItem.id);
+      if (error) { toast(error, "error"); return; }
+      toast("Prestasi berhasil dihapus", "success");
+      setDeleteItem(null);
+      setSelectedIds((s) => { const n = new Set(s); n.delete(deleteItem.id); return n; });
+      fetchAchievements();
+    } catch {
+      toast("Gagal menghapus prestasi", "error");
+    }
   }
 
   async function handleBulkDelete() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    await deleteAchievementBulk(ids);
-    setSelectedIds(new Set());
-    setBulkDelete(false);
-    fetchAchievements();
+    try {
+      const { error } = await deleteAchievementBulk(ids);
+      if (error) { toast(error, "error"); return; }
+      toast(`${ids.length} prestasi berhasil dihapus`, "success");
+      setSelectedIds(new Set());
+      setBulkDelete(false);
+      fetchAchievements();
+    } catch {
+      toast("Gagal menghapus prestasi", "error");
+    }
   }
 
   const SortIcon = ({ field }: { field: SortField }) => {
@@ -251,6 +267,7 @@ export default function AdminAchievementsPage() {
         <StatCard label="Total" value={stats.total} variant="brand" />
         <StatCard label="Tahun Ini" value={stats.thisYear} variant="success" />
         <StatCard label="Kategori" value={stats.categories} variant="purple" />
+        <StatCard label="Semua Tahun" value={stats.otherYears} variant="warning" />
       </StatCardRow>
 
       {/* Bulk actions */}
@@ -496,7 +513,7 @@ export default function AdminAchievementsPage() {
         title={editItem ? "Edit Prestasi" : "Tambah Prestasi Baru"}
         description={editItem ? "Perbarui informasi prestasi" : "Isi form untuk menambahkan prestasi"}
         footer={
-          <>
+          <div className="flex w-full items-center justify-between">
             <button onClick={() => setFormOpen(false)} disabled={formSaving}
               className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
               Batal
@@ -512,7 +529,7 @@ export default function AdminAchievementsPage() {
                 </>
               )}
             </button>
-          </>
+          </div>
         }
       >
         {formError && (

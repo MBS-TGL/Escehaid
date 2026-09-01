@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import AdminSidebar from "./Sidebar";
 import AdminTopbar from "./Topbar";
+import { useToast } from "@/components/ui/Toast";
 
 interface UserProfile {
   full_name: string;
@@ -15,6 +16,8 @@ interface UserProfile {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -60,6 +63,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setMobileOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    if (searchParams.get("success") === "login") {
+      toast("Login berhasil! Selamat datang.", "success");
+      window.history.replaceState({}, "", "/admin");
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!loading && !profile && pathname !== "/admin/login") {
+      router.push("/admin/login");
+    }
+  }, [loading, profile, pathname]);
+
   if (pathname === "/admin/login") {
     return <>{children}</>;
   }
@@ -75,6 +91,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
+  if (!profile) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
+          <p className="text-sm text-slate-500">Mengalihkan...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <AdminSidebar
@@ -85,7 +112,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Main content area */}
       <div className="min-h-screen transition-all duration-300 lg:ml-[270px]">
         <AdminTopbar
-          profile={profile!}
+          profile={profile}
           onOpenMobile={() => setMobileOpen(true)}
         />
         <main>{children}</main>

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 
-const VIDEO_URL = "https://wshnimyaritellcemjav.supabase.co/storage/v1/object/public/videos/Profile.mp4";
+const VIDEO_URL = "https://ljobjrlhaifafvroapeq.supabase.co/storage/v1/object/public/videos/Profile.mp4";
 const SEGMENTS = [
   { start: 0, end: 66 },
   { start: 66, end: 133 },

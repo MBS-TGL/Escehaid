@@ -2,6 +2,11 @@ import { ImageSquare, Star } from "@/components/Icons";
 import { getGalleryList } from "@/lib/queries";
 import { FadeIn } from "@/components/Animations";
 import GalleryLightbox from "./GalleryLightbox";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Galeri",
+};
 
 export default async function GalleryPage() {
   const gallery = await getGalleryList();

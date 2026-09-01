@@ -7,6 +7,11 @@ import FAQ from "./FAQ";
 import WhatsAppButton from "./WhatsAppButton";
 import HeroCarousel from "./HeroCarousel";
 import TeacherCard from "./TeacherCard";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Beranda | SMP Muhammadiyah 4 Tanggul",
+};
 
 type NewsItem = { id: string | number; slug: string; title: string; summary: string; category: string; image_url?: string | null; published_at?: string };
 

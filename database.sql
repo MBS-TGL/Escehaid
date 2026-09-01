@@ -1,5 +1,5 @@
 -- ============================================================
--- SMP Muhammadiyah 4 Tanggul — DATABASE RESET v2
+-- SMP Muhammadiyah 4 Tanggul — DATABASE RESET v4
 -- Perbaikan dari versi sebelumnya:
 --   1. handle_new_user() TIDAK LAGI percaya role dari client metadata
 --      (dulu: siapapun bisa signup langsung jadi 'developer')
@@ -14,8 +14,16 @@
 --   7. Bucket "images" ditambahkan (dulu gak ada tempat upload foto konten)
 --   8. Full cleanup di Phase 0 (drop policy dulu) supaya script ini AMAN
 --      dijalankan berkali-kali tanpa error "already exists"
+--   9. GRANT statements otomatis expose semua tabel ke PostgREST
+--      (WAJIB kalau "Automatically expose new tables" = OFF di Dashboard)
+--  10. Developer user bootstrap otomatis (gak perlu manual insert)
+--  11. Principal & stats fields di school_profile (gabungan 002_add_principal_stats)
+--  12. Slug UPDATE trigger — auto-regenerate slug kalau title berubah
 --
--- Jalankan di Supabase SQL Editor, project BARU (kosong).
+-- Jalankan di Supabase SQL Editor, project BARU (kosong) ATAU existing.
+-- Catatan project settings (Supabase Dashboard → Database → API):
+--   - Automatically expose new tables: OFF
+--   - Enable automatic RLS: OFF
 -- ============================================================
 
 -- ============================================================
@@ -40,11 +48,13 @@ BEGIN
   IF to_regclass('public.news') IS NOT NULL THEN
     EXECUTE 'DROP TRIGGER IF EXISTS trg_set_updated_at_news ON news';
     EXECUTE 'DROP TRIGGER IF EXISTS trg_slug_news ON news';
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_slug_news_update ON news';
     EXECUTE 'DROP TRIGGER IF EXISTS trigger_news_slug ON news';
   END IF;
   IF to_regclass('public.articles') IS NOT NULL THEN
     EXECUTE 'DROP TRIGGER IF EXISTS trg_set_updated_at_articles ON articles';
     EXECUTE 'DROP TRIGGER IF EXISTS trg_slug_articles ON articles';
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_slug_articles_update ON articles';
     EXECUTE 'DROP TRIGGER IF EXISTS trigger_articles_slug ON articles';
   END IF;
   IF to_regclass('public.spmb_registrations') IS NOT NULL THEN
@@ -56,6 +66,7 @@ DROP FUNCTION IF EXISTS handle_new_user();
 DROP FUNCTION IF EXISTS prevent_privilege_escalation();
 DROP FUNCTION IF EXISTS set_updated_at();
 DROP FUNCTION IF EXISTS generate_unique_slug();
+DROP FUNCTION IF EXISTS regenerate_slug_on_title_change();
 DROP FUNCTION IF EXISTS update_news_slug();
 DROP FUNCTION IF EXISTS update_articles_slug();
 DROP FUNCTION IF EXISTS current_user_role();
@@ -283,11 +294,19 @@ CREATE TABLE school_profile (
   history text DEFAULT '',
   logo_url text DEFAULT '/images/Logo-Sekolah.png',
   banner_url text DEFAULT '',
+  principal_name text DEFAULT '',
+  principal_photo_url text DEFAULT '',
+  principal_quote text DEFAULT '',
+  total_teachers integer DEFAULT 0,
+  total_students integer DEFAULT 0,
+  total_classes integer DEFAULT 0,
+  accreditation text DEFAULT 'A',
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
 
-INSERT INTO school_profile (school_name, address, phone, email, website, vision, mission)
+INSERT INTO school_profile (school_name, address, phone, email, website, vision, mission,
+  principal_name, principal_photo_url, principal_quote, total_teachers, total_students, total_classes, accreditation)
 VALUES (
   'SMP Muhammadiyah 4 Tanggul',
   'Jl. Pemandian No. 88, Patemon, Kec. Tanggul, Kab. Jember, Jawa Timur 68154',
@@ -298,7 +317,14 @@ VALUES (
   '1. Menyiapkan kader Islam yang beriman, bertaqwa, dan berilmu.
 2. Mengembangkan potensi siswa secara optimal dan seimbang.
 3. Membentuk siswa yang berakhlak mulia dan mandiri.
-4. Mewujudkan pembelajaran yang kreatif, inovatif, dan menyenangkan.'
+4. Mewujudkan pembelajaran yang kreatif, inovatif, dan menyenangkan.',
+  'Khoirul Anwar, S.Pd',
+  '/images/Kepala-Sekolah.jpg',
+  'Selamat datang di SMP Muhammadiyah 4 Tanggul. Kami berkomitmen mencerdaskan kehidupan bangsa melalui pendidikan berkualitas yang memadukan keunggulan akademik dan pembentukan karakter Islami.',
+  14,
+  164,
+  7,
+  'A'
 );
 
 CREATE TRIGGER trg_set_updated_at_school_profile
@@ -314,6 +340,9 @@ CREATE TABLE news (
   content text NOT NULL DEFAULT '',
   category text NOT NULL DEFAULT 'berita' CHECK (category IN ('berita', 'pengumuman', 'agenda')),
   image_url text DEFAULT '',
+  cover_image_position text DEFAULT 'center' CHECK (cover_image_position IN ('top', 'center', 'bottom')),
+  writer_name text DEFAULT '',
+  editor_name text DEFAULT '',
   author_id uuid REFERENCES user_profiles(id) ON DELETE SET NULL,
   is_published boolean DEFAULT false,
   published_at timestamptz DEFAULT now(),
@@ -328,6 +357,47 @@ CREATE TRIGGER trg_slug_news
 CREATE TRIGGER trg_set_updated_at_news
   BEFORE UPDATE ON news
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- Slug auto-regenerate when title changes (UPDATE only, not on INSERT)
+CREATE OR REPLACE FUNCTION regenerate_slug_on_title_change()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  base_slug text;
+  candidate_slug text;
+  counter int := 1;
+  slug_exists boolean;
+BEGIN
+  IF NEW.title IS DISTINCT FROM OLD.title THEN
+    base_slug := lower(NEW.title);
+    base_slug := regexp_replace(base_slug, '[^a-z0-9]+', '-', 'g');
+    base_slug := trim(both '-' from base_slug);
+    IF base_slug = '' THEN
+      base_slug := 'item';
+    END IF;
+
+    candidate_slug := base_slug;
+    LOOP
+      EXECUTE format(
+        'SELECT EXISTS (SELECT 1 FROM %I WHERE slug = $1 AND id <> $2)',
+        TG_TABLE_NAME
+      ) INTO slug_exists USING candidate_slug, NEW.id;
+
+      EXIT WHEN NOT slug_exists;
+      counter := counter + 1;
+      candidate_slug := base_slug || '-' || counter;
+    END LOOP;
+
+    NEW.slug := candidate_slug;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_slug_news_update
+  BEFORE UPDATE ON news
+  FOR EACH ROW EXECUTE FUNCTION regenerate_slug_on_title_change();
 
 -- Gallery
 CREATE TABLE gallery (
@@ -428,6 +498,10 @@ CREATE TRIGGER trg_slug_articles
 CREATE TRIGGER trg_set_updated_at_articles
   BEFORE UPDATE ON articles
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_slug_articles_update
+  BEFORE UPDATE ON articles
+  FOR EACH ROW EXECUTE FUNCTION regenerate_slug_on_title_change();
 
 -- Achievements
 CREATE TABLE achievements (
@@ -533,6 +607,8 @@ CREATE INDEX idx_articles_published ON articles(is_published, published_at DESC)
 CREATE INDEX idx_teachers_active ON teachers(is_active);
 CREATE INDEX idx_facilities_active ON facilities(is_active);
 CREATE INDEX idx_contact_unread ON contact_messages(is_read, created_at DESC);
+CREATE INDEX idx_achievements_category ON achievements(category, year DESC);
+CREATE INDEX idx_user_profiles_role ON user_profiles(role, is_active);
 
 -- ============================================================
 -- PHASE 10: STORAGE BUCKETS
@@ -565,21 +641,60 @@ CREATE POLICY "Staff manage videos" ON storage.objects
   FOR ALL USING (bucket_id = 'videos' AND current_user_role() IN ('developer', 'admin', 'publisher'));
 
 -- ============================================================
--- PHASE 11: DEVELOPER USER (bootstrap manual)
--- 1. Supabase Dashboard → Authentication → Users → Add user
---      Email: dev@mbs.id
---      Password: dev
---      Auto Confirm: ✅
--- 2. Supabase Dashboard → Authentication → Users → klik user dev@mbs.id
---    → Copy UUID (nomor di sebelah kiri detail user)
--- 3. Supabase Dashboard → Table Editor → user_profiles → Insert row
---    - id: PASTE_UUID_DI_SINI
---    - full_name: Developer
---    - role: developer
---    - is_active: true
---    (kolom lain kosongkan atau isi sesuai kebutuhan)
--- 4. Save. Coba login: dev@mbs.id / dev
+-- PHASE 11: GRANT PRIVILEGES — expose tabel ke PostgREST
+-- Supabase project settings: "Automatically expose new tables" = OFF,
+-- jadi script ini HARUS grant manual supaya tabel bisa diakses
+-- dari client (anon/authenticated roles).
 -- ============================================================
 
--- Verify (jalankan setelah insert)
+-- Public read tables (anon bisa SELECT)
+GRANT SELECT ON school_profile TO anon;
+GRANT SELECT ON news TO anon;
+GRANT SELECT ON gallery TO anon;
+GRANT SELECT ON teachers TO anon;
+GRANT SELECT ON facilities TO anon;
+GRANT SELECT ON articles TO anon;
+GRANT SELECT ON achievements TO anon;
+GRANT SELECT ON user_profiles TO anon;
+GRANT SELECT ON user_audit_log TO anon;
+GRANT SELECT ON spmb_registrations TO anon;
+GRANT SELECT ON contact_messages TO anon;
+
+-- Full CRUD for authenticated users (RLS handles row-level restrictions)
+GRANT SELECT, INSERT, UPDATE, DELETE ON school_profile TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON news TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON gallery TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON teachers TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON facilities TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON articles TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON achievements TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON user_profiles TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON user_audit_log TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON spmb_registrations TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON contact_messages TO authenticated;
+
+-- Sequences for INSERT (gen_random_uuid doesn't use sequences, but safe to grant)
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+
+-- Storage access
+GRANT SELECT ON storage.objects TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO authenticated;
+
+-- ============================================================
+-- PHASE 12: DEVELOPER USER — auto-bootstrap
+-- Kalau user dev@mbs.id udah ada di auth.users tapi belum punya
+-- user_profiles, script ini auto-insert. Kalau udah ada, skip.
+-- Kalau dev@mbs.id belum ada di auth.users, user harus manual
+-- buat dulu di Dashboard → Authentication → Users → Add user.
+-- ============================================================
+
+-- Auto-create developer profile (upsert: INSERT kalau belum ada, UPDATE kalau ada)
+INSERT INTO user_profiles (id, full_name, role, is_active)
+SELECT id, 'Developer', 'developer', true
+FROM auth.users
+WHERE email = 'dev@mbs.id'
+ON CONFLICT (id) DO UPDATE
+SET role = 'developer', full_name = 'Developer', is_active = true;
+
+-- Verify
 SELECT id, full_name, role, is_active FROM user_profiles;

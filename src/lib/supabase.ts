@@ -1,9 +1,9 @@
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export interface SchoolProfile {
   id: string;
@@ -56,6 +56,9 @@ export interface News {
   content: string;
   category: "berita" | "pengumuman" | "agenda";
   image_url: string;
+  cover_image_position: "top" | "center" | "bottom";
+  writer_name: string;
+  editor_name: string;
   author_id: string | null;
   is_published: boolean;
   published_at: string;

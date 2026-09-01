@@ -1,6 +1,11 @@
 import { FileText, CheckCircle, Clock, Warning, GraduationCap, BookOpen, House, Download } from "@/components/Icons";
 import Link from "next/link";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "SPMB",
+};
 
 export default function PPDBPage() {
   return (

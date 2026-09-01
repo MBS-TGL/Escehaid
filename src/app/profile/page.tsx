@@ -3,6 +3,11 @@ import { MapPin, Phone, Envelope, Users, BookOpen, GraduationCap, Building } fro
 import { getSchoolProfile, getTeacherList, getFacilityList } from "@/lib/queries";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
 import TeacherGrid from "./TeacherGrid";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Profil",
+};
 
 export default async function ProfilPage() {
   const [profil, teachers, facilities] = await Promise.all([

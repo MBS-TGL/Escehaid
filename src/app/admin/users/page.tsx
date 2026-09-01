@@ -28,6 +28,7 @@ import {
   Trash,
   PencilSimple,
 } from "@/components/Icons";
+import { useToast } from "@/components/ui/Toast";
 
 const PAGE_SIZE = 10;
 
@@ -43,6 +44,7 @@ type SortField = "full_name" | "role" | "is_active" | "created_at";
 type SortDir = "asc" | "desc";
 
 export default function AdminUsersPage() {
+  const { toast } = useToast();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -99,6 +101,7 @@ export default function AdminUsersPage() {
     total: users.length,
     active: users.filter((u) => u.is_active).length,
     inactive: users.filter((u) => !u.is_active).length,
+    admins: users.filter((u) => u.role === "admin" || u.role === "developer").length,
   };
 
   const allVisibleSelected = paginated.length > 0 && paginated.every((item) => selectedIds.has(item.id));
@@ -135,7 +138,12 @@ export default function AdminUsersPage() {
   async function handleSaveRole() {
     if (!editItem) return;
     setEditSaving(true);
-    await updateProfileRole(editItem.id, editRole);
+    try {
+      await updateProfileRole(editItem.id, editRole);
+      toast("Role berhasil diubah", "success");
+    } catch {
+      toast("Gagal mengubah role", "error");
+    }
     setEditSaving(false);
     setEditItem(null);
     fetchUsers();
@@ -143,7 +151,12 @@ export default function AdminUsersPage() {
 
   async function handleDelete() {
     if (!deleteItem) return;
-    await deleteProfile(deleteItem.id);
+    try {
+      await deleteProfile(deleteItem.id);
+      toast("User berhasil dihapus", "success");
+    } catch {
+      toast("Gagal menghapus user", "error");
+    }
     setDeleteItem(null);
     setSelectedIds((s) => { const n = new Set(s); n.delete(deleteItem.id); return n; });
     fetchUsers();
@@ -152,14 +165,24 @@ export default function AdminUsersPage() {
   async function handleBulkDelete() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    await deleteProfileBulk(ids);
+    try {
+      await deleteProfileBulk(ids);
+      toast(`${ids.length} user berhasil dihapus`, "success");
+    } catch {
+      toast("Gagal menghapus user", "error");
+    }
     setSelectedIds(new Set());
     setBulkDelete(false);
     fetchUsers();
   }
 
   async function handleToggleActive(item: UserProfile) {
-    await updateProfileStatus(item.id, !item.is_active);
+    try {
+      await updateProfileStatus(item.id, !item.is_active);
+      toast("Status berhasil diubah", "success");
+    } catch {
+      toast("Gagal mengubah status", "error");
+    }
     fetchUsers();
   }
 
@@ -190,6 +213,7 @@ export default function AdminUsersPage() {
         <StatCard label="Total" value={stats.total} variant="brand" />
         <StatCard label="Aktif" value={stats.active} variant="success" />
         <StatCard label="Tidak Aktif" value={stats.inactive} variant="danger" />
+        <StatCard label="Admin" value={stats.admins} variant="purple" />
       </StatCardRow>
 
       {/* Bulk actions */}
@@ -357,7 +381,7 @@ export default function AdminUsersPage() {
         description={editItem?.full_name}
 
         footer={
-          <>
+          <div className="flex w-full items-center justify-between">
             <button onClick={() => setEditItem(null)} disabled={editSaving}
               className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
               Batal
@@ -373,7 +397,7 @@ export default function AdminUsersPage() {
                 </>
               )}
             </button>
-          </>
+          </div>
         }
       >
         {editItem && (

@@ -219,22 +219,28 @@ Log audit trail semua aksi pengguna.
 | `images` | ✅ | ❌ | developer, admin, publisher | 5 MB |
 | `videos` | ✅ | ❌ | developer, admin, publisher | 50 MB |
 
-## Setup (2026-08-31 update)
+## Setup (2026-09-01 update)
 
-The developer user `dev@mbs.id` **already exists** in `auth.users` (UUID: `dd6506f5-af48-4ca2-a541-6fc31615df9b`).
+### Supabase Project Settings
+
+Di Dashboard → **Database** → **API**, pastikan:
+- **Automatically expose new tables** = OFF
+- **Enable automatic RLS** = OFF
+
+Script `database.sql` menangani semua manual (GRANT + RLS).
+
+### Jalankan
 
 1. Buka **Supabase Dashboard** → **SQL Editor**
 2. Copy seluruh isi `database.sql`
 3. Paste dan klik **Run** (ini akan me-reset database — drop semua tabel lalu buat ulang)
-4. Setelah SQL jalan, buka **Table Editor** → `user_profiles` → **Insert row**:
-   - `id`: `dd6506f5-af48-4ca2-a541-6fc31615df9b`
-   - `full_name`: `Developer`
-   - `role`: `developer`
-   - `is_active`: `true`
-   - (kolom lain kosongkan)
-5. Save, lalu coba login: `dev@mbs.id` / `dev`
+4. Script otomatis:
+   - Membuat semua tabel + RLS + policies
+   - Grant privileges ke `anon` (public read) dan `authenticated` (full CRUD)
+   - Auto-insert developer profile untuk `dev@mbs.id` (kalau belum ada)
+5. Coba login: `dev@mbs.id` / `dev`
 
-**Jika trigger `handle_new_user` sudah membuat profile otomatis**, skip langkah 4 dan cek apakah profile sudah ada.
+> Kalau user `dev@mbs.id` belum ada di `auth.users`, buat manual dulu via Dashboard → Authentication → Users → Add user (Email: `dev@mbs.id`, Password: `dev`, Auto Confirm: ✅).
 
 > Catatan: `database.sql` sudah termasuk Phase 0 cleanup (aman dijalankan berkali-kali).
 

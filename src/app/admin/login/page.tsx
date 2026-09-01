@@ -49,7 +49,7 @@ function LoginForm() {
       return;
     }
 
-    router.push("/admin");
+    router.push("/admin?success=login");
     router.refresh();
   };
 
@@ -74,6 +74,7 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen flex bg-white">
+      <title>Login Admin | SMP Muhammadiyah 4 Tanggul</title>
       {/* ── LEFT PANEL — Branding ───────────────────────── */}
       <div className="hidden lg:flex lg:w-[44%] relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#1767b1]">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff04_1px,transparent_1px),linear-gradient(to_bottom,#ffffff04_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />

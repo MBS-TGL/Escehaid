@@ -31,6 +31,7 @@ import {
   Checks,
   PencilSimple,
 } from "@/components/Icons";
+import { useToast } from "@/components/ui/Toast";
 
 const PAGE_SIZE = 10;
 
@@ -38,6 +39,7 @@ type SortField = "created_at" | "name" | "is_read";
 type SortDir = "asc" | "desc";
 
 export default function AdminContactPage() {
+  const { toast } = useToast();
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -96,6 +98,11 @@ export default function AdminContactPage() {
     total: messages.length,
     unread: messages.filter((m) => !m.is_read).length,
     read: messages.filter((m) => m.is_read).length,
+    today: messages.filter((m) => {
+      const d = new Date(m.created_at);
+      const now = new Date();
+      return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }).length,
   };
 
   const allVisibleSelected = paginated.length > 0 && paginated.every((item) => selectedIds.has(item.id));
@@ -133,32 +140,52 @@ export default function AdminContactPage() {
 
   async function handleDelete() {
     if (!deleteItem) return;
-    await deleteContactMessage(deleteItem.id);
-    setDeleteItem(null);
-    setSelectedIds((s) => { const n = new Set(s); n.delete(deleteItem.id); return n; });
-    fetchMessages();
+    try {
+      await deleteContactMessage(deleteItem.id);
+      toast("Pesan berhasil dihapus", "success");
+      setDeleteItem(null);
+      setSelectedIds((s) => { const n = new Set(s); n.delete(deleteItem.id); return n; });
+      fetchMessages();
+    } catch {
+      toast("Gagal menghapus pesan", "error");
+    }
   }
 
   async function handleBulkDelete() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    await deleteContactMessageBulk(ids);
-    setSelectedIds(new Set());
-    setBulkDelete(false);
-    fetchMessages();
+    try {
+      await deleteContactMessageBulk(ids);
+      toast(`${ids.length} pesan berhasil dihapus`, "success");
+      setSelectedIds(new Set());
+      setBulkDelete(false);
+      fetchMessages();
+    } catch {
+      toast("Gagal menghapus pesan", "error");
+    }
   }
 
   async function handleBulkMarkRead(isRead: boolean) {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    await toggleReadContactMessageBulk(ids, isRead);
-    setSelectedIds(new Set());
-    fetchMessages();
+    try {
+      await toggleReadContactMessageBulk(ids, isRead);
+      toast(isRead ? `${ids.length} pesan ditandai sudah dibaca` : `${ids.length} pesan ditandai belum dibaca`, "success");
+      setSelectedIds(new Set());
+      fetchMessages();
+    } catch {
+      toast("Gagal mengubah status pesan", "error");
+    }
   }
 
   async function handleToggleRead(item: ContactMessage) {
-    await toggleReadContactMessage(item.id, !item.is_read);
-    fetchMessages();
+    try {
+      await toggleReadContactMessage(item.id, !item.is_read);
+      toast(!item.is_read ? "Pesan ditandai sudah dibaca" : "Pesan ditandai belum dibaca", "success");
+      fetchMessages();
+    } catch {
+      toast("Gagal mengubah status pesan", "error");
+    }
   }
 
   const SortIcon = ({ field }: { field: SortField }) => {
@@ -188,6 +215,7 @@ export default function AdminContactPage() {
         <StatCard label="Total" value={stats.total} variant="brand" />
         <StatCard label="Belum Dibaca" value={stats.unread} variant="warning" />
         <StatCard label="Sudah Dibaca" value={stats.read} variant="success" />
+        <StatCard label="Hari Ini" value={stats.today} variant="info" />
       </StatCardRow>
 
       {/* Bulk actions */}
@@ -353,7 +381,7 @@ export default function AdminContactPage() {
 
         footer={
           detailItem ? (
-            <>
+            <div className="flex w-full items-center justify-between">
               <a href={`mailto:${detailItem.email}?subject=Re: ${detailItem.subject || "Pesan dari Website"}`}
                 className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1]">
                 <Envelope className="h-4 w-4" />
@@ -371,7 +399,7 @@ export default function AdminContactPage() {
                 className="flex items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100">
                 <Trash className="h-4 w-4" />
               </button>
-            </>
+            </div>
           ) : undefined
         }
       >

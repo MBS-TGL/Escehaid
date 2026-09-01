@@ -143,7 +143,9 @@ export default function AdminTopbar({
             <MagnifyingGlass className="h-4 w-4 flex-shrink-0" />
             <span className="hidden sm:inline">Cari halaman...</span>
             <span className="sm:hidden">Cari...</span>
-            <kbd className="ml-auto hidden rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 sm:inline">⌘K</kbd>
+            <kbd className="ml-auto hidden rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 sm:inline">
+              {typeof navigator !== "undefined" && navigator.userAgent.includes("Mac") ? "⌘K" : "Ctrl+K"}
+            </kbd>
           </button>
 
           {/* Search dropdown */}

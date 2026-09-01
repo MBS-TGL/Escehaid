@@ -11,8 +11,7 @@ import {
   togglePublishNewsBulk,
   uploadNewsImage,
 } from "@/lib/queries";
-import { StatCard, StatCardRow } from "@/components/ui";
-import { Modal, ConfirmModal, SlideOver } from "@/components/ui";
+import { StatCard, StatCardRow, Modal, ConfirmModal, SlideOver, RichTextEditor } from "@/components/ui";
 import type { News } from "@/lib/supabase";
 import {
   Megaphone,
@@ -38,6 +37,7 @@ import {
   Funnel,
   Checks,
 } from "@/components/Icons";
+import { useToast } from "@/components/ui/Toast";
 
 const PAGE_SIZE = 10;
 
@@ -56,6 +56,9 @@ interface FormData {
   content: string;
   category: string;
   image_url: string;
+  cover_image_position: string;
+  writer_name: string;
+  editor_name: string;
   is_published: boolean;
 }
 
@@ -65,10 +68,14 @@ const emptyForm: FormData = {
   content: "",
   category: "berita",
   image_url: "",
+  cover_image_position: "center",
+  writer_name: "",
+  editor_name: "",
   is_published: false,
 };
 
 export default function AdminBeritaPage() {
+  const { toast } = useToast();
   const [news, setNews] = useState<News[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -104,6 +111,28 @@ export default function AdminBeritaPage() {
 
   useEffect(() => { fetchNews(); }, [fetchNews]);
 
+  // Paste image handler
+  useEffect(() => {
+    if (!formOpen) return;
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            setImageFile(file);
+            setImagePreview(URL.createObjectURL(file));
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [formOpen]);
+
   // Filtered + Sorted
   const filtered = useMemo(() => {
     let result = news.filter((item) => {
@@ -135,6 +164,11 @@ export default function AdminBeritaPage() {
     total: news.length,
     published: news.filter((n) => n.is_published).length,
     draft: news.filter((n) => !n.is_published).length,
+    thisMonth: news.filter((n) => {
+      const d = new Date(n.created_at);
+      const now = new Date();
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }).length,
   };
 
   const allVisibleSelected = paginated.length > 0 && paginated.every((item) => selectedIds.has(item.id));
@@ -180,6 +214,9 @@ export default function AdminBeritaPage() {
       content: item.content || "",
       category: item.category,
       image_url: item.image_url || "",
+      cover_image_position: item.cover_image_position || "center",
+      writer_name: item.writer_name || "",
+      editor_name: item.editor_name || "",
       is_published: item.is_published,
     });
     setImageFile(null);
@@ -210,9 +247,11 @@ export default function AdminBeritaPage() {
     if (editItem) {
       const { error } = await updateNews(editItem.id, { ...form, image_url: imageUrl });
       if (error) { setFormError(error); setFormSaving(false); return; }
+      toast("Berita berhasil diperbarui", "success");
     } else {
       const { error } = await createNews({ ...form, image_url: imageUrl });
       if (error) { setFormError(error); setFormSaving(false); return; }
+      toast("Berita berhasil diterbitkan", "success");
     }
 
     setFormOpen(false);
@@ -223,6 +262,7 @@ export default function AdminBeritaPage() {
   async function handleDelete() {
     if (!deleteItem) return;
     await deleteNews(deleteItem.id);
+    toast("Berita berhasil dihapus", "success");
     setDeleteItem(null);
     setSelectedIds((s) => { const n = new Set(s); n.delete(deleteItem.id); return n; });
     fetchNews();
@@ -232,6 +272,7 @@ export default function AdminBeritaPage() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
     await deleteNewsBulk(ids);
+    toast(`${ids.length} berita berhasil dihapus`, "success");
     setSelectedIds(new Set());
     setBulkDelete(false);
     fetchNews();
@@ -241,12 +282,14 @@ export default function AdminBeritaPage() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
     await togglePublishNewsBulk(ids, publish);
+    toast(`${ids.length} berita ${publish ? "diterbitkan" : "draft"}`, "success");
     setSelectedIds(new Set());
     fetchNews();
   }
 
   async function handleTogglePublish(item: News) {
     await togglePublishNews(item.id, !item.is_published);
+    toast(`Berita ${!item.is_published ? "diterbitkan" : "draft"}`, "success");
     fetchNews();
   }
 
@@ -280,6 +323,7 @@ export default function AdminBeritaPage() {
         <StatCard label="Total" value={stats.total} variant="brand" />
         <StatCard label="Diterbitkan" value={stats.published} variant="success" />
         <StatCard label="Draft" value={stats.draft} variant="warning" />
+        <StatCard label="Bulan Ini" value={stats.thisMonth} variant="info" />
       </StatCardRow>
 
       {/* Bulk actions */}
@@ -329,18 +373,18 @@ export default function AdminBeritaPage() {
                     className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
                 </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">No</th>
-                <th className="cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("title")}>
+                <th className="w-[40%] cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("title")}>
                   <span className="flex items-center gap-1">Judul <SortIcon field="title" /></span>
                 </th>
-                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none" onClick={() => toggleSort("category")}>
-                  <span className="flex items-center gap-1">Kategori <SortIcon field="category" /></span>
+                <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none" onClick={() => toggleSort("category")}>
+                  <span className="flex items-center justify-center gap-1">Kategori <SortIcon field="category" /></span>
                 </th>
-                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 md:table-cell">Penulis</th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</th>
-                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:table-cell cursor-pointer select-none" onClick={() => toggleSort("created_at")}>
-                  <span className="flex items-center gap-1">Tanggal <SortIcon field="created_at" /></span>
+                <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 md:table-cell">Penulis</th>
+                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</th>
+                <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:table-cell cursor-pointer select-none" onClick={() => toggleSort("created_at")}>
+                  <span className="flex items-center justify-center gap-1">Tanggal <SortIcon field="created_at" /></span>
                 </th>
-                <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
+                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -391,20 +435,20 @@ export default function AdminBeritaPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="hidden px-4 py-3.5 sm:table-cell">
+                    <td className="hidden px-4 py-3.5 text-center sm:table-cell">
                       <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold ${categoryConfig[item.category]?.color || "bg-slate-100 text-slate-600 border-slate-200"}`}>
                         {categoryConfig[item.category]?.label || item.category}
                       </span>
                     </td>
-                    <td className="hidden px-4 py-3.5 md:table-cell">
-                      <div className="flex items-center gap-1.5">
+                    <td className="hidden px-4 py-3.5 text-center md:table-cell">
+                      <div className="flex items-center justify-center gap-1.5">
                         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100">
                           <User className="h-3 w-3 text-slate-400" />
                         </div>
                         <span className="text-xs text-slate-500">{(item as any).author_name || "-"}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => handleTogglePublish(item)}
                         className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
                           item.is_published
@@ -415,11 +459,11 @@ export default function AdminBeritaPage() {
                         {item.is_published ? "Publish" : "Draft"}
                       </button>
                     </td>
-                    <td className="hidden px-4 py-3.5 text-sm text-slate-500 lg:table-cell">
+                    <td className="hidden px-4 py-3.5 text-center text-sm text-slate-500 lg:table-cell">
                       {new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
                     </td>
-                    <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1">
+                    <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-1">
                         <button onClick={() => setViewItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat">
                           <Eye className="h-4 w-4" />
                         </button>
@@ -523,7 +567,7 @@ export default function AdminBeritaPage() {
         title={editItem ? "Edit Berita" : "Buat Berita Baru"}
         description={editItem ? "Perbarui informasi berita" : "Isi form untuk menerbitkan berita"}
         footer={
-          <>
+          <div className="flex w-full items-center justify-between">
             <button onClick={() => setFormOpen(false)} disabled={formSaving}
               className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
               Batal
@@ -539,7 +583,7 @@ export default function AdminBeritaPage() {
                 </>
               )}
             </button>
-          </>
+          </div>
         }
       >
         {formError && (
@@ -578,19 +622,64 @@ export default function AdminBeritaPage() {
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Gambar Sampul</label>
             {imagePreview ? (
-              <div className="relative mb-3 overflow-hidden rounded-xl border border-slate-200">
-                <img src={imagePreview} alt="Preview" className="h-40 w-full object-cover" />
-                <button onClick={() => { setImageFile(null); setImagePreview(""); setForm({ ...form, image_url: "" }); }}
-                  className="absolute right-2 top-2 rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
-                  <X className="h-4 w-4" />
-                </button>
+              <div className="mb-3">
+                <div className="relative overflow-hidden rounded-xl border border-slate-200">
+                  <img src={imagePreview} alt="Preview" className="h-40 w-full object-cover" style={{
+                    objectPosition: form.cover_image_position === "top" ? "center 20%" : form.cover_image_position === "bottom" ? "center 80%" : "center center"
+                  }} />
+                  <button onClick={() => { setImageFile(null); setImagePreview(""); setForm({ ...form, image_url: "" }); }}
+                    className="absolute right-2 top-2 rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                {/* Focal point selector */}
+                <div className="mt-2.5 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-semibold text-slate-700">Focal Point Gambar</p>
+                      <p className="text-[11px] text-slate-400">Atur posisi fokus saat gambar ditampilkan</p>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex gap-2">
+                    {[
+                      { value: "top", label: "Atas", icon: "▲" },
+                      { value: "center", label: "Tengah", icon: "◆" },
+                      { value: "bottom", label: "Bawah", icon: "▼" },
+                    ].map((opt) => (
+                      <button key={opt.value} type="button"
+                        onClick={() => setForm({ ...form, cover_image_position: opt.value })}
+                        className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
+                          form.cover_image_position === opt.value
+                            ? "border-[#1767b1] bg-[#1767b1]/10 text-[#1767b1] shadow-sm"
+                            : "border-slate-200 text-slate-500 hover:border-slate-300"
+                        }`}>
+                        <span className="text-[10px]">{opt.icon}</span>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             ) : (
-              <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50">
+              <div
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add("border-[#1767b1]", "bg-[#1767b1]/5"); }}
+                onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("border-[#1767b1]", "bg-[#1767b1]/5"); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.currentTarget.classList.remove("border-[#1767b1]", "bg-[#1767b1]/5");
+                  const file = e.dataTransfer.files?.[0];
+                  if (file && file.type.startsWith("image/")) {
+                    setImageFile(file);
+                    setImagePreview(URL.createObjectURL(file));
+                  }
+                }}
+                className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50"
+              >
                 <ImageIcon className="h-8 w-8 text-slate-300" />
-                <span className="text-xs text-slate-400">Klik untuk upload gambar</span>
+                <span className="text-xs text-slate-400">Klik, seret & lepas, atau Ctrl+V untuk paste gambar</span>
                 <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-              </label>
+              </div>
             )}
           </div>
 
@@ -603,13 +692,26 @@ export default function AdminBeritaPage() {
               placeholder="Ringkasan singkat berita (opsional)" />
           </div>
 
+          {/* Writer & Editor */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Penulis</label>
+              <input type="text" value={form.writer_name} onChange={(e) => setForm({ ...form, writer_name: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                placeholder="Nama penulis" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Editor</label>
+              <input type="text" value={form.editor_name} onChange={(e) => setForm({ ...form, editor_name: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                placeholder="Nama editor" />
+            </div>
+          </div>
+
           {/* Content */}
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Konten</label>
-            <textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })}
-              rows={12}
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-y"
-              placeholder="Tulis konten berita di sini..." />
+            <RichTextEditor value={form.content} onChange={(val) => setForm({ ...form, content: val })} />
           </div>
 
           {/* Publish toggle */}

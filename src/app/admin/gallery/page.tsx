@@ -29,6 +29,7 @@ import {
   SortAscending,
   Checks,
 } from "@/components/Icons";
+import { useToast } from "@/components/ui/Toast";
 
 const PAGE_SIZE = 12;
 
@@ -52,6 +53,7 @@ const emptyForm: FormData = {
 };
 
 export default function AdminGalleryPage() {
+  const { toast } = useToast();
   const [gallery, setGallery] = useState<Gallery[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -114,6 +116,11 @@ export default function AdminGalleryPage() {
     total: gallery.length,
     foto: gallery.filter((g) => g.media_type === "foto").length,
     video: gallery.filter((g) => g.media_type === "video").length,
+    thisMonth: gallery.filter((g) => {
+      const d = new Date(g.created_at);
+      const now = new Date();
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }).length,
   };
 
   const allVisibleSelected = paginated.length > 0 && paginated.every((item) => selectedIds.has(item.id));
@@ -186,12 +193,13 @@ export default function AdminGalleryPage() {
 
     if (editItem) {
       const { error } = await updateGallery(editItem.id, { ...form, url });
-      if (error) { setFormError(error); setFormSaving(false); return; }
+      if (error) { setFormError(error); setFormSaving(false); toast("Gagal memperbarui galeri", "error"); return; }
     } else {
       const { error } = await createGallery({ ...form, url });
-      if (error) { setFormError(error); setFormSaving(false); return; }
+      if (error) { setFormError(error); setFormSaving(false); toast("Gagal menambahkan galeri", "error"); return; }
     }
 
+    toast(editItem ? "Galeri berhasil diperbarui" : "Galeri berhasil ditambahkan", "success");
     setFormOpen(false);
     setFormSaving(false);
     fetchGallery();
@@ -200,6 +208,7 @@ export default function AdminGalleryPage() {
   async function handleDelete() {
     if (!deleteItem) return;
     await deleteGallery(deleteItem.id);
+    toast("Galeri berhasil dihapus", "success");
     setDeleteItem(null);
     setSelectedIds((s) => { const n = new Set(s); n.delete(deleteItem.id); return n; });
     fetchGallery();
@@ -209,6 +218,7 @@ export default function AdminGalleryPage() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
     await deleteGalleryBulk(ids);
+    toast(`${ids.length} galeri berhasil dihapus`, "success");
     setSelectedIds(new Set());
     setBulkDelete(false);
     fetchGallery();
@@ -244,6 +254,7 @@ export default function AdminGalleryPage() {
         <StatCard label="Total" value={stats.total} variant="brand" />
         <StatCard label="Foto" value={stats.foto} variant="info" />
         <StatCard label="Video" value={stats.video} variant="purple" />
+        <StatCard label="Bulan Ini" value={stats.thisMonth} variant="success" />
       </StatCardRow>
 
       {/* Bulk actions */}
@@ -467,7 +478,7 @@ export default function AdminGalleryPage() {
         title={editItem ? "Edit Media" : "Tambah Media Baru"}
         description={editItem ? "Perbarui informasi media" : "Upload foto atau video baru"}
         footer={
-          <>
+          <div className="flex w-full items-center justify-between">
             <button onClick={() => setFormOpen(false)} disabled={formSaving}
               className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
               Batal
@@ -483,7 +494,7 @@ export default function AdminGalleryPage() {
                 </>
               )}
             </button>
-          </>
+          </div>
         }
       >
         {formError && (

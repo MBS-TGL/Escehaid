@@ -2,6 +2,11 @@ import Link from "next/link";
 import { ArrowUpRight, Newspaper, Clock } from "@/components/Icons";
 import { getNewsList } from "@/lib/queries";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Berita",
+};
 
 export default async function BeritaPage() {
   const berita = await getNewsList();

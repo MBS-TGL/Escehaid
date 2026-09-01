@@ -82,12 +82,35 @@ export async function getNewsBySlug(slug: string): Promise<NewsWithAuthor | null
   };
 }
 
+export async function getRelatedNews(category: string, currentId: string, limit = 4): Promise<NewsWithAuthor[]> {
+  const { data, error } = await supabase
+    .from("news")
+    .select("*, user_profiles(full_name)")
+    .eq("is_published", true)
+    .eq("category", category)
+    .neq("id", currentId)
+    .order("published_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Error fetching related news:", error);
+    return [];
+  }
+  return (data || []).map((item: any) => ({
+    ...item,
+    author_name: item.user_profiles?.full_name ?? null,
+  }));
+}
+
 export async function createNews(news: {
   title: string;
   summary?: string;
   content?: string;
   category?: string;
   image_url?: string;
+  cover_image_position?: string;
+  writer_name?: string;
+  editor_name?: string;
   is_published?: boolean;
 }): Promise<{ data: News | null; error?: string }> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -112,6 +135,9 @@ export async function updateNews(
     content?: string;
     category?: string;
     image_url?: string;
+    cover_image_position?: string;
+    writer_name?: string;
+    editor_name?: string;
     is_published?: boolean;
   }
 ): Promise<{ data: News | null; error?: string }> {

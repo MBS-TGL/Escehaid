@@ -1,6 +1,11 @@
 import SPMBForm from "./SPMBForm";
 import { FadeIn } from "@/components/Animations";
 import { FileText, CheckCircle, Phone } from "@/components/Icons";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Daftar SPMB",
+};
 
 export default function SPMBRegisterPage() {
   return (

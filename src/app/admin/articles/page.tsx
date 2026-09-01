@@ -35,6 +35,7 @@ import {
   SortAscending,
   Checks,
 } from "@/components/Icons";
+import { useToast } from "@/components/ui/Toast";
 
 const PAGE_SIZE = 10;
 
@@ -60,6 +61,7 @@ const emptyForm: FormData = {
 };
 
 export default function AdminArticlesPage() {
+  const { toast } = useToast();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -123,6 +125,11 @@ export default function AdminArticlesPage() {
     total: articles.length,
     published: articles.filter((a) => a.is_published).length,
     draft: articles.filter((a) => !a.is_published).length,
+    thisMonth: articles.filter((a) => {
+      const d = new Date(a.created_at);
+      const now = new Date();
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }).length,
   };
 
   const allVisibleSelected = paginated.length > 0 && paginated.every((item) => selectedIds.has(item.id));
@@ -196,10 +203,12 @@ export default function AdminArticlesPage() {
 
     if (editItem) {
       const { error } = await updateArticle(editItem.id, { ...form, image_url: imageUrl });
-      if (error) { setFormError(error); setFormSaving(false); return; }
+      if (error) { setFormError(error); toast(error, "error"); setFormSaving(false); return; }
+      toast("Artikel berhasil diperbarui", "success");
     } else {
       const { error } = await createArticle({ ...form, image_url: imageUrl });
-      if (error) { setFormError(error); setFormSaving(false); return; }
+      if (error) { setFormError(error); toast(error, "error"); setFormSaving(false); return; }
+      toast("Artikel berhasil diterbitkan", "success");
     }
 
     setFormOpen(false);
@@ -209,7 +218,12 @@ export default function AdminArticlesPage() {
 
   async function handleDelete() {
     if (!deleteItem) return;
-    await deleteArticle(deleteItem.id);
+    try {
+      await deleteArticle(deleteItem.id);
+      toast("Artikel berhasil dihapus", "success");
+    } catch (e: any) {
+      toast(e?.message || "Gagal menghapus artikel", "error");
+    }
     setDeleteItem(null);
     setSelectedIds((s) => { const n = new Set(s); n.delete(deleteItem.id); return n; });
     fetchArticles();
@@ -218,7 +232,12 @@ export default function AdminArticlesPage() {
   async function handleBulkDelete() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    await deleteArticleBulk(ids);
+    try {
+      await deleteArticleBulk(ids);
+      toast(`${ids.length} artikel berhasil dihapus`, "success");
+    } catch (e: any) {
+      toast(e?.message || "Gagal menghapus artikel", "error");
+    }
     setSelectedIds(new Set());
     setBulkDelete(false);
     fetchArticles();
@@ -227,13 +246,23 @@ export default function AdminArticlesPage() {
   async function handleBulkPublish(publish: boolean) {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    await togglePublishArticleBulk(ids, publish);
+    try {
+      await togglePublishArticleBulk(ids, publish);
+      toast(`${ids.length} artikel berhasil ${publish ? "diterbitkan" : "draft"}`, "success");
+    } catch (e: any) {
+      toast(e?.message || "Gagal memperbarui status artikel", "error");
+    }
     setSelectedIds(new Set());
     fetchArticles();
   }
 
   async function handleTogglePublish(item: Article) {
-    await togglePublishArticle(item.id, !item.is_published);
+    try {
+      await togglePublishArticle(item.id, !item.is_published);
+      toast(`Artikel berhasil ${!item.is_published ? "diterbitkan" : "draft"}`, "success");
+    } catch (e: any) {
+      toast(e?.message || "Gagal memperbarui status artikel", "error");
+    }
     fetchArticles();
   }
 
@@ -267,6 +296,7 @@ export default function AdminArticlesPage() {
         <StatCard label="Total" value={stats.total} variant="brand" />
         <StatCard label="Diterbitkan" value={stats.published} variant="success" />
         <StatCard label="Draft" value={stats.draft} variant="warning" />
+        <StatCard label="Bulan Ini" value={stats.thisMonth} variant="info" />
       </StatCardRow>
 
       {/* Bulk actions */}
@@ -540,7 +570,7 @@ export default function AdminArticlesPage() {
         title={editItem ? "Edit Artikel" : "Buat Artikel Baru"}
         description={editItem ? "Perbarui informasi artikel" : "Isi form untuk menerbitkan artikel"}
         footer={
-          <>
+          <div className="flex w-full items-center justify-between">
             <button onClick={() => setFormOpen(false)} disabled={formSaving}
               className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
               Batal
@@ -556,7 +586,7 @@ export default function AdminArticlesPage() {
                 </>
               )}
             </button>
-          </>
+          </div>
         }
       >
         {formError && (

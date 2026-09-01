@@ -11,6 +11,7 @@ import {
 } from "@/lib/queries";
 import { StatCard, StatCardRow, SlideOver } from "@/components/ui";
 import type { SpmbRegistration } from "@/lib/supabase";
+import { useToast } from "@/components/ui/Toast";
 import {
   MagnifyingGlass,
   Download,
@@ -63,6 +64,7 @@ type SortField = "created_at" | "full_name" | "status" | "registration_path";
 type SortDir = "asc" | "desc";
 
 export default function AdminPPDBPage() {
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("all");
   const [data, setData] = useState<SpmbRegistration[]>([]);
@@ -152,7 +154,12 @@ export default function AdminPPDBPage() {
   }
 
   async function handleUpdateStatus(id: string, status: "accepted" | "rejected") {
-    await updateRegistrationStatus(id, status);
+    try {
+      await updateRegistrationStatus(id, status);
+      toast("Status berhasil diubah", "success");
+    } catch (e: any) {
+      toast(e?.message || "Gagal mengubah status", "error");
+    }
     setConfirmAction(null);
     setViewItem(null);
     setSelectedIds(new Set());
@@ -162,7 +169,12 @@ export default function AdminPPDBPage() {
   async function handleBulkStatus(status: "accepted" | "rejected") {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    await updateRegistrationBulkStatus(ids, status);
+    try {
+      await updateRegistrationBulkStatus(ids, status);
+      toast(`${ids.length} pendaftaran berhasil diubah statusnya`, "success");
+    } catch (e: any) {
+      toast(e?.message || "Gagal mengubah status", "error");
+    }
     setSelectedIds(new Set());
     setConfirmAction(null);
     fetchData();
@@ -170,7 +182,12 @@ export default function AdminPPDBPage() {
 
   async function handleDelete() {
     if (!deleteItem) return;
-    await deleteRegistration(deleteItem.id);
+    try {
+      await deleteRegistration(deleteItem.id);
+      toast("Pendaftaran berhasil dihapus", "success");
+    } catch (e: any) {
+      toast(e?.message || "Gagal menghapus pendaftaran", "error");
+    }
     setDeleteItem(null);
     setSelectedIds((s) => { const n = new Set(s); n.delete(deleteItem.id); return n; });
     fetchData();
@@ -179,7 +196,12 @@ export default function AdminPPDBPage() {
   async function handleBulkDelete() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    await deleteRegistrationBulk(ids);
+    try {
+      await deleteRegistrationBulk(ids);
+      toast(`${ids.length} pendaftaran berhasil dihapus`, "success");
+    } catch (e: any) {
+      toast(e?.message || "Gagal menghapus pendaftaran", "error");
+    }
     setSelectedIds(new Set());
     setBulkDelete(false);
     fetchData();
@@ -188,7 +210,12 @@ export default function AdminPPDBPage() {
   async function handleSaveNotes() {
     if (!editItem) return;
     setEditSaving(true);
-    await updateRegistrationNotes(editItem.id, editNotes);
+    try {
+      await updateRegistrationNotes(editItem.id, editNotes);
+      toast("Catatan berhasil disimpan", "success");
+    } catch (e: any) {
+      toast(e?.message || "Gagal menyimpan catatan", "error");
+    }
     setEditSaving(false);
     setEditItem(null);
     fetchData();
@@ -196,7 +223,12 @@ export default function AdminPPDBPage() {
 
   async function handleToggleStatus(item: SpmbRegistration) {
     const nextStatus = item.status === "pending" ? "accepted" : item.status === "accepted" ? "rejected" : "pending";
-    await updateRegistrationStatus(item.id, nextStatus as "accepted" | "rejected");
+    try {
+      await updateRegistrationStatus(item.id, nextStatus as "accepted" | "rejected");
+      toast("Status berhasil diubah", "success");
+    } catch (e: any) {
+      toast(e?.message || "Gagal mengubah status", "error");
+    }
     fetchData();
   }
 
@@ -227,7 +259,7 @@ export default function AdminPPDBPage() {
       </div>
 
       {/* Stats */}
-      <StatCardRow className="!grid-cols-2 sm:!grid-cols-4">
+      <StatCardRow>
         <StatCard label="Total" value={stats.total} variant="brand" />
         <StatCard label="Menunggu" value={stats.pending} variant="warning" />
         <StatCard label="Diterima" value={stats.accepted} variant="success" />
@@ -468,7 +500,7 @@ export default function AdminPPDBPage() {
           description={editItem.full_name}
 
           footer={
-            <>
+            <div className="flex w-full items-center justify-between">
               <button onClick={() => setEditItem(null)} disabled={editSaving}
                 className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
                 Batal
@@ -484,7 +516,7 @@ export default function AdminPPDBPage() {
                   </>
                 )}
               </button>
-            </>
+            </div>
           }
         >
           <div className="space-y-5">
