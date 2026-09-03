@@ -176,7 +176,7 @@ h3 {
 }
 .tiptap-editor a { color: #1767b1; text-decoration: underline; }
 .tiptap-editor a:hover { color: #082b59; }
-.tiptap-editor hr { border: none; border-top: 1px solid #e2e8f0; margin: 1rem 0; }
+.tiptap-editor hr { border: none; border-top: 1px solid #e2e8f0; margin: 2.5rem 0; }
 .tiptap-editor img { max-width: 100%; height: auto; border-radius: 0.75rem; margin: 0.75rem 0; }
 .tiptap-editor mark { background-color: #fef08a; padding: 0.125rem 0.25rem; border-radius: 0.25rem; }
 .tiptap-editor code {
@@ -206,6 +206,28 @@ h3 {
   height: 1rem;
   accent-color: #1767b1;
   cursor: pointer;
+}
+
+/* Prose content HR override */
+.prose hr {
+  margin-top: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
+}
+.prose h2 {
+  font-size: 1.65rem !important;
+  font-weight: 700 !important;
+  color: #082b59 !important;
+  margin-top: 2.5rem !important;
+  margin-bottom: 1rem !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  padding-bottom: 0.75rem !important;
+}
+.prose h3 {
+  font-size: 1.35rem !important;
+  font-weight: 700 !important;
+  color: #082b59 !important;
+  margin-top: 2rem !important;
+  margin-bottom: 0.75rem !important;
 }
 
 /* Reduced motion: disable all animations */

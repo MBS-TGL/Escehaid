@@ -698,3 +698,10 @@ SET role = 'developer', full_name = 'Developer', is_active = true;
 
 -- Verify
 SELECT id, full_name, role, is_active FROM user_profiles;
+
+-- ============================================================
+-- MIGRATION: Add new columns to news (run once on existing DB)
+-- ============================================================
+ALTER TABLE news ADD COLUMN IF NOT EXISTS cover_image_position text DEFAULT 'center';
+ALTER TABLE news ADD COLUMN IF NOT EXISTS writer_name text DEFAULT '';
+ALTER TABLE news ADD COLUMN IF NOT EXISTS editor_name text DEFAULT '';

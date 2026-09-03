@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import { Clock, User, ArrowLeft, Newspaper, MagnifyingGlass, BookmarkSimple, ShareNetwork, WhatsappLogo, FacebookLogo, TwitterLogo } from "@/components/Icons";
 import { getNewsBySlug, getNewsList, getRelatedNews } from "@/lib/queries";
@@ -111,15 +112,26 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
               {berita.title}
             </h1>
             {/* Author */}
-            <div className="mt-3 flex items-center gap-3 border-t border-white/10 pt-3">
+            <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-white/10 pt-3">
               {(berita.writer_name || berita.author_name) && (
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10">
-                    <User className="h-4 w-4 text-white/70" />
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10">
+                    <User className="h-3.5 w-3.5 text-white/70" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-white/90">{berita.writer_name || berita.author_name}</p>
-                    <p className="text-[11px] text-white/40">Penulis</p>
+                    <span className="text-sm font-medium text-white/90">{berita.writer_name || berita.author_name}</span>
+                    <span className="text-[11px] text-white/40 ml-1.5">Penulis</span>
+                  </div>
+                </div>
+              )}
+              {berita.editor_name && (
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10">
+                    <User className="h-3.5 w-3.5 text-white/70" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-white/90">{berita.editor_name}</span>
+                    <span className="text-[11px] text-white/40 ml-1.5">Editor</span>
                   </div>
                 </div>
               )}
@@ -135,7 +147,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
           <article className="min-w-0 flex-1">
             {/* Summary */}
             {berita.summary && (
-              <div className="mb-8 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+              <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
                 <div className="flex items-start gap-3">
                   <BookmarkSimple className="mt-0.5 h-4 w-4 shrink-0 text-[#f4d21f]" />
                   <p className="text-sm font-medium leading-relaxed text-slate-600">{berita.summary}</p>
@@ -148,8 +160,6 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
               <div
                 className="prose prose-lg prose-slate max-w-none
                   prose-headings:text-[#082b59] prose-headings:font-extrabold prose-headings:scroll-mt-24
-                  prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:border-b prose-h2:border-slate-200 prose-h2:pb-3
-                  prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3
                   prose-p:text-gray-700 prose-p:leading-[1.9] prose-p:text-justify prose-p:mb-5
                   prose-a:text-[#1767b1] prose-a:no-underline prose-a:font-medium hover:prose-a:underline
                   prose-strong:text-[#082b59] prose-strong:font-bold
@@ -160,7 +170,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
                   prose-ol:my-5 prose-ol:pl-6 prose-ul:my-5 prose-ul:pl-6
                   prose-code:text-[#1767b1] prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:font-normal prose-code:before:content-none prose-code:after:content-none
                   prose-pre:bg-[#082b59] prose-pre:text-white prose-pre:rounded-xl prose-pre:border prose-pre:border-slate-700
-                  prose-hr:border-slate-200 prose-hr:my-10
+                  prose-hr:border-slate-200 prose-hr:my-12
                   prose-table:text-sm prose-table:border-collapse
                   prose-th:bg-slate-50 prose-th:text-left prose-th:font-semibold prose-th:px-4 prose-th:py-3 prose-th:border prose-th:border-slate-200
                   prose-td:px-4 prose-td:py-3 prose-td:border prose-td:border-slate-200"
@@ -194,36 +204,6 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
               </div>
             </div>
 
-            {/* Author Card */}
-            {(berita.writer_name || berita.editor_name) && (
-              <div className="mt-8 rounded-xl border border-slate-200 bg-white p-5">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#082b59] to-[#1767b1]">
-                    <User className="h-7 w-7 text-white" />
-                  </div>
-                  <div>
-                    {berita.writer_name && (
-                      <>
-                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Penulis</p>
-                        <p className="text-base font-bold text-[#082b59]">{berita.writer_name}</p>
-                      </>
-                    )}
-                  </div>
-                </div>
-                {berita.editor_name && (
-                  <div className="mt-3 flex items-center gap-4 border-t border-slate-100 pt-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#f4d21f] to-[#e6c51a]">
-                      <User className="h-5 w-5 text-[#082b59]" />
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Editor</p>
-                      <p className="text-sm font-bold text-[#082b59]">{berita.editor_name}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* Related */}
             {relatedNews.length > 0 && (
               <div className="mt-10">
@@ -238,7 +218,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
                       <Link key={item.id} href={`/news/${item.slug}`}
                         className="group flex gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-[#1767b1]/30 hover:shadow-md">
                         {item.image_url ? (
-                          <img src={item.image_url} alt="" className="h-20 w-20 flex-shrink-0 rounded-lg object-cover" />
+                          <Image src={item.image_url} alt="" width={80} height={80} className="h-20 w-20 flex-shrink-0 rounded-lg object-cover" />
                         ) : (
                           <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">
                             <Newspaper className="h-6 w-6 text-slate-300" />
@@ -264,11 +244,15 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
             <div className="sticky top-20 space-y-5">
               <div className="rounded-xl border border-slate-200 bg-white p-5">
                 <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">Cari Berita</h3>
-                <Link href="/news"
-                  className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-400 transition-colors hover:border-[#1767b1]/30 hover:bg-white">
-                  <MagnifyingGlass className="h-4 w-4" />
-                  Ketik kata kunci...
-                </Link>
+                <form action="/news" method="get" className="relative">
+                  <MagnifyingGlass className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    name="search"
+                    placeholder="Ketik kata kunci..."
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-[#1767b1] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                  />
+                </form>
               </div>
 
               {filteredRecent.length > 0 && (
@@ -304,11 +288,9 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
                 <div className="space-y-1.5">
                   {Object.entries(categoryConfig).map(([key, cfg]) => (
                     <Link key={key} href={`/news?category=${key}`}
-                      className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm text-slate-600 transition-colors hover:bg-slate-50">
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition-colors hover:bg-slate-50">
+                      <span className={`h-2 w-2 flex-shrink-0 rounded-full ${key === "berita" ? "bg-blue-500" : key === "pengumuman" ? "bg-amber-500" : "bg-purple-500"}`} />
                       <span className="font-medium">{cfg.label}</span>
-                      <span className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase ${cfg.bg} ${cfg.color} ${cfg.border}`}>
-                        {cfg.label.slice(0, 3)}
-                      </span>
                     </Link>
                   ))}
                 </div>

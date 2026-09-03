@@ -87,9 +87,7 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
         {article.content ? (
           <div
             className="prose prose-lg prose-slate max-w-none
-              prose-headings:text-[#082b59] prose-headings:font-extrabold prose-headings:scroll-mt-24
-              prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:border-b prose-h2:border-slate-200 prose-h2:pb-3
-              prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3
+prose-headings:text-[#082b59] prose-headings:font-extrabold prose-headings:scroll-mt-24
               prose-p:text-gray-700 prose-p:leading-[1.9] prose-p:text-justify prose-p:mb-5
               prose-a:text-[#1767b1] prose-a:no-underline prose-a:font-medium hover:prose-a:underline
               prose-strong:text-[#082b59] prose-strong:font-bold
@@ -101,7 +99,7 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
               prose-ul:my-5 prose-ul:pl-6
               prose-code:text-[#1767b1] prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:font-normal prose-code:before:content-none prose-code:after:content-none
               prose-pre:bg-[#082b59] prose-pre:text-white prose-pre:rounded-xl prose-pre:border prose-pre:border-slate-700
-              prose-hr:border-slate-200 prose-hr:my-10
+              prose-hr:border-slate-200 prose-hr:my-12
               prose-table:text-sm prose-table:border-collapse
               prose-th:bg-slate-50 prose-th:text-left prose-th:font-semibold prose-th:px-4 prose-th:py-3 prose-th:border prose-th:border-slate-200
               prose-td:px-4 prose-td:py-3 prose-td:border prose-td:border-slate-200"

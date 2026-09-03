@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { X } from "@/components/Icons";
 
 export default function NewsImageZoom({
@@ -50,11 +51,14 @@ export default function NewsImageZoom({
       {/* Thumbnail */}
       <div className="relative mx-auto max-w-7xl px-4 pt-5 md:pt-6">
         <div className="group relative block w-full overflow-hidden rounded-xl md:rounded-2xl">
-          <img
+          <Image
             src={src}
             alt={alt}
-            className="h-[200px] w-full object-cover transition-transform duration-300 group-hover:scale-[1.02] md:h-[320px]"
+            fill
+            sizes="100vw"
+            className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
             style={{ objectPosition }}
+            priority
           />
           {/* Clickable overlay */}
           <button

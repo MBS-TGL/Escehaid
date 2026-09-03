@@ -25,12 +25,56 @@ export async function getSchoolProfile(): Promise<SchoolProfile | null> {
 }
 
 // ============ NEWS ============
-export async function getNewsList(limit?: number): Promise<NewsWithAuthor[]> {
+export async function getNewsListPaginated(
+  page: number = 1,
+  pageSize: number = 9,
+  search?: string
+): Promise<{ items: NewsWithAuthor[]; total: number; totalPages: number }> {
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase
+    .from("news")
+    .select("*, user_profiles(full_name)", { count: "exact" })
+    .eq("is_published", true)
+    .order("published_at", { ascending: false });
+
+  if (search) {
+    query = query.ilike("title", `%${search}%`);
+  }
+
+  query = query.range(from, to);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    console.error("Error fetching news:", error);
+    return { items: [], total: 0, totalPages: 0 };
+  }
+
+  const total = count || 0;
+  const totalPages = Math.ceil(total / pageSize);
+
+  return {
+    items: (data || []).map((item: any) => ({
+      ...item,
+      author_name: item.user_profiles?.full_name ?? null,
+    })),
+    total,
+    totalPages,
+  };
+}
+
+export async function getNewsList(limit?: number, search?: string): Promise<NewsWithAuthor[]> {
   let query = supabase
     .from("news")
     .select("*, user_profiles(full_name)")
     .eq("is_published", true)
     .order("published_at", { ascending: false });
+
+  if (search) {
+    query = query.ilike("title", `%${search}%`);
+  }
 
   if (limit) {
     query = query.limit(limit);
@@ -111,12 +155,26 @@ export async function createNews(news: {
   cover_image_position?: string;
   writer_name?: string;
   editor_name?: string;
+  published_at?: string;
   is_published?: boolean;
 }): Promise<{ data: News | null; error?: string }> {
   const { data: { user } } = await supabase.auth.getUser();
+  const payload: Record<string, any> = {
+    title: news.title,
+    summary: news.summary,
+    content: news.content,
+    category: news.category,
+    image_url: news.image_url,
+    is_published: news.is_published,
+    author_id: user?.id,
+  };
+  if (news.cover_image_position) payload.cover_image_position = news.cover_image_position;
+  if (news.writer_name) payload.writer_name = news.writer_name;
+  if (news.editor_name) payload.editor_name = news.editor_name;
+  if (news.published_at) payload.published_at = news.published_at;
   const { data, error } = await supabase
     .from("news")
-    .insert({ ...news, author_id: user?.id })
+    .insert(payload)
     .select()
     .single();
 
@@ -138,12 +196,24 @@ export async function updateNews(
     cover_image_position?: string;
     writer_name?: string;
     editor_name?: string;
+    published_at?: string;
     is_published?: boolean;
   }
 ): Promise<{ data: News | null; error?: string }> {
+  const payload: Record<string, any> = {};
+  if (news.title !== undefined) payload.title = news.title;
+  if (news.summary !== undefined) payload.summary = news.summary;
+  if (news.content !== undefined) payload.content = news.content;
+  if (news.category !== undefined) payload.category = news.category;
+  if (news.image_url !== undefined) payload.image_url = news.image_url;
+  if (news.is_published !== undefined) payload.is_published = news.is_published;
+  if (news.cover_image_position) payload.cover_image_position = news.cover_image_position;
+  if (news.writer_name) payload.writer_name = news.writer_name;
+  if (news.editor_name) payload.editor_name = news.editor_name;
+  if (news.published_at) payload.published_at = news.published_at;
   const { data, error } = await supabase
     .from("news")
-    .update(news)
+    .update(payload)
     .eq("id", id)
     .select()
     .single();

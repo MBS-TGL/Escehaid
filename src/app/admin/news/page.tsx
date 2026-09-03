@@ -11,6 +11,7 @@ import {
   togglePublishNewsBulk,
   uploadNewsImage,
 } from "@/lib/queries";
+import { compressImage } from "@/lib/compress-image";
 import { StatCard, StatCardRow, Modal, ConfirmModal, SlideOver, RichTextEditor } from "@/components/ui";
 import type { News } from "@/lib/supabase";
 import {
@@ -59,6 +60,7 @@ interface FormData {
   cover_image_position: string;
   writer_name: string;
   editor_name: string;
+  published_at: string;
   is_published: boolean;
 }
 
@@ -71,6 +73,7 @@ const emptyForm: FormData = {
   cover_image_position: "center",
   writer_name: "",
   editor_name: "",
+  published_at: "",
   is_published: false,
 };
 
@@ -100,6 +103,7 @@ export default function AdminBeritaPage() {
   const [formError, setFormError] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [imageUploading, setImageUploading] = useState(false);
 
   // Fetch
   const fetchNews = useCallback(async () => {
@@ -217,6 +221,7 @@ export default function AdminBeritaPage() {
       cover_image_position: item.cover_image_position || "center",
       writer_name: item.writer_name || "",
       editor_name: item.editor_name || "",
+      published_at: item.published_at ? new Date(item.published_at).toISOString().slice(0, 16) : "",
       is_published: item.is_published,
     });
     setImageFile(null);
@@ -225,11 +230,17 @@ export default function AdminBeritaPage() {
     setFormOpen(true);
   }
 
-  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    setImageUploading(true);
+    try {
+      const compressed = await compressImage(file);
+      setImageFile(compressed);
+      setImagePreview(URL.createObjectURL(compressed));
+    } finally {
+      setImageUploading(false);
+    }
   }
 
   async function handleSave() {
@@ -537,7 +548,10 @@ export default function AdminBeritaPage() {
               <span>{viewItem.published_at ? new Date(viewItem.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"}</span>
             </div>
             {viewItem.summary && <p className="mb-4 text-sm text-slate-600 italic border-l-2 border-[#f4d21f] pl-3">{viewItem.summary}</p>}
-            <div className="prose prose-sm max-w-none text-slate-700 leading-relaxed whitespace-pre-wrap">{viewItem.content || "Tidak ada konten"}</div>
+            <div
+              className="prose prose-sm max-w-none text-slate-700 leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: viewItem.content || "Tidak ada konten" }}
+            />
           </>
         )}
       </Modal>
@@ -664,20 +678,32 @@ export default function AdminBeritaPage() {
               <div
                 onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add("border-[#1767b1]", "bg-[#1767b1]/5"); }}
                 onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("border-[#1767b1]", "bg-[#1767b1]/5"); }}
-                onDrop={(e) => {
+                onDrop={async (e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   e.currentTarget.classList.remove("border-[#1767b1]", "bg-[#1767b1]/5");
                   const file = e.dataTransfer.files?.[0];
                   if (file && file.type.startsWith("image/")) {
-                    setImageFile(file);
-                    setImagePreview(URL.createObjectURL(file));
+                    setImageUploading(true);
+                    try {
+                      const compressed = await compressImage(file);
+                      setImageFile(compressed);
+                      setImagePreview(URL.createObjectURL(compressed));
+                    } finally {
+                      setImageUploading(false);
+                    }
                   }
                 }}
                 className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50"
               >
-                <ImageIcon className="h-8 w-8 text-slate-300" />
-                <span className="text-xs text-slate-400">Klik, seret & lepas, atau Ctrl+V untuk paste gambar</span>
+                {imageUploading ? (
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#1767b1] border-t-transparent" />
+                ) : (
+                  <ImageIcon className="h-8 w-8 text-slate-300" />
+                )}
+                <span className="text-xs text-slate-400">
+                  {imageUploading ? "Mengkompresi gambar..." : "Klik, seret & lepas, atau Ctrl+V untuk paste gambar"}
+                </span>
                 <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
               </div>
             )}
@@ -714,16 +740,27 @@ export default function AdminBeritaPage() {
             <RichTextEditor value={form.content} onChange={(val) => setForm({ ...form, content: val })} />
           </div>
 
-          {/* Publish toggle */}
-          <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4">
-            <div>
-              <p className="text-sm font-semibold text-slate-700">Terbitkan Sekarang</p>
-              <p className="text-xs text-slate-400">{form.is_published ? "Berita akan langsung tampil di website" : "Berita disimpan sebagai draft"}</p>
+          {/* Publish toggle + Date */}
+          <div className="rounded-xl border border-slate-200 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-slate-700">Terbitkan Sekarang</p>
+                <p className="text-xs text-slate-400">{form.is_published ? "Berita akan langsung tampil di website" : "Berita disimpan sebagai draft"}</p>
+              </div>
+              <button type="button" onClick={() => setForm({ ...form, is_published: !form.is_published })}
+                className={`relative h-6 w-11 rounded-full transition-colors ${form.is_published ? "bg-[#1767b1]" : "bg-slate-300"}`}>
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_published ? "left-[22px]" : "left-0.5"}`} />
+              </button>
             </div>
-            <button type="button" onClick={() => setForm({ ...form, is_published: !form.is_published })}
-              className={`relative h-6 w-11 rounded-full transition-colors ${form.is_published ? "bg-[#1767b1]" : "bg-slate-300"}`}>
-              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_published ? "left-[22px]" : "left-0.5"}`} />
-            </button>
+            <div className="flex items-center gap-3 border-t border-slate-100 pt-3">
+              <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Tanggal Publish</label>
+              <input type="datetime-local" value={form.published_at} onChange={(e) => setForm({ ...form, published_at: e.target.value })}
+                className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+              {form.published_at && (
+                <button type="button" onClick={() => setForm({ ...form, published_at: "" })}
+                  className="text-[11px] text-slate-400 hover:text-slate-600">Reset</button>
+              )}
+            </div>
           </div>
         </div>
       </SlideOver>
