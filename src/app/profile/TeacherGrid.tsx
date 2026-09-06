@@ -1,53 +1,51 @@
 "use client";
 
-import { useState } from "react";
-import { Users } from "@/components/Icons";
+import { useState, useMemo } from "react";
+import { Users, MagnifyingGlass } from "@/components/Icons";
 import { StaggerChildren, StaggerItem } from "@/components/Animations";
 import type { Teacher } from "@/lib/supabase";
 import TeacherCard from "../TeacherCard";
 
-const CATEGORY_ALL = "Semua";
-
 export default function TeacherGrid({ teachers }: { teachers: Teacher[] }) {
-  const [active, setActive] = useState(CATEGORY_ALL);
+  const [search, setSearch] = useState("");
 
-  const allCategories = Array.from(
-    new Set(teachers.flatMap((t) => t.categories ?? []))
-  );
-  const tabs = [CATEGORY_ALL, ...allCategories];
-
-  const filtered =
-    active === CATEGORY_ALL
-      ? teachers
-      : teachers.filter((t) => (t.categories ?? []).includes(active));
+  const filtered = useMemo(() => {
+    if (!search.trim()) return teachers;
+    const q = search.toLowerCase();
+    return teachers.filter(
+      (t) =>
+        t.name.toLowerCase().includes(q) ||
+        t.position.toLowerCase().includes(q)
+    );
+  }, [teachers, search]);
 
   return (
     <div>
-      {/* Tabs */}
-      <div className="mb-8 flex flex-wrap justify-center gap-2">
-        {tabs.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setActive(cat)}
-            className={`rounded-full px-4 py-1.5 text-xs font-medium transition-all ${
-              active === cat
-                ? "bg-[#082b59] text-white shadow-md shadow-[#082b59]/20"
-                : "bg-white text-slate-600 border border-[#dce3ed] hover:border-[#1767b1] hover:text-[#1767b1]"
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
+      {/* Search */}
+      <div className="mb-8 flex justify-center">
+        <div className="relative w-full max-w-md">
+          <MagnifyingGlass className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Cari nama atau jabatan..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-full border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+          />
+        </div>
       </div>
 
       {/* Grid */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white py-16 text-center">
+        <div className="flex flex-col items-center justify-center rounded-2xl bg-[#f0f4fa] py-16 text-center">
           <Users className="h-12 w-12 text-[#082b59]/20" />
-          <p className="mt-4 text-sm text-slate-500">Tidak ada guru di kategori ini.</p>
+          <p className="mt-4 text-sm text-[#082b59]/60">Tidak ada guru ditemukan.</p>
+          {search && (
+            <p className="mt-1 text-xs text-[#082b59]/40">Coba kata kunci lain</p>
+          )}
         </div>
       ) : (
-        <StaggerChildren stagger={0.08} className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-5">
+        <StaggerChildren stagger={0.08} className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
           {filtered.map((t) => (
             <StaggerItem key={t.id}>
               <TeacherCard teacher={t} />

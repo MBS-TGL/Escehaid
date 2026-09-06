@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { MapPin, Phone, Envelope, Users, BookOpen, GraduationCap, Building } from "@/components/Icons";
-import { getSchoolProfile, getTeacherList, getFacilityList } from "@/lib/queries";
-import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
+import { Users, BookOpen, GraduationCap, Building, Eye, Checks } from "@/components/Icons";
+import { getSchoolProfile, getTeacherList } from "@/lib/queries";
+import { FadeIn } from "@/components/Animations";
 import TeacherGrid from "./TeacherGrid";
 import type { Metadata } from "next";
 
@@ -10,10 +10,9 @@ export const metadata: Metadata = {
 };
 
 export default async function ProfilPage() {
-  const [profil, teachers, facilities] = await Promise.all([
+  const [profil, teachers] = await Promise.all([
     getSchoolProfile(),
     getTeacherList(),
-    getFacilityList(),
   ]);
 
   return (
@@ -142,48 +141,75 @@ export default async function ProfilPage() {
           <div className="grid gap-8 md:grid-cols-2">
             <FadeIn>
               <div className="h-full rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-8">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#082b59]">
-                  <span className="text-lg font-bold text-[#f4d21f]">V</span>
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[#082b59] shadow-lg shadow-[#082b59]/20">
+                  <Eye className="h-5 w-5 text-[#f4d21f]" weight="bold" />
                 </div>
                 <h3 className="text-xl font-semibold text-[#082b59]">Visi</h3>
-                <p className="mt-4 text-[15px] leading-relaxed text-slate-600">
-                  {profil?.vision || "Unggul dalam Iptek dan Imtaq, Berakhlak Mulia, Berwawasan Global, Berbasis Lingkungan Hidup, serta Mandiri dan Sejahtera."}
-                </p>
+                {profil?.vision ? (
+                  <ul className="mt-4 space-y-2.5 text-[15px] leading-relaxed text-slate-600">
+                    {profil.vision.split(/,\s*/).filter((s: string) => s.trim()).map((v: string, i: number) => (
+                      <li key={i} className="flex gap-3">
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#f4d21f]" />
+                        <span>{v.trim()}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-4 text-[15px] leading-relaxed text-slate-600">
+                    Menjadi lembaga pencetak kader da&apos;i dan ulama hafidz yang menguasai ilmu pengetahuan dan teknologi berwawasan global serta peduli dan berbudaya lingkungan.
+                  </p>
+                )}
               </div>
             </FadeIn>
 
             <FadeIn direction="left">
               <div className="h-full rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-8">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#082b59]">
-                  <span className="text-lg font-bold text-[#f4d21f]">M</span>
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[#082b59] shadow-lg shadow-[#082b59]/20">
+                  <Checks className="h-5 w-5 text-[#f4d21f]" weight="bold" />
                 </div>
                 <h3 className="text-xl font-semibold text-[#082b59]">Misi</h3>
                 {profil?.mission ? (
-                  <ul className="mt-4 space-y-2 text-[15px] leading-relaxed text-slate-600">
+                  <ul className="mt-4 space-y-2.5 text-[15px] leading-relaxed text-slate-600">
                     {(() => {
                       try {
                         const misi = JSON.parse(profil.mission);
-                        return misi.map((m: string, i: number) => (
-                          <li key={i} className="flex gap-2">
-                            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#f4d21f]" />
-                            <span>{m}</span>
-                          </li>
-                        ));
-                      } catch {
-                        return <li>{profil.mission}</li>;
-                      }
+                        if (Array.isArray(misi)) {
+                          return misi.map((m: string, i: number) => (
+                            <li key={i} className="flex gap-3">
+                              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#f4d21f]" />
+                              <span>{m}</span>
+                            </li>
+                          ));
+                        }
+                      } catch {}
+                      const items = profil.mission
+                        .split(/\d+\.\s*/)
+                        .filter((s: string) => s.trim());
+                      return items.map((m: string, i: number) => (
+                        <li key={i} className="flex gap-3">
+                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#f4d21f]" />
+                          <span>{m.trim()}</span>
+                        </li>
+                      ));
                     })()}
                   </ul>
                 ) : (
-                  <ul className="mt-4 space-y-2 text-[15px] leading-relaxed text-slate-600">
+                  <ul className="mt-4 space-y-2.5 text-[15px] leading-relaxed text-slate-600">
                     {[
-                      "Melaksanakan pendidikan yang berkualitas sesuai tuntutan Kurikulum Merdeka",
-                      "Mengembangkan potensi peserta didik secara optimal dan seimbang",
-                      "Membina akhlak mulia sesuai nilai-nilai Al-Islam dan Kemuhammadiyahan",
-                      "Menciptakan lingkungan belajar yang menyenangkan dan kondusif",
+                      "Menanamkan kepribadian Islam dan meningkatkan kepedulian serta berbudaya terhadap lingkungan yang tinggi kepada semua warga sekolah",
+                      "Menanamkan karakter unggul pada siswa sehingga lurus aqidahnya, bagus ibadahnya, mulia akhlaknya, dan luas pemahaman da'wahnya serta peduli dan berbudaya terhadap lingkungannya",
+                      "Menanamkan dan meningkatkan rasa ikhlas dan tanggung jawab serta peduli dan berbudaya lingkungan pada semua warga sekolah",
+                      "Memupuk kedisiplinan, semangat berlatih, demokratis dan beretos kerja tinggi serta peduli dan berbudaya lingkungan pada semua warga sekolah",
+                      "Melaksanakan pembelajaran dan bimbingan yang aktif, inovatif, kreatif, efektif, menyenangkan serta peduli dan berbudaya lingkungan sehingga siswa berkembang secara optimal",
+                      "Melaksanakan program yang mampu menumbuhkan potensi keberbakatan dalam setiap siswa dengan program-program yang berorientasi pada pengembangan bakat dan minat belajar",
+                      "Memberikan pelayanan pendidikan berbasis Boarding School dan Full Day School dengan memadukan kurikulum Nasional dan kurikulum Muhammadiyah",
+                      "Melaksanakan kegiatan pengkaderan secara aktif dan berkelanjutan",
+                      "Mewujudkan lulusan yang beriman dan bertaqwa, menguasai ilmu pengetahuan dan teknologi, yang berkualitas, mampu menjadi da'i dan ulama",
+                      "Mewujudkan generasi emas 2045 dengan cita-cita One Home One Hafidz",
+                      "Memberikan pelayanan yang optimal kepada seluruh lapisan masyarakat",
                     ].map((m, i) => (
-                      <li key={i} className="flex gap-2">
-                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#f4d21f]" />
+                      <li key={i} className="flex gap-3">
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#f4d21f]" />
                         <span>{m}</span>
                       </li>
                     ))}
@@ -196,18 +222,17 @@ export default async function ProfilPage() {
       </section>
 
       {/* Guru & Staff */}
-      <section className="bg-[#f4f7fb] py-20">
-        <div className="mx-auto max-w-7xl px-6">
+      <section className="bg-white">
+        <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
           <FadeIn>
             <div className="mb-12 text-center">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Tim Pengajar</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Guru & Staff</h2>
+              <h2 className="text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Guru & Staff</h2>
             </div>
           </FadeIn>
 
           {teachers.length === 0 ? (
             <FadeIn>
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white py-16 text-center">
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] py-16 text-center">
                 <Users className="h-12 w-12 text-[#082b59]/20" />
                 <p className="mt-4 text-sm text-slate-500">Data guru masih kosong.</p>
               </div>
@@ -215,94 +240,6 @@ export default async function ProfilPage() {
           ) : (
             <TeacherGrid teachers={teachers} />
           )}
-        </div>
-      </section>
-
-      {/* Fasilitas */}
-      <section className="bg-white py-20">
-        <div className="mx-auto max-w-7xl px-6">
-          <FadeIn>
-            <div className="mb-12 text-center">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Sarana Prasarana</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Fasilitas Sekolah</h2>
-            </div>
-          </FadeIn>
-
-          {facilities.length === 0 ? (
-            <FadeIn>
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] py-16 text-center">
-                <Building className="h-12 w-12 text-[#082b59]/20" />
-                <p className="mt-4 text-sm text-slate-500">Data fasilitas masih kosong.</p>
-              </div>
-            </FadeIn>
-          ) : (
-            <StaggerChildren stagger={0.1} className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {facilities.map((f) => (
-                <StaggerItem key={f.id}>
-                  <div className="group overflow-hidden rounded-2xl border border-[#dce3ed] transition-all hover:shadow-lg hover:shadow-[#082b59]/5">
-                    <div className="relative h-48 overflow-hidden bg-[#f4f7fb]">
-                      <img
-                        src={f.image_url || `/images/${encodeURIComponent(f.name)}.jpg`}
-                        alt={f.name}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                    </div>
-                    <div className="p-5">
-                      <h3 className="font-semibold text-[#082b59]">{f.name}</h3>
-                      <p className="mt-2 text-sm leading-relaxed text-slate-600">{f.description}</p>
-                    </div>
-                  </div>
-                </StaggerItem>
-              ))}
-            </StaggerChildren>
-          )}
-        </div>
-      </section>
-
-      {/* Kontak */}
-      <section className="bg-[#f4f7fb] py-20">
-        <div className="mx-auto max-w-7xl px-6">
-          <FadeIn>
-            <div className="mb-12 text-center">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Kontak</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Hubungi Kami</h2>
-            </div>
-          </FadeIn>
-
-          <FadeIn>
-            <div className="mx-auto max-w-2xl rounded-2xl border border-[#dce3ed] bg-white p-8">
-              <div className="space-y-5">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f4f7fb]">
-                    <MapPin className="h-5 w-5 text-[#1767b1]" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-[#082b59]">Alamat</p>
-                    <p className="mt-1 text-sm text-slate-600">{profil?.address || "Jl. Pemandian No. 88, Patemon, Tanggul, Jember 68154"}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f4f7fb]">
-                    <Phone className="h-5 w-5 text-[#1767b1]" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-[#082b59]">Telepon</p>
-                    <p className="mt-1 text-sm text-slate-600">{profil?.phone || "0858-5200-4008"}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f4f7fb]">
-                    <Envelope className="h-5 w-5 text-[#1767b1]" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-[#082b59]">Email</p>
-                    <p className="mt-1 text-sm text-slate-600">{profil?.email || "smpm4tangguljember@gmail.com"}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </FadeIn>
         </div>
       </section>
     </div>

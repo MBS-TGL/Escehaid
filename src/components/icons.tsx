@@ -77,4 +77,5 @@ export {
   ShareNetwork,
   BookmarkSimple,
   LinkSimple,
+  CalendarBlank,
 } from "@phosphor-icons/react";

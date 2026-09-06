@@ -34,7 +34,7 @@ export default function HeroCarousel() {
   }, [current]);
 
   return (
-    <div className="relative h-[320px] w-full overflow-hidden rounded-2xl border border-white/10 md:h-[400px]">
+    <div className="relative h-[480px] w-full overflow-hidden rounded-2xl border border-white/10 md:h-[600px]">
       <video
         ref={videoRef}
         src={VIDEO_URL}

@@ -11,6 +11,7 @@ import {
   ImageSquare,
   Trophy,
   Envelope,
+  CalendarBlank,
   CaretRight,
   X,
 } from "@/components/Icons";
@@ -20,9 +21,12 @@ const navItems = [
   { label: "Kelola SPMB", href: "/admin/admission", icon: Users },
   { label: "Kelola Berita", href: "/admin/news", icon: Megaphone },
   { label: "Kelola Artikel", href: "/admin/articles", icon: Note },
+  { label: "Kelola Guru", href: "/admin/teachers", icon: Users },
   { label: "Kelola Gallery", href: "/admin/gallery", icon: ImageSquare },
   { label: "Kelola Prestasi", href: "/admin/achievements", icon: Trophy },
-  { label: "Pesan Masuk", href: "/admin/contact", icon: Envelope },
+  { label: "Kelola Pesan", href: "/admin/contact", icon: Envelope },
+  { label: "Kelola Pengumuman", href: "/admin/announcements", icon: Megaphone },
+  { label: "Kelola Agenda", href: "/admin/agenda", icon: CalendarBlank },
 ];
 
 export default function AdminSidebar({

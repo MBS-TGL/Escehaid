@@ -80,11 +80,8 @@ export interface Gallery {
 export interface Teacher {
   id: string;
   name: string;
-  subject: string;
   position: string;
-  categories: string[];
   photo_url: string;
-  bio: string;
   sort_order: number;
   is_active: boolean;
   created_at: string;

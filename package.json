@@ -11,6 +11,7 @@
   "dependencies": {
     "@next/swc-win32-x64-msvc": "^16.3.3",
     "@phosphor-icons/react": "^2.1.10",
+    "@splidejs/splide": "^4.1.4",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
     "@tiptap/extension-character-count": "^3.30.6",

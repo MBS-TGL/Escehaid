@@ -1,12 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, FileText, Newspaper, ImageSquare, House, Clock } from "@/components/Icons";
+import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, FileText, Newspaper, ImageSquare, House, Clock, ChatCircle } from "@/components/Icons";
 import { getNewsList, getFacilityList, getArticleList, getTeacherList, getSchoolProfile } from "@/lib/queries";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
 import FAQ from "./FAQ";
 import WhatsAppButton from "./WhatsAppButton";
 import HeroCarousel from "./HeroCarousel";
-import TeacherCard from "./TeacherCard";
+import TeacherCarousel from "./TeacherCarousel";
+import CountdownEvent from "@/components/CountdownEvent";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -74,22 +75,6 @@ export default async function Home() {
             </FadeIn>
 
             <FadeIn delay={0.4}>
-              <div className="mt-8 flex gap-8">
-                {[
-                  [profile?.accreditation || "A", "Akreditasi"],
-                  [String(profile?.total_teachers || 14), "Guru"],
-                  [String(profile?.total_students || 164), "Siswa"],
-                  [String(profile?.total_classes || 7), "Rombel"],
-                ].map(([value, label]) => (
-                  <div key={label} className="text-center">
-                    <p className="text-2xl font-bold text-[#f4d21f] md:text-3xl">{value}</p>
-                    <p className="mt-1 text-xs text-white/50">{label}</p>
-                  </div>
-                ))}
-              </div>
-            </FadeIn>
-
-            <FadeIn delay={0.45}>
               <div className="mt-9 flex flex-wrap items-center gap-5">
                 <Link
                   href="/admission/register"
@@ -118,9 +103,11 @@ export default async function Home() {
         </div>
       </section>
 
+      <CountdownEvent />
+
       {/* ── SAMBUTAN (2 kolom: foto + teks) ──────────────── */}
       <section className="relative overflow-hidden bg-[#f4f7fb]">
-        <div className="mx-auto max-w-[1296px] px-6 py-20 md:px-10 md:py-28">
+        <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
           <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.3fr] lg:gap-16">
             <FadeIn>
               <div className="flex justify-center lg:justify-end">
@@ -167,31 +154,32 @@ export default async function Home() {
 
       {/* ── PROGRAM UNGGULAN ──────────────────────────────── */}
       <section className="bg-white">
-        <div className="mx-auto max-w-[1296px] px-6 py-20 md:px-10 md:py-28">
+        <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
           <FadeIn>
-            <div className="mb-12 flex items-end justify-between gap-6">
+            <div className="mb-12">
               <h2 className="text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Program unggulan</h2>
-               <Link href="/profile" className="hidden text-sm font-semibold text-[#1767b1] md:inline-flex md:items-center md:gap-1">
-                Selengkapnya <ArrowUpRight className="h-4 w-4" />
-              </Link>
             </div>
           </FadeIn>
 
-          <StaggerChildren stagger={0.12} className="grid gap-5 md:grid-cols-2">
+          <StaggerChildren stagger={0.1} className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {([
-              ["Boarding School", "Program asrama yang membentuk kedisiplinan, kemandirian, dan kebersamaan siswa dalam lingkungan Islami.", House],
-              ["Full-day School", "Pembelajaran sehari penuh dari pagi hingga sore dengan pembiasaan ibadah dan kegiatan positif.", Clock],
+              ["Program Tahfidz", "Hafalan Al-Qur'an 30 Juz Dengan Bimbingan Intensif Dan Karantina Khusus Bagi Santri Berbakat Menghafal.", BookOpen],
+              ["Program Keberbakatan", "Pembelajaran fokus sesuai bakat: Tahfidz, Akademik, atau Ketrampilan (Seni/Olahraga) — 75% porsi belajar di bidang unggulan.", GraduationCap],
+              ["Program Bahasa", "Muhadhoroh 3 Bahasa (Arab, Inggris, Indonesia), Arabic Practice, Muhadasah, Dan Bimbingan Intensif Bahasa.", ChatCircle],
+              ["Program Kepesantrenan", "Baca Tulis Al-Qur'an Metode Wafa, Kajian Menjelang Berbuka, Dan Pembiasaan Golden Habit Sehari-hari.", House],
+              ["Program Akademik", "Bimbingan Belajar Semua Mapel Ujian Sekolah Dan Klinik Akademik Untuk Olimpiade IPA & Matematika.", Clock],
+              ["7 Golden Habits", "Pembiasaan Harian: Muraja'ah, Mufrodhat, Shalat Jama'ah Lima Waktu, Shalat Rawatib, Dhuha, Tahajjud, Dan Puasa Senin-Kamis.", Star],
             ] as [string, string, typeof Star][]).map(([title, description, Icon]) => (
               <StaggerItem key={title}>
-                <div className="group relative overflow-hidden rounded-2xl border border-[#dce3ed] bg-white p-6 transition-all hover:border-[#1767b1]/30 hover:shadow-xl hover:shadow-[#082b59]/5">
+                <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white p-5 transition-all hover:border-[#1767b1]/30 hover:shadow-xl hover:shadow-[#082b59]/5">
                   <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-[#f4d21f] to-[#1767b1] opacity-0 transition-opacity group-hover:opacity-100" />
-                  <div className="flex gap-5">
-                    <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#082b59] to-[#0d4a8a] text-white shadow-lg shadow-[#082b59]/20 transition-transform group-hover:scale-110">
-                      <Icon weight="fill" className="h-6 w-6" />
+                  <div className="flex gap-4">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#082b59] to-[#0d4a8a] text-white shadow-lg shadow-[#082b59]/20 transition-transform group-hover:scale-110">
+                      <Icon weight="fill" className="h-5 w-5" />
                     </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-[#082b59]">{title}</h3>
-                      <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-500">{description}</p>
+                    <div className="flex flex-col">
+                      <h3 className="text-base font-semibold text-[#082b59]">{title}</h3>
+                      <p className="mt-1.5 line-clamp-3 text-[13px] leading-relaxed text-slate-500">{description}</p>
                     </div>
                   </div>
                 </div>
@@ -203,7 +191,7 @@ export default async function Home() {
 
       {/* ── GURU & STAFF ────────────────────────────────── */}
       <section className="bg-white">
-        <div className="mx-auto max-w-[1296px] px-6 py-20 md:px-10 md:py-28">
+        <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
           <FadeIn>
             <div className="mb-12 text-center">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Tim Pengajar</p>
@@ -211,19 +199,15 @@ export default async function Home() {
             </div>
           </FadeIn>
 
-          <StaggerChildren stagger={0.1} className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-5">
-            {teachers.filter((t) => t.position !== "Kepala Sekolah").map((t) => (
-              <StaggerItem key={t.id}>
-                <TeacherCard teacher={t} />
-              </StaggerItem>
-            ))}
-          </StaggerChildren>
+          <FadeIn delay={0.15}>
+            <TeacherCarousel teachers={teachers.filter((t) => t.position !== "Kepala Sekolah")} />
+          </FadeIn>
         </div>
       </section>
 
       {/* ── FASILITAS ─────────────────────────────────────── */}
       <section className="bg-white">
-        <div className="mx-auto max-w-[1296px] px-6 py-20 md:px-10 md:py-28">
+        <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
           <FadeIn>
             <div className="mb-12 flex items-end justify-between">
               <h2 className="text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Fasilitas untuk bertumbuh</h2>
@@ -259,7 +243,7 @@ export default async function Home() {
 
       {/* ── BERITA (with images) ──────────────────────────── */}
       <section className="bg-[#082b59] text-white">
-          <div className="mx-auto max-w-[1296px] px-6 py-20 md:px-10 md:py-28">
+          <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
             <FadeIn>
               <div className="mb-12 flex items-end justify-between">
                 <div>
@@ -316,7 +300,7 @@ export default async function Home() {
 
       {/* ── ARTIKEL ──────────────────────────────────────── */}
       <section className="bg-[#f4f7fb]">
-        <div className="mx-auto max-w-[1296px] px-6 py-20 md:px-10 md:py-28">
+        <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
           <FadeIn>
             <div className="mb-12 flex items-end justify-between">
               <div>
@@ -357,7 +341,7 @@ export default async function Home() {
         <div className="absolute inset-0 opacity-10">
           <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#f4d21f] blur-[120px]" />
         </div>
-        <div className="relative mx-auto max-w-[1296px] px-6 py-20 md:px-10 md:py-28">
+        <div className="relative mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
           <FadeIn>
             <div className="mx-auto max-w-2xl text-center">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#f4d21f]">Mengapa MUH4TA</p>
@@ -386,7 +370,7 @@ export default async function Home() {
 
       {/* ── VISI DAN MISI (bento-style, alternating) ────── */}
       <section className="bg-[#f4f7fb]">
-        <div className="mx-auto max-w-[1296px] px-6 py-20 md:px-10 md:py-28">
+        <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
           <FadeIn>
             <div className="mb-12 text-center">
               <h2 className="text-3xl font-semibold leading-tight tracking-tight text-[#082b59] md:text-4xl">
@@ -401,7 +385,7 @@ export default async function Home() {
                 <div>
                   <p className="text-sm font-bold text-[#1767b1]">Visi</p>
                   <p className="mt-4 text-base leading-relaxed text-slate-600">
-                    Mendidik kader umat Islam yang berakhlak mulia, berilmu pengetahuan dan teknologi, serta mampu bersaing secara global.
+                    Menjadi lembaga pencetak kader da&apos;i dan ulama hafidz yang menguasai ilmu pengetahuan dan teknologi berwawasan global serta peduli dan berbudaya lingkungan.
                   </p>
                 </div>
                 <div className="mt-6 h-1 w-12 rounded-full bg-[#f4d21f]" />
@@ -410,9 +394,16 @@ export default async function Home() {
             <StaggerItem>
               <div className="flex h-full flex-col justify-between rounded-2xl border border-[#dce3ed] bg-white p-8">
                 <div>
-                  <p className="text-sm font-bold text-[#1767b1]">Fokus pendidikan</p>
+                  <p className="text-sm font-bold text-[#1767b1]">Misi</p>
                   <ul className="mt-4 space-y-3 text-sm text-slate-600">
-                    {["Keunggulan akademik", "Keislaman yang terintegrasi", "Karakter dan daya saing global"].map((item) => (
+                    {[
+                      "Menanamkan kepribadian Islam dan kepedulian terhadap lingkungan",
+                      "Menanamkan karakter unggul: lurus aqidah, bagus ibadah, mulia akhlak",
+                      "Melaksanakan pembelajaran aktif, inovatif, kreatif, dan menyenangkan",
+                      "Menumbuhkan potensi keberbakatan dalam setiap siswa",
+                      "Berbasis Boarding School dan Full Day School dengan kurikulum Nasional & Muhammadiyah",
+                      "Mewujudkan generasi emas 2045: One Home One Hafidz",
+                    ].map((item) => (
                       <li key={item} className="flex items-start gap-2">
                         <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#f4d21f]" />
                         {item}
@@ -429,7 +420,7 @@ export default async function Home() {
 
       {/* ── LAYANAN SEKOLAH (icons, not text-only) ────────── */}
       <section className="bg-white">
-        <div className="mx-auto max-w-[1296px] px-6 py-20 md:px-10 md:py-24">
+        <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
           <FadeIn>
             <div className="mb-12">
               <h2 className="text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">

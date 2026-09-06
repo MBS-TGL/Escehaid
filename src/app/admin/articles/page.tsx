@@ -196,7 +196,7 @@ export default function AdminArticlesPage() {
 
     let imageUrl = form.image_url;
     if (imageFile) {
-      const tempId = editItem?.id || crypto.randomUUID();
+      const tempId = editItem?.id || (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36));
       const uploaded = await uploadArticleImage(imageFile, tempId);
       if (uploaded.url) imageUrl = uploaded.url;
     }

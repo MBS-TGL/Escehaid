@@ -50,7 +50,7 @@ export default function NewsImageZoom({
     <>
       {/* Thumbnail */}
       <div className="relative mx-auto max-w-7xl px-4 pt-5 md:pt-6">
-        <div className="group relative block w-full overflow-hidden rounded-xl md:rounded-2xl">
+        <div className="group relative block h-[200px] w-full overflow-hidden rounded-xl md:h-[320px] md:rounded-2xl">
           <Image
             src={src}
             alt={alt}

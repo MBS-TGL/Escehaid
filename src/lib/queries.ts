@@ -10,6 +10,18 @@ interface ArticleWithAuthor extends Article {
   author_name?: string;
 }
 
+async function cleanupOldFiles(folder: string, id: string) {
+  const { data } = await supabase.storage.from("images").list(folder);
+  if (data) {
+    const oldFiles = data
+      .filter((f) => f.name.startsWith(id + "."))
+      .map((f) => `${folder}/${f.name}`);
+    if (oldFiles.length > 0) {
+      await supabase.storage.from("images").remove(oldFiles);
+    }
+  }
+}
+
 // ============ SCHOOL PROFILE ============
 export async function getSchoolProfile(): Promise<SchoolProfile | null> {
   const { data, error } = await supabase
@@ -279,6 +291,8 @@ export async function uploadNewsImage(
 ): Promise<{ url: string | null; error?: string }> {
   const ext = file.name.split(".").pop();
   const path = `news/${newsId}.${ext}`;
+
+  await cleanupOldFiles("news", newsId);
 
   const { error: uploadError } = await supabase.storage
     .from("images")
@@ -632,6 +646,9 @@ export async function uploadArticleImage(
 ): Promise<{ url: string | null; error?: string }> {
   const ext = file.name.split(".").pop();
   const path = `articles/${articleId}.${ext}`;
+
+  await cleanupOldFiles("articles", articleId);
+
   const { error: uploadError } = await supabase.storage
     .from("images")
     .upload(path, file, { upsert: true });
@@ -725,6 +742,9 @@ export async function uploadGalleryImage(
 ): Promise<{ url: string | null; error?: string }> {
   const ext = file.name.split(".").pop();
   const path = `gallery/${galleryId}.${ext}`;
+
+  await cleanupOldFiles("gallery", galleryId);
+
   const { error: uploadError } = await supabase.storage
     .from("images")
     .upload(path, file, { upsert: true });
@@ -820,6 +840,9 @@ export async function uploadAchievementImage(
 ): Promise<{ url: string | null; error?: string }> {
   const ext = file.name.split(".").pop();
   const path = `achievements/${achievementId}.${ext}`;
+
+  await cleanupOldFiles("achievements", achievementId);
+
   const { error: uploadError } = await supabase.storage
     .from("images")
     .upload(path, file, { upsert: true });
@@ -827,6 +850,28 @@ export async function uploadAchievementImage(
     console.error("Error uploading achievement image:", uploadError);
     return { url: null, error: uploadError.message };
   }
+  const { data } = supabase.storage.from("images").getPublicUrl(path);
+  return { url: data.publicUrl };
+}
+
+export async function uploadTeacherPhoto(
+  file: File,
+  teacherId: string
+): Promise<{ url: string | null; error?: string }> {
+  const ext = file.name.split(".").pop();
+  const path = `teachers/${teacherId}.${ext}`;
+
+  await cleanupOldFiles("teachers", teacherId);
+
+  const { error: uploadError } = await supabase.storage
+    .from("images")
+    .upload(path, file, { upsert: true });
+
+  if (uploadError) {
+    console.error("Error uploading teacher photo:", uploadError);
+    return { url: null, error: uploadError.message };
+  }
+
   const { data } = supabase.storage.from("images").getPublicUrl(path);
   return { url: data.publicUrl };
 }
@@ -984,5 +1029,157 @@ export async function deleteProfileBulk(ids: string[]): Promise<{ error?: string
     console.error("Error bulk deleting profiles:", error);
     return { error: error.message };
   }
+  return {};
+}
+
+// ============ ANNOUNCEMENTS ============
+export interface Announcement {
+  id: string;
+  text: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getAnnouncements(): Promise<Announcement[]> {
+  const { data, error } = await supabase
+    .from("announcements")
+    .select("*")
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching announcements:", error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function getActiveAnnouncements(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("announcements")
+    .select("text")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  if (error) return [];
+  return (data || []).map((a) => a.text);
+}
+
+export async function createAnnouncement(text: string): Promise<{ error?: string }> {
+  const { error } = await supabase.from("announcements").insert({ text });
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function updateAnnouncement(id: string, data: Partial<Pick<Announcement, "text" | "is_active" | "sort_order">>): Promise<{ error?: string }> {
+  const { error } = await supabase.from("announcements").update({ ...data, updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function deleteAnnouncement(id: string): Promise<{ error?: string }> {
+  const { error } = await supabase.from("announcements").delete().eq("id", id);
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function deleteAnnouncementBulk(ids: string[]): Promise<{ error?: string }> {
+  const { error } = await supabase.from("announcements").delete().in("id", ids);
+  if (error) return { error: error.message };
+  return {};
+}
+
+// ============================================================
+// Agenda Events (countdown timer homepage)
+// ============================================================
+
+export interface AgendaEvent {
+  id: string;
+  title: string;
+  event_date: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getAgendaEvents(): Promise<AgendaEvent[]> {
+  const { data, error } = await supabase
+    .from("agenda_events")
+    .select("*")
+    .order("sort_order", { ascending: true });
+  if (error) return [];
+  return data || [];
+}
+
+export async function getActiveAgendaEvents(): Promise<AgendaEvent[]> {
+  const { data, error } = await supabase
+    .from("agenda_events")
+    .select("*")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+  if (error) return [];
+  return data || [];
+}
+
+export async function createAgendaEvent(title: string, event_date: string): Promise<{ error?: string }> {
+  const { error } = await supabase.from("agenda_events").insert({ title, event_date });
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function updateAgendaEvent(id: string, data: Partial<Pick<AgendaEvent, "title" | "event_date" | "is_active" | "sort_order">>): Promise<{ error?: string }> {
+  const { error } = await supabase.from("agenda_events").update({ ...data, updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function deleteAgendaEvent(id: string): Promise<{ error?: string }> {
+  const { error } = await supabase.from("agenda_events").delete().eq("id", id);
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function deleteAgendaEventBulk(ids: string[]): Promise<{ error?: string }> {
+  const { error } = await supabase.from("agenda_events").delete().in("id", ids);
+  if (error) return { error: error.message };
+  return {};
+}
+
+// ============================================================
+// Teachers (Guru & Staff)
+// ============================================================
+
+export async function getAllTeachers(): Promise<Teacher[]> {
+  const { data, error } = await supabase
+    .from("teachers")
+    .select("*")
+    .order("sort_order", { ascending: true });
+  if (error) return [];
+  return data || [];
+}
+
+export async function createTeacher(data: { name: string; position?: string; photo_url?: string }): Promise<{ error?: string }> {
+  const { error } = await supabase.from("teachers").insert(data);
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function updateTeacher(id: string, data: Partial<Pick<Teacher, "name" | "position" | "photo_url" | "sort_order" | "is_active">>): Promise<{ error?: string }> {
+  const { error } = await supabase.from("teachers").update(data).eq("id", id);
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function deleteTeacher(id: string): Promise<{ error?: string }> {
+  const { error } = await supabase.from("teachers").delete().eq("id", id);
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function deleteTeacherBulk(ids: string[]): Promise<{ error?: string }> {
+  const { error } = await supabase.from("teachers").delete().in("id", ids);
+  if (error) return { error: error.message };
   return {};
 }

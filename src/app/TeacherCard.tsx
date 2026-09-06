@@ -43,46 +43,35 @@ export default function TeacherCard({ teacher }: { teacher: Teacher }) {
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={handleMouseLeave}
-      className="group relative flex h-[220px] w-full cursor-default flex-col items-center rounded-2xl border border-[#dce3ed] bg-white p-5 text-center transition-[border-color] duration-300"
+      className="group relative h-[260px] w-full cursor-default overflow-hidden rounded-2xl bg-[#f0f4fa] shadow-md transition-[box-shadow] duration-300"
       style={{
         ...style,
-        transition: "transform 0.2s ease-out, box-shadow 0.3s ease-out, border-color 0.3s ease-out",
-        borderColor: isHovered ? "#f4d21f" : undefined,
+        transition: "transform 0.2s ease-out, box-shadow 0.3s ease-out",
       }}
     >
-      {/* Glow overlay */}
-      <div
-        className="pointer-events-none absolute inset-0 rounded-2xl transition-opacity duration-300"
-        style={{
-          background: "radial-gradient(circle at 50% 0%, rgba(244,210,31,0.1) 0%, transparent 70%)",
-          opacity: isHovered ? 1 : 0,
-        }}
-      />
-
-      {/* Avatar */}
-      <div className="relative mb-3 flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-3 border-[#f4f7fb] bg-[#f4f7fb] transition-all duration-300 group-hover:border-[#f4d21f] group-hover:bg-[#f4d21f]/10">
-        <User className="h-9 w-9 text-[#082b59]/40 transition-colors group-hover:text-[#082b59]" weight="light" />
-      </div>
-
-      {/* Name */}
-      <h3 className="relative w-full truncate text-sm font-semibold text-[#082b59]" title={teacher.name}>
-        {teacher.name}
-      </h3>
-      <p className="relative mt-0.5 text-xs text-slate-500">{teacher.position || teacher.subject}</p>
-
-      {/* Category badges */}
-      {(teacher.categories ?? []).length > 0 && (
-        <div className="relative mt-auto pt-2.5 flex flex-wrap justify-center gap-1">
-          {teacher.categories.map((c) => (
-            <span
-              key={c}
-              className="rounded-full bg-[#1767b1]/10 px-2 py-0.5 text-[10px] font-medium text-[#1767b1]"
-            >
-              {c}
-            </span>
-          ))}
+      {/* Photo — full-bleed */}
+      {teacher.photo_url ? (
+        <img
+          src={teacher.photo_url}
+          alt={teacher.name}
+          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-[#f0f4fa]">
+          <User className="h-20 w-20 text-[#082b59]/15" weight="light" />
         </div>
       )}
+
+      {/* Bottom scrim */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#082b59]/80 via-[#082b59]/30 to-transparent" />
+
+      {/* Name + position */}
+      <div className="absolute inset-x-0 bottom-0 p-4">
+        <h3 className="truncate text-[13px] font-semibold text-white drop-shadow-sm" title={teacher.name}>
+          {teacher.name}
+        </h3>
+        <p className="mt-0.5 truncate text-[11px] text-white/75">{teacher.position}</p>
+      </div>
     </div>
   );
 }

@@ -705,3 +705,68 @@ SELECT id, full_name, role, is_active FROM user_profiles;
 ALTER TABLE news ADD COLUMN IF NOT EXISTS cover_image_position text DEFAULT 'center';
 ALTER TABLE news ADD COLUMN IF NOT EXISTS writer_name text DEFAULT '';
 ALTER TABLE news ADD COLUMN IF NOT EXISTS editor_name text DEFAULT '';
+
+-- ============================================================
+-- MIGRATION: Announcements table (running text / marquee)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS announcements (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  text text NOT NULL,
+  is_active boolean DEFAULT true,
+  sort_order int DEFAULT 0,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read announcements" ON announcements FOR SELECT USING (is_active = true);
+CREATE POLICY "Staff manage announcements" ON announcements FOR ALL
+  USING (current_user_role() IN ('developer', 'admin'))
+  WITH CHECK (current_user_role() IN ('developer', 'admin'));
+
+GRANT SELECT ON announcements TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON announcements TO authenticated;
+
+-- Default announcements
+INSERT INTO announcements (text, sort_order) VALUES
+  ('PPDB 2026/2027 Sudah Dibuka! Segera Daftar di Halaman PPDB', 1),
+  ('Pengambilan Raport: 20 Juni 2026', 2),
+  ('Libur Hari Raya Idul Adha: 6-7 Juni 2026', 3),
+  ('Ujian Tengah Semester dilaksanakan 16-27 Juni 2026', 4);
+
+-- ============================================================
+-- MIGRATION: Agenda Events table (countdown timer homepage)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS agenda_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  event_date timestamptz NOT NULL,
+  is_active boolean DEFAULT true,
+  sort_order int DEFAULT 0,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE agenda_events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read active agenda" ON agenda_events FOR SELECT USING (is_active = true);
+CREATE POLICY "Staff manage agenda" ON agenda_events FOR ALL
+  USING (current_user_role() IN ('developer', 'admin'))
+  WITH CHECK (current_user_role() IN ('developer', 'admin'));
+
+GRANT SELECT ON agenda_events TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON agenda_events TO authenticated;
+
+-- Default agenda events
+INSERT INTO agenda_events (title, event_date, sort_order) VALUES
+  ('PPDB 2026/2027 Dibuka', '2026-06-15T07:00:00+07:00', 1),
+  ('Ujian Tengah Semester', '2026-06-16T07:00:00+07:00', 2),
+  ('Pengambilan Raport', '2026-06-20T08:00:00+07:00', 3);
+
+-- ============================================================
+-- MIGRATION: Simplify teachers table
+-- ============================================================
+ALTER TABLE teachers DROP COLUMN IF EXISTS categories;
+ALTER TABLE teachers DROP COLUMN IF EXISTS bio;
+ALTER TABLE teachers DROP COLUMN IF EXISTS subject;

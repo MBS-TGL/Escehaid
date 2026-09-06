@@ -57,7 +57,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
   return (
     <div className="min-h-screen bg-white">
       {/* Sticky top bar */}
-      <div className="sticky top-0 z-40 border-b border-slate-100 bg-white/95 backdrop-blur-md">
+      <div className="sticky top-16 z-40 border-b border-slate-100 bg-white/95 backdrop-blur-md md:top-[72px]">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5">
           <nav className="flex items-center gap-1.5 text-xs text-slate-400">
             <Link href="/" className="transition-colors hover:text-[#1767b1]">Beranda</Link>
@@ -93,7 +93,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
             <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#082b59] to-transparent pointer-events-none" />
           </div>
         ) : null}
-        <div className={`relative mx-auto max-w-7xl px-4 ${berita.image_url ? "-mt-20 pb-3 md:-mt-24 md:pb-4" : "pt-8 pb-3 md:pt-10 md:pb-4"}`}>
+        <div className={`relative mx-auto max-w-7xl px-4 ${berita.image_url ? "-mt-12 pb-3 md:-mt-16 md:pb-4" : "pt-8 pb-3 md:pt-10 md:pb-4"}`}>
           <div className="max-w-4xl">
             {/* Category + Meta */}
             <div className="flex flex-wrap items-center gap-2.5">
@@ -241,7 +241,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
 
           {/* Sidebar */}
           <aside className="w-full shrink-0 lg:w-80">
-            <div className="sticky top-20 space-y-5">
+            <div className="sticky top-[128px] space-y-5">
               <div className="rounded-xl border border-slate-200 bg-white p-5">
                 <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">Cari Berita</h3>
                 <form action="/news" method="get" className="relative">

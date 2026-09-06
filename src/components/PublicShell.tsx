@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { RunningText } from "@/components/RunningText";
 
 export default function PublicShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -12,6 +13,7 @@ export default function PublicShell({ children }: { children: React.ReactNode })
 
   return (
     <>
+      <RunningText />
       <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />
