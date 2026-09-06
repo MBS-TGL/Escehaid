@@ -2,54 +2,48 @@
 
 import { useRef, useEffect } from "react";
 import { User } from "@/components/Icons";
+import { Splide } from "@splidejs/splide";
 import type { Teacher } from "@/lib/supabase";
 
 import "@splidejs/splide/css";
 
 export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
   const splideRef = useRef<HTMLDivElement>(null);
-  const splideInstance = useRef<any>(null);
+  const splideInstance = useRef<Splide | null>(null);
 
   useEffect(() => {
     if (!splideRef.current || teachers.length === 0) return;
 
-    let destroyed = false;
+    const instance = new Splide(splideRef.current, {
+      type: "loop",
+      perPage: 6,
+      perMove: 1,
+      gap: "1.25rem",
+      speed: 1500,
+      autoplay: true,
+      interval: 3000,
+      pauseOnHover: true,
+      pauseOnFocus: false,
+      drag: true,
+      flickMaxPages: 1,
+      flickPower: 200,
+      arrows: false,
+      pagination: false,
+      autoWidth: false,
+      autoHeight: false,
+      fixedWidth: 220,
+      fixedHeight: 300,
+      updateOnMove: true,
+      live: false,
+      breakpoints: {
+        640: { perPage: 2, fixedWidth: 180, fixedHeight: 260, gap: "0.75rem" },
+        1024: { perPage: 4, fixedWidth: 200, fixedHeight: 280 },
+      },
+    }).mount();
 
-    import("@splidejs/splide").then(({ Splide }) => {
-      if (destroyed || !splideRef.current) return;
-
-      splideInstance.current = new Splide(splideRef.current, {
-        type: "loop",
-        perPage: 6,
-        perMove: 1,
-        gap: "1.25rem",
-        speed: 1500,
-        autoplay: true,
-        interval: 3000,
-        pauseOnHover: true,
-        pauseOnFocus: false,
-        drag: true,
-        flickMaxPages: 1,
-        flickPower: 200,
-        arrows: false,
-        pagination: false,
-        autoWidth: false,
-        autoHeight: false,
-        fixedWidth: 220,
-        fixedHeight: 300,
-        updateOnMove: true,
-        live: false,
-        breakpoints: {
-          640: { perPage: 2, fixedWidth: 180, fixedHeight: 260, gap: "0.75rem" },
-          1024: { perPage: 4, fixedWidth: 200, fixedHeight: 280 },
-        },
-      }).mount();
-
-      splideRef.current?.classList.add("is-initialized");
-    });
+    splideInstance.current = instance;
 
     return () => {
-      destroyed = true;
       splideInstance.current?.destroy(true);
       splideInstance.current = null;
     };

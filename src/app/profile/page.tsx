@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users, BookOpen, GraduationCap, Building, Eye, Checks } from "@/components/Icons";
+import { Users, BookOpen, GraduationCap, Building, Eye, Checks, ArrowUpRight } from "@/components/Icons";
 import { getSchoolProfile, getTeacherList } from "@/lib/queries";
 import { FadeIn } from "@/components/Animations";
 import TeacherGrid from "./TeacherGrid";
@@ -18,7 +18,11 @@ export default async function ProfilPage() {
   return (
     <div>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-[#082b59] py-12 text-white md:py-16">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-12 text-white md:py-16">
+        <div className="absolute inset-0 opacity-[0.04]">
+          <GraduationCap className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
+          <BookOpen className="absolute -left-10 bottom-0 h-48 w-48 -rotate-12" weight="fill" />
+        </div>
         <div className="absolute inset-0 opacity-20">
           <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
         </div>
@@ -63,7 +67,15 @@ export default async function ProfilPage() {
                 <div className="rounded-2xl bg-[#f4f7fb] p-6 text-center">
                   <GraduationCap className="mx-auto h-8 w-8 text-[#f4d21f]" />
                   <p className="mt-3 text-3xl font-bold text-[#082b59]">{profil?.accreditation || "A"}</p>
-                  <p className="mt-1 text-sm text-slate-500">Akreditasi</p>
+                  <Link
+                    href="https://dapo.kemendikdasmen.go.id/sekolah?npsn=69957381"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-flex items-center gap-1 text-sm text-slate-500 transition-colors hover:text-[#1767b1]"
+                  >
+                    Akreditasi
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </Link>
                 </div>
                 <div className="rounded-2xl bg-[#f4f7fb] p-6 text-center">
                   <Users className="mx-auto h-8 w-8 text-[#f4d21f]" />
@@ -146,14 +158,9 @@ export default async function ProfilPage() {
                 </div>
                 <h3 className="text-xl font-semibold text-[#082b59]">Visi</h3>
                 {profil?.vision ? (
-                  <ul className="mt-4 space-y-2.5 text-[15px] leading-relaxed text-slate-600">
-                    {profil.vision.split(/,\s*/).filter((s: string) => s.trim()).map((v: string, i: number) => (
-                      <li key={i} className="flex gap-3">
-                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#f4d21f]" />
-                        <span>{v.trim()}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <p className="mt-4 text-[15px] leading-relaxed text-slate-600">
+                    {profil.vision}
+                  </p>
                 ) : (
                   <p className="mt-4 text-[15px] leading-relaxed text-slate-600">
                     Menjadi lembaga pencetak kader da&apos;i dan ulama hafidz yang menguasai ilmu pengetahuan dan teknologi berwawasan global serta peduli dan berbudaya lingkungan.
@@ -196,17 +203,12 @@ export default async function ProfilPage() {
                 ) : (
                   <ul className="mt-4 space-y-2.5 text-[15px] leading-relaxed text-slate-600">
                     {[
-                      "Menanamkan kepribadian Islam dan meningkatkan kepedulian serta berbudaya terhadap lingkungan yang tinggi kepada semua warga sekolah",
-                      "Menanamkan karakter unggul pada siswa sehingga lurus aqidahnya, bagus ibadahnya, mulia akhlaknya, dan luas pemahaman da'wahnya serta peduli dan berbudaya terhadap lingkungannya",
-                      "Menanamkan dan meningkatkan rasa ikhlas dan tanggung jawab serta peduli dan berbudaya lingkungan pada semua warga sekolah",
-                      "Memupuk kedisiplinan, semangat berlatih, demokratis dan beretos kerja tinggi serta peduli dan berbudaya lingkungan pada semua warga sekolah",
-                      "Melaksanakan pembelajaran dan bimbingan yang aktif, inovatif, kreatif, efektif, menyenangkan serta peduli dan berbudaya lingkungan sehingga siswa berkembang secara optimal",
-                      "Melaksanakan program yang mampu menumbuhkan potensi keberbakatan dalam setiap siswa dengan program-program yang berorientasi pada pengembangan bakat dan minat belajar",
-                      "Memberikan pelayanan pendidikan berbasis Boarding School dan Full Day School dengan memadukan kurikulum Nasional dan kurikulum Muhammadiyah",
-                      "Melaksanakan kegiatan pengkaderan secara aktif dan berkelanjutan",
-                      "Mewujudkan lulusan yang beriman dan bertaqwa, menguasai ilmu pengetahuan dan teknologi, yang berkualitas, mampu menjadi da'i dan ulama",
-                      "Mewujudkan generasi emas 2045 dengan cita-cita One Home One Hafidz",
-                      "Memberikan pelayanan yang optimal kepada seluruh lapisan masyarakat",
+                      "Menanamkan kepribadian Islam dan kepedulian terhadap lingkungan",
+                      "Menanamkan karakter unggul: lurus aqidah, bagus ibadah, mulia akhlak",
+                      "Melaksanakan pembelajaran aktif, inovatif, kreatif, dan menyenangkan",
+                      "Menumbuhkan potensi keberbakatan dalam setiap siswa",
+                      "Berbasis Boarding School dan Full Day School dengan kurikulum Nasional & Muhammadiyah",
+                      "Mewujudkan generasi emas 2045: One Home One Hafidz",
                     ].map((m, i) => (
                       <li key={i} className="flex gap-3">
                         <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#f4d21f]" />

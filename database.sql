@@ -313,11 +313,15 @@ VALUES (
   '0858-5200-4008',
   'smpm4tangguljember@gmail.com',
   'https://esceha.id',
-  'Unggul dalam Ibadah, Unggul dalam IPTEK, Unggul dalam Akhlak',
-  '1. Menyiapkan kader Islam yang beriman, bertaqwa, dan berilmu.
-2. Mengembangkan potensi siswa secara optimal dan seimbang.
-3. Membentuk siswa yang berakhlak mulia dan mandiri.
-4. Mewujudkan pembelajaran yang kreatif, inovatif, dan menyenangkan.',
+  'Menjadi lembaga pencetak kader da''i dan ulama hafidz yang menguasai ilmu pengetahuan dan teknologi berwawasan global serta peduli dan berbudaya lingkungan.',
+  '[
+    "Menanamkan kepribadian Islam dan kepedulian terhadap lingkungan",
+    "Menanamkan karakter unggul: lurus aqidah, bagus ibadah, mulia akhlak",
+    "Melaksanakan pembelajaran aktif, inovatif, kreatif, dan menyenangkan",
+    "Menumbuhkan potensi keberbakatan dalam setiap siswa",
+    "Berbasis Boarding School dan Full Day School dengan kurikulum Nasional & Muhammadiyah",
+    "Mewujudkan generasi emas 2045: One Home One Hafidz"
+  ]',
   'Khoirul Anwar, S.Pd',
   '/images/Kepala-Sekolah.jpg',
   'Selamat datang di SMP Muhammadiyah 4 Tanggul. Kami berkomitmen mencerdaskan kehidupan bangsa melalui pendidikan berkualitas yang memadukan keunggulan akademik dan pembentukan karakter Islami.',
