@@ -63,7 +63,7 @@ export default function HeroCarousel() {
       {/* bottom label */}
       <div className="absolute bottom-0 left-0 right-0 z-20 p-8 pointer-events-none">
         <div className="flex items-center gap-3">
-          <Image src="/images/Logo-Sekolah.png" alt="Logo" width={40} height={52} className="h-10 w-auto" />
+          <Image src="/images/Logo-Sekolah.png" alt="Logo" width={40} height={52} style={{ width: "auto", height: "auto" }} className="h-10 w-auto" />
           <div>
             <p className="text-sm font-bold text-white">SMP Muhammadiyah 4 Tanggul</p>
             <p className="text-xs text-white/60">Sejak 2016 &middot; Tanggul, Jember</p>

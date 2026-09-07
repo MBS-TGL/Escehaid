@@ -49,6 +49,7 @@ export default function Navbar() {
               alt="Logo SMP Muhammadiyah 4 Tanggul"
               width={36}
               height={46}
+              style={{ width: "auto", height: "auto" }}
               className="shrink-0"
             />
             <div className="flex flex-col leading-tight">
