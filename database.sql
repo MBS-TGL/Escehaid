@@ -57,6 +57,11 @@ BEGIN
     EXECUTE 'DROP TRIGGER IF EXISTS trg_slug_articles_update ON articles';
     EXECUTE 'DROP TRIGGER IF EXISTS trigger_articles_slug ON articles';
   END IF;
+  IF to_regclass('public.activities') IS NOT NULL THEN
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_set_updated_at_activities ON activities';
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_slug_activities ON activities';
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_slug_activities_update ON activities';
+  END IF;
   IF to_regclass('public.spmb_registrations') IS NOT NULL THEN
     EXECUTE 'DROP TRIGGER IF EXISTS trg_set_updated_at_spmb ON spmb_registrations';
   END IF;
@@ -90,6 +95,7 @@ DROP TABLE IF EXISTS user_profiles CASCADE;
 DROP TABLE IF EXISTS contact_messages CASCADE;
 DROP TABLE IF EXISTS achievements CASCADE;
 DROP TABLE IF EXISTS articles CASCADE;
+DROP TABLE IF EXISTS activities CASCADE;
 DROP TABLE IF EXISTS facilities CASCADE;
 DROP TABLE IF EXISTS teachers CASCADE;
 DROP TABLE IF EXISTS spmb_registrations CASCADE;
@@ -519,6 +525,35 @@ CREATE TABLE achievements (
   created_at timestamptz DEFAULT now()
 );
 
+-- Activities (Kegiatan Sekolah)
+CREATE TABLE activities (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  slug text NOT NULL UNIQUE,
+  description text DEFAULT '',
+  content text DEFAULT '',
+  activity_date timestamptz DEFAULT now(),
+  activity_type text DEFAULT 'umum' CHECK (activity_type IN ('kajian', 'peringatan', 'lomba', 'upacara', 'ekskul', 'umum')),
+  location text DEFAULT '',
+  image_url text DEFAULT '',
+  is_published boolean DEFAULT false,
+  author_id uuid REFERENCES user_profiles(id) ON DELETE SET NULL,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE TRIGGER trg_slug_activities
+  BEFORE INSERT ON activities
+  FOR EACH ROW EXECUTE FUNCTION generate_unique_slug();
+
+CREATE TRIGGER trg_set_updated_at_activities
+  BEFORE UPDATE ON activities
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_slug_activities_update
+  BEFORE UPDATE ON activities
+  FOR EACH ROW EXECUTE FUNCTION regenerate_slug_on_title_change();
+
 -- Contact Messages
 CREATE TABLE contact_messages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -541,6 +576,7 @@ ALTER TABLE spmb_registrations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE teachers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE facilities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE articles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contact_messages ENABLE ROW LEVEL SECURITY;
 
@@ -551,6 +587,7 @@ CREATE POLICY "Public read gallery" ON gallery FOR SELECT USING (true);
 CREATE POLICY "Public read teachers" ON teachers FOR SELECT USING (is_active = true);
 CREATE POLICY "Public read facilities" ON facilities FOR SELECT USING (is_active = true);
 CREATE POLICY "Public read articles" ON articles FOR SELECT USING (is_published = true);
+CREATE POLICY "Public read activities" ON activities FOR SELECT USING (is_published = true);
 CREATE POLICY "Public read achievements" ON achievements FOR SELECT USING (true);
 
 -- Staff manage (role-checked, bukan sekadar login)
@@ -575,6 +612,10 @@ CREATE POLICY "Staff manage facilities" ON facilities FOR ALL
   WITH CHECK (current_user_role() IN ('developer', 'admin'));
 
 CREATE POLICY "Staff manage articles" ON articles FOR ALL
+  USING (current_user_role() IN ('developer', 'admin', 'publisher'))
+  WITH CHECK (current_user_role() IN ('developer', 'admin', 'publisher'));
+
+CREATE POLICY "Staff manage activities" ON activities FOR ALL
   USING (current_user_role() IN ('developer', 'admin', 'publisher'))
   WITH CHECK (current_user_role() IN ('developer', 'admin', 'publisher'));
 
@@ -608,6 +649,9 @@ CREATE INDEX idx_spmb_status ON spmb_registrations(status);
 CREATE INDEX idx_spmb_created ON spmb_registrations(created_at DESC);
 CREATE INDEX idx_articles_slug ON articles(slug);
 CREATE INDEX idx_articles_published ON articles(is_published, published_at DESC);
+CREATE INDEX idx_activities_slug ON activities(slug);
+CREATE INDEX idx_activities_published ON activities(is_published, activity_date DESC);
+CREATE INDEX idx_activities_type ON activities(activity_type);
 CREATE INDEX idx_teachers_active ON teachers(is_active);
 CREATE INDEX idx_facilities_active ON facilities(is_active);
 CREATE INDEX idx_contact_unread ON contact_messages(is_read, created_at DESC);

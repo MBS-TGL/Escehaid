@@ -20,6 +20,8 @@ const navItems = [
   { label: "Dashboard", href: "/admin", icon: House },
   { label: "Kelola SPMB", href: "/admin/admission", icon: Users },
   { label: "Kelola Berita", href: "/admin/news", icon: Megaphone },
+  { label: "Kelola Kegiatan", href: "/admin/activities", icon: CalendarBlank },
+  { label: "Kelola Fasilitas", href: "/admin/facilities", icon: ImageSquare },
   { label: "Kelola Artikel", href: "/admin/articles", icon: Note },
   { label: "Kelola Guru", href: "/admin/teachers", icon: Users },
   { label: "Kelola Gallery", href: "/admin/gallery", icon: ImageSquare },

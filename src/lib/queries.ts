@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { SchoolProfile, News, Gallery, SpmbRegistration, Teacher, Facility, Article, Achievement, ContactMessage } from "./supabase";
+import type { SchoolProfile, News, Gallery, SpmbRegistration, Teacher, Facility, Article, Activity, Achievement, ContactMessage } from "./supabase";
 import type { UserProfile } from "./auth";
 
 interface NewsWithAuthor extends News {
@@ -474,6 +474,101 @@ export async function getFacilityList(): Promise<Facility[]> {
   return data || [];
 }
 
+export async function getFacilityListAll(): Promise<Facility[]> {
+  const { data, error } = await supabase
+    .from("facilities")
+    .select("*")
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching all facilities:", error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function createFacility(facility: {
+  name: string;
+  description?: string;
+  image_url?: string;
+  sort_order?: number;
+  is_active?: boolean;
+}): Promise<{ data: Facility | null; error?: string }> {
+  const { data, error } = await supabase
+    .from("facilities")
+    .insert(facility)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating facility:", error);
+    return { data: null, error: error.message };
+  }
+  return { data };
+}
+
+export async function updateFacility(
+  id: string,
+  facility: {
+    name?: string;
+    description?: string;
+    image_url?: string;
+    sort_order?: number;
+    is_active?: boolean;
+  }
+): Promise<{ data: Facility | null; error?: string }> {
+  const { data, error } = await supabase
+    .from("facilities")
+    .update(facility)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating facility:", error);
+    return { data: null, error: error.message };
+  }
+  return { data };
+}
+
+export async function deleteFacility(id: string): Promise<{ error?: string }> {
+  const { error } = await supabase.from("facilities").delete().eq("id", id);
+  if (error) {
+    console.error("Error deleting facility:", error);
+    return { error: error.message };
+  }
+  return {};
+}
+
+export async function deleteFacilityBulk(ids: string[]): Promise<{ error?: string }> {
+  const { error } = await supabase.from("facilities").delete().in("id", ids);
+  if (error) {
+    console.error("Error bulk deleting facilities:", error);
+    return { error: error.message };
+  }
+  return {};
+}
+
+export async function uploadFacilityImage(
+  file: File,
+  facilityId: string
+): Promise<{ url: string | null; error?: string }> {
+  const ext = file.name.split(".").pop();
+  const path = `facilities/${facilityId}.${ext}`;
+
+  await cleanupOldFiles("facilities", facilityId);
+
+  const { error: uploadError } = await supabase.storage
+    .from("images")
+    .upload(path, file, { upsert: true });
+  if (uploadError) {
+    console.error("Error uploading facility image:", uploadError);
+    return { url: null, error: uploadError.message };
+  }
+  const { data } = supabase.storage.from("images").getPublicUrl(path);
+  return { url: data.publicUrl };
+}
+
 // ============ ARTICLES ============
 export async function getArticleList(limit?: number): Promise<ArticleWithAuthor[]> {
   let query = supabase
@@ -654,6 +749,181 @@ export async function uploadArticleImage(
     .upload(path, file, { upsert: true });
   if (uploadError) {
     console.error("Error uploading article image:", uploadError);
+    return { url: null, error: uploadError.message };
+  }
+  const { data } = supabase.storage.from("images").getPublicUrl(path);
+  return { url: data.publicUrl };
+}
+
+// ============ ACTIVITIES CRUD ============
+export async function getActivityList(limit?: number): Promise<Activity[]> {
+  let query = supabase
+    .from("activities")
+    .select("*")
+    .eq("is_published", true)
+    .order("activity_date", { ascending: false });
+
+  if (limit) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching activities:", JSON.stringify(error), error.message, error.code, error.details, error.hint);
+    return [];
+  }
+  return data || [];
+}
+
+export async function getActivityBySlug(slug: string): Promise<Activity | null> {
+  const { data, error } = await supabase
+    .from("activities")
+    .select("*")
+    .eq("slug", slug)
+    .single();
+
+  if (error) {
+    console.error("Error fetching activity by slug:", error);
+    return null;
+  }
+  return data;
+}
+
+export async function getActivityListAll(): Promise<Activity[]> {
+  const { data, error } = await supabase
+    .from("activities")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching all activities:", error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function createActivity(activity: {
+  title: string;
+  slug?: string;
+  description?: string;
+  content?: string;
+  activity_date?: string;
+  activity_type?: string;
+  location?: string;
+  image_url?: string;
+  is_published?: boolean;
+}): Promise<{ data: Activity | null; error?: string }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!activity.slug) {
+    activity.slug = activity.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+  }
+  const { data, error } = await supabase
+    .from("activities")
+    .insert({ ...activity, author_id: user?.id })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating activity:", error);
+    return { data: null, error: error.message };
+  }
+  return { data };
+}
+
+export async function updateActivity(
+  id: string,
+  activity: {
+    title?: string;
+    slug?: string;
+    description?: string;
+    content?: string;
+    activity_date?: string;
+    activity_type?: string;
+    location?: string;
+    image_url?: string;
+    is_published?: boolean;
+  }
+): Promise<{ data: Activity | null; error?: string }> {
+  if (activity.title && !activity.slug) {
+    activity.slug = activity.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+  }
+  const { data, error } = await supabase
+    .from("activities")
+    .update(activity)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating activity:", error);
+    return { data: null, error: error.message };
+  }
+  return { data };
+}
+
+export async function deleteActivity(id: string): Promise<{ error?: string }> {
+  const { error } = await supabase.from("activities").delete().eq("id", id);
+  if (error) {
+    console.error("Error deleting activity:", error);
+    return { error: error.message };
+  }
+  return {};
+}
+
+export async function deleteActivityBulk(ids: string[]): Promise<{ error?: string }> {
+  const { error } = await supabase.from("activities").delete().in("id", ids);
+  if (error) {
+    console.error("Error bulk deleting activities:", error);
+    return { error: error.message };
+  }
+  return {};
+}
+
+export async function togglePublishActivity(
+  id: string,
+  is_published: boolean
+): Promise<{ error?: string }> {
+  const { error } = await supabase.from("activities").update({ is_published }).eq("id", id);
+  if (error) {
+    console.error("Error toggling activity publish:", error);
+    return { error: error.message };
+  }
+  return {};
+}
+
+export async function togglePublishActivityBulk(
+  ids: string[],
+  is_published: boolean
+): Promise<{ error?: string }> {
+  const { error } = await supabase.from("activities").update({ is_published }).in("id", ids);
+  if (error) {
+    console.error("Error bulk toggling activity publish:", error);
+    return { error: error.message };
+  }
+  return {};
+}
+
+export async function uploadActivityImage(
+  file: File,
+  activityId: string
+): Promise<{ url: string | null; error?: string }> {
+  const ext = file.name.split(".").pop();
+  const path = `activities/${activityId}.${ext}`;
+
+  await cleanupOldFiles("activities", activityId);
+
+  const { error: uploadError } = await supabase.storage
+    .from("images")
+    .upload(path, file, { upsert: true });
+  if (uploadError) {
+    console.error("Error uploading activity image:", uploadError);
     return { url: null, error: uploadError.message };
   }
   const { data } = supabase.storage.from("images").getPublicUrl(path);
@@ -966,6 +1236,34 @@ export async function markContactAsRead(id: string): Promise<{ success: boolean;
     return { success: false, error: error.message };
   }
   return { success: true };
+}
+
+export async function getUnreadMessageCount(): Promise<number> {
+  const { count, error } = await supabase
+    .from("contact_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("is_read", false);
+
+  if (error) {
+    console.error("Error fetching unread count:", error);
+    return 0;
+  }
+  return count || 0;
+}
+
+export async function getRecentUnreadMessages(limit = 5): Promise<ContactMessage[]> {
+  const { data, error } = await supabase
+    .from("contact_messages")
+    .select("*")
+    .eq("is_read", false)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Error fetching recent unread messages:", error);
+    return [];
+  }
+  return data || [];
 }
 
 // ============ USER PROFILES ============

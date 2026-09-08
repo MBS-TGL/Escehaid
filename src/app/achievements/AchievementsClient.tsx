@@ -15,10 +15,17 @@ const categories = ["Semua", "Akademik", "Keagamaan", "Sekolah", "Olahraga"];
 
 type Achievement = { id: string; title: string; category: string; year: number; description: string };
 
+function capitalizeCategory(cat: string): string {
+  return cat
+    .split("-")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join("-");
+}
+
 export default function PrestasiClient({ achievements }: { achievements: Achievement[] }) {
   const [active, setActive] = useState("Semua");
 
-  const filtered = active === "Semua" ? achievements : achievements.filter((a) => a.category === active);
+  const filtered = active === "Semua" ? achievements : achievements.filter((a) => capitalizeCategory(a.category) === active);
 
   return (
     <div>
@@ -89,7 +96,7 @@ export default function PrestasiClient({ achievements }: { achievements: Achieve
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="rounded-full bg-[#1767b1]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#1767b1]">
-                          {item.category}
+                          {capitalizeCategory(item.category)}
                         </span>
                         <span className="text-xs text-slate-400">{item.year}</span>
                       </div>

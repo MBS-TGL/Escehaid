@@ -112,6 +112,22 @@ export interface Article {
   updated_at: string;
 }
 
+export interface Activity {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  content: string;
+  activity_date: string;
+  activity_type: "kajian" | "peringatan" | "lomba" | "upacara" | "ekskul" | "umum";
+  location: string;
+  image_url: string;
+  is_published: boolean;
+  author_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Achievement {
   id: string;
   title: string;
