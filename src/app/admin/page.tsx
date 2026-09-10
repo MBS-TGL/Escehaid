@@ -21,7 +21,7 @@ const menuItems = [
   { label: "Kelola SPMB", href: "/admin/admission", icon: Users, color: "from-[#082b59] to-[#0a3570]", roles: ["developer", "admin"] },
   { label: "Kelola Berita", href: "/admin/news", icon: Megaphone, color: "from-[#1767b1] to-[#1d7dd4]", roles: ["developer", "admin", "publisher"] },
   { label: "Kelola Artikel", href: "/admin/articles", icon: Note, color: "from-[#0d4a8a] to-[#1565c0]", roles: ["developer", "admin", "publisher"] },
-  { label: "Kelola Gallery", href: "/admin/gallery", icon: ImageSquare, color: "from-[#1767b1] to-[#2196f3]", roles: ["developer", "admin", "publisher"] },
+  { label: "Kelola Galeri", href: "/admin/gallery", icon: ImageSquare, color: "from-[#1767b1] to-[#2196f3]", roles: ["developer", "admin", "publisher"] },
   { label: "Kelola Prestasi", href: "/admin/achievements", icon: Trophy, color: "from-[#f4d21f] to-[#fdd835]", roles: ["developer", "admin"] },
   { label: "Pesan Masuk", href: "/admin/contact", icon: Envelope, color: "from-[#082b59] to-[#0a3570]", roles: ["developer", "admin"] },
 ];
@@ -69,7 +69,7 @@ export default async function AdminPage() {
   const stats = [
     { label: "Total Berita", value: newsCount.count || 0, icon: Megaphone, variant: "info" as const },
     { label: "Total Artikel", value: articlesCount.count || 0, icon: Note, variant: "brand" as const },
-    { label: "Total Gallery", value: galleryCount.count || 0, icon: ImageSquare, variant: "info" as const },
+    { label: "Total Galeri", value: galleryCount.count || 0, icon: ImageSquare, variant: "info" as const },
     { label: "Pendaftar SPMB", value: spmbCount.count || 0, icon: Users, variant: "brand" as const },
     { label: "Prestasi", value: achievementsCount.count || 0, icon: Trophy, variant: "warning" as const },
     { label: "Pesan Masuk", value: contactCount.count || 0, icon: Envelope, variant: "brand" as const },

@@ -240,7 +240,7 @@ export default function AdminGalleryPage() {
             <ImageSquare className="h-5 w-5 text-[#1767b1]" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Kelola Gallery</h1>
+            <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Kelola Galeri</h1>
             <p className="text-sm text-slate-500">Foto dan video kegiatan sekolah</p>
           </div>
         </div>

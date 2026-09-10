@@ -35,7 +35,7 @@ const navSearchItems = [
   { label: "Kelola Berita", href: "/admin/news", icon: Megaphone },
   { label: "Kelola Fasilitas", href: "/admin/facilities", icon: ImageSquare },
   { label: "Kelola Artikel", href: "/admin/articles", icon: Note },
-  { label: "Kelola Gallery", href: "/admin/gallery", icon: ImageSquare },
+  { label: "Kelola Galeri", href: "/admin/gallery", icon: ImageSquare },
   { label: "Kelola Prestasi", href: "/admin/achievements", icon: Trophy },
   { label: "Pesan Masuk", href: "/admin/contact", icon: Envelope },
 ];

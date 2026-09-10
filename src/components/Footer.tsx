@@ -74,7 +74,7 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="h-3.5 w-3.5 shrink-0 text-[#f4d21f]" />
-                <span className="text-xs text-white/50">0858-5200-4008</span>
+                <span className="text-xs text-white/50">0858-0673-8160</span>
               </li>
               <li className="flex items-center gap-2">
                 <Envelope className="h-3.5 w-3.5 shrink-0 text-[#f4d21f]" />

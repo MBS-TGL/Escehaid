@@ -12,7 +12,7 @@ const navLinks = [
   { href: "/achievements", label: "Prestasi" },
   { href: "/news", label: "Berita" },
   { href: "/articles", label: "Artikel" },
-  { href: "/gallery", label: "Gallery" },
+  { href: "/gallery", label: "Galeri" },
   { href: "/contact", label: "Kontak" },
 ];
 

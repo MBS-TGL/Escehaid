@@ -64,9 +64,15 @@ export default function CountdownEvent() {
   if (events.length === 0) return null;
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-12 md:py-16">
-      <div className="absolute inset-0 opacity-10">
-        <CalendarBlank className="absolute -right-8 -top-8 h-48 w-48 rotate-12" weight="fill" />
+    <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0b3a7a] to-[#0d4a8a] py-14 md:py-20">
+      {/* Decorative elements */}
+      <div className="absolute inset-0">
+        <div className="absolute -left-32 -top-32 h-80 w-80 rounded-full bg-[#f4d21f]/8 blur-[100px]" />
+        <div className="absolute -bottom-20 -right-20 h-60 w-60 rounded-full bg-[#1767b1]/20 blur-[80px]" />
+        <div className="absolute left-1/2 top-0 h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        <div className="absolute bottom-0 left-1/2 h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        <CalendarBlank className="absolute -right-8 -top-8 h-48 w-48 rotate-12 text-white/[0.03]" weight="fill" />
+        <CalendarBlank className="absolute -bottom-10 -left-10 h-40 w-40 -rotate-12 text-white/[0.03]" weight="fill" />
       </div>
 
       <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">
@@ -84,7 +90,7 @@ export default function CountdownEvent() {
         </p>
 
         {/* Countdown */}
-        <div className="mt-6 flex items-center justify-center gap-3 md:gap-4">
+        <div className="mt-8 flex items-center justify-center gap-3 md:gap-4">
           <Unit value={time.days} label="Hari" />
           <span className="mt-[-12px] text-2xl font-bold text-white/40">:</span>
           <Unit value={time.hours} label="Jam" />
@@ -96,7 +102,7 @@ export default function CountdownEvent() {
 
         {/* Dots indicator */}
         {events.length > 1 && (
-          <div className="mt-6 flex items-center justify-center gap-2">
+          <div className="mt-8 flex items-center justify-center gap-2">
             {events.map((_, i) => (
               <button
                 key={i}

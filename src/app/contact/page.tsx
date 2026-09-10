@@ -76,7 +76,7 @@ export default function KontakPage() {
                       placeholder="Masukkan nama lengkap"
                     />
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-3">
                     <div>
                       <label className="mb-1.5 block text-sm font-medium text-[#082b59]">Email *</label>
                       <input
@@ -149,52 +149,34 @@ export default function KontakPage() {
                 </div>
               </FadeIn>
 
-              {/* Quick Info Cards */}
+              {/* Quick Info */}
               <FadeIn direction="left" delay={0.1}>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <a
-                    href="https://maps.app.goo.gl/v5AwkkHae5poMRWR9"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group rounded-2xl border border-[#dce3ed] bg-white p-5 transition-all hover:border-[#1767b1]/30 hover:shadow-md"
-                  >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#082b59]/5 text-[#1767b1] transition-colors group-hover:bg-[#082b59] group-hover:text-white">
-                      <MapPin className="h-5 w-5" />
+                <div className="rounded-2xl border border-[#dce3ed] bg-white p-5">
+                  <h3 className="text-sm font-bold text-[#082b59]">Informasi Sekolah</h3>
+                  <div className="mt-3 space-y-2.5">
+                    <a href="https://maps.app.goo.gl/v5AwkkHae5poMRWR9" target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-3 rounded-xl bg-[#f4f7fb] px-4 py-2.5 transition-colors hover:bg-[#082b59]/5">
+                      <MapPin className="h-4 w-4 shrink-0 text-[#1767b1]" />
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Alamat</p>
+                        <p className="truncate text-sm text-slate-600">Jl. Pemandian No. 88, Patemon, Tanggul, Jember 68155</p>
+                      </div>
+                    </a>
+                    <a href="mailto:smpm4tangguljember@gmail.com"
+                      className="flex items-center gap-3 rounded-xl bg-[#f4f7fb] px-4 py-2.5 transition-colors hover:bg-[#082b59]/5">
+                      <Envelope className="h-4 w-4 shrink-0 text-[#1767b1]" />
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Email</p>
+                        <p className="truncate text-sm text-slate-600">smpm4tangguljember@gmail.com</p>
+                      </div>
+                    </a>
+                    <div className="flex items-center gap-3 rounded-xl bg-[#f4f7fb] px-4 py-2.5">
+                      <Clock className="h-4 w-4 shrink-0 text-[#1767b1]" />
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Jam Operasional</p>
+                        <p className="text-sm text-slate-600">Senin - Sabtu, 07:00 - 15:00 WIB</p>
+                      </div>
                     </div>
-                    <h3 className="mt-3 text-sm font-bold text-[#082b59]">Alamat</h3>
-                    <p className="mt-1 text-xs leading-relaxed text-slate-500">Jl. Pemandian No. 88, Patemon, Tanggul, Jember 68155</p>
-                  </a>
-
-                  <a
-                    href="https://wa.me/6285852004008"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group rounded-2xl border border-[#dce3ed] bg-white p-5 transition-all hover:border-[#1767b1]/30 hover:shadow-md"
-                  >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#082b59]/5 text-[#1767b1] transition-colors group-hover:bg-[#082b59] group-hover:text-white">
-                      <Phone className="h-5 w-5" />
-                    </div>
-                    <h3 className="mt-3 text-sm font-bold text-[#082b59]">Telepon SPMB</h3>
-                    <p className="mt-1 text-xs text-slate-500">0858-5200-4008</p>
-                  </a>
-
-                  <a
-                    href="mailto:smpm4tangguljember@gmail.com"
-                    className="group rounded-2xl border border-[#dce3ed] bg-white p-5 transition-all hover:border-[#1767b1]/30 hover:shadow-md"
-                  >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#082b59]/5 text-[#1767b1] transition-colors group-hover:bg-[#082b59] group-hover:text-white">
-                      <Envelope className="h-5 w-5" />
-                    </div>
-                    <h3 className="mt-3 text-sm font-bold text-[#082b59]">Email</h3>
-                    <p className="mt-1 text-xs text-slate-500">smpm4tangguljember@gmail.com</p>
-                  </a>
-
-                  <div className="rounded-2xl border border-[#dce3ed] bg-white p-5">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#082b59]/5 text-[#1767b1]">
-                      <Clock className="h-5 w-5" />
-                    </div>
-                    <h3 className="mt-3 text-sm font-bold text-[#082b59]">Jam Operasional</h3>
-                    <p className="mt-1 text-xs text-slate-500">Senin - Sabtu, 07:00 - 15:00 WIB</p>
                   </div>
                 </div>
               </FadeIn>

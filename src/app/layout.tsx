@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     template: "%s | SMP Muhammadiyah 4 Tanggul",
     default: "SMP Muhammadiyah 4 Tanggul",
   },
-  description: "Sistem Informasi Sekolah SMP Muhammadiyah 4 Tanggul - SPMB Online, Berita, Gallery, dan Informasi Sekolah",
+  description: "Sistem Informasi Sekolah SMP Muhammadiyah 4 Tanggul - SPMB Online, Berita, Galeri, dan Informasi Sekolah",
   icons: {
     icon: "/images/Logo-Favicon.png",
   },

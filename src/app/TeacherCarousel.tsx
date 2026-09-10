@@ -18,7 +18,7 @@ export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
       type: "loop",
       perPage: 6,
       perMove: 1,
-      gap: "1.25rem",
+      gap: "1rem",
       speed: 1500,
       autoplay: true,
       interval: 3000,
@@ -29,15 +29,13 @@ export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
       flickPower: 200,
       arrows: false,
       pagination: false,
-      autoWidth: false,
+      autoWidth: true,
       autoHeight: false,
-      fixedWidth: 220,
-      fixedHeight: 300,
       updateOnMove: true,
       live: false,
       breakpoints: {
-        640: { perPage: 2, fixedWidth: 180, fixedHeight: 260, gap: "0.75rem" },
-        1024: { perPage: 4, fixedWidth: 200, fixedHeight: 280 },
+        640: { perPage: 2, gap: "0.75rem" },
+        1024: { perPage: 4, gap: "0.75rem" },
       },
     }).mount();
 
@@ -53,10 +51,6 @@ export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
 
   return (
     <div className="splide-wrapper relative group">
-      {/* Gradient fades */}
-      <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-12 bg-gradient-to-r from-white to-transparent" />
-      <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-12 bg-gradient-to-l from-white to-transparent" />
-
       {/* Custom arrows */}
       <button
         onClick={() => splideInstance.current?.go("<")}
@@ -83,24 +77,24 @@ export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
           <div className="splide__list">
             {teachers.map((t) => (
               <div key={t.id} className="splide__slide">
-                <div className="group/card relative h-[300px] w-[220px] overflow-hidden rounded-2xl bg-[#f0f4fa] shadow-md transition-shadow duration-500 hover:shadow-xl">
+                <div className="group/card relative h-[340px] w-[220px] overflow-hidden rounded-2xl bg-[#082b59] shadow-md transition-shadow duration-500 hover:shadow-xl sm:h-[380px] sm:w-[240px]">
                   {t.photo_url ? (
                     <img
                       src={t.photo_url}
                       alt={t.name}
-                      className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover/card:scale-105"
+                      className="h-full w-full object-cover object-top transition-transform duration-700 ease-out group-hover/card:scale-105"
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-[#f0f4fa]">
                       <User className="h-20 w-20 text-[#082b59]/15" weight="light" />
                     </div>
                   )}
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#082b59]/80 via-[#082b59]/30 to-transparent" />
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#082b59] via-[#082b59]/40 to-transparent" />
                   <div className="absolute inset-x-0 bottom-0 p-4">
-                    <h3 className="truncate text-[13px] font-semibold text-white drop-shadow-sm" title={t.name}>
+                    <h3 className="text-[13px] font-semibold text-white drop-shadow-sm leading-tight" title={t.name}>
                       {t.name}
                     </h3>
-                    <p className="mt-0.5 truncate text-[11px] text-white/75">{t.position}</p>
+                    <p className="mt-1 text-[11px] text-white/80">{t.position}</p>
                   </div>
                 </div>
               </div>

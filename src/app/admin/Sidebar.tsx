@@ -24,7 +24,7 @@ const navItems = [
   { label: "Kelola Fasilitas", href: "/admin/facilities", icon: ImageSquare },
   { label: "Kelola Artikel", href: "/admin/articles", icon: Note },
   { label: "Kelola Guru", href: "/admin/teachers", icon: Users },
-  { label: "Kelola Gallery", href: "/admin/gallery", icon: ImageSquare },
+  { label: "Kelola Galeri", href: "/admin/gallery", icon: ImageSquare },
   { label: "Kelola Prestasi", href: "/admin/achievements", icon: Trophy },
   { label: "Kelola Pesan", href: "/admin/contact", icon: Envelope },
   { label: "Kelola Pengumuman", href: "/admin/announcements", icon: Megaphone },
