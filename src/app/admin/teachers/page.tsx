@@ -45,6 +45,7 @@ export default function AdminTeachersPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<Teacher | null>(null);
   const [formSaving, setFormSaving] = useState(false);
+  const [photoBust, setPhotoBust] = useState<Record<string, number>>({});
 
   const [formName, setFormName] = useState("");
   const [formPosition, setFormPosition] = useState("");
@@ -132,6 +133,7 @@ export default function AdminTeachersPage() {
       if (formPhotoFile) {
         const uploaded = await uploadTeacherPhoto(formPhotoFile, editItem.id);
         if (uploaded.url) photoUrl = uploaded.url;
+        setPhotoBust((prev) => ({ ...prev, [editItem.id]: Date.now() }));
       }
       const { error } = await updateTeacher(editItem.id, {
         name: formName,
@@ -334,7 +336,7 @@ export default function AdminTeachersPage() {
                     <td className="px-4 py-3.5">
                       <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-slate-100">
                         {item.photo_url ? (
-                          <img src={item.photo_url} alt={item.name}
+                          <img src={`${item.photo_url}?v=${photoBust[item.id] || 0}`} alt={item.name}
                             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }}
                             className="h-full w-full object-cover" />
                         ) : null}

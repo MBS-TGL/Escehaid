@@ -69,6 +69,7 @@ function CustomSelect({ label, required, error, options, value, onChange, placeh
       <button
         type="button"
         onClick={() => setOpen(!open)}
+        data-field-type="select"
         className={`${error ? errorClass : normalClass} w-full cursor-pointer text-left`}
       >
         <span className={selectedLabel ? "text-[#172033]" : "text-slate-400"}>

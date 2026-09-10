@@ -124,6 +124,23 @@ export default function SPMBForm() {
 
   const formRef = useRef<HTMLDivElement>(null);
 
+  // Enter → next field
+  function handleFormKeyDown(e: React.KeyboardEvent) {
+    if (e.key !== "Enter") return;
+    const tag = (e.target as HTMLElement).tagName;
+    if (tag === "TEXTAREA") return;
+    e.preventDefault();
+    const form = formRef.current;
+    if (!form) return;
+    const fields = Array.from(form.querySelectorAll<HTMLElement>(
+      'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), [data-field-type="select"]:not([disabled]), [data-field-type="datepicker"]:not([disabled])'
+    ));
+    const idx = fields.indexOf(e.target as HTMLElement);
+    if (idx !== -1 && idx < fields.length - 1) {
+      fields[idx + 1].focus();
+    }
+  }
+
   // Load from localStorage on mount
   useEffect(() => {
     try {
@@ -319,7 +336,7 @@ export default function SPMBForm() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl" ref={formRef}>
+    <div className="mx-auto max-w-2xl" ref={formRef} onKeyDown={handleFormKeyDown}>
 
       {/* Progress */}
       <div className="mb-8 flex items-center justify-center gap-2 md:gap-4">
