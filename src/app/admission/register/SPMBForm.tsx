@@ -379,18 +379,20 @@ export default function SPMBForm() {
       )}
 
       {/* Progress */}
-      <div className="mb-8 flex items-center justify-center gap-2 md:gap-4">
-        {steps.map((s, i) => (
-          <div key={s} className="flex items-center gap-2 md:gap-4">
-            <div className={`flex aspect-square h-8 shrink-0 items-center justify-center rounded-full text-xs font-bold leading-none transition-colors ${
-              i < step ? "bg-green-500 text-white" : i === step ? "bg-[#082b59] text-white" : "bg-[#dce3ed] text-slate-500"
-            }`}>
-              {i < step ? <CheckCircle className="h-5 w-5" /> : i + 1}
+      <div className="mb-8 overflow-x-auto overflow-y-hidden scrollbar-hide">
+        <div className="flex items-center justify-center gap-2 px-2 pb-2 min-w-max mx-auto md:min-w-0 md:gap-4 md:justify-center">
+          {steps.map((s, i) => (
+            <div key={s} className="flex items-center gap-2 shrink-0 md:gap-4">
+              <div className={`flex aspect-square h-8 shrink-0 items-center justify-center rounded-full text-xs font-bold leading-none transition-colors ${
+                i < step ? "bg-green-500 text-white" : i === step ? "bg-[#082b59] text-white" : "bg-[#dce3ed] text-slate-500"
+              }`}>
+                {i < step ? <CheckCircle className="h-5 w-5" /> : i + 1}
+              </div>
+              <span className={`text-sm whitespace-nowrap ${i === step ? "font-semibold text-[#082b59]" : "text-slate-400"}`}>{s}</span>
+              {i < steps.length - 1 && <div className="h-px w-4 shrink-0 bg-[#dce3ed] md:w-8" />}
             </div>
-            <span className={`text-sm whitespace-nowrap ${i === step ? "font-semibold text-[#082b59]" : "text-slate-400"}`}>{s}</span>
-            {i < steps.length - 1 && <div className="h-px w-4 shrink-0 bg-[#dce3ed] md:w-8" />}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {success ? (
