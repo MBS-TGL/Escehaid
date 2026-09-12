@@ -11,6 +11,7 @@ import {
 } from "@/lib/queries";
 import { StatCard, StatCardRow, SlideOver } from "@/components/ui";
 import type { SpmbRegistration } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/Toast";
 import {
   MagnifyingGlass,
@@ -79,6 +80,7 @@ export default function AdminPPDBPage() {
   // Modals
   const [viewItem, setViewItem] = useState<SpmbRegistration | null>(null);
   const [viewTab, setViewTab] = useState<"siswa" | "kontak" | "ayah" | "ibu" | "berkas">("siswa");
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [deleteItem, setDeleteItem] = useState<SpmbRegistration | null>(null);
   const [bulkDelete, setBulkDelete] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ id: string; status: "accepted" | "rejected" } | null>(null);
@@ -95,6 +97,24 @@ export default function AdminPPDBPage() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Generate signed URLs when viewItem changes
+  useEffect(() => {
+    if (!viewItem?.documents) { setSignedUrls({}); return; }
+    const docKeys = ["kk", "akta", "surat_sekolah", "ktp_ortu", "bukti_transfer"];
+    const paths = docKeys
+      .map((key) => ({ key, path: viewItem.documents?.[key] }))
+      .filter((item): item is { key: string; path: string } => typeof item.path === "string" && item.path.length > 0);
+    if (paths.length === 0) { setSignedUrls({}); return; }
+    (async () => {
+      const urls: Record<string, string> = {};
+      await Promise.all(paths.map(async ({ key, path }) => {
+        const { data } = await supabase.storage.from("spmb-documents").createSignedUrl(path, 3600);
+        if (data?.signedUrl) urls[key] = data.signedUrl;
+      }));
+      setSignedUrls(urls);
+    })();
+  }, [viewItem]);
 
   // Filtered + Sorted
   const filtered = useMemo(() => {
@@ -467,7 +487,7 @@ export default function AdminPPDBPage() {
                 { key: "ibu" as const, label: "Ibu" },
                 { key: "berkas" as const, label: "Berkas" },
               ];
-              const docCount = viewItem.documents ? [viewItem.documents.kk, viewItem.documents.akta, viewItem.documents.surat_sekolah, viewItem.documents.ktp_ortu, viewItem.documents.bukti_transfer].filter((u) => u && typeof u === "string" && u.startsWith("http")).length : 0;
+              const docCount = viewItem.documents ? [viewItem.documents.kk, viewItem.documents.akta, viewItem.documents.surat_sekolah, viewItem.documents.ktp_ortu, viewItem.documents.bukti_transfer].filter((v) => typeof v === "string" && v.length > 0).length : 0;
               return (
                 <div className="flex border-b border-slate-100 px-6">
                   {tabs.map((t) => (
@@ -550,8 +570,8 @@ export default function AdminPPDBPage() {
                     ["ktp_ortu", "KTP Orang Tua"],
                     ["bukti_transfer", "Bukti Transfer"],
                   ] as [string, string][]).map(([key, label]) => {
-                    const url = viewItem.documents?.[key];
-                    const hasFile = url && typeof url === "string" && url.startsWith("http");
+                    const url = signedUrls[key];
+                    const hasFile = !!url;
                     const ext = hasFile ? url.split(".").pop()?.split("?")[0]?.toLowerCase() || "" : "";
                     const isImage = ["jpg", "jpeg", "png", "gif", "webp"].includes(ext);
                     const isPdf = ext === "pdf";

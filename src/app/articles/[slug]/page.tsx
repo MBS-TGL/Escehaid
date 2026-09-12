@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, Clock, User, BookOpen } from "@/components/Icons";
 import { getArticleBySlug } from "@/lib/queries";
+import { sanitize } from "@/lib/sanitize";
 import type { Metadata } from "next";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -103,7 +104,7 @@ prose-headings:text-[#082b59] prose-headings:font-extrabold prose-headings:scrol
               prose-table:text-sm prose-table:border-collapse
               prose-th:bg-slate-50 prose-th:text-left prose-th:font-semibold prose-th:px-4 prose-th:py-3 prose-th:border prose-th:border-slate-200
               prose-td:px-4 prose-td:py-3 prose-td:border prose-td:border-slate-200"
-            dangerouslySetInnerHTML={{ __html: article.content }}
+            dangerouslySetInnerHTML={{ __html: sanitize(article.content) }}
           />
         ) : (
           <p className="text-gray-500">Konten belum tersedia.</p>

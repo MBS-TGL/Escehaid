@@ -12,6 +12,7 @@ import {
   uploadNewsImage,
 } from "@/lib/queries";
 import { compressImage } from "@/lib/compress-image";
+import { sanitize } from "@/lib/sanitize";
 import { StatCard, StatCardRow, Modal, ConfirmModal, SlideOver, RichTextEditor } from "@/components/ui";
 import type { News } from "@/lib/supabase";
 import {
@@ -550,7 +551,7 @@ export default function AdminBeritaPage() {
             {viewItem.summary && <p className="mb-4 text-sm text-slate-600 italic border-l-2 border-[#f4d21f] pl-3">{viewItem.summary}</p>}
             <div
               className="prose prose-sm max-w-none text-slate-700 leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: viewItem.content || "Tidak ada konten" }}
+              dangerouslySetInnerHTML={{ __html: sanitize(viewItem.content || "Tidak ada konten") }}
             />
           </>
         )}

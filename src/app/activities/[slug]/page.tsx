@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getActivityBySlug, getActivityList } from "@/lib/queries";
+import { sanitize } from "@/lib/sanitize";
 import { FadeIn } from "@/components/Animations";
 import { CalendarBlank, MapPin, ArrowLeft } from "@/components/Icons";
 import { notFound } from "next/navigation";
@@ -77,7 +78,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           )}
 
           {activity.content && (
-            <div className="prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: activity.content }} />
+            <div className="prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: sanitize(activity.content) }} />
           )}
         </FadeIn>
       </section>

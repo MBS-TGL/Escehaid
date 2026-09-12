@@ -663,15 +663,13 @@ CREATE INDEX idx_user_profiles_role ON user_profiles(role, is_active);
 -- ============================================================
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES
-  ('spmb-documents', 'spmb-documents', true, 2097152, ARRAY['application/pdf', 'image/jpeg', 'image/png']),
+  ('spmb-documents', 'spmb-documents', false, 2097152, ARRAY['application/pdf', 'image/jpeg', 'image/png']),
   ('images', 'images', true, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']),
   ('videos', 'videos', true, 52428800, ARRAY['video/mp4', 'video/webm', 'video/quicktime'])
 ON CONFLICT (id) DO NOTHING;
 
--- spmb-documents: publik bisa upload (buat form pendaftaran), staff kelola
-CREATE POLICY "Public read spmb documents" ON storage.objects
-  FOR SELECT USING (bucket_id = 'spmb-documents');
-CREATE POLICY "Public upload spmb documents" ON storage.objects
+-- spmb-documents: private bucket - unauthenticated upload only, admin reads via signed URLs
+CREATE POLICY "Anyone can upload spmb documents" ON storage.objects
   FOR INSERT WITH CHECK (bucket_id = 'spmb-documents');
 CREATE POLICY "Staff manage spmb documents" ON storage.objects
   FOR ALL USING (bucket_id = 'spmb-documents' AND current_user_role() IN ('developer', 'admin'));

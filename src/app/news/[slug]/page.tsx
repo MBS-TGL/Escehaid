@@ -4,6 +4,7 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import { Clock, User, ArrowLeft, Newspaper, MagnifyingGlass, BookmarkSimple, ShareNetwork, WhatsappLogo, FacebookLogo, TwitterLogo } from "@/components/Icons";
 import { getNewsBySlug, getNewsList, getRelatedNews } from "@/lib/queries";
+import { sanitize } from "@/lib/sanitize";
 import ImageZoom from "./ImageZoom";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -174,7 +175,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
                   prose-table:text-sm prose-table:border-collapse
                   prose-th:bg-slate-50 prose-th:text-left prose-th:font-semibold prose-th:px-4 prose-th:py-3 prose-th:border prose-th:border-slate-200
                   prose-td:px-4 prose-td:py-3 prose-td:border prose-td:border-slate-200"
-                dangerouslySetInnerHTML={{ __html: berita.content }}
+                dangerouslySetInnerHTML={{ __html: sanitize(berita.content) }}
               />
             ) : (
               <p className="text-gray-500">Konten belum tersedia.</p>

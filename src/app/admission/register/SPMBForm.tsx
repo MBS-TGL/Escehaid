@@ -295,12 +295,7 @@ export default function SPMBForm() {
       .upload(path, file, { contentType: file.type, upsert: true });
 
     if (error) return null;
-
-    const { data: urlData } = supabase.storage
-      .from("spmb-documents")
-      .getPublicUrl(uploadData.path);
-
-    return urlData.publicUrl;
+    return uploadData.path;
   }
 
   async function handleSubmit() {
