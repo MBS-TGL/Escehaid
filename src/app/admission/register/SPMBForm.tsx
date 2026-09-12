@@ -114,6 +114,41 @@ const initialDocs: Documents = {
 const STORAGE_KEY = "spmb_form_data";
 const STORAGE_STEP_KEY = "spmb_form_step";
 
+const DEBUG_DATA: FormData = {
+  program: "SMP Boarding",
+  full_name: "Ahmad Fauzi",
+  nickname: "Fauzi",
+  gender: "L",
+  birth_place: "Jember",
+  birth_date: "2012-05-15",
+  nisn: "0012345678",
+  nik: "3509123456780001",
+  height: "150",
+  weight: "42",
+  language: "Bahasa Indonesia",
+  hobby: "Sepak Bola",
+  ambition: "Insinyur",
+  child_order: "2",
+  siblings: "3",
+  blood_type: "A",
+  orphan_status: "tidak",
+  previous_school: "SDN 01 Tanggul",
+  address: "Jl. Merdeka No. 10, Tanggul, Jember",
+  phone: "081234567890",
+  father_name: "Budi Santoso",
+  father_birth_place: "Surabaya",
+  father_birth_date: "1980-03-20",
+  father_education: "S1",
+  father_job: "Wiraswasta",
+  father_income: "5000000",
+  mother_name: "Siti Aminah",
+  mother_birth_place: "Malang",
+  mother_birth_date: "1982-07-10",
+  mother_education: "SMA",
+  mother_job: "Ibu Rumah Tangga",
+  mother_income: "0",
+};
+
 export default function SPMBForm() {
   const [step, setStep] = useState(0);
   const [data, setData] = useState<FormData>(initialData);
@@ -338,6 +373,16 @@ export default function SPMBForm() {
   return (
     <div className="mx-auto max-w-2xl" ref={formRef} onKeyDown={handleFormKeyDown}>
 
+      {/* DEBUG: Auto-fill button */}
+      {process.env.NODE_ENV === "development" && (
+        <button
+          onClick={() => { setData(DEBUG_DATA); setStep(0); setErrors({}); }}
+          className="mb-4 w-full rounded-xl border border-dashed border-amber-400 bg-amber-50 px-4 py-2.5 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100 cursor-pointer"
+        >
+          ⚡ Auto-Fill (Debug)
+        </button>
+      )}
+
       {/* Progress */}
       <div className="mb-8 flex items-center justify-center gap-2 md:gap-4">
         {steps.map((s, i) => (
@@ -360,14 +405,8 @@ export default function SPMBForm() {
           </div>
           <h3 className="mt-4 text-xl font-bold text-green-800">Pendaftaran Berhasil!</h3>
           <p className="mt-2 text-sm text-green-600">
-            Data Anda telah kami terima. Silakan hubungi contact person untuk informasi lebih lanjut.
+            Data Anda telah kami terima. Silakan hubungi contact person di bawah untuk informasi lebih lanjut.
           </p>
-          <div className="mt-4 rounded-xl bg-white p-4 text-left text-sm text-slate-600">
-            <p className="font-medium text-[#082b59]">Contact Person:</p>
-            <p>Bu Azizah: 085259341209</p>
-            <p>Bu Lusi: 082302326820</p>
-            <p>Pak Arif: 085806738160</p>
-          </div>
         </div>
       ) : (
         <div className="rounded-2xl border border-[#dce3ed] bg-white p-6 shadow-sm md:p-8">

@@ -78,6 +78,7 @@ export default function AdminPPDBPage() {
 
   // Modals
   const [viewItem, setViewItem] = useState<SpmbRegistration | null>(null);
+  const [viewTab, setViewTab] = useState<"siswa" | "kontak" | "ayah" | "ibu" | "berkas">("siswa");
   const [deleteItem, setDeleteItem] = useState<SpmbRegistration | null>(null);
   const [bulkDelete, setBulkDelete] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ id: string; status: "accepted" | "rejected" } | null>(null);
@@ -429,46 +430,146 @@ export default function AdminPPDBPage() {
       {/* ── VIEW MODAL ──────────────────────────────── */}
       {viewItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setViewItem(null)}>
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#082b59]/10">
-                  <GraduationCap className="h-5 w-5 text-[#082b59]" />
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Profile Header */}
+            <div className="bg-gradient-to-r from-[#082b59] via-[#0d4a8a] to-[#1767b1] px-6 py-5 text-white">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-xl font-bold">
+                  {viewItem.full_name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
                 </div>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-800">{viewItem.full_name}</h2>
-                  <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusConfig[viewItem.status]?.bg} ${statusConfig[viewItem.status]?.color}`}>
-                    {(() => { const SI = statusConfig[viewItem.status]?.icon; return SI ? <SI className="h-2.5 w-2.5" /> : null; })()}
-                    {statusConfig[viewItem.status]?.label}
-                  </span>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg font-bold truncate">{viewItem.full_name}</h2>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-white/70">
+                    {viewItem.documents?.nisn && <span className="flex items-center gap-1"><FileText className="h-3 w-3" />{viewItem.documents.nisn}</span>}
+                    {viewItem.documents?.nisn && viewItem.phone && <span>&middot;</span>}
+                    {viewItem.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{viewItem.phone}</span>}
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap gap-2">
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusConfig[viewItem.status]?.bg} ${statusConfig[viewItem.status]?.color}`}>
+                      {(() => { const SI = statusConfig[viewItem.status]?.icon; return SI ? <SI className="h-2.5 w-2.5" /> : null; })()}
+                      {statusConfig[viewItem.status]?.label}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white">
+                      {pathLabels[viewItem.registration_path] || viewItem.registration_path}
+                    </span>
+                  </div>
                 </div>
+                <button onClick={() => setViewItem(null)} className="ml-auto shrink-0 rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white"><X className="h-5 w-5" /></button>
               </div>
-              <button onClick={() => setViewItem(null)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X className="h-5 w-5" /></button>
             </div>
-            <div className="max-h-[60vh] overflow-y-auto space-y-4 px-6 py-5">
-              <div className="grid grid-cols-2 gap-4">
-                <InfoRow icon={FileText} label="Tempat Lahir" value={viewItem.birth_place || "-"} />
-                <InfoRow icon={CalendarIcon} label="Tanggal Lahir" value={viewItem.birth_date ? new Date(viewItem.birth_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"} />
-                <InfoRow icon={Users} label="Jenis Kelamin" value={viewItem.gender === "L" ? "Laki-laki" : "Perempuan"} />
-                <InfoRow icon={GraduationCap} label="Jalur" value={pathLabels[viewItem.registration_path] || viewItem.registration_path} />
-              </div>
-              <div className="border-t border-slate-100 pt-4">
-                <InfoRow icon={MapPin} label="Alamat" value={viewItem.address || "-"} />
-                <InfoRow icon={Phone} label="Telepon" value={viewItem.phone || "-"} />
-                <InfoRow icon={Envelope} label="Email" value={viewItem.email || "-"} />
-              </div>
-              <div className="border-t border-slate-100 pt-4">
-                <InfoRow label="Nama Orang Tua" value={viewItem.parent_name || "-"} />
-                <InfoRow label="Pekerjaan Orang Tua" value={viewItem.parent_occupation || "-"} />
-                <InfoRow label="Asal Sekolah" value={viewItem.previous_school || "-"} />
-              </div>
+
+            {/* Tabs */}
+            {(() => {
+              const tabs = [
+                { key: "siswa" as const, label: "Siswa" },
+                { key: "kontak" as const, label: "Kontak" },
+                { key: "ayah" as const, label: "Ayah" },
+                { key: "ibu" as const, label: "Ibu" },
+                { key: "berkas" as const, label: "Berkas" },
+              ];
+              const docCount = viewItem.documents ? [viewItem.documents.kk, viewItem.documents.akta, viewItem.documents.surat_sekolah, viewItem.documents.ktp_ortu, viewItem.documents.bukti_transfer].filter((u) => u && typeof u === "string" && u.startsWith("http")).length : 0;
+              return (
+                <div className="flex border-b border-slate-100 px-6">
+                  {tabs.map((t) => (
+                    <button key={t.key} onClick={() => setViewTab(t.key)}
+                      className={`relative px-4 py-2.5 text-xs font-semibold transition-colors ${viewTab === t.key ? "text-[#082b59]" : "text-slate-400 hover:text-slate-600"}`}>
+                      {t.label}
+                      {t.key === "berkas" && docCount > 0 && <span className="ml-1 rounded-full bg-[#082b59]/10 px-1.5 text-[10px] text-[#082b59]">{docCount}</span>}
+                      {viewTab === t.key && <div className="absolute inset-x-2 -bottom-px h-0.5 bg-[#082b59]" />}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* Tab Content */}
+            <div className="max-h-[60vh] overflow-y-auto px-6 py-5">
+              {viewTab === "siswa" && (
+                <div className="space-y-1">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                    <InfoRow icon={MapPin} label="Tempat Lahir" value={viewItem.birth_place || "-"} />
+                    <InfoRow icon={CalendarIcon} label="Tanggal Lahir" value={viewItem.birth_date ? new Date(viewItem.birth_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"} />
+                    <InfoRow icon={Users} label="Jenis Kelamin" value={viewItem.gender === "L" ? "Laki-laki" : "Perempuan"} />
+                    <InfoRow icon={GraduationCap} label="Jalur" value={pathLabels[viewItem.registration_path] || viewItem.registration_path} />
+                  </div>
+                  <div className="my-3 h-px bg-slate-100" />
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                    <InfoRow icon={Users} label="Nama Panggilan" value={viewItem.documents?.nickname || "-"} />
+                    <InfoRow icon={CheckCircle} label="Golongan Darah" value={viewItem.documents?.blood_type || "-"} />
+                    <InfoRow icon={FileText} label="NISN" value={viewItem.documents?.nisn || "-"} />
+                    <InfoRow icon={FileText} label="NIK" value={viewItem.documents?.nik || "-"} />
+                    <InfoRow icon={ArrowUp} label="Tinggi Badan" value={viewItem.documents?.height ? `${viewItem.documents.height} cm` : "-"} />
+                    <InfoRow icon={ArrowDown} label="Berat Badan" value={viewItem.documents?.weight ? `${viewItem.documents.weight} kg` : "-"} />
+                    <InfoRow icon={MagnifyingGlass} label="Bahasa Sehari-hari" value={viewItem.documents?.language || "-"} />
+                    <InfoRow icon={Eye} label="Hobi" value={viewItem.documents?.hobby || "-"} />
+                    <InfoRow icon={GraduationCap} label="Cita-cita" value={viewItem.documents?.ambition || "-"} />
+                    <InfoRow icon={Users} label="Anak Ke-" value={viewItem.documents?.child_order ? `${viewItem.documents.child_order} dari ${viewItem.documents.siblings || "?"} bersaudara` : "-"} />
+                    <InfoRow icon={Warning} label="Yatim/Piatu" value={viewItem.documents?.orphan_status === "tidak" ? "Tidak" : viewItem.documents?.orphan_status === "yatim" ? "Yatim" : viewItem.documents?.orphan_status === "piatu" ? "Piatu" : viewItem.documents?.orphan_status === "yatim_piatu" ? "Yatim Piatu" : "-"} />
+                  </div>
+                </div>
+              )}
+
+              {viewTab === "kontak" && (
+                <div className="space-y-1">
+                  <InfoRow icon={MapPin} label="Alamat" value={viewItem.address || "-"} />
+                  <InfoRow icon={Phone} label="Telepon" value={viewItem.phone || "-"} />
+                  <InfoRow icon={Envelope} label="Email" value={viewItem.email || "-"} />
+                  <div className="my-3 h-px bg-slate-100" />
+                  <InfoRow icon={GraduationCap} label="Asal Sekolah" value={viewItem.previous_school || "-"} />
+                </div>
+              )}
+
+              {viewTab === "ayah" && (
+                <div className="space-y-1">
+                  <InfoRow icon={Users} label="Nama" value={viewItem.parent_name?.split(" / ")[0] || "-"} />
+                  <InfoRow icon={MapPin} label="Tempat Lahir" value={viewItem.documents?.father_birth_place || "-"} />
+                  <InfoRow icon={CalendarIcon} label="Tanggal Lahir" value={viewItem.documents?.father_birth_date ? new Date(viewItem.documents.father_birth_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"} />
+                  <InfoRow icon={GraduationCap} label="Pendidikan Terakhir" value={viewItem.documents?.father_education || "-"} />
+                  <InfoRow icon={FileText} label="Pekerjaan" value={viewItem.parent_occupation || "-"} />
+                  <InfoRow icon={FloppyDisk} label="Penghasilan/bulan" value={viewItem.documents?.father_income ? `Rp ${Number(viewItem.documents.father_income).toLocaleString("id-ID")}` : "-"} />
+                </div>
+              )}
+
+              {viewTab === "ibu" && (
+                <div className="space-y-1">
+                  <InfoRow icon={Users} label="Nama" value={viewItem.parent_name?.split(" / ")[1] || "-"} />
+                  <InfoRow icon={MapPin} label="Tempat Lahir" value={viewItem.documents?.mother_birth_place || "-"} />
+                  <InfoRow icon={CalendarIcon} label="Tanggal Lahir" value={viewItem.documents?.mother_birth_date ? new Date(viewItem.documents.mother_birth_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"} />
+                  <InfoRow icon={GraduationCap} label="Pendidikan Terakhir" value={viewItem.documents?.mother_education || "-"} />
+                  <InfoRow icon={FileText} label="Pekerjaan" value={viewItem.documents?.mother_job || "-"} />
+                  <InfoRow icon={FloppyDisk} label="Penghasilan/bulan" value={viewItem.documents?.mother_income ? `Rp ${Number(viewItem.documents.mother_income).toLocaleString("id-ID")}` : "-"} />
+                </div>
+              )}
+
+              {viewTab === "berkas" && (
+                <div className="space-y-2">
+                  {([
+                    ["kk", "Kartu Keluarga"],
+                    ["akta", "Akta Kelahiran"],
+                    ["surat_sekolah", "Surat Keterangan Sekolah"],
+                    ["ktp_ortu", "KTP Orang Tua"],
+                    ["bukti_transfer", "Bukti Transfer"],
+                  ] as [string, string][]).map(([key, label]) => {
+                    const url = viewItem.documents?.[key];
+                    const hasFile = url && typeof url === "string" && url.startsWith("http");
+                    const ext = hasFile ? url.split(".").pop()?.split("?")[0]?.toLowerCase() || "" : "";
+                    const isImage = ["jpg", "jpeg", "png", "gif", "webp"].includes(ext);
+                    const isPdf = ext === "pdf";
+                    return <BerkasItem key={key} label={label} url={hasFile ? url : null} isImage={isImage} isPdf={isPdf} />;
+                  })}
+                </div>
+              )}
+
+              {/* Catatan Admin */}
               {viewItem.admin_notes && (
-                <div className="border-t border-slate-100 pt-4">
+                <div className="mt-4 border-t border-slate-100 pt-4">
                   <p className="mb-1 text-xs font-semibold text-slate-400">Catatan Admin</p>
                   <p className="text-sm text-slate-600">{viewItem.admin_notes}</p>
                 </div>
               )}
             </div>
+
+            {/* Footer */}
             <div className="flex gap-3 border-t border-slate-100 px-6 py-4">
               <button onClick={() => { setViewItem(null); setEditItem(viewItem); setEditNotes(viewItem.admin_notes || ""); }}
                 className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
@@ -624,6 +725,93 @@ function InfoRow({ icon: Icon, label, value }: { icon?: React.ElementType; label
         <p className="text-[11px] font-medium text-slate-400">{label}</p>
         <p className="text-sm text-slate-700">{value}</p>
       </div>
+    </div>
+  );
+}
+
+const BERKAS_ICONS: Record<string, React.ElementType> = {
+  kk: FileText,
+  akta: FileText,
+  surat_sekolah: FileText,
+  ktp_ortu: FileText,
+  bukti_transfer: Download,
+};
+
+const BERKAS_COLORS: Record<string, string> = {
+  kk: "text-blue-600 bg-blue-100",
+  akta: "text-amber-600 bg-amber-100",
+  surat_sekolah: "text-emerald-600 bg-emerald-100",
+  ktp_ortu: "text-purple-600 bg-purple-100",
+  bukti_transfer: "text-rose-600 bg-rose-100",
+};
+
+function BerkasItem({ label, url, isImage, isPdf }: { label: string; url: string | null; isImage: boolean; isPdf: boolean }) {
+  const [open, setOpen] = useState(false);
+  const berkasKey = label.toLowerCase().includes("kartu") ? "kk"
+    : label.toLowerCase().includes("akta") ? "akta"
+    : label.toLowerCase().includes("surat") ? "surat_sekolah"
+    : label.toLowerCase().includes("ktp") ? "ktp_ortu"
+    : "bukti_transfer";
+  const Icon = BERKAS_ICONS[berkasKey] || FileText;
+  const colorCls = BERKAS_COLORS[berkasKey] || "text-slate-600 bg-slate-100";
+
+  if (!url) {
+    return (
+      <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5">
+        <div className={`flex h-8 min-w-8 items-center justify-center rounded-lg ${colorCls}`}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <span className="text-sm text-red-600">{label}</span>
+        <span className="ml-auto text-[11px] text-red-400">Belum diupload</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-slate-200 overflow-hidden">
+      <button onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-slate-50">
+        <div className={`flex h-8 min-w-8 items-center justify-center rounded-lg ${colorCls}`}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <span className="flex-1 text-sm text-slate-700">{label}</span>
+        {isImage && <span className="text-[10px] text-slate-400">Gambar</span>}
+        {isPdf && <span className="text-[10px] text-slate-400">PDF</span>}
+        <svg className={`h-4 w-4 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && (
+        <div className="border-t border-slate-100 bg-slate-50 p-3 space-y-3">
+          {isImage && (
+            <div className="rounded-lg border border-slate-200 bg-white p-1">
+              <img src={url} alt={label} className="max-h-72 w-full rounded object-contain" loading="lazy" />
+            </div>
+          )}
+          {isPdf && (
+            <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+              <iframe src={url} className="h-72 w-full" title={label} loading="lazy" />
+            </div>
+          )}
+          {!isImage && !isPdf && (
+            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-500">
+              Preview tidak tersedia untuk file ini
+            </div>
+          )}
+          <div className="flex gap-2">
+            <a href={url} target="_blank" rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50">
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+              Buka
+            </a>
+            <a href={url} download
+              className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-[#082b59] px-3 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#1767b1]">
+              <Download className="h-3.5 w-3.5" />
+              Download
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

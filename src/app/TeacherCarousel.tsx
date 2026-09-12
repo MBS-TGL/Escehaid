@@ -7,6 +7,11 @@ import type { Teacher } from "@/lib/supabase";
 
 import "@splidejs/splide/css";
 
+const splideOverrides = `
+  .splide__slide,
+  .splide__slide > div { border: none !important; outline: none !important; border-radius: 0 !important; }
+`;
+
 export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
   const splideRef = useRef<HTMLDivElement>(null);
   const splideInstance = useRef<Splide | null>(null);
@@ -18,24 +23,26 @@ export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
       type: "loop",
       perPage: 6,
       perMove: 1,
-      gap: "1rem",
+      gap: "10px",
       speed: 1500,
       autoplay: true,
       interval: 3000,
       pauseOnHover: true,
       pauseOnFocus: false,
       drag: true,
-      flickMaxPages: 1,
-      flickPower: 200,
+      cover: true,
+      rewind: true,
       arrows: false,
       pagination: false,
-      autoWidth: true,
+      autoWidth: false,
       autoHeight: false,
       updateOnMove: true,
       live: false,
       breakpoints: {
-        640: { perPage: 2, gap: "0.75rem" },
-        1024: { perPage: 4, gap: "0.75rem" },
+        0: { perPage: 2 },
+        640: { perPage: 2 },
+        1024: { perPage: 4 },
+        1280: { perPage: 6 },
       },
     }).mount();
 
@@ -50,6 +57,8 @@ export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
   if (teachers.length === 0) return null;
 
   return (
+    <>
+    <style dangerouslySetInnerHTML={{ __html: splideOverrides }} />
     <div className="splide-wrapper relative group">
       {/* Custom arrows */}
       <button
@@ -76,8 +85,8 @@ export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
         <div className="splide__track">
           <div className="splide__list">
             {teachers.map((t) => (
-              <div key={t.id} className="splide__slide">
-                <div className="group/card relative h-[340px] w-[220px] overflow-hidden rounded-2xl bg-[#082b59] shadow-md transition-shadow duration-500 hover:shadow-xl sm:h-[380px] sm:w-[240px]">
+              <div key={t.id} className="splide__slide" style={{ width: "calc(16.6667% - 8.33333px)", marginRight: "10px" }}>
+                <div className="group/card relative aspect-[3/4] overflow-hidden rounded-none bg-[#082b59] shadow-md transition-shadow duration-500 hover:shadow-xl">
                   {t.photo_url ? (
                     <img
                       src={t.photo_url}
@@ -86,15 +95,15 @@ export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-[#f0f4fa]">
-                      <User className="h-20 w-20 text-[#082b59]/15" weight="light" />
+                      <User className="h-16 w-16 text-[#082b59]/15" weight="light" />
                     </div>
                   )}
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#082b59] via-[#082b59]/40 to-transparent" />
-                  <div className="absolute inset-x-0 bottom-0 p-4">
-                    <h3 className="text-[13px] font-semibold text-white drop-shadow-sm leading-tight" title={t.name}>
+                  <div className="absolute inset-x-0 bottom-0 p-3">
+                    <h3 className="text-xs font-semibold text-white drop-shadow-sm leading-tight" title={t.name}>
                       {t.name}
                     </h3>
-                    <p className="mt-1 text-[11px] text-white/80">{t.position}</p>
+                    <p className="mt-0.5 text-[10px] text-white/80">{t.position}</p>
                   </div>
                 </div>
               </div>
@@ -103,5 +112,6 @@ export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
         </div>
       </div>
     </div>
+    </>
   );
 }
