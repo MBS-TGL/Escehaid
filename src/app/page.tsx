@@ -499,11 +499,11 @@ export default async function Home() {
           </FadeIn>
 
           <StaggerChildren stagger={0.12} className="mt-14 grid gap-6 md:grid-cols-3">
-            {[
+            {([
               ["Pendampingan dekat", "Guru hadir mendampingi proses belajar dan perkembangan setiap peserta didik.", Users],
               ["Nilai yang terintegrasi", "Pembelajaran akademik berjalan bersama pembiasaan ibadah dan akhlak.", Checks],
               ["Berani mencoba", "Siswa mendapat ruang untuk bertanya, berkarya, dan mengembangkan potensi.", Star],
-            ].map(([title, description, Icon]) => (
+            ] as [string, string, React.ElementType][]).map(([title, description, Icon]) => (
               <StaggerItem key={title}>
                 <div className="group rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm transition-all duration-300 hover:border-white/20 hover:bg-white/10">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f4d21f]/10 text-[#f4d21f]">
