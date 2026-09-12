@@ -47,10 +47,9 @@ export default function Navbar() {
             <Image
               src="/images/Logo-Sekolah.png"
               alt="Logo SMP Muhammadiyah 4 Tanggul"
-              width={36}
-              height={46}
-              style={{ width: "auto", height: "auto" }}
-              className="shrink-0"
+              width={140}
+              height={180}
+              className="h-8 w-auto shrink-0 md:h-9"
             />
             <div className="flex flex-col leading-tight">
               <span className="text-[13px] font-bold tracking-tight text-[#082b59]">
