@@ -1,6 +1,12 @@
 import { supabase } from "./supabase";
 import type { SchoolProfile, News, Gallery, SpmbRegistration, Teacher, Facility, Article, Activity, Achievement, ContactMessage } from "./supabase";
 import type { UserProfile } from "./auth";
+import {
+  sendRegistrationEmail,
+  sendRegistrationAdminEmail,
+  sendContactEmail,
+  sendContactAdminEmail,
+} from "./notifications";
 
 interface NewsWithAuthor extends News {
   author_name?: string;
@@ -361,6 +367,11 @@ export async function submitRegistration(registration: {
     console.error("Error submitting registration:", error);
     return { success: false, error: error.message };
   }
+
+  // Send confirmation email to registrant + admin notification (fire-and-forget)
+  sendRegistrationEmail(registration).catch(() => {});
+  sendRegistrationAdminEmail(registration).catch(() => {});
+
   return { success: true };
 }
 
@@ -1209,6 +1220,11 @@ export async function submitContactMessage(message: {
     console.error("Error submitting contact:", error);
     return { success: false, error: error.message };
   }
+
+  // Send confirmation email to sender + admin notification (fire-and-forget)
+  sendContactEmail(message).catch(() => {});
+  sendContactAdminEmail(message).catch(() => {});
+
   return { success: true };
 }
 
@@ -1478,6 +1494,42 @@ export async function deleteTeacher(id: string): Promise<{ error?: string }> {
 
 export async function deleteTeacherBulk(ids: string[]): Promise<{ error?: string }> {
   const { error } = await supabase.from("teachers").delete().in("id", ids);
+  if (error) return { error: error.message };
+  return {};
+}
+
+// ============ CATEGORIES ============
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  type: string;
+  color: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export async function getCategoryList(type?: string): Promise<Category[]> {
+  let query = supabase.from("categories").select("*").order("sort_order", { ascending: true });
+  if (type) query = query.eq("type", type);
+  const { data } = await query;
+  return data || [];
+}
+
+export async function createCategory(data: { name: string; slug: string; type: string; color?: string; sort_order?: number }): Promise<{ error?: string }> {
+  const { error } = await supabase.from("categories").insert(data);
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function updateCategory(id: string, data: Partial<{ name: string; slug: string; type: string; color: string; sort_order: number }>): Promise<{ error?: string }> {
+  const { error } = await supabase.from("categories").update(data).eq("id", id);
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function deleteCategory(id: string): Promise<{ error?: string }> {
+  const { error } = await supabase.from("categories").delete().eq("id", id);
   if (error) return { error: error.message };
   return {};
 }

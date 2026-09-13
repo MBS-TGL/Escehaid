@@ -816,3 +816,44 @@ INSERT INTO agenda_events (title, event_date, sort_order) VALUES
 ALTER TABLE teachers DROP COLUMN IF EXISTS categories;
 ALTER TABLE teachers DROP COLUMN IF EXISTS bio;
 ALTER TABLE teachers DROP COLUMN IF EXISTS subject;
+
+-- ============================================================
+-- MIGRATION: Categories table
+-- ============================================================
+CREATE TABLE IF NOT EXISTS categories (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  slug text NOT NULL UNIQUE,
+  type text NOT NULL CHECK (type IN ('berita', 'artikel', 'kegiatan')),
+  color text DEFAULT '#1767b1',
+  sort_order int DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_categories_type ON categories(type);
+
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read categories" ON categories FOR SELECT USING (true);
+CREATE POLICY "Staff manage categories" ON categories FOR ALL
+  USING (current_user_role() IN ('developer', 'admin'))
+  WITH CHECK (current_user_role() IN ('developer', 'admin'));
+
+GRANT SELECT ON categories TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON categories TO authenticated;
+
+-- Default categories
+INSERT INTO categories (name, slug, type, color, sort_order) VALUES
+  ('Berita', 'berita', 'berita', '#3b82f6', 1),
+  ('Pengumuman', 'pengumuman', 'berita', '#f59e0b', 2),
+  ('Agenda', 'agenda', 'berita', '#a855f7', 3),
+  ('Tips Belajar', 'tips-belajar', 'artikel', '#1767b1', 1),
+  ('Parenting', 'parenting', 'artikel', '#10b981', 2),
+  ('Islam Terapan', 'islam-terapan', 'artikel', '#f4d21f', 3),
+  ('Kajian', 'kajian', 'kegiatan', '#082b59', 1),
+  ('Peringatan', 'peringatan', 'kegiatan', '#ef4444', 2),
+  ('Lomba', 'lomba', 'kegiatan', '#f97316', 3),
+  ('Upacara', 'upacara', 'kegiatan', '#6366f1', 4),
+  ('Ekstrakurikuler', 'ekskul', 'kegiatan', '#14b8a6', 5),
+  ('Umum', 'umum', 'kegiatan', '#64748b', 6)
+ON CONFLICT (slug) DO NOTHING;

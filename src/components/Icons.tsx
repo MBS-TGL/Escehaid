@@ -78,4 +78,5 @@ export {
   BookmarkSimple,
   LinkSimple,
   CalendarBlank,
+  Tag,
 } from "@phosphor-icons/react";

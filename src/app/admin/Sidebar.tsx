@@ -14,6 +14,7 @@ import {
   CalendarBlank,
   CaretRight,
   X,
+  Tag,
 } from "@/components/Icons";
 
 const navItems = [
@@ -29,6 +30,7 @@ const navItems = [
   { label: "Kelola Pesan", href: "/admin/contact", icon: Envelope },
   { label: "Kelola Pengumuman", href: "/admin/announcements", icon: Megaphone },
   { label: "Kelola Agenda", href: "/admin/agenda", icon: CalendarBlank },
+  { label: "Kategori", href: "/admin/categories", icon: Tag },
 ];
 
 export default function AdminSidebar({
