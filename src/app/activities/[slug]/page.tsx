@@ -46,8 +46,50 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
     notFound();
   }
 
+  const activityUrl = `https://smpmuh4tanggul.web.id/activities/${activity.slug}`;
+
+  const eventJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: activity.title,
+    description: activity.description || activity.title,
+    image: activity.image_url || undefined,
+    startDate: activity.activity_date || undefined,
+    location: activity.location
+      ? {
+          "@type": "Place",
+          name: activity.location,
+          address: {
+            "@type": "PostalAddress",
+            addressLocality: "Tanggul",
+            addressRegion: "Jember",
+            addressCountry: "ID",
+          },
+        }
+      : undefined,
+    organizer: {
+      "@type": "Organization",
+      name: "SMP Muhammadiyah 4 Tanggul",
+      url: "https://smpmuh4tanggul.web.id",
+    },
+    eventStatus: "https://schema.org/EventCompleted",
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+  };
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Beranda", item: "https://smpmuh4tanggul.web.id" },
+      { "@type": "ListItem", position: 2, name: "Kegiatan", item: "https://smpmuh4tanggul.web.id/activities" },
+      { "@type": "ListItem", position: 3, name: activity.title, item: activityUrl },
+    ],
+  };
+
   return (
     <div>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-12 text-white md:py-16">
         <div className="absolute inset-0 opacity-20">
           <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />

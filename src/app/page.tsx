@@ -41,8 +41,64 @@ export default async function Home() {
     getAchievementList(),
   ]);
 
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "Bagaimana cara mendaftarkan anak ke SMP Muhammadiyah 4 Tanggul?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Pendaftaran dapat dilakukan secara online melalui halaman SPMB kami. Isi data calon peserta didik, lengkapi dokumen yang diperlukan, dan ikuti tahapan seleksi yang akan diinformasikan oleh panitia.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Apa saja program unggulan yang tersedia?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Kami memiliki 6 program unggulan: Program Tahfidz, Program Keberbakatan, Program Bahasa, Program Kepesantrenan, Program Akademik, dan 7 Golden Habits.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Berapa biaya masuk dan SPP per bulan?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Informasi lengkap mengenai biaya pendidikan dapat dilihat di halaman SPMB atau menghubungi bagian administrasi sekolah. Kami juga menyediakan beasiswa bagi siswa berprestasi.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Apakah tersedia fasilitas asrama?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Ya, kami menyediakan fasilitas asrama yang nyaman dan aman bagi siswa program Boarding School. Asrama dilengkapi dengan fasilitas penunjang pembelajaran dan pembiasaan ibadah.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Bagaimana dengan kurikulum yang diterapkan?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Kami menggunakan Kurikulum Merdeka yang dipadukan dengan ISMUBA (Al-Islam, Kemuhammadiyahan, dan Bahasa Arab) sebagai kurikulum khas Muhammadiyah.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Apakah ada kegiatan ekstrakurikuler?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Tentu! Kami menyediakan berbagai kegiatan ekstrakurikuler seperti Sepak Bola, Futsal, Bulu Tangkis, Hizbul Wathan, Catur, Qiroah, dan masih banyak lagi.",
+        },
+      },
+    ],
+  };
+
   return (
     <div className="bg-white text-[#172033]">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       {/* ── HERO ──────────────────────────────────────────── */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a]" />

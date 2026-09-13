@@ -68,11 +68,50 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
   const publishDate = new Date(berita.published_at || berita.created_at);
   const objectPosition = positionMap[berita.cover_image_position || "center"] || positionMap.center;
 
-  const shareUrl = `https://esceha.id/news/${berita.slug}`;
+  const shareUrl = `https://smpmuh4tanggul.web.id/news/${berita.slug}`;
   const shareText = encodeURIComponent(berita.title);
+
+  const newsJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    headline: berita.title,
+    description: berita.summary || berita.title,
+    image: berita.image_url || undefined,
+    datePublished: berita.published_at || berita.created_at,
+    dateModified: berita.updated_at || berita.published_at || berita.created_at,
+    author: {
+      "@type": "Person",
+      name: berita.writer_name || berita.author_name || "Admin MBS",
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "SMP Muhammadiyah 4 Tanggul",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://smpmuh4tanggul.web.id/images/Logo-Sekolah.png",
+      },
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": shareUrl,
+    },
+    articleSection: cat.label,
+  };
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Beranda", item: "https://smpmuh4tanggul.web.id" },
+      { "@type": "ListItem", position: 2, name: "Berita", item: "https://smpmuh4tanggul.web.id/news" },
+      { "@type": "ListItem", position: 3, name: berita.title, item: shareUrl },
+    ],
+  };
 
   return (
     <div className="min-h-screen bg-white">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(newsJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       {/* Sticky top bar */}
       <div className="sticky top-16 z-40 border-b border-slate-100 bg-white/95 backdrop-blur-md md:top-[72px]">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5">

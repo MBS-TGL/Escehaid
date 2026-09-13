@@ -43,8 +43,49 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
     );
   }
 
+  const articleUrl = `https://smpmuh4tanggul.web.id/articles/${article.slug}`;
+
+  const articleJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: article.title,
+    description: article.excerpt || article.title,
+    image: article.image_url || undefined,
+    datePublished: article.published_at || article.created_at,
+    dateModified: article.updated_at || article.published_at || article.created_at,
+    author: {
+      "@type": "Person",
+      name: article.author_name || "Tim MBS",
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "SMP Muhammadiyah 4 Tanggul",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://smpmuh4tanggul.web.id/images/Logo-Sekolah.png",
+      },
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": articleUrl,
+    },
+    articleSection: article.category,
+  };
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Beranda", item: "https://smpmuh4tanggul.web.id" },
+      { "@type": "ListItem", position: 2, name: "Artikel", item: "https://smpmuh4tanggul.web.id/articles" },
+      { "@type": "ListItem", position: 3, name: article.title, item: articleUrl },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-white">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       {/* Hero */}
       <section className="relative bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] text-white">
         <div className="absolute inset-0 opacity-10">

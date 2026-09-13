@@ -50,11 +50,64 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
+  const schoolJsonLd = {
+    "@context": "https://schema.org",
+    "@type": ["EducationalOrganization", "School"],
+    name: "SMP Muhammadiyah 4 Tanggul",
+    alternateName: "MBS Tanggul",
+    url: "https://smpmuh4tanggul.web.id",
+    logo: "https://smpmuh4tanggul.web.id/images/Logo-Sekolah.png",
+    image: "https://smpmuh4tanggul.web.id/images/Logo-Sekolah.png",
+    description: "SMP Muhammadiyah 4 Tanggul - Sekolah unggulan dengan program Tahfidz, keberbakatan, dan kepesantrenan di Tanggul, Jember.",
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: "Jl. Pemandian No. 88, Patemon",
+      addressLocality: "Tanggul",
+      addressRegion: "Jember",
+      postalCode: "68155",
+      addressCountry: "ID",
+    },
+    geo: {
+      "@type": "GeoCoordinates",
+      latitude: -8.1515,
+      longitude: 113.455,
+    },
+    telephone: "+6285806738160",
+    email: "smpm4tangguljember@gmail.com",
+    sameAs: [
+      "https://instagram.com/mbstanggul",
+      "https://youtube.com/@MBSTANGGUL",
+      "https://facebook.com/mbs.tanggul",
+    ],
+    foundingDate: "2003",
+    motto: "Pusat Kaderisasi Da'i & Ulama Hafidz",
+    schoolType: "Sekolah Menengah Pertama (SMP)",
+    educationalLevel: "Sekolah Menengah Pertama",
+    curriculum: "Kurikulum Merdeka",
+    numberOfStudents: {
+      "@type": "QuantitativeValue",
+      value: 300,
+    },
+    availableLanguage: ["id", "ar", "en"],
+    contactPoint: {
+      "@type": "ContactPoint",
+      telephone: "+6285806738160",
+      contactType: "admissions",
+      availableLanguage: ["id"],
+    },
+  };
+
   return (
     <html
       lang="id"
       className={`${jakartaSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schoolJsonLd) }}
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-gray-50">
         <ToastProvider>
           <PublicShell>{children}</PublicShell>
