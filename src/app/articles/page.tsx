@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Artikel",
+  description: "Artikel dan tips pendidikan dari guru SMP Muhammadiyah 4 Tanggul - Trik belajar, parenting, dan Islam terapan.",
 };
 
 export default async function ArtikelPage() {

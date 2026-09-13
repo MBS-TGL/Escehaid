@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -16,12 +16,34 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  themeColor: "#082b59",
+};
+
 export const metadata: Metadata = {
+  metadataBase: new URL("https://esceha.id"),
   title: {
     template: "%s | SMP Muhammadiyah 4 Tanggul",
     default: "SMP Muhammadiyah 4 Tanggul",
   },
-  description: "Sistem Informasi Sekolah SMP Muhammadiyah 4 Tanggul - SPMB Online, Berita, Galeri, dan Informasi Sekolah",
+  description: "SMP Muhammadiyah 4 Tanggul - Sekolah unggulan dengan program Tahfidz, keberbakatan, dan kepesantrenan. Daftar SPMB online di sini.",
+  openGraph: {
+    type: "website",
+    locale: "id_ID",
+    siteName: "SMP Muhammadiyah 4 Tanggul",
+    images: [
+      {
+        url: "/og-image.svg",
+        width: 1200,
+        height: 630,
+        alt: "SMP Muhammadiyah 4 Tanggul",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/og-image.svg"],
+  },
   icons: {
     icon: "/images/Logo-Favicon.png",
   },

@@ -15,6 +15,7 @@ const FACILITY_FALLBACKS: Record<string, string> = {
 
 export const metadata: Metadata = {
   title: "Profil",
+  description: "Kenali SMP Muhammadiyah 4 Tanggul - Visi, misi, tenaga pengajar, dan fasilitas sekolah unggulan di Tanggul, Jember.",
 };
 
 export default async function ProfilPage() {

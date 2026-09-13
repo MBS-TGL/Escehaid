@@ -19,7 +19,23 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const activity = await getActivityBySlug(slug);
   if (!activity) return { title: "Kegiatan Tidak Ditemukan" };
-  return { title: activity.title };
+  const description = activity.description || activity.title;
+  return {
+    title: activity.title,
+    description,
+    openGraph: {
+      title: activity.title,
+      description,
+      type: "article",
+      images: activity.image_url ? [{ url: activity.image_url, width: 1200, height: 630 }] : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: activity.title,
+      description,
+      images: activity.image_url ? [activity.image_url] : [],
+    },
+  };
 }
 
 export default async function ActivityDetailPage({ params }: { params: Promise<{ slug: string }> }) {

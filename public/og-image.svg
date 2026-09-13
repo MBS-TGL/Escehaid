@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#082b59"/>
+      <stop offset="50%" style="stop-color:#0a3570"/>
+      <stop offset="100%" style="stop-color:#0d4a8a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="900" cy="100" r="200" fill="#f4d21f" opacity="0.08"/>
+  <circle cx="100" cy="530" r="250" fill="#1767b1" opacity="0.08"/>
+  <rect x="80" y="220" width="8" height="190" rx="4" fill="#f4d21f"/>
+  <text x="110" y="270" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="white">SMP Muhammadiyah 4</text>
+  <text x="110" y="320" font-family="Arial, sans-serif" font-size="32" fill="white" opacity="0.8">Tanggul</text>
+  <text x="110" y="380" font-family="Arial, sans-serif" font-size="20" fill="#f4d21f" opacity="0.9">Pusat Kaderisasi Da'i &amp; Ulama Hafidz · School of Talents</text>
+  <text x="110" y="430" font-family="Arial, sans-serif" font-size="18" fill="white" opacity="0.5">esceha.id</text>
+</svg>

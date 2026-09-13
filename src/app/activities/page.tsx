@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Kegiatan",
+  description: "Kegiatan sekolah SMP Muhammadiyah 4 Tanggul - Kajian, perlombaan, upacara, dan ekstrakurikuler.",
 };
 
 const ACTIVITY_TYPES: Record<string, string> = {

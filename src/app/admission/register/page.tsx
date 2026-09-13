@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Daftar SPMB",
+  description: "Formulir pendaftaran SPMB SMP Muhammadiyah 4 Tanggul - Daftar online mudah dan cepat.",
 };
 
 export default function SPMBRegisterPage() {

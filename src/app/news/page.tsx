@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Berita",
+  description: "Berita terbaru dari SMP Muhammadiyah 4 Tanggul - Informasi kegiatan, pengumuman, dan agenda sekolah.",
 };
 
 const PAGE_SIZE = 9;

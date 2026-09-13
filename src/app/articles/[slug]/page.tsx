@@ -8,7 +8,23 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const article = await getArticleBySlug(slug);
   if (!article) return { title: "Artikel Tidak Ditemukan" };
-  return { title: article.title };
+  const description = article.excerpt || article.title;
+  return {
+    title: article.title,
+    description,
+    openGraph: {
+      title: article.title,
+      description,
+      type: "article",
+      images: article.image_url ? [{ url: article.image_url, width: 1200, height: 630 }] : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: article.title,
+      description,
+      images: article.image_url ? [article.image_url] : [],
+    },
+  };
 }
 
 export default async function ArtikelDetailPage({ params }: { params: Promise<{ slug: string }> }) {

@@ -11,7 +11,23 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const berita = await getNewsBySlug(slug);
   if (!berita) return { title: "Berita Tidak Ditemukan" };
-  return { title: berita.title, description: berita.summary || berita.title };
+  const description = berita.summary || berita.title;
+  return {
+    title: berita.title,
+    description,
+    openGraph: {
+      title: berita.title,
+      description,
+      type: "article",
+      images: berita.image_url ? [{ url: berita.image_url, width: 1200, height: 630 }] : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: berita.title,
+      description,
+      images: berita.image_url ? [berita.image_url] : [],
+    },
+  };
 }
 
 const categoryConfig: Record<string, { label: string; color: string; bg: string; border: string }> = {
