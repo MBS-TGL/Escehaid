@@ -26,6 +26,7 @@ const FACILITY_FALLBACKS: Record<string, string> = {
 export const metadata: Metadata = {
   title: "Beranda | SMP Muhammadiyah 4 Tanggul",
   description: "SMP Muhammadiyah 4 Tanggul - Sekolah unggulan dengan program Tahfidz, keberbakatan, dan kepesantrenan. Daftar SPMB online sekarang.",
+  alternates: { canonical: "/" },
 };
 
 type NewsItem = { id: string | number; slug: string; title: string; summary: string; category: string; image_url?: string | null; published_at?: string };

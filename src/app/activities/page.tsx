@@ -8,6 +8,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Kegiatan",
   description: "Kegiatan sekolah SMP Muhammadiyah 4 Tanggul - Kajian, perlombaan, upacara, dan ekstrakurikuler.",
+  alternates: { canonical: "/activities" },
 };
 
 const ACTIVITY_TYPES: Record<string, string> = {
@@ -24,6 +25,14 @@ export default async function ActivitiesPage() {
 
   return (
     <div>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Beranda", item: "https://smpmuh4tanggul.web.id" },
+          { "@type": "ListItem", position: 2, name: "Kegiatan", item: "https://smpmuh4tanggul.web.id/activities" },
+        ],
+      }) }} />
       <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-12 text-white md:py-16">
         <div className="absolute inset-0 opacity-20">
           <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />

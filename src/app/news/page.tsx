@@ -8,6 +8,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Berita",
   description: "Berita terbaru dari SMP Muhammadiyah 4 Tanggul - Informasi kegiatan, pengumuman, dan agenda sekolah.",
+  alternates: { canonical: "/news" },
 };
 
 const PAGE_SIZE = 9;
@@ -25,6 +26,14 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Beranda", item: "https://smpmuh4tanggul.web.id" },
+          { "@type": "ListItem", position: 2, name: "Berita", item: "https://smpmuh4tanggul.web.id/news" },
+        ],
+      }) }} />
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-12 text-white md:py-16">
         <div className="absolute inset-0 opacity-[0.04]">

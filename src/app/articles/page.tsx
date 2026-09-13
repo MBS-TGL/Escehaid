@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Artikel",
   description: "Artikel dan tips pendidikan dari guru SMP Muhammadiyah 4 Tanggul - Trik belajar, parenting, dan Islam terapan.",
+  alternates: { canonical: "/articles" },
 };
 
 export default async function ArtikelPage() {
@@ -14,6 +15,14 @@ export default async function ArtikelPage() {
 
   return (
     <div>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Beranda", item: "https://smpmuh4tanggul.web.id" },
+          { "@type": "ListItem", position: 2, name: "Artikel", item: "https://smpmuh4tanggul.web.id/articles" },
+        ],
+      }) }} />
       <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-12 text-white md:py-16">
         <div className="absolute inset-0 opacity-[0.04]">
           <BookOpen className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />

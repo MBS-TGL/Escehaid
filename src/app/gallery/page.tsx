@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Galeri",
   description: "Galeri foto dan video kegiatan SMP Muhammadiyah 4 Tanggul - Dokumentasi momen sekolah.",
+  alternates: { canonical: "/gallery" },
 };
 
 export default async function GalleryPage() {

@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "SPMB",
   description: "Informasi Penerimaan Peserta Didik Baru (SPMB) SMP Muhammadiyah 4 Tanggul - Jadwal, persyaratan, dan biaya.",
+  alternates: { canonical: "/admission" },
 };
 
 export default function PPDBPage() {
