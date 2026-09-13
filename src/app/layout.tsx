@@ -48,6 +48,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/images/Logo-Favicon.png",
   },
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

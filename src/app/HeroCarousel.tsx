@@ -11,11 +11,33 @@ const SEGMENTS = [
 
 export default function HeroCarousel() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [current, setCurrent] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    const video = videoRef.current;
+    if (!container || !video) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !loaded) {
+          video.src = VIDEO_URL;
+          video.load();
+          setLoaded(true);
+        }
+      },
+      { rootMargin: "200px" }
+    );
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [loaded]);
 
   useEffect(() => {
     const v = videoRef.current;
-    if (!v) return;
+    if (!v || !loaded) return;
 
     v.currentTime = SEGMENTS[current].start;
     v.play().catch(() => {});
@@ -31,17 +53,16 @@ export default function HeroCarousel() {
 
     v.addEventListener("timeupdate", onTimeUpdate);
     return () => v.removeEventListener("timeupdate", onTimeUpdate);
-  }, [current]);
+  }, [current, loaded]);
 
   return (
-    <div className="relative h-[480px] w-full overflow-hidden rounded-2xl border border-white/10 md:h-[600px]">
+    <div ref={containerRef} className="relative h-[480px] w-full overflow-hidden rounded-2xl border border-white/10 md:h-[600px]">
       <video
         ref={videoRef}
-        src={VIDEO_URL}
         muted
         loop
         playsInline
-        preload="auto"
+        preload="none"
         className="h-full w-full object-cover"
       />
 
@@ -63,7 +84,7 @@ export default function HeroCarousel() {
       {/* bottom label */}
       <div className="absolute bottom-0 left-0 right-0 z-20 p-8 pointer-events-none">
         <div className="flex items-center gap-3">
-          <Image src="/images/Logo-Sekolah.png" alt="Logo" width={40} height={52} style={{ width: "auto", height: "auto" }} className="h-10 w-auto" />
+          <Image src="/images/Logo-Sekolah.png" alt="Logo SMP Muhammadiyah 4 Tanggul" width={40} height={52} className="h-10 w-auto" />
           <div>
             <p className="text-sm font-bold text-white">SMP Muhammadiyah 4 Tanggul</p>
             <p className="text-xs text-white/60">Sejak 2016 &middot; Tanggul, Jember</p>
