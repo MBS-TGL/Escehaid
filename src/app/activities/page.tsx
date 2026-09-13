@@ -63,7 +63,7 @@ export default async function ActivitiesPage() {
                     {item.image_url ? (
                       <img src={item.image_url} alt={item.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
                     ) : (
-                      <img src={`https://picsum.photos/seed/${encodeURIComponent(item.title)}/600/400`} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-60" loading="lazy" />
+                      <img src={`https://picsum.photos/seed/${encodeURIComponent(item.title)}/600/400`} alt={item.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-60" loading="lazy" />
                     )}
                     <div className="absolute left-3 top-3">
                       <span className="rounded-full bg-[#f4d21f] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#082b59]">

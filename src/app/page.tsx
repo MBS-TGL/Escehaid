@@ -1,12 +1,14 @@
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy } from "@/components/Icons";
 import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList } from "@/lib/queries";
 import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
-import FAQ from "./FAQ";
-import WhatsAppButton from "./WhatsAppButton";
-import HeroCarousel from "./HeroCarousel";
-import TeacherCarousel from "./TeacherCarousel";
-import CountdownEvent from "@/components/CountdownEvent";
+
+const FAQ = dynamic(() => import("./FAQ"), { loading: () => <div className="h-96" /> });
+const WhatsAppButton = dynamic(() => import("./WhatsAppButton"));
+const HeroCarousel = dynamic(() => import("./HeroCarousel"), { loading: () => <div className="h-[480px] md:h-[600px] rounded-2xl bg-[#082b59]/10" /> });
+const TeacherCarousel = dynamic(() => import("./TeacherCarousel"), { loading: () => <div className="h-64 rounded-2xl bg-slate-100" /> });
+const CountdownEvent = dynamic(() => import("@/components/CountdownEvent"));
 import type { Metadata } from "next";
 
 function capitalizeCategory(cat: string): string {
@@ -371,7 +373,7 @@ export default async function Home() {
                             {f.image_url ? (
                               <img src={f.image_url} alt={f.name} className="h-full w-full object-cover" loading="lazy" />
                             ) : (
-                              <img src={FACILITY_FALLBACKS[f.name] || `https://picsum.photos/seed/${encodeURIComponent(f.name)}/100/100`} alt="" className="h-full w-full object-cover" loading="lazy" />
+                              <img src={FACILITY_FALLBACKS[f.name] || `https://picsum.photos/seed/${encodeURIComponent(f.name)}/100/100`} alt={f.name} className="h-full w-full object-cover" loading="lazy" />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">

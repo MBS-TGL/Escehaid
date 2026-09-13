@@ -275,7 +275,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
                       <Link key={item.id} href={`/news/${item.slug}`}
                         className="group flex gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-[#1767b1]/30 hover:shadow-md">
                         {item.image_url ? (
-                          <Image src={item.image_url} alt="" width={80} height={80} className="h-20 w-20 flex-shrink-0 rounded-lg object-cover" />
+                          <Image src={item.image_url} alt={item.title} width={80} height={80} className="h-20 w-20 flex-shrink-0 rounded-lg object-cover" />
                         ) : (
                           <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">
                             <Newspaper className="h-6 w-6 text-slate-300" />

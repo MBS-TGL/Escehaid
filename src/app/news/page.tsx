@@ -26,6 +26,8 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {currentPage > 1 && <link rel="prev" href={`/news?page=${currentPage - 1}${search ? `&search=${search}` : ""}`} />}
+      {currentPage < totalPages && <link rel="next" href={`/news?page=${currentPage + 1}${search ? `&search=${search}` : ""}`} />}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
