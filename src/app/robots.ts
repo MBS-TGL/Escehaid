@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/admin/", "/api/"],
       },
     ],
-    sitemap: "https://esceha.id/sitemap.xml",
+    sitemap: "https://smpmuh4tanggul.web.id/sitemap.xml",
   };
 }

@@ -21,7 +21,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://esceha.id"),
+  metadataBase: new URL("https://smpmuh4tanggul.web.id"),
   title: {
     template: "%s | SMP Muhammadiyah 4 Tanggul",
     default: "SMP Muhammadiyah 4 Tanggul",

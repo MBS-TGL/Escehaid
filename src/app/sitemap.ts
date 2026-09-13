@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getNewsListAll, getArticleListAll, getActivityListAll } from "@/lib/queries";
 
-const BASE_URL = "https://esceha.id";
+const BASE_URL = "https://smpmuh4tanggul.web.id";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [news, articles, activities] = await Promise.all([
