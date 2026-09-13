@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     siteName: "SMP Muhammadiyah 4 Tanggul",
     images: [
       {
-        url: "/og-image.svg",
+        url: "/og-image.png",
         width: 1200,
         height: 630,
         alt: "SMP Muhammadiyah 4 Tanggul",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    images: ["/og-image.svg"],
+    images: ["/og-image.png"],
   },
   icons: {
     icon: "/images/Logo-Favicon.png",
