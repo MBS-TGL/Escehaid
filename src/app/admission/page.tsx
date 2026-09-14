@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/admission" },
 };
 
+export const revalidate = 3600;
+
 export default function PPDBPage() {
   return (
     <div>

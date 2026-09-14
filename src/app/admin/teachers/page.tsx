@@ -336,7 +336,7 @@ export default function AdminTeachersPage() {
                     <td className="px-4 py-3.5">
                       <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-slate-100">
                         {item.photo_url ? (
-                          <img src={`${item.photo_url}?v=${photoBust[item.id] || 0}`} alt={item.name}
+                          <img src={`${item.photo_url}?v=${photoBust[item.id] || 0}`} alt={item.name} loading="lazy"
                             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }}
                             className="h-full w-full object-cover" />
                         ) : null}

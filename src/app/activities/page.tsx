@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/activities" },
 };
 
+export const revalidate = 3600;
+
 const ACTIVITY_TYPES: Record<string, string> = {
   kajian: "Kajian",
   peringatan: "Peringatan",
@@ -61,9 +63,9 @@ export default async function ActivitiesPage() {
                 <Link href={`/activities/${item.slug}`} className="group block overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:shadow-xl hover:shadow-[#082b59]/5">
                   <div className="relative aspect-[16/10] overflow-hidden bg-[#f4f7fb]">
                     {item.image_url ? (
-                      <img src={item.image_url} alt={item.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
+                      <Image src={item.image_url} alt={item.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     ) : (
-                      <img src={`https://picsum.photos/seed/${encodeURIComponent(item.title)}/600/400`} alt={item.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-60" loading="lazy" />
+                      <Image src="/images/Ruang-Kelas.jpg" alt={item.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-60" />
                     )}
                     <div className="absolute left-3 top-3">
                       <span className="rounded-full bg-[#f4d21f] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#082b59]">

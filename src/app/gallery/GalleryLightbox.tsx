@@ -1,11 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Gallery } from "@/lib/supabase";
+import Image from "next/image";
 import { X } from "@/components/Icons";
 
-export default function GalleryLightbox({ items }: { items: Gallery[] }) {
+export default function GalleryLightbox({
+  items,
+  page,
+  perPage,
+}: {
+  items: Gallery[];
+  page: number;
+  perPage: number;
+}) {
   const [selected, setSelected] = useState<Gallery | null>(null);
+  const router = useRouter();
+  const hasMore = items.length === perPage;
 
   function close() {
     setSelected(null);
@@ -21,9 +33,11 @@ export default function GalleryLightbox({ items }: { items: Gallery[] }) {
               className="group relative block aspect-square w-full overflow-hidden rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] text-left"
             >
               {item.media_type === "foto" ? (
-                <img
+                <Image
                   src={item.thumbnail_url || item.url}
                   alt={item.title}
+                  width={400}
+                  height={300}
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"
                 />
@@ -43,6 +57,28 @@ export default function GalleryLightbox({ items }: { items: Gallery[] }) {
           </div>
         ))}
       </div>
+
+      {hasMore && (
+        <div className="mt-10 text-center">
+          <button
+            onClick={() => router.push(`/gallery?page=${page + 1}`, { scroll: false })}
+            className="rounded-xl bg-[#082b59] px-8 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#1767b1]"
+          >
+            Muat Lebih Banyak
+          </button>
+        </div>
+      )}
+
+      {page > 0 && (
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => router.push(page === 1 ? "/gallery" : `/gallery?page=${page - 1}`, { scroll: false })}
+            className="rounded-xl border border-[#dce3ed] bg-white px-8 py-3 text-sm font-semibold text-[#082b59] transition-colors hover:bg-[#f4f7fb]"
+          >
+            Kembali
+          </button>
+        </div>
+      )}
 
       {selected && (
         <div
@@ -72,6 +108,7 @@ export default function GalleryLightbox({ items }: { items: Gallery[] }) {
                 src={selected.url}
                 alt={selected.title}
                 className="w-full rounded-xl object-contain max-h-[80vh]"
+                loading="lazy"
               />
             )}
 

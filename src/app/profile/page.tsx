@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/profile" },
 };
 
+export const revalidate = 3600;
+
 export default async function ProfilPage() {
   const [profil, teachers, facilities, achievements, gallery] = await Promise.all([
     getSchoolProfile(),
@@ -95,11 +97,12 @@ export default async function ProfilPage() {
                 <div className="relative">
                   <div className="absolute -inset-4 rounded-full bg-gradient-to-br from-[#f4d21f]/30 to-[#1767b1]/20 blur-xl" />
                   <div className="relative h-64 w-64 overflow-hidden rounded-full border-4 border-[#f4d21f] md:h-80 md:w-80">
-                    <img
+                    <Image
                       src={profil?.principal_photo_url || "/images/Kepala-Sekolah.jpg"}
                       alt={profil?.principal_name || "Kepala Sekolah"}
-                      className="h-full w-full object-cover object-[center_20%]"
-                      loading="lazy"
+                      fill
+                      sizes="(max-width: 768px) 256px, 320px"
+                      className="object-cover object-[center_20%]"
                     />
                   </div>
                   <div className="absolute -bottom-2 -right-2 rounded-2xl bg-[#082b59] px-4 py-2 shadow-lg">
@@ -228,7 +231,7 @@ export default async function ProfilPage() {
                   <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:shadow-xl hover:shadow-[#082b59]/5">
                     <div className="relative h-48 overflow-hidden bg-[#f4f7fb]">
                       <Image
-                        src={f.image_url || FACILITY_FALLBACKS[f.name] || `https://picsum.photos/seed/${encodeURIComponent(f.name)}/600/400`}
+                        src={f.image_url || FACILITY_FALLBACKS[f.name] || "/images/Ruang-Kelas.jpg"}
                         alt={f.name}
                         fill
                         sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -321,7 +324,7 @@ export default async function ProfilPage() {
                 <StaggerItem key={g.id}>
                   <Link href="/gallery" className="group relative block aspect-square overflow-hidden rounded-xl">
                     <Image
-                      src={g.thumbnail_url || g.url || `https://picsum.photos/seed/${encodeURIComponent(g.title)}/400/400`}
+                      src={g.thumbnail_url || g.url || "/images/Ruang-Kelas.jpg"}
                       alt={g.title}
                       fill
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"

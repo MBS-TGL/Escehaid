@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/achievements" },
 };
 
+export const revalidate = 3600;
+
 export default async function PrestasiPage() {
   const achievements = await getAchievementList();
 

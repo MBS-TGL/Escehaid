@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
+import Image from "next/image";
 import { User } from "@/components/Icons";
 import { Splide } from "@splidejs/splide";
 import type { Teacher } from "@/lib/supabase";
@@ -88,10 +89,12 @@ export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
               <div key={t.id} className="splide__slide" style={{ width: "calc(16.6667% - 8.33333px)", marginRight: "10px" }}>
                 <div className="group/card relative aspect-[3/4] overflow-hidden rounded-none bg-[#082b59] shadow-md transition-shadow duration-500 hover:shadow-xl">
                   {t.photo_url ? (
-                    <img
+                    <Image
                       src={t.photo_url}
                       alt={t.name}
-                      className="h-full w-full object-cover object-top transition-transform duration-700 ease-out group-hover/card:scale-105"
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 16.67vw"
+                      className="object-cover object-top transition-transform duration-700 ease-out group-hover/card:scale-105"
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-[#f0f4fa]">

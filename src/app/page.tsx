@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import dynamic from "next/dynamic";
 import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy } from "@/components/Icons";
 import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList } from "@/lib/queries";
@@ -30,6 +31,8 @@ export const metadata: Metadata = {
   description: "SMP Muhammadiyah 4 Tanggul - Sekolah unggulan dengan program Tahfidz, keberbakatan, dan kepesantrenan. Daftar SPMB online sekarang.",
   alternates: { canonical: "/" },
 };
+
+export const revalidate = 3600;
 
 type NewsItem = { id: string | number; slug: string; title: string; summary: string; category: string; image_url?: string | null; published_at?: string };
 
@@ -179,11 +182,13 @@ export default async function Home() {
                 <div className="relative">
                   <div className="absolute -inset-4 rounded-full bg-gradient-to-br from-[#f4d21f]/30 to-[#1767b1]/20 blur-xl" />
                   <div className="relative h-56 w-56 overflow-hidden rounded-full border-4 border-[#f4d21f] md:h-72 md:w-72">
-                    <img
+                    <Image
                       src={profile?.principal_photo_url || "/images/Kepala-Sekolah.jpg"}
                       alt={`${profile?.principal_name || "Kepala Sekolah"} - Kepala Sekolah`}
-                      className="h-full w-full object-cover object-[center_15%]"
-                      loading="lazy"
+                      fill
+                      sizes="288px"
+                      className="object-cover object-[center_15%]"
+                      priority
                     />
                   </div>
                   <div className="absolute -bottom-2 -right-2 rounded-2xl bg-[#082b59] px-4 py-2 shadow-lg">
@@ -239,7 +244,7 @@ export default async function Home() {
                     <Link href="/news" className="group block overflow-hidden rounded-xl">
                       <div className="relative aspect-[4/3] overflow-hidden bg-[#f4f7fb]">
                         {beritaRaw[0]?.image_url ? (
-                          <img src={beritaRaw[0].image_url} alt={beritaRaw[0].title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
+                          <Image src={beritaRaw[0].image_url} alt={beritaRaw[0].title} fill sizes="(max-width: 768px) 100vw, 320px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center">
                             <Megaphone className="h-12 w-12 text-[#082b59]/10" />
@@ -257,7 +262,7 @@ export default async function Home() {
                         <Link key={item.id} href={`/news/${item.slug}`} className="group flex gap-2.5">
                           <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f4f7fb]">
                             {item.image_url ? (
-                              <img src={item.image_url} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
+                              <Image src={item.image_url} alt={item.title} width={56} height={56} className="h-full w-full object-cover" />
                             ) : (
                               <div className="flex h-full w-full items-center justify-center">
                                 <Megaphone className="h-5 w-5 text-[#082b59]/15" />
@@ -297,7 +302,7 @@ export default async function Home() {
                     <Link href="/activities" className="group block overflow-hidden rounded-xl">
                       <div className="relative aspect-[4/3] overflow-hidden bg-[#f4f7fb]">
                         {activities[0]?.image_url ? (
-                          <img src={activities[0].image_url} alt={activities[0].title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
+                          <Image src={activities[0].image_url} alt={activities[0].title} fill sizes="(max-width: 768px) 100vw, 320px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center">
                             <CalendarBlank className="h-12 w-12 text-[#082b59]/10" />
@@ -315,7 +320,7 @@ export default async function Home() {
                         <Link key={item.slug} href={`/activities/${item.slug}`} className="group flex gap-2.5">
                           <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f4f7fb]">
                             {item.image_url ? (
-                              <img src={item.image_url} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
+                              <Image src={item.image_url} alt={item.title} width={56} height={56} className="h-full w-full object-cover" />
                             ) : (
                               <div className="flex h-full w-full items-center justify-center">
                                 <CalendarBlank className="h-5 w-5 text-[#082b59]/15" />
@@ -355,9 +360,9 @@ export default async function Home() {
                     <Link href="/profile#fasilitas" className="group block overflow-hidden rounded-xl">
                       <div className="relative aspect-[4/3] overflow-hidden bg-[#f4f7fb]">
                         {dbFacilities[0]?.image_url ? (
-                          <img src={dbFacilities[0].image_url} alt={dbFacilities[0].name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
+                          <Image src={dbFacilities[0].image_url} alt={dbFacilities[0].name} fill sizes="(max-width: 768px) 100vw, 320px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
                         ) : (
-                          <img src={FACILITY_FALLBACKS[dbFacilities[0]?.name] || "https://picsum.photos/seed/fasilitas/600/450"} alt={dbFacilities[0]?.name || "Fasilitas"} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
+                          <Image src={FACILITY_FALLBACKS[dbFacilities[0]?.name] || "/images/Ruang-Kelas.jpg"} alt={dbFacilities[0]?.name || "Fasilitas"} fill sizes="(max-width: 768px) 100vw, 320px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-[#082b59]/80 via-[#082b59]/20 to-transparent" />
                         <div className="absolute bottom-0 left-0 right-0 p-3.5">
@@ -371,9 +376,9 @@ export default async function Home() {
                         <Link key={f.id} href="/profile#fasilitas" className="group flex gap-2.5">
                           <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f4f7fb]">
                             {f.image_url ? (
-                              <img src={f.image_url} alt={f.name} className="h-full w-full object-cover" loading="lazy" />
+                              <Image src={f.image_url} alt={f.name} width={56} height={56} className="h-full w-full object-cover" />
                             ) : (
-                              <img src={FACILITY_FALLBACKS[f.name] || `https://picsum.photos/seed/${encodeURIComponent(f.name)}/100/100`} alt={f.name} className="h-full w-full object-cover" loading="lazy" />
+                              <Image src={FACILITY_FALLBACKS[f.name] || "/images/Ruang-Kelas.jpg"} alt={f.name} width={56} height={56} className="h-full w-full object-cover" />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -409,7 +414,7 @@ export default async function Home() {
                     <Link href="/achievements" className="group block overflow-hidden rounded-xl">
                       <div className="relative aspect-[4/3] overflow-hidden bg-[#f4f7fb]">
                         {achievements[0]?.image_url ? (
-                          <img src={achievements[0].image_url} alt={achievements[0].title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
+                          <Image src={achievements[0].image_url} alt={achievements[0].title} fill sizes="(max-width: 768px) 100vw, 320px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center">
                             <Trophy className="h-12 w-12 text-[#082b59]/10" />
@@ -427,7 +432,7 @@ export default async function Home() {
                         <Link key={a.id} href="/achievements" className="group flex gap-2.5">
                           <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f4f7fb]">
                             {a.image_url ? (
-                              <img src={a.image_url} alt={a.title} className="h-full w-full object-cover" loading="lazy" />
+                              <Image src={a.image_url} alt={a.title} width={56} height={56} className="h-full w-full object-cover" />
                             ) : (
                               <div className="flex h-full w-full items-center justify-center">
                                 <Trophy className="h-5 w-5 text-[#082b59]/15" />

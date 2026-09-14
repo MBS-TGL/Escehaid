@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/admission/register" },
 };
 
+export const revalidate = 3600;
+
 export default function SPMBRegisterPage() {
   return (
     <div>

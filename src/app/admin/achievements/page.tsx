@@ -361,7 +361,7 @@ export default function AdminAchievementsPage() {
                     <td className="px-4 py-3.5 cursor-pointer" onClick={() => setViewItem(item)}>
                       <div className="flex items-center gap-3">
                         {item.image_url ? (
-                          <img src={item.image_url} alt="" className="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
+                          <img src={item.image_url} alt="" loading="lazy" className="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
                         ) : (
                           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#f4d21f]/10">
                             <Medal className="h-5 w-5 text-[#f4d21f]" />
@@ -445,7 +445,7 @@ export default function AdminAchievementsPage() {
             </div>
             {viewItem.image_url && (
               <div className="mb-4 overflow-hidden rounded-xl">
-                <img src={viewItem.image_url} alt={viewItem.title} className="h-40 w-full object-cover" />
+                <img src={viewItem.image_url} alt={viewItem.title} loading="lazy" className="h-40 w-full object-cover" />
               </div>
             )}
             <div className="space-y-3 text-sm">

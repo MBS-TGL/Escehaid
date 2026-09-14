@@ -7,6 +7,7 @@ import {
   sendContactEmail,
   sendContactAdminEmail,
 } from "./notifications";
+import { compressImage } from "./compress-image";
 
 interface NewsWithAuthor extends News {
   author_name?: string;
@@ -53,7 +54,7 @@ export async function getNewsListPaginated(
 
   let query = supabase
     .from("news")
-    .select("*, user_profiles(full_name)", { count: "exact" })
+    .select("id, title, slug, summary, cover_position, image_url, category, is_published, published_at, created_at, user_profiles(full_name)", { count: "exact" })
     .eq("is_published", true)
     .order("published_at", { ascending: false });
 
@@ -86,7 +87,7 @@ export async function getNewsListPaginated(
 export async function getNewsList(limit?: number, search?: string): Promise<NewsWithAuthor[]> {
   let query = supabase
     .from("news")
-    .select("*, user_profiles(full_name)")
+    .select("id, title, slug, summary, image_url, category, published_at, created_at, user_profiles(full_name)")
     .eq("is_published", true)
     .order("published_at", { ascending: false });
 
@@ -295,14 +296,14 @@ export async function uploadNewsImage(
   file: File,
   newsId: string
 ): Promise<{ url: string | null; error?: string }> {
-  const ext = file.name.split(".").pop();
-  const path = `news/${newsId}.${ext}`;
+  const compressed = await compressImage(file);
+  const path = `news/${newsId}.jpg`;
 
   await cleanupOldFiles("news", newsId);
 
   const { error: uploadError } = await supabase.storage
     .from("images")
-    .upload(path, file, { upsert: true });
+    .upload(path, compressed, { upsert: true });
 
   if (uploadError) {
     console.error("Error uploading image:", uploadError);
@@ -328,6 +329,23 @@ export async function getGalleryList(limit?: number): Promise<Gallery[]> {
 
   if (error) {
     console.error("Error fetching gallery:", error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function getGalleryPage(page: number, perPage: number = 20): Promise<Gallery[]> {
+  const start = page * perPage;
+  const end = start + perPage - 1;
+
+  const { data, error } = await supabase
+    .from("gallery")
+    .select("id, title, description, url, thumbnail_url, category, media_type, created_at")
+    .order("created_at", { ascending: false })
+    .range(start, end);
+
+  if (error) {
+    console.error("Error fetching gallery page:", error);
     return [];
   }
   return data || [];
@@ -564,14 +582,14 @@ export async function uploadFacilityImage(
   file: File,
   facilityId: string
 ): Promise<{ url: string | null; error?: string }> {
-  const ext = file.name.split(".").pop();
-  const path = `facilities/${facilityId}.${ext}`;
+  const compressed = await compressImage(file);
+  const path = `facilities/${facilityId}.jpg`;
 
   await cleanupOldFiles("facilities", facilityId);
 
   const { error: uploadError } = await supabase.storage
     .from("images")
-    .upload(path, file, { upsert: true });
+    .upload(path, compressed, { upsert: true });
   if (uploadError) {
     console.error("Error uploading facility image:", uploadError);
     return { url: null, error: uploadError.message };
@@ -584,7 +602,7 @@ export async function uploadFacilityImage(
 export async function getArticleList(limit?: number): Promise<ArticleWithAuthor[]> {
   let query = supabase
     .from("articles")
-    .select("*, user_profiles(full_name)")
+    .select("id, title, slug, excerpt, image_url, category, is_published, published_at, created_at, user_profiles(full_name)")
     .eq("is_published", true)
     .order("published_at", { ascending: false });
 
@@ -750,14 +768,14 @@ export async function uploadArticleImage(
   file: File,
   articleId: string
 ): Promise<{ url: string | null; error?: string }> {
-  const ext = file.name.split(".").pop();
-  const path = `articles/${articleId}.${ext}`;
+  const compressed = await compressImage(file);
+  const path = `articles/${articleId}.jpg`;
 
   await cleanupOldFiles("articles", articleId);
 
   const { error: uploadError } = await supabase.storage
     .from("images")
-    .upload(path, file, { upsert: true });
+    .upload(path, compressed, { upsert: true });
   if (uploadError) {
     console.error("Error uploading article image:", uploadError);
     return { url: null, error: uploadError.message };
@@ -770,7 +788,7 @@ export async function uploadArticleImage(
 export async function getActivityList(limit?: number): Promise<Activity[]> {
   let query = supabase
     .from("activities")
-    .select("*")
+    .select("id, title, slug, description, activity_type, activity_date, image_url, is_published, created_at")
     .eq("is_published", true)
     .order("activity_date", { ascending: false });
 
@@ -925,14 +943,14 @@ export async function uploadActivityImage(
   file: File,
   activityId: string
 ): Promise<{ url: string | null; error?: string }> {
-  const ext = file.name.split(".").pop();
-  const path = `activities/${activityId}.${ext}`;
+  const compressed = await compressImage(file);
+  const path = `activities/${activityId}.jpg`;
 
   await cleanupOldFiles("activities", activityId);
 
   const { error: uploadError } = await supabase.storage
     .from("images")
-    .upload(path, file, { upsert: true });
+    .upload(path, compressed, { upsert: true });
   if (uploadError) {
     console.error("Error uploading activity image:", uploadError);
     return { url: null, error: uploadError.message };
@@ -1021,14 +1039,14 @@ export async function uploadGalleryImage(
   file: File,
   galleryId: string
 ): Promise<{ url: string | null; error?: string }> {
-  const ext = file.name.split(".").pop();
-  const path = `gallery/${galleryId}.${ext}`;
+  const compressed = await compressImage(file);
+  const path = `gallery/${galleryId}.jpg`;
 
   await cleanupOldFiles("gallery", galleryId);
 
   const { error: uploadError } = await supabase.storage
     .from("images")
-    .upload(path, file, { upsert: true });
+    .upload(path, compressed, { upsert: true });
   if (uploadError) {
     console.error("Error uploading gallery image:", uploadError);
     return { url: null, error: uploadError.message };
@@ -1119,14 +1137,14 @@ export async function uploadAchievementImage(
   file: File,
   achievementId: string
 ): Promise<{ url: string | null; error?: string }> {
-  const ext = file.name.split(".").pop();
-  const path = `achievements/${achievementId}.${ext}`;
+  const compressed = await compressImage(file);
+  const path = `achievements/${achievementId}.jpg`;
 
   await cleanupOldFiles("achievements", achievementId);
 
   const { error: uploadError } = await supabase.storage
     .from("images")
-    .upload(path, file, { upsert: true });
+    .upload(path, compressed, { upsert: true });
   if (uploadError) {
     console.error("Error uploading achievement image:", uploadError);
     return { url: null, error: uploadError.message };
@@ -1139,14 +1157,14 @@ export async function uploadTeacherPhoto(
   file: File,
   teacherId: string
 ): Promise<{ url: string | null; error?: string }> {
-  const ext = file.name.split(".").pop();
-  const path = `teachers/${teacherId}.${ext}`;
+  const compressed = await compressImage(file);
+  const path = `teachers/${teacherId}.jpg`;
 
   await cleanupOldFiles("teachers", teacherId);
 
   const { error: uploadError } = await supabase.storage
     .from("images")
-    .upload(path, file, { upsert: true });
+    .upload(path, compressed, { upsert: true });
 
   if (uploadError) {
     console.error("Error uploading teacher photo:", uploadError);

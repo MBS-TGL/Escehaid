@@ -1,10 +1,13 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getActivityBySlug, getActivityList } from "@/lib/queries";
 import { sanitize } from "@/lib/sanitize";
 import { FadeIn } from "@/components/Animations";
 import { CalendarBlank, MapPin, ArrowLeft } from "@/components/Icons";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+
+export const revalidate = 3600;
 
 const ACTIVITY_TYPES: Record<string, string> = {
   kajian: "Kajian",
@@ -128,7 +131,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         <FadeIn>
           {activity.image_url && (
             <div className="relative mb-8 aspect-[16/9] overflow-hidden rounded-2xl">
-              <img src={activity.image_url} alt={activity.title} className="h-full w-full object-cover" />
+              <Image src={activity.image_url} alt={activity.title} fill sizes="100vw" className="h-full w-full object-cover" />
             </div>
           )}
 

@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/news" },
 };
 
+export const revalidate = 3600;
+
 const PAGE_SIZE = 9;
 
 const categoryConfig: Record<string, { label: string; color: string; bg: string; border: string }> = {

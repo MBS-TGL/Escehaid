@@ -1,5 +1,5 @@
 import { ImageSquare, Star } from "@/components/Icons";
-import { getGalleryList } from "@/lib/queries";
+import { getGalleryPage } from "@/lib/queries";
 import { FadeIn } from "@/components/Animations";
 import GalleryLightbox from "./GalleryLightbox";
 import type { Metadata } from "next";
@@ -10,8 +10,14 @@ export const metadata: Metadata = {
   alternates: { canonical: "/gallery" },
 };
 
-export default async function GalleryPage() {
-  const gallery = await getGalleryList();
+export const revalidate = 3600;
+
+const PER_PAGE = 20;
+
+export default async function GalleryPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const sp = await searchParams;
+  const page = Math.max(0, Number(sp.page) || 0);
+  const gallery = await getGalleryPage(page, PER_PAGE);
 
   return (
     <div>
@@ -32,7 +38,7 @@ export default async function GalleryPage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-6 py-16">
-        {gallery.length === 0 ? (
+        {gallery.length === 0 && page === 0 ? (
           <FadeIn>
             <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white py-20 text-center">
               <ImageSquare className="h-14 w-14 text-[#082b59]/20" />
@@ -42,7 +48,7 @@ export default async function GalleryPage() {
           </FadeIn>
         ) : (
           <FadeIn>
-            <GalleryLightbox items={gallery} />
+            <GalleryLightbox items={gallery} page={page} perPage={PER_PAGE} />
           </FadeIn>
         )}
       </section>

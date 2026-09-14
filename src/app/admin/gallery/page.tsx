@@ -346,7 +346,7 @@ export default function AdminGalleryPage() {
                   <div onClick={() => setViewItem(item)} className="cursor-pointer">
                     <div className="aspect-square bg-slate-100 flex items-center justify-center">
                       {item.url ? (
-                        <img src={item.url} alt={item.title} className="h-full w-full object-cover" />
+                        <img src={item.url} alt={item.title} loading="lazy" className="h-full w-full object-cover" />
                       ) : item.media_type === "video" ? (
                         <Video className="h-10 w-10 text-slate-300 sm:h-12 sm:w-12" />
                       ) : (
@@ -403,7 +403,7 @@ export default function AdminGalleryPage() {
                 viewItem.media_type === "video" ? (
                   <video src={viewItem.url} controls className="h-full w-full object-cover" />
                 ) : (
-                  <img src={viewItem.url} alt={viewItem.title} className="h-full w-full object-cover" />
+                  <img src={viewItem.url} alt={viewItem.title} loading="lazy" className="h-full w-full object-cover" />
                 )
               ) : (
                 <ImageSquare className="h-16 w-16 text-slate-300" />

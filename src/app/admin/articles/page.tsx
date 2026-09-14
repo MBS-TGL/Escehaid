@@ -396,7 +396,7 @@ export default function AdminArticlesPage() {
                     <td className="px-4 py-3.5 cursor-pointer" onClick={() => setViewItem(item)}>
                       <div className="flex items-center gap-3">
                         {item.image_url ? (
-                          <img src={item.image_url} alt="" className="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
+                          <img src={item.image_url} alt="" loading="lazy" className="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
                         ) : (
                           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">
                             <FileText className="h-5 w-5 text-slate-300" />
@@ -485,7 +485,7 @@ export default function AdminArticlesPage() {
           <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
             {viewItem.image_url && (
               <div className="h-48 overflow-hidden rounded-t-2xl sm:h-64">
-                <img src={viewItem.image_url} alt={viewItem.title} className="h-full w-full object-cover" />
+                <img src={viewItem.image_url} alt={viewItem.title} loading="lazy" className="h-full w-full object-cover" />
               </div>
             )}
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">

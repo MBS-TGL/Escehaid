@@ -1,8 +1,11 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowLeft, Clock, User, BookOpen } from "@/components/Icons";
 import { getArticleBySlug } from "@/lib/queries";
 import { sanitize } from "@/lib/sanitize";
 import type { Metadata } from "next";
+
+export const revalidate = 3600;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -128,11 +131,13 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
       {/* Content */}
       <article className="mx-auto max-w-4xl px-4 py-10 md:py-14">
         {article.image_url && (
-          <div className="mb-8 overflow-hidden rounded-2xl">
-            <img
+          <div className="relative mb-8 aspect-video overflow-hidden rounded-2xl">
+            <Image
               src={article.image_url}
               alt={article.title}
-              className="h-auto w-full object-cover"
+              fill
+              sizes="100vw"
+              className="object-cover"
             />
           </div>
         )}
