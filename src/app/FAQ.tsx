@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { CaretDown } from "@phosphor-icons/react";
 import Link from "next/link";
-import { FadeIn } from "@/components/Animations";
+import { CSSFadeIn } from "@/components/CSSAnimations";
 
 const faqs = [
   {
@@ -64,43 +63,41 @@ function FAQItem({ q, a, index }: { q: string; a: string; index: number }) {
         >
           {q}
         </span>
-        <motion.div
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ duration: 0.3 }}
+        <div
           className={`shrink-0 transition-colors duration-300 ${
             isOpen ? "text-[#1767b1]" : "text-[#082b59]/30 group-hover:text-[#1767b1]"
           }`}
+          style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.3s ease" }}
         >
           <CaretDown className="h-5 w-5" />
-        </motion.div>
+        </div>
       </button>
 
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="px-5 pb-5 pl-17">
-              <div className="border-l-2 border-[#f4d21f] pl-4">
-                <p className="text-sm leading-relaxed text-slate-600">{a}</p>
-              </div>
+      <div
+        className="overflow-hidden"
+        style={{
+          display: "grid",
+          gridTemplateRows: isOpen ? "1fr" : "0fr",
+          transition: "grid-template-rows 0.3s ease",
+        }}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="px-5 pb-5 pl-17">
+            <div className="border-l-2 border-[#f4d21f] pl-4">
+              <p className="text-sm leading-relaxed text-slate-600">{a}</p>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 export default function FAQ() {
   return (
-    <section className="bg-[#f4f7fb]">
+    <section className="bg-[#f4f7fb]" style={{ contentVisibility: "auto" } as React.CSSProperties}>
       <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
-        <FadeIn>
+        <CSSFadeIn>
           <div className="mb-14 text-center">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">FAQ</p>
             <h2 className="mt-4 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">
@@ -113,15 +110,15 @@ export default function FAQ() {
               </Link>
             </p>
           </div>
-        </FadeIn>
+        </CSSFadeIn>
 
-        <FadeIn delay={0.15}>
+        <CSSFadeIn delay={0.15}>
           <div className="mx-auto grid max-w-4xl gap-3 md:grid-cols-1">
             {faqs.map((faq, i) => (
               <FAQItem key={i} q={faq.q} a={faq.a} index={i} />
             ))}
           </div>
-        </FadeIn>
+        </CSSFadeIn>
       </div>
     </section>
   );

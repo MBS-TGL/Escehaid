@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { submitContactMessage } from "@/lib/queries";
 import { MapPin, Phone, Envelope, Clock, WhatsappLogo, InstagramLogo, YoutubeLogo, FacebookLogo } from "@/components/Icons";
-import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
+import { CSSFadeIn } from "@/components/CSSAnimations";
 
 export default function ContactForm() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: "" });
@@ -35,19 +35,19 @@ export default function ContactForm() {
           <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
         </div>
         <div className="relative mx-auto max-w-7xl px-6 text-center">
-          <FadeIn>
+          <CSSFadeIn>
             <h1 className="text-3xl font-bold md:text-4xl">Hubungi Kami</h1>
             <p className="mt-3 text-base text-white/70">Kami siap membantu Anda. Kirim pesan atau hubungi langsung.</p>
-          </FadeIn>
+          </CSSFadeIn>
         </div>
       </section>
 
       {/* Main Content */}
-      <section className="bg-[#f4f7fb]">
+      <section className="bg-[#f4f7fb]" style={{ contentVisibility: "auto" } as React.CSSProperties}>
         <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
           <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr]">
             {/* Left: Form */}
-            <FadeIn>
+            <CSSFadeIn>
               <div className="rounded-2xl border border-[#dce3ed] bg-white p-6 shadow-sm md:p-8">
                 <h2 className="text-xl font-bold text-[#082b59]">Kirim Pesan</h2>
                 <p className="mt-1.5 text-sm text-slate-500">Isi form di bawah ini, kami akan merespons secepat mungkin.</p>
@@ -128,12 +128,12 @@ export default function ContactForm() {
                   </button>
                 </form>
               </div>
-            </FadeIn>
+            </CSSFadeIn>
 
             {/* Right: Info */}
             <div className="space-y-5">
               {/* Map */}
-              <FadeIn direction="left">
+              <CSSFadeIn>
                 <div className="overflow-hidden rounded-2xl border border-[#dce3ed]">
                   <iframe
                     src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3947.8!2d113.455!3d-8.1515!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2dd6fb0000000001%3A0x0!2sSMP%20Muhammadiyah%204%20Tanggul!5e0!3m2!1sid!2sid!4v1"
@@ -146,10 +146,10 @@ export default function ContactForm() {
                     title="Lokasi SMP Muhammadiyah 4 Tanggul"
                   />
                 </div>
-              </FadeIn>
+              </CSSFadeIn>
 
               {/* Quick Info */}
-              <FadeIn direction="left" delay={0.1}>
+              <CSSFadeIn delay={0.1}>
                 <div className="rounded-2xl border border-[#dce3ed] bg-white p-5">
                   <h3 className="text-sm font-bold text-[#082b59]">Informasi Sekolah</h3>
                   <div className="mt-3 space-y-2.5">
@@ -178,10 +178,10 @@ export default function ContactForm() {
                     </div>
                   </div>
                 </div>
-              </FadeIn>
+              </CSSFadeIn>
 
               {/* Contact Persons */}
-              <FadeIn direction="left" delay={0.15}>
+              <CSSFadeIn delay={0.15}>
                 <div className="rounded-2xl border border-[#dce3ed] bg-white p-5">
                   <h3 className="text-sm font-bold text-[#082b59]">Contact Person SPMB</h3>
                   <div className="mt-3 space-y-2.5">
@@ -205,10 +205,10 @@ export default function ContactForm() {
                     ))}
                   </div>
                 </div>
-              </FadeIn>
+              </CSSFadeIn>
 
               {/* Social Media */}
-              <FadeIn direction="left" delay={0.2}>
+              <CSSFadeIn delay={0.2}>
                 <div className="rounded-2xl border border-[#dce3ed] bg-white p-5">
                   <h3 className="text-sm font-bold text-[#082b59]">Ikuti Kami</h3>
                   <div className="mt-3 flex gap-3">
@@ -230,7 +230,7 @@ export default function ContactForm() {
                     ))}
                   </div>
                 </div>
-              </FadeIn>
+              </CSSFadeIn>
             </div>
           </div>
         </div>

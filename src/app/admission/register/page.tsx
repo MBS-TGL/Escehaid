@@ -1,5 +1,5 @@
 import SPMBForm from "./SPMBForm";
-import { FadeIn } from "@/components/Animations";
+import { CSSFadeIn } from "@/components/CSSAnimations";
 import { FileText, CheckCircle, Phone } from "@/components/Icons";
 import type { Metadata } from "next";
 
@@ -23,17 +23,17 @@ export default function SPMBRegisterPage() {
           <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
         </div>
         <div className="relative mx-auto max-w-7xl px-6 text-center">
-          <FadeIn>
+          <CSSFadeIn>
             <h1 className="text-3xl font-bold md:text-4xl">Formulir Pendaftaran</h1>
             <p className="mt-3 text-base text-white/70">Silakan isi formulir dengan data yang benar</p>
-          </FadeIn>
+          </CSSFadeIn>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-12">
+      <section className="mx-auto max-w-7xl px-6 py-12" style={{ contentVisibility: "auto" } as React.CSSProperties}>
         <SPMBForm />
 
-        <FadeIn>
+        <CSSFadeIn>
           <div className="mx-auto mt-6 max-w-2xl rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-5">
             <div className="mb-3 flex items-center gap-2">
               <Phone className="h-4 w-4 text-[#1767b1]" />
@@ -63,7 +63,7 @@ export default function SPMBRegisterPage() {
               ))}
             </div>
           </div>
-        </FadeIn>
+        </CSSFadeIn>
       </section>
     </div>
   );

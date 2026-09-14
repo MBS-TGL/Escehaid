@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Trophy, MedalMilitary, Medal, Star } from "@/components/Icons";
-import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
+import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 
 const iconMap: Record<string, typeof Trophy> = {
   Akademik: Trophy,
@@ -38,16 +38,16 @@ export default function PrestasiClient({ achievements }: { achievements: Achieve
           <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
         </div>
         <div className="relative mx-auto max-w-7xl px-6 text-center">
-          <FadeIn>
+          <CSSFadeIn>
             <h1 className="text-3xl font-bold md:text-4xl">Prestasi</h1>
             <p className="mt-3 text-base text-white/70">Pencapaian terbaik siswa dan sekolah</p>
-          </FadeIn>
+          </CSSFadeIn>
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-6 py-16">
         {/* Category Tabs */}
-        <FadeIn>
+        <CSSFadeIn>
           <div className="mb-10 flex flex-wrap justify-center gap-2">
             {categories.map((cat) => (
               <button
@@ -63,53 +63,52 @@ export default function PrestasiClient({ achievements }: { achievements: Achieve
               </button>
             ))}
           </div>
-        </FadeIn>
+        </CSSFadeIn>
 
         {/* Bento Grid */}
         {achievements.length === 0 ? (
-          <FadeIn>
+          <CSSFadeIn>
             <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white py-20 text-center">
               <Trophy className="h-14 w-14 text-[#082b59]/20" />
               <p className="mt-5 text-base text-slate-500">Prestasi masih kosong.</p>
               <p className="mt-1 text-sm text-slate-400">Nantikan pencapaian terbaik dari siswa kami.</p>
             </div>
-          </FadeIn>
+          </CSSFadeIn>
         ) : (
-          <StaggerChildren stagger={0.08} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <CSSStagger stagger={80} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((item, i) => {
               const Icon = iconMap[item.category] || Trophy;
               const isLarge = i === 0;
               return (
-                <StaggerItem key={item.id}>
+                <div
+                  key={item.id}
+                  className={`group flex flex-col rounded-2xl border border-[#dce3ed] bg-white p-6 transition-all hover:border-[#1767b1]/30 hover:shadow-lg hover:shadow-[#082b59]/5 ${
+                    isLarge ? "sm:col-span-2 sm:flex-row sm:items-center sm:gap-6" : ""
+                  }`}
+                >
                   <div
-                    className={`group flex flex-col rounded-2xl border border-[#dce3ed] bg-white p-6 transition-all hover:border-[#1767b1]/30 hover:shadow-lg hover:shadow-[#082b59]/5 ${
-                      isLarge ? "sm:col-span-2 sm:flex-row sm:items-center sm:gap-6" : ""
+                    className={`mb-4 flex items-center justify-center rounded-2xl bg-gradient-to-br from-[#f4d21f]/20 to-[#f4d21f]/5 text-[#f4d21f] ${
+                      isLarge ? "h-20 w-20 shrink-0 sm:mb-0" : "mb-4 h-12 w-12"
                     }`}
                   >
-                    <div
-                      className={`mb-4 flex items-center justify-center rounded-2xl bg-gradient-to-br from-[#f4d21f]/20 to-[#f4d21f]/5 text-[#f4d21f] ${
-                        isLarge ? "h-20 w-20 shrink-0 sm:mb-0" : "mb-4 h-12 w-12"
-                      }`}
-                    >
-                      <Icon weight="fill" className={isLarge ? "h-10 w-10" : "h-6 w-6"} />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-[#1767b1]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#1767b1]">
-                          {capitalizeCategory(item.category)}
-                        </span>
-                        <span className="text-xs text-slate-400">{item.year}</span>
-                      </div>
-                      <h3 className={`mt-2 font-semibold text-[#082b59] ${isLarge ? "text-xl" : "text-base"}`}>
-                        {item.title}
-                      </h3>
-                      <p className="mt-2 text-sm leading-relaxed text-slate-500 line-clamp-2">{item.description}</p>
-                    </div>
+                    <Icon weight="fill" className={isLarge ? "h-10 w-10" : "h-6 w-6"} />
                   </div>
-                </StaggerItem>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-[#1767b1]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#1767b1]">
+                        {capitalizeCategory(item.category)}
+                      </span>
+                      <span className="text-xs text-slate-400">{item.year}</span>
+                    </div>
+                    <h3 className={`mt-2 font-semibold text-[#082b59] ${isLarge ? "text-xl" : "text-base"}`}>
+                      {item.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-500 line-clamp-2">{item.description}</p>
+                  </div>
+                </div>
               );
             })}
-          </StaggerChildren>
+          </CSSStagger>
         )}
       </section>
     </div>

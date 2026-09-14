@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Newspaper, Clock, CaretLeft, CaretRight } from "@/components/Icons";
 import { getNewsListPaginated } from "@/lib/queries";
-import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
+import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -48,30 +48,30 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
           <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
         </div>
         <div className="relative mx-auto max-w-7xl px-4 text-center sm:px-6">
-          <FadeIn>
+          <CSSFadeIn>
             <h1 className="text-3xl font-bold md:text-4xl">Berita</h1>
             <p className="mt-3 text-base text-white/70">Informasi terkini dari SMP Muhammadiyah 4 Tanggul</p>
             {search && (
               <p className="mt-2 text-sm text-white/50">Hasil pencarian: &quot;{search}&quot;</p>
             )}
-          </FadeIn>
+          </CSSFadeIn>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6" style={{ contentVisibility: "auto" } as React.CSSProperties}>
         {berita.length === 0 ? (
-          <FadeIn>
+          <CSSFadeIn>
             <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-20 text-center">
               <Newspaper className="h-14 w-14 text-slate-300" />
               <p className="mt-5 text-base text-slate-500">Berita masih kosong.</p>
               <p className="mt-1 text-sm text-slate-400">Nantikan informasi terbaru dari sekolah.</p>
             </div>
-          </FadeIn>
+          </CSSFadeIn>
         ) : (
           <>
             {/* Featured — full width (only on page 1) */}
             {currentPage === 1 && berita.length >= 1 && (
-              <FadeIn>
+              <CSSFadeIn>
                 <Link
                   href={`/news/${berita[0].slug}`}
                   className="group block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg"
@@ -111,16 +111,16 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                     </div>
                   </div>
                 </Link>
-              </FadeIn>
+              </CSSFadeIn>
             )}
 
             {/* Grid — 3 columns */}
             <div className={currentPage === 1 ? "mt-8" : ""}>
-              <StaggerChildren stagger={0.06} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <CSSStagger stagger={60} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {(currentPage === 1 ? berita.slice(1) : berita).map((item) => {
                   const cat = categoryConfig[item.category] || { label: item.category, color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" };
                   return (
-                    <StaggerItem key={item.id}>
+                    <div key={item.id}>
                       <Link
                         href={`/news/${item.slug}`}
                         className="group block overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all hover:border-[#1767b1]/30 hover:shadow-lg"
@@ -156,15 +156,15 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                           )}
                         </div>
                       </Link>
-                    </StaggerItem>
+                    </div>
                   );
                 })}
-              </StaggerChildren>
+              </CSSStagger>
             </div>
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <FadeIn delay={0.15}>
+              <CSSFadeIn delay={150}>
                 <div className="mt-10 flex flex-col items-center gap-3">
                   <p className="text-xs text-slate-400">
                     Halaman {currentPage} dari {totalPages} · {total} berita
@@ -204,7 +204,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                     </Link>
                   </div>
                 </div>
-              </FadeIn>
+              </CSSFadeIn>
             )}
           </>
         )}

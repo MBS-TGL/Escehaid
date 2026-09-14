@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Users, MagnifyingGlass } from "@/components/Icons";
-import { StaggerChildren, StaggerItem } from "@/components/Animations";
+import { CSSStagger } from "@/components/CSSAnimations";
 import type { Teacher } from "@/lib/supabase";
 import TeacherCard from "../TeacherCard";
 
@@ -45,13 +45,11 @@ export default function TeacherGrid({ teachers }: { teachers: Teacher[] }) {
           )}
         </div>
       ) : (
-        <StaggerChildren stagger={0.08} className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
+        <CSSStagger stagger={80} className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
           {filtered.map((t) => (
-            <StaggerItem key={t.id}>
-              <TeacherCard teacher={t} />
-            </StaggerItem>
+            <TeacherCard key={t.id} teacher={t} />
           ))}
-        </StaggerChildren>
+        </CSSStagger>
       )}
     </div>
   );

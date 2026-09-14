@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight, BookOpen, FileText } from "@/components/Icons";
 import { getArticleList } from "@/lib/queries";
-import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
+import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -34,26 +34,26 @@ export default async function ArtikelPage() {
           <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
         </div>
         <div className="relative mx-auto max-w-7xl px-6 text-center">
-          <FadeIn>
+          <CSSFadeIn>
             <h1 className="text-3xl font-bold md:text-4xl">Artikel</h1>
             <p className="mt-3 text-base text-white/70">Tulisan dan pemikiran dari guru serta pegiat pendidikan</p>
-          </FadeIn>
+          </CSSFadeIn>
         </div>
       </section>
 
-      <section className="mx-auto max-w-4xl px-6 py-16">
+      <section className="mx-auto max-w-4xl px-6 py-16" style={{ contentVisibility: "auto" } as React.CSSProperties}>
         {articles.length === 0 ? (
-          <FadeIn>
+          <CSSFadeIn>
             <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white py-20 text-center">
               <BookOpen className="h-14 w-14 text-[#082b59]/20" />
               <p className="mt-5 text-base text-slate-500">Artikel masih kosong.</p>
               <p className="mt-1 text-sm text-slate-400">Nantikan tulisan dan tips dari guru kami.</p>
             </div>
-          </FadeIn>
+          </CSSFadeIn>
         ) : (
-          <StaggerChildren stagger={0.12} className="space-y-5">
+          <CSSStagger stagger={120} className="space-y-5">
             {articles.map((item, i) => (
-              <StaggerItem key={item.slug}>
+              <div key={item.slug}>
                 <Link
                   href={`/articles/${item.slug}`}
                   className="group flex flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:border-[#1767b1]/30 hover:shadow-lg hover:shadow-[#082b59]/5 sm:flex-row"
@@ -82,9 +82,9 @@ export default async function ArtikelPage() {
                     </div>
                   </div>
                 </Link>
-              </StaggerItem>
+              </div>
             ))}
-          </StaggerChildren>
+          </CSSStagger>
         )}
       </section>
     </div>

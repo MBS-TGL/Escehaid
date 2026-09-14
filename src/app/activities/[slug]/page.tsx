@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getActivityBySlug, getActivityList } from "@/lib/queries";
 import { sanitize } from "@/lib/sanitize";
-import { FadeIn } from "@/components/Animations";
+import { CSSFadeIn } from "@/components/CSSAnimations";
 import { CalendarBlank, MapPin, ArrowLeft } from "@/components/Icons";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -99,7 +99,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
         </div>
         <div className="relative mx-auto max-w-4xl px-6">
-          <FadeIn>
+          <CSSFadeIn>
             <Link href="/activities" className="mb-6 inline-flex items-center gap-1.5 text-sm text-white/60 transition-colors hover:text-white">
               <ArrowLeft className="h-4 w-4" /> Kembali ke Kegiatan
             </Link>
@@ -123,12 +123,12 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                 </span>
               )}
             </div>
-          </FadeIn>
+          </CSSFadeIn>
         </div>
       </section>
 
-      <section className="mx-auto max-w-4xl px-6 py-12">
-        <FadeIn>
+      <section style={{ contentVisibility: "auto" } as React.CSSProperties} className="mx-auto max-w-4xl px-6 py-12">
+        <CSSFadeIn>
           {activity.image_url && (
             <div className="relative mb-8 aspect-[16/9] overflow-hidden rounded-2xl">
               <Image src={activity.image_url} alt={activity.title} fill sizes="100vw" className="h-full w-full object-cover" />
@@ -142,7 +142,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           {activity.content && (
             <div className="prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: sanitize(activity.content) }} />
           )}
-        </FadeIn>
+        </CSSFadeIn>
       </section>
     </div>
   );
