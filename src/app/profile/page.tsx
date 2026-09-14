@@ -2,9 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { Users, BookOpen, GraduationCap, Eye, Checks, ArrowUpRight, Trophy, MapPin } from "@/components/Icons";
 import { getSchoolProfile, getTeacherList, getFacilityList, getAchievementList, getGalleryList } from "@/lib/queries";
-import { FadeIn, StaggerChildren, StaggerItem } from "@/components/Animations";
+import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import TeacherGrid from "./TeacherGrid";
-import type { Metadata } from "next";
 
 const FACILITY_FALLBACKS: Record<string, string> = {
   "Ruang Kelas": "/images/Ruang-Kelas.jpg",
@@ -13,7 +12,7 @@ const FACILITY_FALLBACKS: Record<string, string> = {
   "Lapangan Olahraga": "/images/Lapangan-Olahraga.jpg",
 };
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Profil",
   description: "Kenali SMP Muhammadiyah 4 Tanggul - Visi, misi, tenaga pengajar, dan fasilitas sekolah unggulan di Tanggul, Jember.",
   alternates: { canonical: "/profile" },
@@ -42,17 +41,17 @@ export default async function ProfilPage() {
           <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
         </div>
         <div className="relative mx-auto max-w-7xl px-6 text-center">
-          <FadeIn>
+          <CSSFadeIn>
             <h1 className="text-3xl font-bold md:text-4xl">Profil Sekolah</h1>
             <p className="mt-3 text-base text-white/70">Mengenal {profil?.school_name || "SMP Muhammadiyah 4 Tanggul"} lebih dekat</p>
-          </FadeIn>
+          </CSSFadeIn>
         </div>
       </section>
 
       {/* Tentang Kami */}
-      <section className="bg-white py-20">
+      <section className="bg-white py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
         <div className="mx-auto max-w-3xl px-6">
-          <FadeIn>
+          <CSSFadeIn>
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Tentang Kami</p>
               <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Sejarah Singkat</h2>
@@ -84,15 +83,15 @@ export default async function ProfilPage() {
                 <ArrowUpRight className="h-3.5 w-3.5 text-slate-400" />
               </Link>
             </div>
-          </FadeIn>
+          </CSSFadeIn>
         </div>
       </section>
 
       {/* Kepala Sekolah */}
-      <section className="bg-[#f4f7fb] py-20">
+      <section className="bg-[#f4f7fb] py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
         <div className="mx-auto max-w-7xl px-6">
           <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.3fr] lg:gap-16">
-            <FadeIn>
+            <CSSFadeIn>
               <div className="flex justify-center lg:justify-end">
                 <div className="relative">
                   <div className="absolute -inset-4 rounded-full bg-gradient-to-br from-[#f4d21f]/30 to-[#1767b1]/20 blur-xl" />
@@ -110,9 +109,9 @@ export default async function ProfilPage() {
                   </div>
                 </div>
               </div>
-            </FadeIn>
+            </CSSFadeIn>
 
-            <FadeIn direction="left">
+            <CSSFadeIn delay={0.1}>
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Kepala Sekolah</p>
                 <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">
@@ -126,23 +125,23 @@ export default async function ProfilPage() {
                   <span className="rounded-full bg-[#082b59]/10 px-3 py-1 text-xs font-medium text-[#082b59]">ISMUBA</span>
                 </div>
               </div>
-            </FadeIn>
+            </CSSFadeIn>
           </div>
         </div>
       </section>
 
       {/* Visi & Misi */}
-      <section className="bg-white py-20">
+      <section className="bg-white py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
         <div className="mx-auto max-w-7xl px-6">
-          <FadeIn>
+          <CSSFadeIn>
             <div className="mb-12 text-center">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Visi & Misi</p>
               <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Arah dan Tujuan Sekolah</h2>
             </div>
-          </FadeIn>
+          </CSSFadeIn>
 
           <div className="grid gap-8 md:grid-cols-2">
-            <FadeIn>
+            <CSSFadeIn>
               <div className="h-full rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-8">
                 <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[#082b59] shadow-lg shadow-[#082b59]/20">
                   <Eye className="h-5 w-5 text-[#f4d21f]" weight="bold" />
@@ -158,9 +157,9 @@ export default async function ProfilPage() {
                   </p>
                 )}
               </div>
-            </FadeIn>
+            </CSSFadeIn>
 
-            <FadeIn direction="left">
+            <CSSFadeIn delay={0.1}>
               <div className="h-full rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-8">
                 <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[#082b59] shadow-lg shadow-[#082b59]/20">
                   <Checks className="h-5 w-5 text-[#f4d21f]" weight="bold" />
@@ -209,52 +208,50 @@ export default async function ProfilPage() {
                   </ul>
                 )}
               </div>
-            </FadeIn>
+            </CSSFadeIn>
           </div>
         </div>
       </section>
 
       {/* Fasilitas Sekolah */}
       {facilities.length > 0 && (
-        <section id="fasilitas" className="bg-[#f4f7fb] py-20">
+        <section id="fasilitas" className="bg-[#f4f7fb] py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
           <div className="mx-auto max-w-7xl px-6">
-            <FadeIn>
+            <CSSFadeIn>
               <div className="mb-12">
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Infrastruktur</p>
                 <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Fasilitas Sekolah</h2>
               </div>
-            </FadeIn>
+            </CSSFadeIn>
 
-            <StaggerChildren stagger={0.1} className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <CSSStagger className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {facilities.map((f) => (
-                <StaggerItem key={f.id}>
-                  <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:shadow-xl hover:shadow-[#082b59]/5">
-                    <div className="relative h-48 overflow-hidden bg-[#f4f7fb]">
-                      <Image
-                        src={f.image_url || FACILITY_FALLBACKS[f.name] || "/images/Ruang-Kelas.jpg"}
-                        alt={f.name}
-                        fill
-                        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    </div>
-                    <div className="flex flex-1 flex-col p-6">
-                      <h3 className="text-lg font-semibold text-[#082b59]">{f.name}</h3>
-                      <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">{f.description}</p>
-                    </div>
+                <div key={f.id} className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:shadow-xl hover:shadow-[#082b59]/5">
+                  <div className="relative h-48 overflow-hidden bg-[#f4f7fb]">
+                    <Image
+                      src={f.image_url || FACILITY_FALLBACKS[f.name] || "/images/Ruang-Kelas.jpg"}
+                      alt={f.name}
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
                   </div>
-                </StaggerItem>
+                  <div className="flex flex-1 flex-col p-6">
+                    <h3 className="text-lg font-semibold text-[#082b59]">{f.name}</h3>
+                    <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">{f.description}</p>
+                  </div>
+                </div>
               ))}
-            </StaggerChildren>
+            </CSSStagger>
           </div>
         </section>
       )}
 
       {/* Prestasi Highlights */}
       {achievements.length > 0 && (
-        <section className="bg-[#f4f7fb] py-20">
+        <section className="bg-[#f4f7fb] py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
           <div className="mx-auto max-w-7xl px-6">
-            <FadeIn>
+            <CSSFadeIn>
               <div className="flex flex-col items-center justify-between gap-6 rounded-2xl border border-[#dce3ed] bg-white p-6 sm:flex-row">
                 <div className="flex items-center gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#082b59] shadow-lg shadow-[#082b59]/20">
@@ -276,27 +273,27 @@ export default async function ProfilPage() {
                   </Link>
                 </div>
               </div>
-            </FadeIn>
+            </CSSFadeIn>
           </div>
         </section>
       )}
 
       {/* Guru & Staff */}
-      <section className="bg-white">
+      <section className="bg-white" style={{ contentVisibility: "auto" } as React.CSSProperties}>
         <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
-          <FadeIn>
+          <CSSFadeIn>
             <div className="mb-12 text-center">
               <h2 className="text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Guru & Staff</h2>
             </div>
-          </FadeIn>
+          </CSSFadeIn>
 
           {teachers.length === 0 ? (
-            <FadeIn>
+            <CSSFadeIn>
               <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] py-16 text-center">
                 <Users className="h-12 w-12 text-[#082b59]/20" />
                 <p className="mt-4 text-sm text-slate-500">Data guru masih kosong.</p>
               </div>
-            </FadeIn>
+            </CSSFadeIn>
           ) : (
             <TeacherGrid teachers={teachers} />
           )}
@@ -305,9 +302,9 @@ export default async function ProfilPage() {
 
       {/* Galeri Preview */}
       {gallery.length > 0 && (
-        <section className="bg-[#f4f7fb] py-20">
+        <section className="bg-[#f4f7fb] py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
           <div className="mx-auto max-w-7xl px-6">
-            <FadeIn>
+            <CSSFadeIn>
               <div className="mb-12 flex items-end justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Dokumentasi</p>
@@ -317,38 +314,36 @@ export default async function ProfilPage() {
                   Lihat semua <ArrowUpRight className="inline h-4 w-4" />
                 </Link>
               </div>
-            </FadeIn>
+            </CSSFadeIn>
 
-            <StaggerChildren stagger={0.06} className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
+            <CSSStagger stagger={60} className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
               {gallery.slice(0, 8).map((g) => (
-                <StaggerItem key={g.id}>
-                  <Link href="/gallery" className="group relative block aspect-square overflow-hidden rounded-xl">
-                    <Image
-                      src={g.thumbnail_url || g.url || "/images/Ruang-Kelas.jpg"}
-                      alt={g.title}
-                      fill
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                      className="object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#082b59]/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                    <div className="absolute bottom-0 left-0 right-0 p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                      <p className="text-xs font-semibold text-white line-clamp-1">{g.title}</p>
-                      {g.category && (
-                        <span className="mt-1 inline-block rounded-full bg-[#f4d21f]/90 px-2 py-0.5 text-[9px] font-bold uppercase text-[#082b59]">{g.category}</span>
-                      )}
-                    </div>
-                  </Link>
-                </StaggerItem>
+                <Link key={g.id} href="/gallery" className="group relative block aspect-square overflow-hidden rounded-xl">
+                  <Image
+                    src={g.thumbnail_url || g.url || "/images/Ruang-Kelas.jpg"}
+                    alt={g.title}
+                    fill
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#082b59]/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  <div className="absolute bottom-0 left-0 right-0 p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                    <p className="text-xs font-semibold text-white line-clamp-1">{g.title}</p>
+                    {g.category && (
+                      <span className="mt-1 inline-block rounded-full bg-[#f4d21f]/90 px-2 py-0.5 text-[9px] font-bold uppercase text-[#082b59]">{g.category}</span>
+                    )}
+                  </div>
+                </Link>
               ))}
-            </StaggerChildren>
+            </CSSStagger>
           </div>
         </section>
       )}
 
       {/* Kontak & Lokasi */}
-      <section className="bg-white py-20">
+      <section className="bg-white py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
         <div className="mx-auto max-w-7xl px-6">
-          <FadeIn>
+          <CSSFadeIn>
             <div className="flex flex-col items-center justify-between gap-6 rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-6 sm:flex-row">
               <div className="flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#082b59] shadow-lg shadow-[#082b59]/20">
@@ -365,7 +360,7 @@ export default async function ProfilPage() {
                 Hubungi Kami <ArrowUpRight className="h-4 w-4" />
               </Link>
             </div>
-          </FadeIn>
+          </CSSFadeIn>
         </div>
       </section>
 
@@ -375,18 +370,18 @@ export default async function ProfilPage() {
           <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
         </div>
         <div className="relative mx-auto flex max-w-7xl flex-col items-center gap-7 px-6 py-16 text-center md:flex-row md:justify-between md:text-left">
-          <FadeIn>
+          <CSSFadeIn>
             <div className="max-w-xl">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#f4d21f]">Penerimaan Peserta Didik Baru</p>
               <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white md:text-4xl">Mulai langkah baru bersama kami.</h2>
               <p className="mt-3 text-sm text-white/60">Bergabunglah menjadi bagian dari keluarga besar SMP Muhammadiyah 4 Tanggul.</p>
             </div>
-          </FadeIn>
-          <FadeIn direction="left" delay={0.2}>
+          </CSSFadeIn>
+          <CSSFadeIn delay={0.1}>
             <Link href="/admission/register" className="inline-flex w-fit items-center gap-2 rounded-xl bg-[#f4d21f] px-7 py-4 text-sm font-bold text-[#082b59] transition-all hover:bg-white hover:shadow-lg hover:shadow-[#f4d21f]/20">
               Daftar sekarang <ArrowUpRight className="h-4 w-4" />
             </Link>
-          </FadeIn>
+          </CSSFadeIn>
         </div>
       </section>
     </div>
