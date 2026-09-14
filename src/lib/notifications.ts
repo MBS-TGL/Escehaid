@@ -1,6 +1,12 @@
-import { Resend } from "resend";
+let resend: any;
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+async function getResend() {
+  if (!resend) {
+    const { Resend } = await import("resend");
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
 
 const FROM_EMAIL = "SMP Muhammadiyah 4 Tanggul <noreply@resend.dev>";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "itzme.rizal@gmail.com";
@@ -54,7 +60,8 @@ export async function sendRegistrationEmail(reg: {
     </div>`;
 
   try {
-    await resend.emails.send({
+    const client = await getResend();
+    await client.emails.send({
       from: FROM_EMAIL,
       to: reg.email || ADMIN_EMAIL,
       subject: `Konfirmasi Pendaftaran SPMB - ${reg.full_name}`,
@@ -122,7 +129,8 @@ export async function sendRegistrationAdminEmail(reg: {
     </div>`;
 
   try {
-    await resend.emails.send({
+    const client = await getResend();
+    await client.emails.send({
       from: FROM_EMAIL,
       to: ADMIN_EMAIL,
       subject: `[SPMB Baru] ${reg.full_name} - ${pathLabel}`,
@@ -164,7 +172,8 @@ export async function sendContactEmail(msg: {
     </div>`;
 
   try {
-    await resend.emails.send({
+    const client = await getResend();
+    await client.emails.send({
       from: FROM_EMAIL,
       to: msg.email,
       subject: `Terima Kasih - ${msg.subject || "Pesan dari Website"}`,
@@ -220,7 +229,8 @@ export async function sendContactAdminEmail(msg: {
     </div>`;
 
   try {
-    await resend.emails.send({
+    const client = await getResend();
+    await client.emails.send({
       from: FROM_EMAIL,
       to: ADMIN_EMAIL,
       subject: `[Pesan Baru] ${msg.subject || msg.name}`,
