@@ -301,7 +301,17 @@ export default function SPMBForm() {
       .from("spmb-documents")
       .upload(path, file, { contentType: file.type, upsert: true });
 
-    if (error) return null;
+    if (error) {
+      console.error("Upload error:", error);
+      if (error.message?.includes("file_size")) {
+        setErrors({ submit: `File "${file.name}" terlalu besar. Maksimal 10 MB.` });
+      } else if (error.message?.includes("mime")) {
+        setErrors({ submit: `Format file "${file.name}" tidak didukung. Gunakan PDF, JPG, atau PNG.` });
+      } else {
+        setErrors({ submit: `Gagal upload "${file.name}". ${error.message}` });
+      }
+      return null;
+    }
     return uploadData.path;
   }
 
@@ -525,7 +535,7 @@ export default function SPMBForm() {
           {step === 3 && (
             <div className="step-enter space-y-5">
               <h3 className="text-lg font-bold text-[#082b59]">Upload Berkas Persyaratan</h3>
-              <p className="text-sm text-slate-500">Format: PDF, JPG, PNG. Maksimal 1 MB per file.</p>
+              <p className="text-sm text-slate-500">Format: PDF, JPG, PNG, WebP. Maksimal 10 MB per file.</p>
 
               <div data-field="doc_kk">
                 <FileUpload

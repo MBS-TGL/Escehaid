@@ -18,9 +18,12 @@ const ALLOWED_TYPES: Record<string, string[]> = {
   ".jpg": ["image/jpeg"],
   ".jpeg": ["image/jpeg"],
   ".png": ["image/png"],
+  ".webp": ["image/webp"],
+  ".heic": ["image/heic"],
+  ".heif": ["image/heif"],
 };
 
-export function FileUpload({ label, required, error, accept = ".pdf,.jpg,.jpeg,.png", maxSize = 1, value, onChange }: FileUploadProps) {
+export function FileUpload({ label, required, error, accept = ".pdf,.jpg,.jpeg,.png,.webp", maxSize = 10, value, onChange }: FileUploadProps) {
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -104,7 +107,7 @@ export function FileUpload({ label, required, error, accept = ".pdf,.jpg,.jpeg,.
           </svg>
           <div className="text-center">
             <p className="text-sm font-medium text-[#082b59]">Klik atau drag file ke sini</p>
-            <p className="mt-0.5 text-xs text-slate-400">PDF, JPG, PNG (maks. {maxSize} MB)</p>
+            <p className="mt-0.5 text-xs text-slate-400">PDF, JPG, PNG, WebP (maks. {maxSize} MB)</p>
           </div>
         </div>
       )}
