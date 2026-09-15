@@ -378,8 +378,21 @@ export async function submitRegistration(registration: {
   parent_occupation?: string;
   previous_school?: string;
   registration_path: "reguler" | "prestasi" | "beasiswa";
+  documents?: Record<string, string | null>;
 }): Promise<{ success: boolean; error?: string }> {
-  const { error } = await supabase.from("spmb_registrations").insert(registration);
+  const { error } = await supabase.from("spmb_registrations").insert({
+    full_name: registration.full_name,
+    birth_place: registration.birth_place,
+    birth_date: registration.birth_date,
+    gender: registration.gender,
+    address: registration.address,
+    phone: registration.phone,
+    parent_name: registration.parent_name,
+    parent_occupation: registration.parent_occupation,
+    previous_school: registration.previous_school,
+    registration_path: registration.registration_path,
+    documents: registration.documents || {},
+  });
 
   if (error) {
     console.error("Error submitting registration:", error);
@@ -387,8 +400,20 @@ export async function submitRegistration(registration: {
   }
 
   // Send confirmation email to registrant + admin notification (fire-and-forget)
-  sendRegistrationEmail(registration).catch(() => {});
-  sendRegistrationAdminEmail(registration).catch(() => {});
+  sendRegistrationEmail({
+    full_name: registration.full_name,
+    email: registration.email,
+    registration_path: registration.registration_path,
+    parent_name: registration.parent_name,
+  }).catch(() => {});
+  sendRegistrationAdminEmail({
+    full_name: registration.full_name,
+    parent_name: registration.parent_name,
+    phone: registration.phone,
+    email: registration.email,
+    registration_path: registration.registration_path,
+    previous_school: registration.previous_school,
+  }).catch(() => {});
 
   return { success: true };
 }

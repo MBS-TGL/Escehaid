@@ -703,7 +703,7 @@ GRANT SELECT ON articles TO anon;
 GRANT SELECT ON achievements TO anon;
 GRANT SELECT ON user_profiles TO anon;
 GRANT SELECT ON user_audit_log TO anon;
-GRANT SELECT ON spmb_registrations TO anon;
+GRANT SELECT, INSERT ON spmb_registrations TO anon;
 GRANT SELECT ON contact_messages TO anon;
 
 -- Full CRUD for authenticated users (RLS handles row-level restrictions)
@@ -723,7 +723,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON contact_messages TO authenticated;
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 
 -- Storage access
-GRANT SELECT ON storage.objects TO anon;
+GRANT SELECT, INSERT ON storage.objects TO anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO authenticated;
 
 -- ============================================================

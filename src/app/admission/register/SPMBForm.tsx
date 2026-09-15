@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { CheckCircle, ArrowLeft, ArrowRight, FileText } from "@/components/Icons";
 import { supabase } from "@/lib/supabase";
+import { submitRegistration } from "@/lib/queries";
 import { Input, InputRupiah, Select, DatePicker, FileUpload } from "@/components/ui";
 
 const steps = ["Program", "Data Siswa", "Data Orang Tua", "Upload Berkas", "Selesai"];
@@ -46,6 +47,7 @@ type FormData = {
   previous_school: string;
   address: string;
   phone: string;
+  email: string;
   father_name: string;
   father_birth_place: string;
   father_birth_date: string;
@@ -81,6 +83,7 @@ const initialData: FormData = {
   previous_school: "",
   address: "",
   phone: "",
+  email: "",
   father_name: "",
   father_birth_place: "",
   father_birth_date: "",
@@ -135,6 +138,7 @@ const DEBUG_DATA: FormData = {
   previous_school: "SDN 01 Tanggul",
   address: "Jl. Merdeka No. 10, Tanggul, Jember",
   phone: "081234567890",
+  email: "test@example.com",
   father_name: "Budi Santoso",
   father_birth_place: "Surabaya",
   father_birth_date: "1980-03-20",
@@ -158,6 +162,7 @@ export default function SPMBForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const formRef = useRef<HTMLDivElement>(null);
+  const loadedRef = useRef(false);
 
   // Enter → next field
   function handleFormKeyDown(e: React.KeyboardEvent) {
@@ -186,10 +191,12 @@ export default function SPMBForm() {
         setStep(savedStep ? parseInt(savedStep, 10) : 0);
       }
     } catch {}
+    loadedRef.current = true;
   }, []);
 
-  // Save to localStorage on every change
+  // Save to localStorage on every change (skip initial mount to avoid overwrite)
   useEffect(() => {
+    if (!loadedRef.current) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       localStorage.setItem(STORAGE_STEP_KEY, step.toString());
@@ -342,13 +349,14 @@ export default function SPMBForm() {
 
     const registrationPath = data.program.includes("Boarding") ? "reguler" : "prestasi";
 
-    const { error } = await supabase.from("spmb_registrations").insert({
+    const result = await submitRegistration({
       full_name: data.full_name,
       birth_place: data.birth_place,
       birth_date: data.birth_date,
-      gender: data.gender,
+      gender: data.gender as "L" | "P",
       address: data.address,
       phone: data.phone,
+      email: data.email,
       parent_name: `${data.father_name} / ${data.mother_name}`,
       parent_occupation: data.father_job,
       previous_school: data.previous_school,
@@ -357,8 +365,8 @@ export default function SPMBForm() {
     });
 
     setLoading(false);
-    if (error) {
-      setErrors({ submit: "Gagal mengirim data. Silakan coba lagi." });
+    if (!result.success) {
+      setErrors({ submit: result.error || "Gagal mengirim data. Silakan coba lagi." });
       return;
     }
     clearStorage();
@@ -505,7 +513,10 @@ export default function SPMBForm() {
               </div>
               <div>
                 <h3 className="mb-4 text-lg font-bold text-[#082b59]">Kontak Orang Tua</h3>
-                <div data-field="phone"><Input label="No. HP/WA" required placeholder="08xxxxxxxxxx" value={data.phone} onChange={(e) => update("phone", e.target.value)} error={errors.phone} /></div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div data-field="phone"><Input label="No. HP/WA" required placeholder="08xxxxxxxxxx" value={data.phone} onChange={(e) => update("phone", e.target.value)} error={errors.phone} /></div>
+                  <div data-field="email"><Input label="Email" type="email" placeholder="email@contoh.com" value={data.email} onChange={(e) => update("email", e.target.value)} /></div>
+                </div>
               </div>
             </div>
           )}
@@ -687,6 +698,7 @@ export default function SPMBForm() {
                     <table className="w-full text-sm">
                       <tbody>
                         <tr><td className="w-36 py-1 text-slate-400">No. HP/WA</td><td className="py-1 font-medium text-[#082b59]">{data.phone || "-"}</td></tr>
+                        <tr><td className="py-1 text-slate-400">Email</td><td className="py-1 font-medium text-[#082b59]">{data.email || "-"}</td></tr>
                       </tbody>
                     </table>
                   </div>

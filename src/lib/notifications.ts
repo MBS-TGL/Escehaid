@@ -8,9 +8,9 @@ async function getResend() {
   return resend;
 }
 
-const FROM_EMAIL = "SMP Muhammadiyah 4 Tanggul <noreply@resend.dev>";
+const FROM_EMAIL = `SMP Muhammadiyah 4 Tanggul <${process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev"}>`;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "itzme.rizal@gmail.com";
-const SCHOOL_NAME = "SMP Muhammadiyah 4 Tanggul";
+const SCHOOL_NAME = process.env.NEXT_PUBLIC_APP_NAME || "SMP Muhammadiyah 4 Tanggul";
 
 // ============================================================
 // Email: SPMB Registration Confirmation
