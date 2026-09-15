@@ -399,21 +399,31 @@ export async function submitRegistration(registration: {
     return { success: false, error: error.message };
   }
 
-  // Send confirmation email to registrant + admin notification (fire-and-forget)
-  sendRegistrationEmail({
-    full_name: registration.full_name,
-    email: registration.email,
-    registration_path: registration.registration_path,
-    parent_name: registration.parent_name,
-  }).catch(() => {});
-  sendRegistrationAdminEmail({
-    full_name: registration.full_name,
-    parent_name: registration.parent_name,
-    phone: registration.phone,
-    email: registration.email,
-    registration_path: registration.registration_path,
-    previous_school: registration.previous_school,
-  }).catch(() => {});
+  // Email notifications —暂时 DISABLED (belum diverifikasi domain Resend)
+  // Aktifkan lagi setelah custom domain ter-verify di Resend
+  // sendRegistrationEmail({
+  //   full_name: registration.full_name,
+  //   email: registration.email,
+  //   registration_path: registration.registration_path,
+  //   parent_name: registration.parent_name,
+  // }).catch(() => {});
+  // sendRegistrationAdminEmail({
+  //   full_name: registration.full_name,
+  //   parent_name: registration.parent_name,
+  //   phone: registration.phone,
+  //   email: registration.email,
+  //   registration_path: registration.registration_path,
+  //   previous_school: registration.previous_school,
+  // }).catch(() => {});
+
+  // In-app notification to admins
+  const pathLabel = registration.registration_path === "prestasi" ? "Prestasi" : registration.registration_path === "beasiswa" ? "Beasiswa" : "Reguler";
+  notifyAllAdmins(
+    "Pendaftaran SPMB Baru",
+    `${registration.full_name} mendaftar via jalur ${pathLabel} dari ${registration.previous_school || "-"}.`,
+    "info",
+    "/admin/admission"
+  ).catch(() => {});
 
   return { success: true };
 }
@@ -1264,9 +1274,17 @@ export async function submitContactMessage(message: {
     return { success: false, error: error.message };
   }
 
-  // Send confirmation email to sender + admin notification (fire-and-forget)
-  sendContactEmail(message).catch(() => {});
-  sendContactAdminEmail(message).catch(() => {});
+  // Email notifications —暂时 DISABLED (belum diverifikasi domain Resend)
+  // sendContactEmail(message).catch(() => {});
+  // sendContactAdminEmail(message).catch(() => {});
+
+  // In-app notification to admins
+  notifyAllAdmins(
+    "Pesan Baru dari Website",
+    `${message.name} mengirim pesan: "${message.subject || message.message.slice(0, 50)}..."`,
+    "info",
+    "/admin/contact"
+  ).catch(() => {});
 
   return { success: true };
 }
@@ -1575,4 +1593,103 @@ export async function deleteCategory(id: string): Promise<{ error?: string }> {
   const { error } = await supabase.from("categories").delete().eq("id", id);
   if (error) return { error: error.message };
   return {};
+}
+
+// ============ NOTIFICATIONS ============
+export interface Notification {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: "info" | "success" | "warning" | "error";
+  link: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export async function createNotification(
+  userId: string,
+  title: string,
+  message: string,
+  type: "info" | "success" | "warning" | "error" = "info",
+  link?: string
+): Promise<{ error?: string }> {
+  const { error } = await supabase.from("notifications").insert({
+    user_id: userId,
+    title,
+    message,
+    type,
+    link: link || null,
+  });
+  if (error) {
+    console.error("Error creating notification:", error);
+    return { error: error.message };
+  }
+  return {};
+}
+
+export async function getUnreadNotificationCount(): Promise<number> {
+  const { count, error } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("is_read", false);
+
+  if (error) {
+    console.error("Error fetching unread notification count:", error);
+    return 0;
+  }
+  return count || 0;
+}
+
+export async function getRecentNotifications(limit: number = 10): Promise<Notification[]> {
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Error fetching notifications:", error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function markNotificationAsRead(id: string): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function markAllNotificationsAsRead(): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("is_read", false);
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function notifyAllAdmins(
+  title: string,
+  message: string,
+  type: "info" | "success" | "warning" | "error" = "info",
+  link?: string
+): Promise<void> {
+  const { data: admins } = await supabase
+    .from("user_profiles")
+    .select("id")
+    .in("role", ["developer", "admin"])
+    .eq("is_active", true);
+
+  if (!admins || admins.length === 0) return;
+
+  await Promise.all(
+    admins.map((admin) =>
+      createNotification(admin.id, title, message, type, link)
+    )
+  );
 }

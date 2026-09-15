@@ -19,9 +19,16 @@ import {
   Trophy,
   Envelope,
   CheckCircle,
+  Warning,
+  Info,
 } from "@/components/Icons";
-import { getUnreadMessageCount, getRecentUnreadMessages, markContactAsRead } from "@/lib/queries";
-import type { ContactMessage } from "@/lib/supabase";
+import {
+  getUnreadNotificationCount,
+  getRecentNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+} from "@/lib/queries";
+import type { Notification } from "@/lib/queries";
 
 interface UserProfile {
   full_name: string;
@@ -70,8 +77,9 @@ export default function AdminTopbar({
   const [searchQuery, setSearchQuery] = useState("");
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [notifications, setNotifications] = useState<ContactMessage[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notifLoading, setNotifLoading] = useState(false);
+  const [hasPermission, setHasPermission] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -89,16 +97,46 @@ export default function AdminTopbar({
     : [];
 
   const fetchNotifications = useCallback(async () => {
-    const count = await getUnreadMessageCount();
+    const count = await getUnreadNotificationCount();
     setUnreadCount(count);
   }, []);
 
-  useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
+  // Polling: fetch unread count every 30 seconds
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
+
+  // Request browser notification permission
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().then((perm) => {
+        setHasPermission(perm === "granted");
+      });
+    } else if ("Notification" in window && Notification.permission === "granted") {
+      setHasPermission(true);
+    }
+  }, []);
+
+  // Show browser notification when new unread arrives
+  const prevCountRef = useRef(0);
+  useEffect(() => {
+    if (unreadCount > prevCountRef.current && hasPermission) {
+      getRecentNotifications(1).then((msgs) => {
+        if (msgs.length > 0) {
+          const n = msgs[0];
+          new Notification(n.title, { body: n.message, icon: "/images/Logo-Favicon.png" });
+        }
+      });
+    }
+    prevCountRef.current = unreadCount;
+  }, [unreadCount, hasPermission]);
 
   useEffect(() => {
     if (!notifOpen) return;
     setNotifLoading(true);
-    getRecentUnreadMessages(5).then((msgs) => {
+    getRecentNotifications(8).then((msgs) => {
       setNotifications(msgs);
       setNotifLoading(false);
     });
@@ -153,9 +191,15 @@ export default function AdminTopbar({
   };
 
   async function handleMarkAsRead(id: string) {
-    await markContactAsRead(id);
-    setNotifications((prev) => prev.filter((m) => m.id !== id));
+    await markNotificationAsRead(id);
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
     setUnreadCount((c) => Math.max(0, c - 1));
+  }
+
+  async function handleMarkAllAsRead() {
+    await markAllNotificationsAsRead();
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    setUnreadCount(0);
   }
 
   function timeAgo(dateStr: string) {
@@ -168,6 +212,20 @@ export default function AdminTopbar({
     const days = Math.floor(hrs / 24);
     return `${days}h lalu`;
   }
+
+  const notifIcon: Record<string, typeof Bell> = {
+    info: Info,
+    success: CheckCircle,
+    warning: Warning,
+    error: Warning,
+  };
+
+  const notifColor: Record<string, string> = {
+    info: "bg-blue-100 text-blue-600",
+    success: "bg-emerald-100 text-emerald-600",
+    warning: "bg-amber-100 text-amber-600",
+    error: "bg-red-100 text-red-600",
+  };
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200/80 bg-white/80 backdrop-blur-xl px-4 sm:px-6">
@@ -261,10 +319,10 @@ export default function AdminTopbar({
               <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                 <h3 className="text-sm font-semibold text-slate-800">Notifikasi</h3>
                 {unreadCount > 0 && (
-                  <Link href="/admin/contact" onClick={() => setNotifOpen(false)}
+                  <button onClick={handleMarkAllAsRead}
                     className="text-[11px] font-semibold text-[#1767b1] hover:text-[#082b59]">
-                    Lihat semua
-                  </Link>
+                    Semua dibaca
+                  </button>
                 )}
               </div>
               <div className="max-h-80 overflow-y-auto">
@@ -278,34 +336,45 @@ export default function AdminTopbar({
                     <p className="text-xs text-slate-500">Semua sudah dibaca</p>
                   </div>
                 ) : (
-                  notifications.map((msg) => (
-                    <div key={msg.id} className="flex gap-3 border-b border-slate-50 px-4 py-3 transition-colors hover:bg-slate-50/50">
-                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#1767b1]/10">
-                        <Envelope className="h-4 w-4 text-[#1767b1]" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-xs font-semibold text-slate-800 truncate">{msg.name}</p>
-                          <span className="text-[10px] text-slate-400 whitespace-nowrap">{timeAgo(msg.created_at)}</span>
+                  notifications.map((n) => {
+                    const Icon = notifIcon[n.type] || Bell;
+                    return (
+                      <div key={n.id} className={`flex gap-3 border-b border-slate-50 px-4 py-3 transition-colors hover:bg-slate-50/50 ${!n.is_read ? "bg-[#1767b1]/[0.03]" : ""}`}>
+                        <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${notifColor[n.type] || "bg-slate-100 text-slate-500"}`}>
+                          <Icon className="h-4 w-4" />
                         </div>
-                        <p className="mt-0.5 text-[11px] text-slate-500 line-clamp-2">{msg.message}</p>
-                        <button
-                          onClick={() => handleMarkAsRead(msg.id)}
-                          className="mt-1.5 text-[10px] font-semibold text-[#1767b1] hover:text-[#082b59]"
-                        >
-                          Tandai sudah dibaca
-                        </button>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className={`text-xs font-semibold truncate ${!n.is_read ? "text-slate-900" : "text-slate-600"}`}>{n.title}</p>
+                            <span className="text-[10px] text-slate-400 whitespace-nowrap">{timeAgo(n.created_at)}</span>
+                          </div>
+                          <p className="mt-0.5 text-[11px] text-slate-500 line-clamp-2">{n.message}</p>
+                          <div className="mt-1.5 flex items-center gap-2">
+                            {!n.is_read && (
+                              <button onClick={() => handleMarkAsRead(n.id)}
+                                className="text-[10px] font-semibold text-[#1767b1] hover:text-[#082b59]">
+                                Tandai dibaca
+                              </button>
+                            )}
+                            {n.link && (
+                              <Link href={n.link} onClick={() => setNotifOpen(false)}
+                                className="text-[10px] font-semibold text-slate-400 hover:text-slate-600">
+                                Lihat →
+                              </Link>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
-              {unreadCount > 0 && (
+              {notifications.length > 0 && (
                 <div className="border-t border-slate-100 px-4 py-2.5">
-                  <Link href="/admin/contact" onClick={() => setNotifOpen(false)}
-                    className="block text-center text-xs font-semibold text-[#1767b1] hover:text-[#082b59]">
-                    Lihat semua pesan
-                  </Link>
+                  <button onClick={handleMarkAllAsRead}
+                    className="block w-full text-center text-xs font-semibold text-[#1767b1] hover:text-[#082b59]">
+                    Tandai semua sudah dibaca
+                  </button>
                 </div>
               )}
             </div>
