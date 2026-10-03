@@ -12,7 +12,7 @@ export default function WhatsAppButton() {
     return () => clearTimeout(timer);
   }, []);
 
-  const phone = "6285852004008";
+  const phone = "6285806738160";
   const message = "Assalamualaikum, saya ingin bertanya tentang SMP Muhammadiyah 4 Tanggul.";
 
   return (
