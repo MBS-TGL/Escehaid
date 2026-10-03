@@ -290,7 +290,7 @@ $$;
 CREATE TABLE school_profile (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   school_name text NOT NULL DEFAULT 'SMP Muhammadiyah 4 Tanggul',
-  address text NOT NULL DEFAULT 'Jl. Pemandian No. 88, Patemon, Tanggul, Jember 68154',
+  address text NOT NULL DEFAULT 'Jl. Pemandian No. 88, Patemon, Tanggul, Jember 68155',
   phone text NOT NULL DEFAULT '0858-0673-8160',
   email text NOT NULL DEFAULT 'smpm4tangguljember@gmail.com',
   website text DEFAULT 'https://esceha.id',
@@ -314,7 +314,7 @@ INSERT INTO school_profile (school_name, address, phone, email, website, vision,
   principal_name, principal_photo_url, principal_quote, total_teachers, total_students, total_classes, accreditation)
 VALUES (
   'SMP Muhammadiyah 4 Tanggul',
-  'Jl. Pemandian No. 88, Patemon, Kec. Tanggul, Kab. Jember, Jawa Timur 68154',
+  'Jl. Pemandian No. 88, Patemon, Kec. Tanggul, Kab. Jember, Jawa Timur 68155',
   '0858-0673-8160',
   'smpm4tangguljember@gmail.com',
   'https://esceha.id',

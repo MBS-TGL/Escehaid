@@ -1,6 +1,7 @@
 import { FileText, CheckCircle, Clock, Warning, GraduationCap, BookOpen, House, Download } from "@/components/Icons";
 import Link from "next/link";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
+import { getPublishedWaves, getWaveStatus } from "@/lib/queries";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -11,7 +12,23 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600;
 
-export default function SPMBPage() {
+/** Badge status gelombang untuk halaman publik. */
+const waveStatusBadges: Record<string, { label: string; cls: string }> = {
+  upcoming: { label: "Akan dibuka", cls: "border border-blue-100 bg-blue-50 text-[#1767b1]" },
+  open: { label: "Dibuka", cls: "border border-emerald-100 bg-emerald-50 text-emerald-600" },
+  closed: { label: "Ditutup", cls: "border border-slate-200 bg-slate-100 text-slate-500" },
+};
+
+/** Format "YYYY-MM-DD" → "20 Oktober 2026" (id-ID), tanpa geser zona waktu. */
+function formatWaveDate(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  if (!y || !m || !d) return dateStr;
+  return new Date(y, m - 1, d).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+}
+
+export default async function SPMBPage() {
+  const waves = await getPublishedWaves();
+
   return (
     <div>
       <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-12 text-white md:py-16">
@@ -91,17 +108,50 @@ export default function SPMBPage() {
           {/* Biaya & Pendaftaran */}
           <CSSFadeIn>
             <div>
-              <h2 className="mb-6 text-2xl font-bold text-[#082b59]">Informasi Biaya</h2>
-              <div className="rounded-2xl border border-[#dce3ed] bg-white p-6 shadow-sm">
-                <div className="mb-4 flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1767b1]/10">
-                    <Clock className="h-5 w-5 text-[#1767b1]" />
-                  </div>
-                  <div>
-                    <div className="font-medium text-[#082b59]">Gelombang Inden</div>
-                    <div className="text-sm text-slate-500">20 Oktober - 30 Desember 2026</div>
+              <h2 className="mb-6 text-2xl font-bold text-[#082b59]">Jadwal Pendaftaran</h2>
+              {/* Gelombang pendaftaran (dari tabel spmb_waves) */}
+              {waves.length === 0 ? (
+                <div className="rounded-2xl border border-[#dce3ed] bg-white p-6 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1767b1]/10">
+                      <Clock className="h-5 w-5 text-[#1767b1]" />
+                    </div>
+                    <p className="text-sm text-slate-500">Jadwal gelombang pendaftaran akan segera diumumkan.</p>
                   </div>
                 </div>
+              ) : (
+                <div className="space-y-4">
+                  {waves.map((wave) => {
+                    const badge = waveStatusBadges[getWaveStatus(wave)] || waveStatusBadges.closed;
+                    return (
+                      <div key={wave.id} className="rounded-2xl border border-[#dce3ed] bg-white p-6 shadow-sm">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1767b1]/10">
+                            <Clock className="h-5 w-5 text-[#1767b1]" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-medium text-[#082b59]">{wave.name}</span>
+                              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${badge.cls}`}>
+                                {badge.label}
+                              </span>
+                            </div>
+                            <div className="text-sm text-slate-500">
+                              {formatWaveDate(wave.start_date)} - {formatWaveDate(wave.end_date)}
+                            </div>
+                          </div>
+                        </div>
+                        {wave.note && (
+                          <p className="mt-3 text-sm leading-relaxed text-slate-500">{wave.note}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Brosur */}
+              <div className="mt-4 rounded-2xl border border-[#dce3ed] bg-white p-6 shadow-sm">
                 <p className="mb-4 text-sm leading-relaxed text-slate-500">
                   Rincian biaya pendidikan, boarding, dan kegiatan dapat dilihat pada brosur resmi sekolah.
                 </p>
