@@ -495,6 +495,32 @@ export async function revalidateNews(
   }
 }
 
+/**
+ * Revalidate path publik tertentu (mis. "/admission") via API route /api/revalidate.
+ * Dipanggil dari client component admin setelah create/update/delete/toggle gelombang.
+ * Kredensial & whitelist path dicek di server (route /api/revalidate).
+ */
+export async function revalidatePaths(paths: string[]): Promise<void> {
+  const unique = Array.from(
+    new Set(paths.filter((p) => typeof p === "string" && p.startsWith("/") && p.length > 1))
+  );
+  if (unique.length === 0) return;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token ?? "";
+    await fetch("/api/revalidate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ paths: unique }),
+    });
+  } catch {
+    console.warn("[revalidatePaths] fetch failed, cache not invalidated");
+  }
+}
+
 // ============ NEWS ATTACHMENT (lampiran file) ============
 export const ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 

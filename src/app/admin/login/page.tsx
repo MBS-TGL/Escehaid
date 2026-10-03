@@ -100,7 +100,7 @@ function LoginForm() {
 
             <div className="mt-12 space-y-3">
               {([
-                [GraduationCap, "164 Siswa Aktif", "Tahun ajaran 2025/2026"],
+                [GraduationCap, "164 Siswa Aktif", "Tahun ajaran 2026/2027"],
                 [BookOpen, "Kurikulum Merdeka", " + ISMUBA terintegrasi"],
                 [Users, "14 Guru & 3 Tendik", "Tim pengajar profesional"],
               ] as [typeof GraduationCap, string, string][]).map(([Icon, title, desc]) => (

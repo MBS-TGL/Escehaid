@@ -8,9 +8,15 @@ import {
   updateRegistrationBulkStatus,
   deleteRegistration,
   deleteRegistrationBulk,
+  getWavesAll,
+  createWave,
+  updateWave,
+  deleteWave,
+  getWaveStatus,
+  revalidatePaths,
 } from "@/lib/queries";
 import { StatCard, StatCardRow, SlideOver } from "@/components/ui";
-import type { SpmbRegistration } from "@/lib/supabase";
+import type { SpmbRegistration, SpmbWave } from "@/lib/supabase";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -39,6 +45,7 @@ import {
   ArrowDown,
   SortAscending,
   Checks,
+  CalendarBlank,
 } from "@/components/Icons";
 
 const PAGE_SIZE = 10;
@@ -63,6 +70,32 @@ const pathColors: Record<string, string> = {
 
 type SortField = "created_at" | "full_name" | "status" | "registration_path";
 type SortDir = "asc" | "desc";
+
+/** Tab utama halaman: daftar pendaftar atau pengelolaan gelombang. */
+type MainTab = "registrations" | "waves";
+
+/** State form tambah/edit gelombang pendaftaran. */
+type WaveFormState = {
+  name: string;
+  start_date: string;
+  end_date: string;
+  note: string;
+  is_published: boolean;
+  sort_order: number;
+};
+
+const waveStatusConfig: Record<string, { label: string; cls: string }> = {
+  upcoming: { label: "Akan Datang", cls: "border-blue-200 bg-blue-50 text-blue-700" },
+  open: { label: "Dibuka", cls: "border-emerald-200 bg-emerald-50 text-emerald-700" },
+  closed: { label: "Ditutup", cls: "border-slate-200 bg-slate-100 text-slate-500" },
+};
+
+/** Format "YYYY-MM-DD" → "20 Okt 2026" (id-ID), tanpa geser zona waktu. */
+function formatWaveDate(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  if (!y || !m || !d) return dateStr;
+  return new Date(y, m - 1, d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+}
 
 export default function AdminSPMBPage() {
   const { toast } = useToast();
@@ -90,6 +123,18 @@ export default function AdminSPMBPage() {
   const [editNotes, setEditNotes] = useState("");
   const [editSaving, setEditSaving] = useState(false);
 
+  // Gelombang pendaftaran
+  const [mainTab, setMainTab] = useState<MainTab>("registrations");
+  const [waves, setWaves] = useState<SpmbWave[]>([]);
+  const [wavesLoading, setWavesLoading] = useState(true);
+  const [wavesError, setWavesError] = useState<string | null>(null);
+  const [waveForm, setWaveForm] = useState<WaveFormState | null>(null);
+  const [waveEditing, setWaveEditing] = useState<SpmbWave | null>(null);
+  const [waveFormError, setWaveFormError] = useState<string | null>(null);
+  const [waveSaving, setWaveSaving] = useState(false);
+  const [deleteWaveItem, setDeleteWaveItem] = useState<SpmbWave | null>(null);
+  const [waveDeleting, setWaveDeleting] = useState(false);
+
   const fetchData = useCallback(async () => {
     const registrations = await getRegistrationList();
     setData(registrations);
@@ -97,6 +142,20 @@ export default function AdminSPMBPage() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const fetchWaves = useCallback(async () => {
+    setWavesLoading(true);
+    try {
+      const list = await getWavesAll();
+      setWaves(list);
+      setWavesError(null);
+    } catch (e: any) {
+      setWavesError(e?.message || "Gagal memuat data gelombang");
+    }
+    setWavesLoading(false);
+  }, []);
+
+  useEffect(() => { if (mainTab === "waves") fetchWaves(); }, [mainTab, fetchWaves]);
 
   // Generate signed URLs when viewItem changes
   useEffect(() => {
@@ -253,6 +312,93 @@ export default function AdminSPMBPage() {
     fetchData();
   }
 
+  // ── Gelombang pendaftaran: CRUD ─────────────────────────
+
+  function openWaveForm(wave?: SpmbWave) {
+    setWaveEditing(wave ?? null);
+    setWaveFormError(null);
+    setWaveForm(
+      wave
+        ? {
+          name: wave.name,
+          start_date: wave.start_date,
+          end_date: wave.end_date,
+          note: wave.note ?? "",
+          is_published: wave.is_published,
+          sort_order: wave.sort_order,
+        }
+        : { name: "", start_date: "", end_date: "", note: "", is_published: true, sort_order: waves.length }
+    );
+  }
+
+  async function handleSaveWave() {
+    if (!waveForm) return;
+
+    // Validasi
+    const name = waveForm.name.trim();
+    if (!name) { setWaveFormError("Nama gelombang wajib diisi."); return; }
+    if (!waveForm.start_date || !waveForm.end_date) {
+      setWaveFormError("Tanggal mulai dan tanggal selesai wajib diisi.");
+      return;
+    }
+    if (waveForm.end_date < waveForm.start_date) {
+      setWaveFormError("Tanggal selesai tidak boleh sebelum tanggal mulai.");
+      return;
+    }
+
+    const payload = {
+      name,
+      start_date: waveForm.start_date,
+      end_date: waveForm.end_date,
+      note: waveForm.note.trim() || null,
+      is_published: waveForm.is_published,
+      sort_order: Number(waveForm.sort_order) || 0,
+    };
+
+    setWaveSaving(true);
+    const res = waveEditing ? await updateWave(waveEditing.id, payload) : await createWave(payload);
+    setWaveSaving(false);
+
+    if (res.error) {
+      setWaveFormError(res.error);
+      toast(res.error, "error");
+      return;
+    }
+
+    toast(waveEditing ? "Gelombang berhasil diperbarui" : "Gelombang berhasil ditambahkan", "success");
+    setWaveForm(null);
+    setWaveEditing(null);
+    fetchWaves();
+    revalidatePaths(["/admission"]).catch(() => { });
+  }
+
+  async function handleToggleWave(wave: SpmbWave) {
+    const res = await updateWave(wave.id, { is_published: !wave.is_published });
+    if (res.error) {
+      toast(res.error, "error");
+      return;
+    }
+    toast(wave.is_published ? "Gelombang disembunyikan dari website" : "Gelombang ditampilkan di website", "success");
+    fetchWaves();
+    revalidatePaths(["/admission"]).catch(() => { });
+  }
+
+  async function handleDeleteWave() {
+    if (!deleteWaveItem) return;
+    setWaveDeleting(true);
+    const res = await deleteWave(deleteWaveItem.id);
+    setWaveDeleting(false);
+    setDeleteWaveItem(null);
+    if (res.error) {
+      toast(res.error, "error");
+      fetchWaves();
+      return;
+    }
+    toast("Gelombang berhasil dihapus", "success");
+    fetchWaves();
+    revalidatePaths(["/admission"]).catch(() => { });
+  }
+
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return <SortAscending className="h-3 w-3 text-slate-300" />;
     return sortDir === "asc"
@@ -260,24 +406,230 @@ export default function AdminSPMBPage() {
       : <ArrowDown className="h-3 w-3 text-[#1767b1]" />;
   };
 
+  // ── TAB: GELOMBANG PENDAFTARAN ──────────────────────────
+  if (mainTab === "waves") {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        {/* Header + Tab */}
+        <PageHeader active={mainTab} onSelect={setMainTab} />
+
+        {/* Toolbar */}
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-slate-500">
+            Atur gelombang pendaftaran yang tampil di halaman Penerimaan Santri Baru.
+          </p>
+          <button onClick={() => openWaveForm()}
+            className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1767b1]">
+            <Plus className="h-4 w-4" />
+            Tambah Gelombang
+          </button>
+        </div>
+
+        {/* Error memuat data */}
+        {wavesError && (
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <Warning className="h-4 w-4 shrink-0" />
+            {wavesError}
+          </div>
+        )}
+
+        {/* Daftar gelombang */}
+        <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
+          {wavesLoading ? (
+            <div className="flex flex-col items-center gap-3 px-4 py-16 text-center">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
+              <p className="text-sm text-slate-500">Memuat data gelombang...</p>
+            </div>
+          ) : waves.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 px-4 py-16 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+                <CalendarBlank className="h-8 w-8 text-slate-300" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-600">Belum ada gelombang pendaftaran</p>
+                <p className="mt-1 text-xs text-slate-400">Klik &ldquo;Tambah Gelombang&rdquo; untuk membuat gelombang pertama.</p>
+              </div>
+            </div>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {waves.map((w) => {
+                const st = waveStatusConfig[getWaveStatus(w)] || waveStatusConfig.upcoming;
+                return (
+                  <li key={w.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-slate-800">{w.name}</span>
+                        <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${st.cls}`}>{st.label}</span>
+                        {!w.is_published && (
+                          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                            Disembunyikan
+                          </span>
+                        )}
+                        <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
+                          Urutan {w.sort_order}
+                        </span>
+                      </div>
+                      <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                        <CalendarBlank className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                        {formatWaveDate(w.start_date)} &ndash; {formatWaveDate(w.end_date)}
+                      </p>
+                      {w.note && <p className="mt-1 text-xs text-slate-400">{w.note}</p>}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                      {/* Toggle tampil di website */}
+                      <button onClick={() => handleToggleWave(w)}
+                        title={w.is_published ? "Sembunyikan dari website" : "Tampilkan di website"}
+                        className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${w.is_published ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100"}`}>
+                        <span className={`relative inline-block h-4 w-7 rounded-full transition-colors ${w.is_published ? "bg-emerald-500" : "bg-slate-300"}`}>
+                          <span className={`absolute left-0.5 top-1 h-2 w-2 rounded-full bg-white transition-transform ${w.is_published ? "translate-x-3" : ""}`} />
+                        </span>
+                        {w.is_published ? "Tampil" : "Sembunyi"}
+                      </button>
+                      <button onClick={() => openWaveForm(w)} title="Edit Gelombang"
+                        className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600">
+                        <PencilSimple className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => setDeleteWaveItem(w)} title="Hapus"
+                        className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600">
+                        <Trash className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        {/* ── FORM TAMBAH/EDIT GELOMBANG (SLIDE-OVER) ─────── */}
+        {waveForm && (
+          <SlideOver
+            open={true}
+            onClose={() => !waveSaving && setWaveForm(null)}
+            title={waveEditing ? "Edit Gelombang" : "Tambah Gelombang"}
+            description={waveEditing ? waveEditing.name : "Gelombang pendaftaran baru"}
+            footer={
+              <div className="flex w-full items-center justify-between">
+                <button onClick={() => setWaveForm(null)} disabled={waveSaving}
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                  Batal
+                </button>
+                <button onClick={handleSaveWave} disabled={waveSaving}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
+                  {waveSaving ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <>
+                      <FloppyDisk className="h-4 w-4" />
+                      Simpan
+                    </>
+                  )}
+                </button>
+              </div>
+            }
+          >
+            <div className="space-y-5">
+              {waveFormError && (
+                <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  <Warning className="mt-0.5 h-4 w-4 shrink-0" />
+                  {waveFormError}
+                </div>
+              )}
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Nama Gelombang <span className="text-red-500">*</span>
+                </label>
+                <input type="text" value={waveForm.name}
+                  onChange={(e) => setWaveForm({ ...waveForm, name: e.target.value })}
+                  placeholder="cth: Gelombang Inden"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Tanggal Mulai <span className="text-red-500">*</span>
+                  </label>
+                  <input type="date" value={waveForm.start_date}
+                    onChange={(e) => setWaveForm({ ...waveForm, start_date: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Tanggal Selesai <span className="text-red-500">*</span>
+                  </label>
+                  <input type="date" value={waveForm.end_date} min={waveForm.start_date || undefined}
+                    onChange={(e) => setWaveForm({ ...waveForm, end_date: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Keterangan (opsional)</label>
+                <textarea value={waveForm.note} onChange={(e) => setWaveForm({ ...waveForm, note: e.target.value })}
+                  rows={3} placeholder="cth: khusus pendaftar yang mendaftar lebih awal"
+                  className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Urutan Tampil</label>
+                  <input type="number" min={0} value={waveForm.sort_order}
+                    onChange={(e) => setWaveForm({ ...waveForm, sort_order: e.target.value === "" ? 0 : Number(e.target.value) })}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tampil di Website</label>
+                  <button type="button" onClick={() => setWaveForm({ ...waveForm, is_published: !waveForm.is_published })}
+                    className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${waveForm.is_published ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500"}`}>
+                    <span>{waveForm.is_published ? "Tampil" : "Sembunyi"}</span>
+                    <span className={`relative inline-block h-6 w-11 rounded-full transition-colors ${waveForm.is_published ? "bg-emerald-500" : "bg-slate-300"}`}>
+                      <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${waveForm.is_published ? "translate-x-5" : ""}`} />
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-400">
+                Gelombang dengan status &ldquo;Tampil&rdquo; akan ditampilkan di halaman Penerimaan Santri Baru.
+              </p>
+            </div>
+          </SlideOver>
+        )}
+
+        {/* ── KONFIRMASI HAPUS GELOMBANG ─────────────────── */}
+        {deleteWaveItem && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+            onClick={() => !waveDeleting && setDeleteWaveItem(null)}>
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto">
+                <Warning className="h-6 w-6 text-red-600" />
+              </div>
+              <h3 className="text-center text-lg font-bold text-slate-800">Hapus Gelombang?</h3>
+              <p className="mt-2 text-center text-sm text-slate-500">&ldquo;{deleteWaveItem.name}&rdquo; akan dihapus permanen.</p>
+              <div className="mt-6 flex gap-3">
+                <button onClick={() => setDeleteWaveItem(null)} disabled={waveDeleting}
+                  className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                  Batal
+                </button>
+                <button onClick={handleDeleteWave} disabled={waveDeleting}
+                  className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-70">
+                  {waveDeleting ? "Menghapus..." : "Ya, Hapus"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      {/* Header */}
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#082b59]/10">
-            <Users className="h-5 w-5 text-[#082b59]" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Kelola SPMB</h1>
-            <p className="text-sm text-slate-500">Pendaftaran Santri Baru 2025/2026</p>
-          </div>
-        </div>
-        <button className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50">
-          <Download className="h-4 w-4" />
-          Export Excel
-        </button>
-      </div>
+      {/* Header + Tab */}
+      <PageHeader active={mainTab} onSelect={setMainTab} />
 
       {/* Stats */}
       <StatCardRow>
@@ -734,6 +1086,47 @@ export default function AdminSPMBPage() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Header halaman + tab "Pendaftar" / "Gelombang Pendaftaran". */
+function PageHeader({ active, onSelect }: { active: MainTab; onSelect: (tab: MainTab) => void }) {
+  const tabs: { key: MainTab; label: string; icon: React.ElementType }[] = [
+    { key: "registrations", label: "Pendaftar", icon: Users },
+    { key: "waves", label: "Gelombang Pendaftaran", icon: CalendarBlank },
+  ];
+  return (
+    <>
+      {/* Header */}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#082b59]/10">
+            <Users className="h-5 w-5 text-[#082b59]" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Kelola SPMB</h1>
+            <p className="text-sm text-slate-500">Kelola Pendaftaran Santri Baru</p>
+          </div>
+        </div>
+        {active === "registrations" && (
+          <button className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50">
+            <Download className="h-4 w-4" />
+            Export Excel
+          </button>
+        )}
+      </div>
+
+      {/* Tab utama */}
+      <div className="mb-6 flex w-fit flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
+        {tabs.map((t) => (
+          <button key={t.key} onClick={() => onSelect(t.key)}
+            className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all ${active === t.key ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+            <t.icon className="h-3.5 w-3.5" />
+            {t.label}
+          </button>
+        ))}
+      </div>
+    </>
   );
 }
 

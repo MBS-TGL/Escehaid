@@ -2,7 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const ALLOWED_PATHS = new Set(["/", "/news"]);
+const ALLOWED_PATHS = new Set(["/", "/news", "/admission"]);
 function isAllowedPath(p: unknown): boolean {
   if (typeof p !== "string") return false;
   if (!p.startsWith("/")) return false;
