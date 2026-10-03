@@ -198,7 +198,12 @@ export default function AdminArticlesPage() {
     if (imageFile) {
       const tempId = editItem?.id || (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36));
       const uploaded = await uploadArticleImage(imageFile, tempId);
-      if (uploaded.url) imageUrl = uploaded.url;
+      if (!uploaded.url) {
+        setFormError(uploaded.error || "Gagal mengunggah gambar artikel.");
+        setFormSaving(false);
+        return;
+      }
+      imageUrl = uploaded.url;
     }
 
     if (editItem) {

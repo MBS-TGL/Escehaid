@@ -145,7 +145,7 @@ export default async function Home() {
             <FadeIn delay={0.4}>
               <div className="mt-9 flex flex-wrap items-center gap-5">
                 <Link
-                  href="/admission/register"
+                  href="https://docs.google.com/forms/d/e/1FAIpQLScGq3QR_ohqV-lBPtM7wgS-1IqXeUVqvFGwm3XO3VSJGBjw8w/viewform"
                   className="group inline-flex items-center gap-2 rounded-xl bg-[#f4d21f] px-6 py-3.5 text-sm font-bold text-[#082b59] transition-all hover:bg-white hover:shadow-lg hover:shadow-[#f4d21f]/20"
                 >
                   Daftar
@@ -598,7 +598,7 @@ export default async function Home() {
             </div>
           </CSSFadeIn>
           <CSSFadeIn delay={0.1}>
-            <Link href="/admission/register" className="inline-flex w-fit items-center gap-2 rounded-xl bg-[#082b59] px-6 py-3.5 text-sm font-bold text-white transition-all hover:bg-[#1767b1] hover:shadow-lg">
+            <Link href="https://docs.google.com/forms/d/e/1FAIpQLScGq3QR_ohqV-lBPtM7wgS-1IqXeUVqvFGwm3XO3VSJGBjw8w/viewform" className="inline-flex w-fit items-center gap-2 rounded-xl bg-[#082b59] px-6 py-3.5 text-sm font-bold text-white transition-all hover:bg-[#1767b1] hover:shadow-lg">
               Daftar sekarang <ArrowUpRight className="h-4 w-4" />
             </Link>
           </CSSFadeIn>

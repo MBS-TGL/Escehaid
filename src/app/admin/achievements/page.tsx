@@ -191,7 +191,12 @@ export default function AdminAchievementsPage() {
     if (imageFile) {
       const tempId = editItem?.id || (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36));
       const uploaded = await uploadAchievementImage(imageFile, tempId);
-      if (uploaded.url) imageUrl = uploaded.url;
+      if (!uploaded.url) {
+        setFormError(uploaded.error || "Gagal mengunggah gambar prestasi.");
+        setFormSaving(false);
+        return;
+      }
+      imageUrl = uploaded.url;
     }
 
     if (editItem) {

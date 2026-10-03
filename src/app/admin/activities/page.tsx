@@ -239,6 +239,8 @@ export default function AdminActivitiesPage() {
       const compressed = await compressImage(file);
       setImageFile(compressed);
       setImagePreview(URL.createObjectURL(compressed));
+    } catch {
+      toast("Gagal memproses gambar. Pastikan file tidak rusak dan berformat JPG/PNG/WebP.", "error");
     } finally {
       setImageUploading(false);
     }
@@ -253,7 +255,12 @@ export default function AdminActivitiesPage() {
     if (imageFile) {
       const tempId = editItem?.id || (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36));
       const uploaded = await uploadActivityImage(imageFile, tempId);
-      if (uploaded.url) imageUrl = uploaded.url;
+      if (!uploaded.url) {
+        setFormError(uploaded.error || "Gagal mengunggah gambar kegiatan.");
+        setFormSaving(false);
+        return;
+      }
+      imageUrl = uploaded.url;
     }
 
     if (editItem) {

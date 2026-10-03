@@ -7,7 +7,7 @@ import {
   sendContactEmail,
   sendContactAdminEmail,
 } from "./notifications";
-import { compressImage, TEACHER_PHOTO } from "./compress-image";
+import { tryCompressImage, TEACHER_PHOTO } from "./compress-image";
 
 interface NewsWithAuthor extends News {
   author_name?: string;
@@ -366,7 +366,8 @@ export async function uploadNewsImage(
   const rand = Math.random().toString(36).slice(2, 8);
   const path = `news/${newsId}/${Date.now()}-${rand}.${ext}`;
 
-  const compressed = await compressImage(file);
+  const { file: compressed, error: compressError } = await tryCompressImage(file);
+  if (!compressed) return { url: null, error: compressError };
 
   const { error: uploadError } = await supabase.storage
     .from("images")
@@ -922,7 +923,8 @@ export async function uploadFacilityImage(
   file: File,
   facilityId: string
 ): Promise<{ url: string | null; error?: string }> {
-  const compressed = await compressImage(file);
+  const { file: compressed, error: compressError } = await tryCompressImage(file);
+  if (!compressed) return { url: null, error: compressError };
   const path = `facilities/${facilityId}.jpg`;
 
   await cleanupOldFiles("facilities", facilityId);
@@ -1108,7 +1110,8 @@ export async function uploadArticleImage(
   file: File,
   articleId: string
 ): Promise<{ url: string | null; error?: string }> {
-  const compressed = await compressImage(file);
+  const { file: compressed, error: compressError } = await tryCompressImage(file);
+  if (!compressed) return { url: null, error: compressError };
   const path = `articles/${articleId}.jpg`;
 
   await cleanupOldFiles("articles", articleId);
@@ -1283,7 +1286,8 @@ export async function uploadActivityImage(
   file: File,
   activityId: string
 ): Promise<{ url: string | null; error?: string }> {
-  const compressed = await compressImage(file);
+  const { file: compressed, error: compressError } = await tryCompressImage(file);
+  if (!compressed) return { url: null, error: compressError };
   const path = `activities/${activityId}.jpg`;
 
   await cleanupOldFiles("activities", activityId);
@@ -1379,7 +1383,8 @@ export async function uploadGalleryImage(
   file: File,
   galleryId: string
 ): Promise<{ url: string | null; error?: string }> {
-  const compressed = await compressImage(file);
+  const { file: compressed, error: compressError } = await tryCompressImage(file);
+  if (!compressed) return { url: null, error: compressError };
   const path = `gallery/${galleryId}.jpg`;
 
   await cleanupOldFiles("gallery", galleryId);
@@ -1477,7 +1482,8 @@ export async function uploadAchievementImage(
   file: File,
   achievementId: string
 ): Promise<{ url: string | null; error?: string }> {
-  const compressed = await compressImage(file);
+  const { file: compressed, error: compressError } = await tryCompressImage(file);
+  if (!compressed) return { url: null, error: compressError };
   const path = `achievements/${achievementId}.jpg`;
 
   await cleanupOldFiles("achievements", achievementId);
@@ -1497,7 +1503,8 @@ export async function uploadTeacherPhoto(
   file: File,
   teacherId: string
 ): Promise<{ url: string | null; error?: string }> {
-  const compressed = await compressImage(file, TEACHER_PHOTO);
+  const { file: compressed, error: compressError } = await tryCompressImage(file, TEACHER_PHOTO);
+  if (!compressed) return { url: null, error: compressError };
   const path = `teachers/${teacherId}.jpg`;
 
   await cleanupOldFiles("teachers", teacherId);

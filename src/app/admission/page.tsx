@@ -168,7 +168,7 @@ export default async function SPMBPage() {
               <h2 className="mb-6 mt-8 text-2xl font-bold text-[#082b59]">Cara Mendaftar</h2>
               <div className="space-y-3">
                 <Link
-                  href="/admission/register"
+                  href="https://docs.google.com/forms/d/e/1FAIpQLScGq3QR_ohqV-lBPtM7wgS-1IqXeUVqvFGwm3XO3VSJGBjw8w/viewform"
                   className="flex items-center gap-3 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm transition-all hover:border-[#1767b1]/30 hover:shadow-lg"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#082b59] text-white">

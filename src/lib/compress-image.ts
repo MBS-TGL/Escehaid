@@ -98,3 +98,25 @@ export async function compressImage(
     lastModified: Date.now(),
   });
 }
+
+/**
+ * Versi `compressImage` yang tidak pernah melempar error.
+ * Kegagalan (file rusak, format tak didukung browser — mis. HEIC, dsb.)
+ * dikembalikan sebagai `{ file: null, error }` supaya bisa ditampilkan ke
+ * pengguna, bukan diam-diam membekukan alur simpan (unhandled rejection).
+ */
+export async function tryCompressImage(
+  file: File,
+  options?: CompressOptions
+): Promise<{ file: File | null; error?: string }> {
+  try {
+    return { file: await compressImage(file, options) };
+  } catch (e) {
+    console.error("compressImage gagal:", e);
+    return {
+      file: null,
+      error:
+        "Gambar tidak dapat diproses — file mungkin rusak atau format tidak didukung browser.",
+    };
+  }
+}

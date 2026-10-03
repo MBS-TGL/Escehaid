@@ -118,10 +118,14 @@ export default function AdminTeachersPage() {
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    compressImage(file, TEACHER_PHOTO).then((compressed) => {
-      setFormPhotoFile(compressed);
-      setFormPhotoPreview(URL.createObjectURL(compressed));
-    });
+    compressImage(file, TEACHER_PHOTO)
+      .then((compressed) => {
+        setFormPhotoFile(compressed);
+        setFormPhotoPreview(URL.createObjectURL(compressed));
+      })
+      .catch(() =>
+        toast("Gagal memproses foto. Pastikan file tidak rusak dan berformat JPG/PNG/WebP.", "error")
+      );
   }
 
   async function handleSave() {
@@ -132,7 +136,12 @@ export default function AdminTeachersPage() {
       let photoUrl = editItem.photo_url;
       if (formPhotoFile) {
         const uploaded = await uploadTeacherPhoto(formPhotoFile, editItem.id);
-        if (uploaded.url) photoUrl = uploaded.url;
+        if (!uploaded.url) {
+          toast(uploaded.error || "Gagal mengunggah foto guru.", "error");
+          setFormSaving(false);
+          return;
+        }
+        photoUrl = uploaded.url;
         setPhotoBust((prev) => ({ ...prev, [editItem.id]: Date.now() }));
       }
       const { error } = await updateTeacher(editItem.id, {
@@ -147,7 +156,12 @@ export default function AdminTeachersPage() {
       let photoUrl = "";
       if (formPhotoFile) {
         const uploaded = await uploadTeacherPhoto(formPhotoFile, tempId);
-        if (uploaded.url) photoUrl = uploaded.url;
+        if (!uploaded.url) {
+          toast(uploaded.error || "Gagal mengunggah foto guru.", "error");
+          setFormSaving(false);
+          return;
+        }
+        photoUrl = uploaded.url;
       }
       const { error } = await createTeacher({
         name: formName,
