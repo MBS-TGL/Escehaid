@@ -10,6 +10,9 @@ import {
   togglePublishNews,
   togglePublishNewsBulk,
   uploadNewsImage,
+  uploadNewsAttachment,
+  checkAttachment,
+  attachmentKind,
 } from "@/lib/queries";
 import { compressImage } from "@/lib/compress-image";
 import { sanitize } from "@/lib/sanitize";
@@ -38,6 +41,8 @@ import {
   SortAscending,
   Funnel,
   Checks,
+  Paperclip,
+  Download,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
 
@@ -63,6 +68,8 @@ interface FormData {
   editor_name: string;
   published_at: string;
   is_published: boolean;
+  attachment_url: string;
+  attachment_name: string;
 }
 
 const emptyForm: FormData = {
@@ -76,7 +83,11 @@ const emptyForm: FormData = {
   editor_name: "",
   published_at: "",
   is_published: false,
+  attachment_url: "",
+  attachment_name: "",
 };
+
+const ATTACHMENT_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.odt,.txt,.zip";
 
 export default function AdminBeritaPage() {
   const { toast } = useToast();
@@ -105,6 +116,7 @@ export default function AdminBeritaPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [imageUploading, setImageUploading] = useState(false);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
   // Fetch
   const fetchNews = useCallback(async () => {
@@ -207,6 +219,7 @@ export default function AdminBeritaPage() {
     setForm(emptyForm);
     setImageFile(null);
     setImagePreview("");
+    setAttachmentFile(null);
     setFormError("");
     setFormOpen(true);
   }
@@ -224,9 +237,12 @@ export default function AdminBeritaPage() {
       editor_name: item.editor_name || "",
       published_at: item.published_at ? new Date(item.published_at).toISOString().slice(0, 16) : "",
       is_published: item.is_published,
+      attachment_url: item.attachment_url || "",
+      attachment_name: item.attachment_name || "",
     });
     setImageFile(null);
     setImagePreview(item.image_url || "");
+    setAttachmentFile(null);
     setFormError("");
     setFormOpen(true);
   }
@@ -244,8 +260,27 @@ export default function AdminBeritaPage() {
     }
   }
 
+  async function handleAttachmentChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // izinkan memilih file yang sama lagi
+    if (!file) return;
+    const invalid = checkAttachment(file);
+    if (invalid) { setFormError(invalid); return; }
+    setFormError("");
+    setAttachmentFile(file);
+  }
+
+  function removeAttachment() {
+    setAttachmentFile(null);
+    setForm((f) => ({ ...f, attachment_url: "", attachment_name: "" }));
+  }
+
   async function handleSave() {
     if (!form.title.trim()) { setFormError("Judul wajib diisi."); return; }
+    if (attachmentFile) {
+      const invalid = checkAttachment(attachmentFile);
+      if (invalid) { setFormError(invalid); return; }
+    }
     setFormSaving(true);
     setFormError("");
 
@@ -256,14 +291,36 @@ export default function AdminBeritaPage() {
       if (uploaded.url) imageUrl = uploaded.url;
     }
 
+    // 1) Simpan baris berita (lampiran menyusul — butuh id berita)
+    let newsId = editItem?.id || "";
     if (editItem) {
       const { error } = await updateNews(editItem.id, { ...form, image_url: imageUrl });
       if (error) { setFormError(error); setFormSaving(false); return; }
-      toast("Berita berhasil diperbarui", "success");
     } else {
-      const { error } = await createNews({ ...form, image_url: imageUrl });
+      const { data, error } = await createNews({ ...form, image_url: imageUrl });
       if (error) { setFormError(error); setFormSaving(false); return; }
-      toast("Berita berhasil diterbitkan", "success");
+      newsId = data?.id || "";
+    }
+
+    // 2) Unggah lampiran (PDF dsb.) bila ada file baru
+    let attachmentError = "";
+    if (attachmentFile && newsId) {
+      const uploaded = await uploadNewsAttachment(attachmentFile, newsId);
+      if (uploaded.url) {
+        const { error } = await updateNews(newsId, {
+          attachment_url: uploaded.url,
+          attachment_name: attachmentFile.name,
+        });
+        if (error) attachmentError = error;
+      } else {
+        attachmentError = uploaded.error || "Gagal mengunggah lampiran.";
+      }
+    }
+
+    if (attachmentError) {
+      toast(`Berita tersimpan, tapi lampiran gagal: ${attachmentError}`, "error");
+    } else {
+      toast(editItem ? "Berita berhasil diperbarui" : "Berita berhasil diterbitkan", "success");
     }
 
     setFormOpen(false);
@@ -442,7 +499,12 @@ export default function AdminBeritaPage() {
                           </div>
                         )}
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-slate-800 line-clamp-1">{item.title}</p>
+                          <p className="text-sm font-medium text-slate-800 line-clamp-1">
+                            {item.title}
+                            {item.attachment_url && (
+                              <Paperclip className="ml-1.5 inline h-3.5 w-3.5 -translate-y-px text-[#1767b1]" aria-label="Ada lampiran" />
+                            )}
+                          </p>
                           {item.summary && <p className="mt-0.5 text-xs text-slate-400 line-clamp-1">{item.summary}</p>}
                         </div>
                       </div>
@@ -549,6 +611,23 @@ export default function AdminBeritaPage() {
               <span>{viewItem.published_at ? new Date(viewItem.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"}</span>
             </div>
             {viewItem.summary && <p className="mb-4 text-sm text-slate-600 italic border-l-2 border-[#f4d21f] pl-3">{viewItem.summary}</p>}
+            {viewItem.attachment_url && (
+              <a
+                href={viewItem.attachment_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mb-4 flex items-center gap-3 rounded-xl border border-[#1767b1]/20 bg-[#082b59]/5 px-4 py-3 transition-colors hover:bg-[#082b59]/10"
+              >
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[#082b59]/10 text-[10px] font-black text-[#082b59]">
+                  {attachmentKind(viewItem.attachment_name)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-slate-700">{viewItem.attachment_name || "Lampiran"}</span>
+                  <span className="block text-[11px] text-slate-400">Klik untuk membuka atau mengunduh</span>
+                </span>
+                <Download className="h-4 w-4 flex-shrink-0 text-[#1767b1]" />
+              </a>
+            )}
             <div
               className="prose prose-sm max-w-none text-slate-700 leading-relaxed"
               dangerouslySetInnerHTML={{ __html: sanitize(viewItem.content || "Tidak ada konten") }}
@@ -707,6 +786,51 @@ export default function AdminBeritaPage() {
                 </span>
                 <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
               </div>
+            )}
+          </div>
+
+          {/* Attachment (lampiran file) */}
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Lampiran File</label>
+            <p className="mb-2 text-xs text-slate-400">
+              Opsional — dokumen pendukung, mis. surat pengumuman (PDF/Word/Excel/TXT/ZIP, maks 10 MB).
+            </p>
+            {attachmentFile || form.attachment_url ? (
+              <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#082b59]/10 text-[10px] font-black text-[#082b59]">
+                  {attachmentKind(attachmentFile?.name || form.attachment_name)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-slate-700">
+                    {attachmentFile ? attachmentFile.name : form.attachment_name || "Lampiran"}
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    {attachmentFile
+                      ? `${Math.max(1, Math.round(attachmentFile.size / 1024))} KB · akan diunggah saat disimpan`
+                      : "Tersimpan · klik Ganti untuk mengganti"}
+                  </p>
+                </div>
+                <label className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">
+                  Ganti
+                  <input type="file" accept={ATTACHMENT_ACCEPT} className="hidden" onChange={handleAttachmentChange} />
+                </label>
+                <button
+                  type="button"
+                  onClick={removeAttachment}
+                  className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                  title="Hapus lampiran"
+                >
+                  <Trash className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-5 transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50">
+                <Paperclip className="h-7 w-7 text-slate-300" />
+                <span className="text-center text-xs text-slate-400">
+                  Klik untuk memilih file lampiran
+                </span>
+                <input type="file" accept={ATTACHMENT_ACCEPT} className="hidden" onChange={handleAttachmentChange} />
+              </label>
             )}
           </div>
 

@@ -6,6 +6,7 @@ import { Clock, User, ArrowLeft, Newspaper, MagnifyingGlass, BookmarkSimple, Sha
 import { getNewsBySlug, getNewsList, getRelatedNews } from "@/lib/queries";
 import { sanitize } from "@/lib/sanitize";
 import ImageZoom from "./ImageZoom";
+import AttachmentPanel from "./AttachmentPanel";
 
 export const revalidate = 3600;
 
@@ -237,6 +238,11 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
               />
             ) : (
               <p className="text-gray-500">Konten belum tersedia.</p>
+            )}
+
+            {/* Lampiran file (PDF dsb.) — pratinjau tertanam */}
+            {berita.attachment_url && (
+              <AttachmentPanel url={berita.attachment_url} name={berita.attachment_name} />
             )}
 
             {/* Share + Back */}

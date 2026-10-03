@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Newspaper, Clock, CaretLeft, CaretRight } from "@/components/Icons";
+import { Newspaper, Clock, CaretLeft, CaretRight, Paperclip } from "@/components/Icons";
 import { getNewsListPaginated } from "@/lib/queries";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import type { Metadata } from "next";
@@ -107,6 +107,11 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                             day: "numeric", month: "long", year: "numeric",
                           })}
                         </span>
+                        {berita[0].attachment_url && (
+                          <span className="flex items-center gap-1 text-xs">
+                            <Paperclip className="h-3 w-3" /> Lampiran
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -149,6 +154,9 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                               <Clock className="h-3 w-3" />
                               {new Date(item.published_at || item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
                             </span>
+                            {item.attachment_url && (
+                              <Paperclip className="h-3.5 w-3.5 text-[#1767b1]" aria-label="Ada lampiran" />
+                            )}
                           </div>
                           <h3 className="mt-2 text-sm font-semibold text-slate-800 line-clamp-2 group-hover:text-[#1767b1]">{item.title}</h3>
                           {item.summary && (

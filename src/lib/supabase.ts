@@ -59,6 +59,8 @@ export interface News {
   cover_image_position: "top" | "center" | "bottom";
   writer_name: string;
   editor_name: string;
+  attachment_url: string;
+  attachment_name: string;
   author_id: string | null;
   is_published: boolean;
   published_at: string;

@@ -15,10 +15,10 @@ export default function Footer() {
               <Image
                 src="/images/Logo-Sekolah.png"
                 alt="Logo SMP Muhammadiyah 4 Tanggul"
-                width={32}
-                height={42}
+                width={199}
+                height={253}
                 sizes="32px"
-                className="shrink-0"
+                className="w-8 shrink-0"
               />
               <div className="flex flex-col leading-tight">
                 <span className="text-sm font-bold text-white">SMP Muhammadiyah 4</span>

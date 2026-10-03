@@ -44,17 +44,16 @@ export async function getSchoolProfile(): Promise<SchoolProfile | null> {
 }
 
 // ============ NEWS ============
-export async function getNewsListPaginated(
-  page: number = 1,
-  pageSize: number = 9,
-  search?: string
-): Promise<{ items: NewsWithAuthor[]; total: number; totalPages: number }> {
+const NEWS_LIST_COLUMNS =
+  "id, title, slug, summary, cover_image_position, image_url, category, is_published, published_at, created_at, user_profiles(full_name)";
+
+async function queryNewsPage(columns: string, page: number, pageSize: number, search?: string) {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
   let query = supabase
     .from("news")
-    .select("id, title, slug, summary, cover_image_position, image_url, category, is_published, published_at, created_at, user_profiles(full_name)", { count: "exact" })
+    .select(columns, { count: "exact" })
     .eq("is_published", true)
     .order("published_at", { ascending: false });
 
@@ -62,9 +61,26 @@ export async function getNewsListPaginated(
     query = query.ilike("title", `%${search}%`);
   }
 
-  query = query.range(from, to);
+  return query.range(from, to);
+}
 
-  const { data, error, count } = await query;
+export async function getNewsListPaginated(
+  page: number = 1,
+  pageSize: number = 9,
+  search?: string
+): Promise<{ items: NewsWithAuthor[]; total: number; totalPages: number }> {
+  let { data, error, count } = await queryNewsPage(
+    `${NEWS_LIST_COLUMNS}, attachment_url`,
+    page,
+    pageSize,
+    search
+  );
+
+  // Kolom attachment_url belum ada (migration 005 belum dijalankan)
+  // → jangan sampai halaman berita jadi kosong, ulangi tanpa kolom itu.
+  if (error && /attachment_url/.test(error.message || "")) {
+    ({ data, error, count } = await queryNewsPage(NEWS_LIST_COLUMNS, page, pageSize, search));
+  }
 
   if (error) {
     console.error("Error fetching news:", error);
@@ -176,6 +192,8 @@ export async function createNews(news: {
   editor_name?: string;
   published_at?: string;
   is_published?: boolean;
+  attachment_url?: string;
+  attachment_name?: string;
 }): Promise<{ data: News | null; error?: string }> {
   const { data: { user } } = await supabase.auth.getUser();
   const payload: Record<string, any> = {
@@ -191,11 +209,22 @@ export async function createNews(news: {
   if (news.writer_name) payload.writer_name = news.writer_name;
   if (news.editor_name) payload.editor_name = news.editor_name;
   if (news.published_at) payload.published_at = news.published_at;
-  const { data, error } = await supabase
+  if (news.attachment_url) {
+    payload.attachment_url = news.attachment_url;
+    payload.attachment_name = news.attachment_name || "";
+  }
+  let { data, error } = await supabase
     .from("news")
     .insert(payload)
     .select()
     .single();
+
+  // Kolom attachment belum ada (migration 005 belum jalan) → ulangi tanpa itu
+  if (error && /attachment/.test(error.message || "")) {
+    delete payload.attachment_url;
+    delete payload.attachment_name;
+    ({ data, error } = await supabase.from("news").insert(payload).select().single());
+  }
 
   if (error) {
     console.error("Error creating news:", error);
@@ -217,6 +246,8 @@ export async function updateNews(
     editor_name?: string;
     published_at?: string;
     is_published?: boolean;
+    attachment_url?: string;
+    attachment_name?: string;
   }
 ): Promise<{ data: News | null; error?: string }> {
   const payload: Record<string, any> = {};
@@ -230,12 +261,23 @@ export async function updateNews(
   if (news.writer_name) payload.writer_name = news.writer_name;
   if (news.editor_name) payload.editor_name = news.editor_name;
   if (news.published_at) payload.published_at = news.published_at;
-  const { data, error } = await supabase
+  if (news.attachment_url !== undefined) {
+    payload.attachment_url = news.attachment_url;
+    payload.attachment_name = news.attachment_name || "";
+  }
+  let { data, error } = await supabase
     .from("news")
     .update(payload)
     .eq("id", id)
     .select()
     .single();
+
+  // Kolom attachment belum ada (migration 005 belum jalan) → ulangi tanpa itu
+  if (error && /attachment/.test(error.message || "")) {
+    delete payload.attachment_url;
+    delete payload.attachment_name;
+    ({ data, error } = await supabase.from("news").update(payload).eq("id", id).select().single());
+  }
 
   if (error) {
     console.error("Error updating news:", error);
@@ -250,6 +292,7 @@ export async function deleteNews(id: string): Promise<{ error?: string }> {
     console.error("Error deleting news:", error);
     return { error: error.message };
   }
+  cleanupNewsAttachments(id).catch(() => {});
   return {};
 }
 
@@ -259,6 +302,7 @@ export async function deleteNewsBulk(ids: string[]): Promise<{ error?: string }>
     console.error("Error bulk deleting news:", error);
     return { error: error.message };
   }
+  ids.forEach((id) => cleanupNewsAttachments(id).catch(() => {}));
   return {};
 }
 
@@ -312,6 +356,93 @@ export async function uploadNewsImage(
 
   const { data } = supabase.storage.from("images").getPublicUrl(path);
   return { url: data.publicUrl };
+}
+
+// ============ NEWS ATTACHMENT (lampiran file) ============
+export const ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+
+const ATTACHMENT_TYPES: Record<string, string> = {
+  "application/pdf": "PDF",
+  "application/msword": "DOC",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "DOCX",
+  "application/vnd.ms-excel": "XLS",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "XLSX",
+  "application/vnd.oasis.opendocument.text": "ODT",
+  "text/plain": "TXT",
+  "application/zip": "ZIP",
+};
+
+/** null = file boleh diunggah, string = pesan penolakan. */
+export function checkAttachment(file: File): string | null {
+  if (!ATTACHMENT_TYPES[file.type]) {
+    return "Format file tidak didukung. Gunakan PDF, Word, Excel, TXT, atau ZIP.";
+  }
+  if (file.size > ATTACHMENT_MAX_BYTES) {
+    return `Ukuran file maksimal ${Math.round(ATTACHMENT_MAX_BYTES / 1048576)} MB.`;
+  }
+  return null;
+}
+
+/** Label jenis lampiran dari ekstensi, mis. "PDF", "DOCX". */
+export function attachmentKind(name?: string | null): string {
+  const ext = (name || "").split(".").pop()?.toUpperCase() || "FILE";
+  return ext.length <= 5 ? ext : "FILE";
+}
+
+export async function uploadNewsAttachment(
+  file: File,
+  newsId: string
+): Promise<{ url: string | null; error?: string }> {
+  const invalid = checkAttachment(file);
+  if (invalid) return { url: null, error: invalid };
+
+  const folder = `news/${newsId}`;
+  const storage = supabase.storage.from("documents");
+
+  // Nama file aman untuk URL (tanpa spasi/karakter aneh); nama asli tetap disimpan
+  // di attachment_name untuk ditampilkan.
+  const safeName = file.name.replace(/[^\w.\-]+/g, "_").slice(-100);
+  const path = `${folder}/${safeName}`;
+
+  const { error: uploadError } = await storage.upload(path, file, {
+    upsert: true,
+    contentType: file.type,
+  });
+
+  if (uploadError) {
+    console.error("Error uploading attachment:", uploadError);
+    return { url: null, error: uploadError.message };
+  }
+
+  const { data } = storage.getPublicUrl(path);
+  const publicUrl = data.publicUrl;
+
+  // Satu berita = satu file → buang file lama SETELAH upload sukses
+  // (kalau gagal, lampiran lama tetap utuh).
+  try {
+    const { data: listing } = await storage.list(folder);
+    const stale = (listing || [])
+      .map((f) => `${folder}/${f.name}`)
+      .filter((p) => p !== path);
+    if (stale.length > 0) await storage.remove(stale);
+  } catch {
+    /* best-effort */
+  }
+
+  return { url: publicUrl };
+}
+
+/** Hapus semua lampiran milik sebuah berita (dipanggil saat berita dihapus). */
+async function cleanupNewsAttachments(newsId: string) {
+  try {
+    const storage = supabase.storage.from("documents");
+    const { data } = await storage.list(`news/${newsId}`);
+    if (data && data.length > 0) {
+      await storage.remove(data.map((f) => `news/${newsId}/${f.name}`));
+    }
+  } catch {
+    /* best-effort */
+  }
 }
 
 // ============ GALLERY ============

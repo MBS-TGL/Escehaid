@@ -20,6 +20,7 @@ export {
   ChatCircle,
   Quotes,
   CheckCircle,
+  Info,
   Clock,
   Warning,
   User,
@@ -79,4 +80,5 @@ export {
   LinkSimple,
   CalendarBlank,
   Tag,
+  Paperclip,
 } from "@phosphor-icons/react";

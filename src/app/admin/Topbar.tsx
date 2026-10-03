@@ -92,8 +92,8 @@ export default function AdminTopbar({
 
   const filteredNav = searchQuery
     ? navSearchItems.filter((item) =>
-        item.label.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+      item.label.toLowerCase().includes(searchQuery.toLowerCase())
+    )
     : [];
 
   const fetchNotifications = useCallback(async () => {
@@ -279,11 +279,10 @@ export default function AdminTopbar({
                         key={item.href}
                         href={item.href}
                         onClick={() => { setSearchOpen(false); setSearchQuery(""); }}
-                        className={`flex items-center gap-3 px-3 py-2.5 text-sm transition-colors ${
-                          isActive
+                        className={`flex items-center gap-3 px-3 py-2.5 text-sm transition-colors ${isActive
                             ? "bg-[#082b59]/5 text-[#082b59] font-semibold"
                             : "text-slate-600 hover:bg-slate-50"
-                        }`}
+                          }`}
                       >
                         <item.icon className="h-4 w-4 flex-shrink-0" />
                         {item.label}

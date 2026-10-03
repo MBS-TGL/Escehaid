@@ -353,6 +353,8 @@ CREATE TABLE news (
   cover_image_position text DEFAULT 'center' CHECK (cover_image_position IN ('top', 'center', 'bottom')),
   writer_name text DEFAULT '',
   editor_name text DEFAULT '',
+  attachment_url text DEFAULT '',
+  attachment_name text DEFAULT '',
   author_id uuid REFERENCES user_profiles(id) ON DELETE SET NULL,
   is_published boolean DEFAULT false,
   published_at timestamptz DEFAULT now(),
@@ -893,3 +895,37 @@ CREATE POLICY "Users delete own notifications" ON notifications
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read, created_at DESC);
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON notifications TO authenticated;
+-- ============================================================
+-- MIGRATION: Lampiran file berita (PDF dsb.) + bucket documents
+-- (sama isinya dengan supabase/migrations/005_news_attachments.sql)
+-- ============================================================
+ALTER TABLE news ADD COLUMN IF NOT EXISTS attachment_url text DEFAULT '';
+ALTER TABLE news ADD COLUMN IF NOT EXISTS attachment_name text DEFAULT '';
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'documents', 'documents', true, 10485760,
+  ARRAY[
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.oasis.opendocument.text',
+    'text/plain',
+    'application/zip'
+  ]
+)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Public read documents" ON storage.objects;
+CREATE POLICY "Public read documents" ON storage.objects
+  FOR SELECT USING (bucket_id = 'documents');
+
+DROP POLICY IF EXISTS "Staff manage documents" ON storage.objects;
+CREATE POLICY "Staff manage documents" ON storage.objects
+  FOR ALL USING (bucket_id = 'documents' AND current_user_role() IN ('developer', 'admin', 'publisher'))
+  WITH CHECK (bucket_id = 'documents' AND current_user_role() IN ('developer', 'admin', 'publisher'));
+
+GRANT SELECT ON storage.objects TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO authenticated;
