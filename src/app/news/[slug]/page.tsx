@@ -143,17 +143,9 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
         </div>
       </div>
 
-      {/* Hero — CNN/Kompas-style */}
-      <section className="relative bg-[#082b59]">
-        {berita.image_url ? (
-          <div className="relative">
-            {/* Image with gradient overlay */}
-            <ImageZoom src={berita.image_url} alt={berita.title} objectPosition={objectPosition} />
-            {/* Gradient fade to title area */}
-            <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#082b59] to-transparent pointer-events-none" />
-          </div>
-        ) : null}
-        <div className={`relative mx-auto max-w-7xl px-4 ${berita.image_url ? "-mt-12 pb-3 md:-mt-16 md:pb-4" : "pt-8 pb-3 md:pt-10 md:pb-4"}`}>
+      {/* Hero — judul & metadata saja, tanpa gambar */}
+      <section className="bg-[#082b59]">
+        <div className="mx-auto max-w-7xl px-4 pt-8 pb-3 md:pt-10 md:pb-4">
           <div className="max-w-4xl">
             {/* Category + Meta */}
             <div className="flex flex-wrap items-center gap-2.5">
@@ -205,6 +197,17 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
         <div className="flex flex-col gap-8 lg:flex-row">
           {/* Article Body */}
           <article className="min-w-0 flex-1">
+            {/* Cover Image — di atas summary, selebar kolom */}
+            {berita.image_url && (
+              <div className="mb-6 w-full overflow-hidden rounded-2xl shadow-md aspect-[1200/630]">
+                <ImageZoom
+                  src={berita.image_url}
+                  alt={berita.title}
+                  objectPosition={objectPosition}
+                />
+              </div>
+            )}
+
             {/* Summary */}
             {berita.summary && (
               <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
@@ -220,14 +223,14 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
               <div
                 className="prose prose-lg prose-slate max-w-none
                   prose-headings:text-[#082b59] prose-headings:font-extrabold prose-headings:scroll-mt-24
-                  prose-p:text-gray-700 prose-p:leading-[1.9] prose-p:text-justify prose-p:mb-5
+                  prose-p:text-gray-700 prose-p:leading-[1.75] prose-p:my-4
                   prose-a:text-[#1767b1] prose-a:no-underline prose-a:font-medium hover:prose-a:underline
                   prose-strong:text-[#082b59] prose-strong:font-bold
                   prose-em:text-slate-600
                   prose-img:rounded-2xl prose-img:shadow-md prose-img:my-8
                   prose-blockquote:border-l-4 prose-blockquote:border-[#f4d21f] prose-blockquote:bg-gradient-to-r prose-blockquote:from-amber-50 prose-blockquote:to-transparent prose-blockquote:py-4 prose-blockquote:pr-6 prose-blockquote:pl-6 prose-blockquote:rounded-r-xl prose-blockquote:italic prose-blockquote:text-slate-600
-                  prose-li:text-gray-700 prose-li:leading-relaxed prose-li:mb-1
-                  prose-ol:my-5 prose-ol:pl-6 prose-ul:my-5 prose-ul:pl-6
+                  prose-li:text-gray-700 prose-li:leading-[1.7] prose-li:my-1 [&_li>p]:my-0
+                  prose-ol:my-4 prose-ol:pl-6 prose-ul:my-4 prose-ul:pl-6
                   prose-code:text-[#1767b1] prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:font-normal prose-code:before:content-none prose-code:after:content-none
                   prose-pre:bg-[#082b59] prose-pre:text-white prose-pre:rounded-xl prose-pre:border prose-pre:border-slate-700
                   prose-hr:border-slate-200 prose-hr:my-12

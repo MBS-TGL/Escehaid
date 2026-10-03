@@ -287,11 +287,10 @@ export default function AdminAnnouncementsPage() {
                     </td>
                     <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => handleToggle(item)}
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-                          item.is_active
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${item.is_active
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
                             : "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200"
-                        }`}>
+                          }`}>
                         {item.is_active ? "Aktif" : "Nonaktif"}
                       </button>
                     </td>
@@ -368,7 +367,7 @@ export default function AdminAnnouncementsPage() {
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Teks Pengumuman <span className="text-red-500">*</span></label>
             <input type="text" value={formText} onChange={(e) => setFormText(e.target.value)}
-              placeholder="Contoh: PPDB 2026/2027 Sudah Dibuka!"
+              placeholder="Contoh: SPMB 2026/2027 Sudah Dibuka!"
               className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
             <p className="mt-1.5 text-xs text-slate-400">Teks ini akan ditampilkan di bar berjalan (marquee) di atas website</p>
           </div>

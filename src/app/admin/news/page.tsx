@@ -13,6 +13,8 @@ import {
   uploadNewsAttachment,
   checkAttachment,
   attachmentKind,
+  revalidateNews,
+  cleanupNewsImageFolder,
 } from "@/lib/queries";
 import { compressImage } from "@/lib/compress-image";
 import { sanitize } from "@/lib/sanitize";
@@ -128,10 +130,10 @@ export default function AdminBeritaPage() {
 
   useEffect(() => { fetchNews(); }, [fetchNews]);
 
-  // Paste image handler
+  // Paste image handler — kompres seperti handleImageChange
   useEffect(() => {
     if (!formOpen) return;
-    const handlePaste = (e: ClipboardEvent) => {
+    const handlePaste = async (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
       if (!items) return;
       for (const item of items) {
@@ -139,8 +141,14 @@ export default function AdminBeritaPage() {
           const file = item.getAsFile();
           if (file) {
             e.preventDefault();
-            setImageFile(file);
-            setImagePreview(URL.createObjectURL(file));
+            setImageUploading(true);
+            try {
+              const compressed = await compressImage(file);
+              setImageFile(compressed);
+              setImagePreview(URL.createObjectURL(compressed));
+            } finally {
+              setImageUploading(false);
+            }
             break;
           }
         }
@@ -284,25 +292,36 @@ export default function AdminBeritaPage() {
     setFormSaving(true);
     setFormError("");
 
+    // ── Upload gambar baru jika ada ──
     let imageUrl = form.image_url;
+    const oldImageUrl = editItem?.image_url || "";
     if (imageFile) {
       const tempId = editItem?.id || (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36));
       const uploaded = await uploadNewsImage(imageFile, tempId);
-      if (uploaded.url) imageUrl = uploaded.url;
+      if (!uploaded.url) {
+        setFormError(uploaded.error || "Gagal mengunggah gambar sampul.");
+        setFormSaving(false);
+        return;
+      }
+      imageUrl = uploaded.url;
     }
 
-    // 1) Simpan baris berita (lampiran menyusul — butuh id berita)
+    // ── Simpan baris berita ──
     let newsId = editItem?.id || "";
     if (editItem) {
       const { error } = await updateNews(editItem.id, { ...form, image_url: imageUrl });
       if (error) { setFormError(error); setFormSaving(false); return; }
+
+      // Hapus file lama di storage jika gambar diganti atau dikosongkan
+      // Gunakan folder-based cleanup: list semua file di news/<id>/, hapus semua kecuali keepUrl
+      cleanupNewsImageFolder(editItem.id, imageUrl || null).catch(() => {});
     } else {
       const { data, error } = await createNews({ ...form, image_url: imageUrl });
       if (error) { setFormError(error); setFormSaving(false); return; }
       newsId = data?.id || "";
     }
 
-    // 2) Unggah lampiran (PDF dsb.) bila ada file baru
+    // ── Upload lampiran bila ada ──
     let attachmentError = "";
     if (attachmentFile && newsId) {
       const uploaded = await uploadNewsAttachment(attachmentFile, newsId);
@@ -326,40 +345,55 @@ export default function AdminBeritaPage() {
     setFormOpen(false);
     setFormSaving(false);
     fetchNews();
+
+    // Revalidate cache
+    const slug = (editItem
+      ? news.find(n => n.id === editItem.id)?.slug || editItem.slug
+      : "") || "";
+    const oldSlug = editItem?.slug;
+    revalidateNews(slug, oldSlug && oldSlug !== slug ? oldSlug : undefined).catch(() => {});
   }
 
   async function handleDelete() {
     if (!deleteItem) return;
+    const slug = deleteItem.slug;
     await deleteNews(deleteItem.id);
     toast("Berita berhasil dihapus", "success");
     setDeleteItem(null);
     setSelectedIds((s) => { const n = new Set(s); n.delete(deleteItem.id); return n; });
     fetchNews();
+    revalidateNews(slug).catch(() => {});
   }
 
   async function handleBulkDelete() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
+    // kumpulkan slug sebelum dihapus
+    const slugs = ids.map(id => news.find(n => n.id === id)?.slug).filter(Boolean) as string[];
     await deleteNewsBulk(ids);
     toast(`${ids.length} berita berhasil dihapus`, "success");
     setSelectedIds(new Set());
     setBulkDelete(false);
     fetchNews();
+    slugs.forEach(slug => revalidateNews(slug).catch(() => {}));
   }
 
   async function handleBulkPublish(publish: boolean) {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
+    const slugs = ids.map(id => news.find(n => n.id === id)?.slug).filter(Boolean) as string[];
     await togglePublishNewsBulk(ids, publish);
     toast(`${ids.length} berita ${publish ? "diterbitkan" : "draft"}`, "success");
     setSelectedIds(new Set());
     fetchNews();
+    slugs.forEach(slug => revalidateNews(slug).catch(() => {}));
   }
 
   async function handleTogglePublish(item: News) {
     await togglePublishNews(item.id, !item.is_published);
     toast(`Berita ${!item.is_published ? "diterbitkan" : "draft"}`, "success");
     fetchNews();
+    revalidateNews(item.slug).catch(() => {});
   }
 
   const SortIcon = ({ field }: { field: SortField }) => {
@@ -755,7 +789,8 @@ export default function AdminBeritaPage() {
                 </div>
               </div>
             ) : (
-              <div
+              <label
+                htmlFor="cover-image-input"
                 onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add("border-[#1767b1]", "bg-[#1767b1]/5"); }}
                 onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("border-[#1767b1]", "bg-[#1767b1]/5"); }}
                 onDrop={async (e) => {
@@ -784,8 +819,8 @@ export default function AdminBeritaPage() {
                 <span className="text-xs text-slate-400">
                   {imageUploading ? "Mengkompresi gambar..." : "Klik, seret & lepas, atau Ctrl+V untuk paste gambar"}
                 </span>
-                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-              </div>
+                <input id="cover-image-input" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+              </label>
             )}
           </div>
 

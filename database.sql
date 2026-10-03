@@ -99,7 +99,6 @@ DROP TABLE IF EXISTS activities CASCADE;
 DROP TABLE IF EXISTS facilities CASCADE;
 DROP TABLE IF EXISTS teachers CASCADE;
 DROP TABLE IF EXISTS spmb_registrations CASCADE;
-DROP TABLE IF EXISTS ppdb_registrations CASCADE; -- nama lama, jaga-jaga
 DROP TABLE IF EXISTS gallery CASCADE;
 DROP TABLE IF EXISTS news CASCADE;
 DROP TABLE IF EXISTS school_profile CASCADE;
@@ -778,7 +777,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON announcements TO authenticated;
 
 -- Default announcements
 INSERT INTO announcements (text, sort_order) VALUES
-  ('PPDB 2026/2027 Sudah Dibuka! Segera Daftar di Halaman PPDB', 1),
+  ('SPMB 2026/2027 Sudah Dibuka! Segera Daftar di Halaman SPMB', 1),
   ('Pengambilan Raport: 20 Juni 2026', 2),
   ('Libur Hari Raya Idul Adha: 6-7 Juni 2026', 3),
   ('Ujian Tengah Semester dilaksanakan 16-27 Juni 2026', 4);
@@ -808,7 +807,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON agenda_events TO authenticated;
 
 -- Default agenda events
 INSERT INTO agenda_events (title, event_date, sort_order) VALUES
-  ('PPDB 2026/2027 Dibuka', '2026-06-15T07:00:00+07:00', 1),
+  ('SPMB 2026/2027 Dibuka', '2026-06-15T07:00:00+07:00', 1),
   ('Ujian Tengah Semester', '2026-06-16T07:00:00+07:00', 2),
   ('Pengambilan Raport', '2026-06-20T08:00:00+07:00', 3);
 

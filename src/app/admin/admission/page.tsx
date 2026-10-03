@@ -64,7 +64,7 @@ const pathColors: Record<string, string> = {
 type SortField = "created_at" | "full_name" | "status" | "registration_path";
 type SortDir = "asc" | "desc";
 
-export default function AdminPPDBPage() {
+export default function AdminSPMBPage() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("all");
@@ -769,9 +769,9 @@ function BerkasItem({ label, url, isImage, isPdf }: { label: string; url: string
   const [open, setOpen] = useState(false);
   const berkasKey = label.toLowerCase().includes("kartu") ? "kk"
     : label.toLowerCase().includes("akta") ? "akta"
-    : label.toLowerCase().includes("surat") ? "surat_sekolah"
-    : label.toLowerCase().includes("ktp") ? "ktp_ortu"
-    : "bukti_transfer";
+      : label.toLowerCase().includes("surat") ? "surat_sekolah"
+        : label.toLowerCase().includes("ktp") ? "ktp_ortu"
+          : "bukti_transfer";
   const Icon = BERKAS_ICONS[berkasKey] || FileText;
   const colorCls = BERKAS_COLORS[berkasKey] || "text-slate-600 bg-slate-100";
 

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600;
 
-export default function PPDBPage() {
+export default function SPMBPage() {
   return (
     <div>
       <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-12 text-white md:py-16">

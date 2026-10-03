@@ -624,7 +624,7 @@ export default function AdminArticlesPage() {
               <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50">
                 <ImageIcon className="h-8 w-8 text-slate-300" />
                 <span className="text-xs text-slate-400">Klik untuk upload gambar</span>
-                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                <input id="cover-image-input" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
               </label>
             )}
           </div>

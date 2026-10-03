@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 :root {
   --background: #ffffff;
@@ -34,30 +35,56 @@ h3 {
 }
 
 /* Shape consistency: all cards/buttons use 12px radius */
-.rounded-xl { border-radius: var(--radius); }
-.rounded-2xl { border-radius: calc(var(--radius) * 1.33); }
-.rounded-lg { border-radius: calc(var(--radius) * 0.67); }
+.rounded-xl {
+  border-radius: var(--radius);
+}
+
+.rounded-2xl {
+  border-radius: calc(var(--radius) * 1.33);
+}
+
+.rounded-lg {
+  border-radius: calc(var(--radius) * 0.67);
+}
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 @keyframes gradient-shift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 @keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 .animate-shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
 }
+
 .animate-gradient {
   background-size: 200% 200%;
   animation: gradient-shift 4s ease infinite;
@@ -66,6 +93,7 @@ h3 {
 .card-hover {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
+
 .card-hover:hover {
   transform: translateY(-4px);
   box-shadow: 0 20px 40px -12px rgba(8, 43, 89, 0.15);
@@ -124,6 +152,7 @@ h3 {
     opacity: 0;
     transform: translateY(12px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -136,7 +165,9 @@ h3 {
 
 /* Loading spinner */
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinner {
@@ -153,6 +184,7 @@ h3 {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
@@ -165,13 +197,49 @@ h3 {
   pointer-events: none;
   height: 0;
 }
-.tiptap-editor h2 { font-size: 1.25rem; font-weight: 700; margin: 1rem 0 0.5rem; color: #0f172a; }
-.tiptap-editor h3 { font-size: 1.125rem; font-weight: 600; margin: 0.75rem 0 0.5rem; color: #1e293b; }
-.tiptap-editor h4 { font-size: 1rem; font-weight: 600; margin: 0.75rem 0 0.5rem; color: #334155; }
-.tiptap-editor p { margin: 0.5rem 0; line-height: 1.7; }
-.tiptap-editor ul { list-style: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
-.tiptap-editor ol { list-style: decimal; padding-left: 1.5rem; margin: 0.5rem 0; }
-.tiptap-editor li { margin: 0.25rem 0; }
+
+.tiptap-editor h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 1rem 0 0.5rem;
+  color: #0f172a;
+}
+
+.tiptap-editor h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0.75rem 0 0.5rem;
+  color: #1e293b;
+}
+
+.tiptap-editor h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.75rem 0 0.5rem;
+  color: #334155;
+}
+
+.tiptap-editor p {
+  margin: 0.5rem 0;
+  line-height: 1.7;
+}
+
+.tiptap-editor ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.tiptap-editor ol {
+  list-style: decimal;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.tiptap-editor li {
+  margin: 0.25rem 0;
+}
+
 .tiptap-editor blockquote {
   border-left: 3px solid #f4d21f;
   padding-left: 0.75rem;
@@ -179,11 +247,35 @@ h3 {
   color: #64748b;
   font-style: italic;
 }
-.tiptap-editor a { color: #1767b1; text-decoration: underline; }
-.tiptap-editor a:hover { color: #082b59; }
-.tiptap-editor hr { border: none; border-top: 1px solid #e2e8f0; margin: 2.5rem 0; }
-.tiptap-editor img { max-width: 100%; height: auto; border-radius: 0.75rem; margin: 0.75rem 0; }
-.tiptap-editor mark { background-color: #fef08a; padding: 0.125rem 0.25rem; border-radius: 0.25rem; }
+
+.tiptap-editor a {
+  color: #1767b1;
+  text-decoration: underline;
+}
+
+.tiptap-editor a:hover {
+  color: #082b59;
+}
+
+.tiptap-editor hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 2.5rem 0;
+}
+
+.tiptap-editor img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+  margin: 0.75rem 0;
+}
+
+.tiptap-editor mark {
+  background-color: #fef08a;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+}
+
 .tiptap-editor code {
   background-color: #f1f5f9;
   color: #1767b1;
@@ -191,6 +283,7 @@ h3 {
   border-radius: 0.25rem;
   font-size: 0.875rem;
 }
+
 .tiptap-editor pre {
   background-color: #082b59;
   color: #e2e8f0;
@@ -199,13 +292,49 @@ h3 {
   overflow-x: auto;
   margin: 0.75rem 0;
 }
-.tiptap-editor pre code { background: none; color: inherit; padding: 0; font-size: 0.875rem; }
-.tiptap-editor table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; font-size: 0.875rem; }
-.tiptap-editor th { background-color: #f8fafc; font-weight: 600; text-align: left; padding: 0.5rem 0.75rem; border: 1px solid #e2e8f0; }
-.tiptap-editor td { padding: 0.5rem 0.75rem; border: 1px solid #e2e8f0; }
-.tiptap-editor ul[data-type="taskList"] { list-style: none; padding-left: 0; }
-.tiptap-editor ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 0.5rem; }
-.tiptap-editor ul[data-type="taskList"] li label { margin-top: 0.125rem; }
+
+.tiptap-editor pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: 0.875rem;
+}
+
+.tiptap-editor table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75rem 0;
+  font-size: 0.875rem;
+}
+
+.tiptap-editor th {
+  background-color: #f8fafc;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+}
+
+.tiptap-editor td {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+}
+
+.tiptap-editor ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.tiptap-editor ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.tiptap-editor ul[data-type="taskList"] li label {
+  margin-top: 0.125rem;
+}
+
 .tiptap-editor ul[data-type="taskList"] li label input[type="checkbox"] {
   width: 1rem;
   height: 1rem;
@@ -214,29 +343,33 @@ h3 {
 }
 
 /* Prose content HR override */
+/* Ukuran isi berita: `prose-lg` = 18px — terlalu besar untuk teks tubuh
+   (teks situs 16px, h2 isi 26px). Samakan dengan ukuran teks situs. */
+.prose.prose-lg {
+  font-size: 1rem !important;
+  line-height: 1.8 !important;
+}
+
 .prose hr {
   margin-top: 1.5rem !important;
   margin-bottom: 1.5rem !important;
 }
+
 .prose h2 {
-  font-size: 1.65rem !important;
-  font-weight: 700 !important;
-  color: #082b59 !important;
-  margin-top: 2.5rem !important;
-  margin-bottom: 1rem !important;
-  border-bottom: 1px solid #e2e8f0 !important;
-  padding-bottom: 0.75rem !important;
-}
-.prose h3 {
-  font-size: 1.35rem !important;
-  font-weight: 700 !important;
-  color: #082b59 !important;
   margin-top: 2rem !important;
   margin-bottom: 0.75rem !important;
+  font-size: 1.5rem !important;
+}
+
+.prose h3 {
+  margin-top: 1.5rem !important;
+  margin-bottom: 0.5rem !important;
+  font-size: 1.25rem !important;
 }
 
 /* Reduced motion: disable all animations */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {

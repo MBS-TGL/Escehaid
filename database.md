@@ -89,7 +89,7 @@ Foto & video galeri.
 | `created_at` | timestamptz | |
 
 ### 4. `spmb_registrations`
-Pendaftaran SPMB (sebelumnya PPDB). Dikunci: public insert → status `pending` saja.
+Pendaftaran SPMB. Dikunci: public insert → status `pending` saja.
 
 | Field | Type | Description |
 |-------|------|-------------|

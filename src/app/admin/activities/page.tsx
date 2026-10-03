@@ -660,7 +660,7 @@ export default function AdminActivitiesPage() {
                 </div>
               </div>
             ) : (
-              <div
+              <label
                 onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add("border-[#1767b1]", "bg-[#1767b1]/5"); }}
                 onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("border-[#1767b1]", "bg-[#1767b1]/5"); }}
                 onDrop={async (e) => {
@@ -690,7 +690,7 @@ export default function AdminActivitiesPage() {
                   {imageUploading ? "Mengkompresi gambar..." : "Klik, seret & lepas, atau Ctrl+V untuk paste gambar"}
                 </span>
                 <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-              </div>
+              </label>
             )}
           </div>
 

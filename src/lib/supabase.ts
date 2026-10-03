@@ -44,8 +44,20 @@ export interface SpmbRegistration {
   status: "pending" | "accepted" | "rejected";
   documents: Record<string, string> | null;
   admin_notes: string;
+  wave_id?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface SpmbWave {
+  id: string;
+  name: string;
+  start_date: string; // ISO date string, e.g. "2026-10-20"
+  end_date: string;
+  note: string | null;
+  is_published: boolean;
+  sort_order: number;
+  created_at: string;
 }
 
 export interface News {
@@ -126,6 +138,7 @@ export interface Activity {
   image_url: string;
   is_published: boolean;
   author_id: string | null;
+  published_at?: string | null;
   created_at: string;
   updated_at: string;
 }

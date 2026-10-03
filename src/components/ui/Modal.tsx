@@ -154,14 +154,25 @@ export const Modal = memo(function Modal({
 });
 
 /* ─── ConfirmModal ──────────────────────────────────────── */
+const variantColorMap: Record<string, string> = {
+  danger: "bg-red-600 hover:bg-red-700",
+  warning: "bg-amber-600 hover:bg-amber-700",
+  info: "bg-blue-600 hover:bg-blue-700",
+};
+
 type ConfirmModalProps = {
   open: boolean;
   onClose: () => void;
   onConfirm: () => void;
   title: string;
+  /** Primary body text (alias: `message`) */
   description?: string;
+  /** Alias for description */
+  message?: string;
   confirmLabel?: string;
   confirmColor?: string;
+  /** Shorthand: "danger" | "warning" | "info" — maps to confirmColor */
+  variant?: string;
   loading?: boolean;
 };
 
@@ -171,19 +182,24 @@ export function ConfirmModal({
   onConfirm,
   title,
   description,
+  message,
   confirmLabel = "Ya, Hapus",
-  confirmColor = "bg-red-600 hover:bg-red-700",
+  confirmColor,
+  variant,
   loading = false,
 }: ConfirmModalProps) {
+  const resolvedDesc = description || message;
+  const resolvedColor = confirmColor || (variant && variantColorMap[variant]) || "bg-red-600 hover:bg-red-700";
+
   return (
-    <Modal open={open} onClose={onClose} size="sm" title={title} description={description}>
+    <Modal open={open} onClose={onClose} size="sm" title={title} description={resolvedDesc}>
       <div className="flex gap-3">
         <button onClick={onClose} disabled={loading}
           className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
           Batal
         </button>
         <button onClick={onConfirm} disabled={loading}
-          className={`flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-50 ${confirmColor}`}>
+          className={`flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-50 ${resolvedColor}`}>
           {loading ? "Memproses..." : confirmLabel}
         </button>
       </div>

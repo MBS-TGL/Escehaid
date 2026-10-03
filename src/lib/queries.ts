@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { SchoolProfile, News, Gallery, SpmbRegistration, Teacher, Facility, Article, Activity, Achievement, ContactMessage } from "./supabase";
+import type { SchoolProfile, News, Gallery, SpmbRegistration, SpmbWave, Teacher, Facility, Article, Activity, Achievement, ContactMessage } from "./supabase";
 import type { UserProfile } from "./auth";
 import {
   sendRegistrationEmail,
@@ -255,7 +255,7 @@ export async function updateNews(
   if (news.summary !== undefined) payload.summary = news.summary;
   if (news.content !== undefined) payload.content = news.content;
   if (news.category !== undefined) payload.category = news.category;
-  if (news.image_url !== undefined) payload.image_url = news.image_url;
+  if (news.image_url !== undefined) payload.image_url = news.image_url || null;
   if (news.is_published !== undefined) payload.is_published = news.is_published;
   if (news.cover_image_position) payload.cover_image_position = news.cover_image_position;
   if (news.writer_name) payload.writer_name = news.writer_name;
@@ -287,21 +287,43 @@ export async function updateNews(
 }
 
 export async function deleteNews(id: string): Promise<{ error?: string }> {
+  // Ambil URL lampiran sebelum row dihapus
+  const { data: row } = await supabase
+    .from("news")
+    .select("attachment_url")
+    .eq("id", id)
+    .single();
+
   const { error } = await supabase.from("news").delete().eq("id", id);
   if (error) {
     console.error("Error deleting news:", error);
     return { error: error.message };
   }
+  // Hapus seluruh folder gambar berita ini
+  cleanupNewsImageFolder(id).catch(() => {});
+  // Hapus lampiran via URL (bisa ada di folder berbeda)
+  if (row?.attachment_url) deleteStorageFileByUrl(row.attachment_url).catch(() => {});
   cleanupNewsAttachments(id).catch(() => {});
   return {};
 }
 
 export async function deleteNewsBulk(ids: string[]): Promise<{ error?: string }> {
+  // Ambil URL lampiran semua row sebelum dihapus
+  const { data: rows } = await supabase
+    .from("news")
+    .select("id, attachment_url")
+    .in("id", ids);
+
   const { error } = await supabase.from("news").delete().in("id", ids);
   if (error) {
     console.error("Error bulk deleting news:", error);
     return { error: error.message };
   }
+  // Hapus folder gambar tiap berita + lampiran
+  ids.forEach((id) => cleanupNewsImageFolder(id).catch(() => {}));
+  (rows || []).forEach((row: any) => {
+    if (row.attachment_url) deleteStorageFileByUrl(row.attachment_url).catch(() => {});
+  });
   ids.forEach((id) => cleanupNewsAttachments(id).catch(() => {}));
   return {};
 }
@@ -340,22 +362,137 @@ export async function uploadNewsImage(
   file: File,
   newsId: string
 ): Promise<{ url: string | null; error?: string }> {
-  const compressed = await compressImage(file);
-  const path = `news/${newsId}.jpg`;
+  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const rand = Math.random().toString(36).slice(2, 8);
+  const path = `news/${newsId}/${Date.now()}-${rand}.${ext}`;
 
-  await cleanupOldFiles("news", newsId);
+  const compressed = await compressImage(file);
 
   const { error: uploadError } = await supabase.storage
     .from("images")
-    .upload(path, compressed, { upsert: true });
+    .upload(path, compressed, { upsert: false });
 
   if (uploadError) {
     console.error("Error uploading image:", uploadError);
-    return { url: null, error: uploadError.message };
+    return { url: null, error: `Gagal mengunggah gambar: ${uploadError.message}` };
   }
 
   const { data } = supabase.storage.from("images").getPublicUrl(path);
-  return { url: data.publicUrl };
+  const url = `${data.publicUrl}?v=${Date.now()}`;
+  return { url };
+}
+
+/**
+ * Ekstrak path di dalam bucket dari publicUrl Supabase Storage.
+ * Menangani trailing-slash inconsistency pada getPublicUrl("").
+ */
+function storagePathFromUrl(url: string): string | null {
+  // URL format: https://<project>.supabase.co/storage/v1/object/public/<bucket>/<path>
+  const match = url.split("?")[0].match(/\/storage\/v1\/object\/public\/images\/(.+)$/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Hapus file dari bucket "images" berdasarkan publicUrl.
+ * Abaikan URL yang bukan dari bucket ini.
+ */
+export async function deleteStorageFileByUrl(url: string): Promise<void> {
+  try {
+    const filePath = storagePathFromUrl(url);
+    if (!filePath) return;
+    const { data, error } = await supabase.storage.from("images").remove([filePath]);
+    if (error) {
+      console.warn("[deleteStorageFileByUrl] remove failed:", error.message);
+    } else if (!data || data.length === 0) {
+      console.warn("[deleteStorageFileByUrl] remove returned empty data for", filePath,
+        "— kemungkinan policy DELETE belum dikonfigurasi di bucket 'images'.");
+    }
+  } catch (e) {
+    console.warn("[deleteStorageFileByUrl] error:", e);
+  }
+}
+
+/**
+ * Hapus semua file di folder `news/<newsId>/`, kecuali file yang URL-nya == keepUrl.
+ * Dipakai saat: (1) sampul diganti — hapus versi lama, (2) berita dihapus — bersihkan semua.
+ */
+export async function cleanupNewsImageFolder(
+  newsId: string,
+  keepUrl?: string | null
+): Promise<void> {
+  try {
+    const prefix = `news/${newsId}`;
+    const { data: files, error: listError } = await supabase.storage
+      .from("images")
+      .list(prefix);
+
+    if (listError) {
+      console.warn("[cleanupNewsImageFolder] list failed:", listError.message);
+      return;
+    }
+    if (!files || files.length === 0) return;
+
+    // Nama file yang harus dipertahankan
+    const keepName = keepUrl ? storagePathFromUrl(keepUrl)?.split("/").pop() : null;
+
+    const toDelete = files
+      .filter((f) => f.name !== keepName)
+      .map((f) => `${prefix}/${f.name}`);
+
+    if (toDelete.length === 0) return;
+
+    const { data, error: removeError } = await supabase.storage
+      .from("images")
+      .remove(toDelete);
+
+    if (removeError) {
+      console.warn("[cleanupNewsImageFolder] remove failed:", removeError.message);
+    } else if (!data || data.length === 0) {
+      console.warn(
+        `[cleanupNewsImageFolder] remove returned empty data untuk ${toDelete.length} file di ${prefix}/`,
+        "— kemungkinan policy DELETE belum dikonfigurasi di bucket 'images'.",
+        "Tambahkan SQL policy berikut di Supabase Dashboard → Storage → Policies:",
+        `CREATE POLICY \"Allow authenticated delete\" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'images');`
+      );
+    }
+  } catch (e) {
+    console.warn("[cleanupNewsImageFolder] error:", e);
+  }
+}
+
+/**
+ * Panggil revalidatePath untuk halaman berita via API route /api/revalidate.
+ * Aman dipanggil dari client component admin setelah create/update/delete/togglePublish.
+ */
+export async function revalidateNews(
+  slug: string,
+  oldSlug?: string
+): Promise<void> {
+  const paths = Array.from(
+    new Set(
+      [
+        slug ? `/news/${slug}` : null,
+        oldSlug && oldSlug !== slug ? `/news/${oldSlug}` : null,
+        "/news",
+        "/",
+      ].filter(Boolean) as string[]
+    )
+  );
+  try {
+    // Ambil session token untuk otorisasi di server
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token ?? "";
+    await fetch("/api/revalidate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ paths }),
+    });
+  } catch {
+    console.warn("[revalidateNews] fetch failed, cache not invalidated");
+  }
 }
 
 // ============ NEWS ATTACHMENT (lampiran file) ============
@@ -968,7 +1105,7 @@ export async function getActivityList(limit?: number): Promise<Activity[]> {
     console.error("Error fetching activities:", JSON.stringify(error), error.message, error.code, error.details, error.hint);
     return [];
   }
-  return data || [];
+  return (data || []) as Activity[];
 }
 
 export async function getActivityBySlug(slug: string): Promise<Activity | null> {
@@ -1823,4 +1960,155 @@ export async function notifyAllAdmins(
       createNotification(admin.id, title, message, type, link)
     )
   );
+}
+
+// ============ SPMB WAVES (Gelombang Pendaftaran) ============
+
+/**
+ * Untuk halaman publik — hanya gelombang yang is_published = true,
+ * diurutkan sort_order ASC, start_date ASC.
+ */
+export async function getPublishedWaves(): Promise<SpmbWave[]> {
+  const { data, error } = await supabase
+    .from("spmb_waves")
+    .select("*")
+    .eq("is_published", true)
+    .order("sort_order", { ascending: true })
+    .order("start_date", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching published waves:", error);
+    return [];
+  }
+  return (data || []) as SpmbWave[];
+}
+
+/**
+ * Untuk panel admin — semua gelombang termasuk yang is_published = false.
+ */
+export async function getWavesAll(): Promise<SpmbWave[]> {
+  const { data, error } = await supabase
+    .from("spmb_waves")
+    .select("*")
+    .order("sort_order", { ascending: true })
+    .order("start_date", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching all waves:", error);
+    return [];
+  }
+  return (data || []) as SpmbWave[];
+}
+
+export async function createWave(wave: {
+  name: string;
+  start_date: string;
+  end_date: string;
+  note?: string | null;
+  is_published?: boolean;
+  sort_order?: number;
+}): Promise<{ data: SpmbWave | null; error?: string }> {
+  const { data, error } = await supabase
+    .from("spmb_waves")
+    .insert({
+      name: wave.name,
+      start_date: wave.start_date,
+      end_date: wave.end_date,
+      note: wave.note ?? null,
+      is_published: wave.is_published ?? true,
+      sort_order: wave.sort_order ?? 0,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating wave:", error);
+    return { data: null, error: error.message };
+  }
+  return { data: data as SpmbWave };
+}
+
+export async function updateWave(
+  id: string,
+  wave: Partial<{
+    name: string;
+    start_date: string;
+    end_date: string;
+    note: string | null;
+    is_published: boolean;
+    sort_order: number;
+  }>
+): Promise<{ data: SpmbWave | null; error?: string }> {
+  const { data, error } = await supabase
+    .from("spmb_waves")
+    .update(wave)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating wave:", error);
+    return { data: null, error: error.message };
+  }
+  return { data: data as SpmbWave };
+}
+
+export async function deleteWave(id: string): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from("spmb_waves")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("Error deleting wave:", error);
+    return { error: error.message };
+  }
+  return {};
+}
+
+/**
+ * Hitung status gelombang relatif terhadap `now` dalam zona waktu WIB (Asia/Jakarta, UTC+7).
+ * `end_date` dianggap inklusif sampai 23:59:59 WIB.
+ *
+ * @returns "upcoming" | "open" | "closed"
+ *
+ * Contoh pengujian (anggap start_date="2026-10-20", end_date="2026-12-30"):
+ *
+ *   [1] Sebelum start — now = 2026-10-19T23:59:59+07:00
+ *       startWIB = 2026-10-20T00:00:00+07:00
+ *       endWIB   = 2026-12-30T23:59:59+07:00
+ *       now < startWIB → "upcoming"
+ *
+ *   [2] Tepat di start — now = 2026-10-20T00:00:00+07:00
+ *       now >= startWIB && now <= endWIB → "open"
+ *
+ *   [3] Tepat di hari end — now = 2026-12-30T23:59:59+07:00
+ *       now >= startWIB && now <= endWIB → "open"  (end_date inklusif)
+ *
+ *   [4] Sehari setelah end — now = 2026-12-31T00:00:00+07:00
+ *       now > endWIB → "closed"
+ */
+export function getWaveStatus(
+  wave: Pick<SpmbWave, "start_date" | "end_date">,
+  now: Date = new Date()
+): "upcoming" | "open" | "closed" {
+  const WIB_OFFSET = 7 * 60; // menit
+
+  // Konversi date string ("YYYY-MM-DD") ke epoch UTC dengan asumsi WIB
+  function wibDateToMs(dateStr: string, endOfDay = false): number {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const hours = endOfDay ? 23 : 0;
+    const mins = endOfDay ? 59 : 0;
+    const secs = endOfDay ? 59 : 0;
+    // Buat Date di UTC, lalu kurangi offset WIB agar mewakili "jam X WIB"
+    return Date.UTC(y, m - 1, d, hours - WIB_OFFSET / 60, mins, secs);
+  }
+
+  const startMs = wibDateToMs(wave.start_date, false); // 00:00:00 WIB
+  const endMs   = wibDateToMs(wave.end_date, true);    // 23:59:59 WIB
+  const nowMs   = now.getTime();
+
+  if (nowMs < startMs) return "upcoming";
+  if (nowMs > endMs)   return "closed";
+  return "open";
 }

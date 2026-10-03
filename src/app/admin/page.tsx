@@ -67,12 +67,12 @@ export default async function AdminPage() {
   ]);
 
   const stats = [
-    { label: "Total Berita", value: newsCount.count || 0, icon: Megaphone, variant: "info" as const },
-    { label: "Total Artikel", value: articlesCount.count || 0, icon: Note, variant: "brand" as const },
-    { label: "Total Galeri", value: galleryCount.count || 0, icon: ImageSquare, variant: "info" as const },
-    { label: "Pendaftar SPMB", value: spmbCount.count || 0, icon: Users, variant: "brand" as const },
-    { label: "Prestasi", value: achievementsCount.count || 0, icon: Trophy, variant: "warning" as const },
-    { label: "Pesan Masuk", value: contactCount.count || 0, icon: Envelope, variant: "brand" as const },
+    { label: "Total Berita", value: newsCount.count || 0, icon: <Megaphone className="h-5 w-5 text-blue-600" />, variant: "info" as const },
+    { label: "Total Artikel", value: articlesCount.count || 0, icon: <Note className="h-5 w-5 text-[#082b59]" />, variant: "brand" as const },
+    { label: "Total Galeri", value: galleryCount.count || 0, icon: <ImageSquare className="h-5 w-5 text-blue-600" />, variant: "info" as const },
+    { label: "Pendaftar SPMB", value: spmbCount.count || 0, icon: <Users className="h-5 w-5 text-[#082b59]" />, variant: "brand" as const },
+    { label: "Prestasi", value: achievementsCount.count || 0, icon: <Trophy className="h-5 w-5 text-amber-600" />, variant: "warning" as const },
+    { label: "Pesan Masuk", value: contactCount.count || 0, icon: <Envelope className="h-5 w-5 text-[#082b59]" />, variant: "brand" as const },
   ];
 
   const spmbStatusColor: Record<string, string> = {

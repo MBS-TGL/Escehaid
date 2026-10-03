@@ -21,7 +21,7 @@ type StatCardProps = {
   label: string;
   value: number | string;
   variant?: StatVariant;
-  icon?: React.ElementType;
+  icon?: ReactNode;
   children?: ReactNode;
   className?: string;
 };
@@ -30,7 +30,7 @@ export function StatCard({
   label,
   value,
   variant = "brand",
-  icon: Icon,
+  icon,
   className = "",
 }: StatCardProps) {
   const v = variantStyles[variant];
@@ -50,9 +50,9 @@ export function StatCard({
           <p className="mt-1.5 text-[13px] font-medium text-slate-400">{label}</p>
         </div>
 
-        {Icon && (
+        {icon && (
           <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${v.iconBg} transition-transform duration-200 group-hover:scale-105`}>
-            <Icon className={`h-5 w-5 ${v.iconColor}`} />
+            {icon}
           </div>
         )}
       </div>

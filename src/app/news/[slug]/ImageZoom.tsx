@@ -48,14 +48,14 @@ export default function NewsImageZoom({
 
   return (
     <>
-      {/* Thumbnail */}
-      <div className="relative mx-auto max-w-7xl px-4 pt-5 md:pt-6">
-        <div className="group relative block h-[200px] w-full overflow-hidden rounded-xl md:h-[320px] md:rounded-2xl">
+      {/* Thumbnail — mengikuti ukuran container dari parent */}
+      <div className="relative h-full w-full">
+        <div className="group relative h-full w-full overflow-hidden">
           <Image
             src={src}
             alt={alt}
             fill
-            sizes="100vw"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) calc(100vw - 2rem), 720px"
             className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
             style={{ objectPosition }}
             priority
