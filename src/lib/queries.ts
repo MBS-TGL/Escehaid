@@ -461,6 +461,44 @@ export async function cleanupNewsImageFolder(
 }
 
 /**
+ * Kirim daftar path ke POST /api/revalidate, lalu catat status HTTP +
+ * pesan error dari server bila gagal (untuk debugging admin/developer).
+ */
+async function postRevalidate(paths: string[], logLabel: string): Promise<void> {
+  try {
+    // Ambil session token untuk otorisasi di server
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token ?? "";
+    const res = await fetch("/api/revalidate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ paths }),
+    });
+
+    if (!res.ok) {
+      let message = "";
+      try {
+        const payload = (await res.json()) as { error?: unknown };
+        message = typeof payload?.error === "string" ? payload.error : "";
+      } catch {
+        // body bukan JSON — abaikan
+      }
+      console.warn(
+        `[${logLabel}] revalidate gagal: HTTP ${res.status}${message ? ` (${message})` : ""} | paths: ${paths.join(", ")}`
+      );
+    }
+  } catch (e) {
+    console.warn(
+      `[${logLabel}] fetch failed, cache not invalidated:`,
+      e instanceof Error ? e.message : e
+    );
+  }
+}
+
+/**
  * Panggil revalidatePath untuk halaman berita via API route /api/revalidate.
  * Aman dipanggil dari client component admin setelah create/update/delete/togglePublish.
  */
@@ -478,21 +516,7 @@ export async function revalidateNews(
       ].filter(Boolean) as string[]
     )
   );
-  try {
-    // Ambil session token untuk otorisasi di server
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token ?? "";
-    await fetch("/api/revalidate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ paths }),
-    });
-  } catch {
-    console.warn("[revalidateNews] fetch failed, cache not invalidated");
-  }
+  await postRevalidate(paths, "revalidateNews");
 }
 
 /**
@@ -505,20 +529,7 @@ export async function revalidatePaths(paths: string[]): Promise<void> {
     new Set(paths.filter((p) => typeof p === "string" && p.startsWith("/") && p.length > 1))
   );
   if (unique.length === 0) return;
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token ?? "";
-    await fetch("/api/revalidate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ paths: unique }),
-    });
-  } catch {
-    console.warn("[revalidatePaths] fetch failed, cache not invalidated");
-  }
+  await postRevalidate(unique, "revalidatePaths");
 }
 
 // ============ NEWS ATTACHMENT (lampiran file) ============

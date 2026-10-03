@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
+import { canAccessAdminPanel } from "@/lib/auth";
 
 const ALLOWED_PATHS = new Set(["/", "/news", "/admission"]);
 function isAllowedPath(p: unknown): boolean {
@@ -9,6 +10,11 @@ function isAllowedPath(p: unknown): boolean {
   if (ALLOWED_PATHS.has(p)) return true;
   if (p.startsWith("/news/") && p.length > 6) return true;
   return false;
+}
+
+/** Respons error singkat tanpa membocorkan data. */
+function errorResponse(error: string, status: number) {
+  return NextResponse.json({ error }, { status });
 }
 
 /**
@@ -21,30 +27,43 @@ export async function POST(req: NextRequest) {
   const authHeader = req.headers.get("authorization") ?? "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
   if (!token) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return errorResponse("unauthenticated", 401);
   }
 
-  // Buat client Supabase tanpa cookies (pakai token langsung)
-  const supabase = createServerClient(
+  // Client tanpa cookie, SEMUA request membawa token milik pengguna
+  // (Authorization: Bearer <token>) sehingga query ke PostgREST ikut
+  // terautentikasi sebagai pemilik token → RLS "Users read own profile"
+  // (id = auth.uid()) terpenuhi dan baris profilnya terbaca.
+  const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
+    {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    }
   );
 
   const { data: { user }, error: authError } = await supabase.auth.getUser(token);
   if (authError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return errorResponse("unauthenticated", 401);
   }
 
-  // Cek role admin di user_profiles
-  const { data: profile } = await supabase
+  // ── Cek role memakai helper bersama (satu daftar role untuk semua) ──
+  const { data: profile, error: profileError } = await supabase
     .from("user_profiles")
     .select("role, is_active")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (!profile?.is_active || !["developer", "admin", "publisher"].includes(profile.role ?? "")) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (profileError) {
+    // Jangan bocorkan pesan error internal Supabase
+    return errorResponse("profile_lookup_failed", 500);
+  }
+  if (!profile) {
+    return errorResponse("profile_not_found", 403);
+  }
+  if (!canAccessAdminPanel(profile)) {
+    return errorResponse(profile.is_active ? "role_not_allowed" : "inactive", 403);
   }
 
   // ── 2. Validasi body ──────────────────────────────────────

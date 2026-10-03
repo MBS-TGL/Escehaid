@@ -60,3 +60,29 @@ export async function isStudent(): Promise<boolean> {
   const role = await getUserRole();
   return role === "student";
 }
+
+/**
+ * SATU-SATUNYA sumber daftar role panel admin (untuk aksi admin seperti
+ * memanggil /api/revalidate). Jangan diduplikasi di tempat lain.
+ *
+ * Sumbernya: union kolom `roles` pada kartu menu admin
+ * (src/app/admin/page.tsx — SPMB/Prestasi/Pesan = developer|admin,
+ * Berita/Artikel/Galeri = developer|admin|publisher).
+ * Role `teacher`/`student` sengaja TIDAK termasuk supaya pengguna login
+ * biasa tidak bisa menjalankan aksi admin.
+ */
+export const ADMIN_PANEL_ROLES: UserRole[] = ["developer", "admin", "publisher"];
+
+/**
+ * Benar jika sebuah profil berhak masuk panel admin & menjalankan aksi admin:
+ * profil ada, `is_active = true`, dan role termasuk {@link ADMIN_PANEL_ROLES}.
+ *
+ * Aturan yang sama dengan guard panel (src/proxy.ts + DashboardLayout):
+ * wajib login → profil ada → aktif; di sini ditambah daftar role terpusat.
+ */
+export function canAccessAdminPanel(
+  profile: { role?: string | null; is_active?: boolean | null } | null | undefined
+): boolean {
+  if (!profile || profile.is_active !== true) return false;
+  return ADMIN_PANEL_ROLES.includes((profile.role ?? "") as UserRole);
+}
