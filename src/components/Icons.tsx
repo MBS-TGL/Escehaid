@@ -1,5 +1,3 @@
-"use client";
-
 export {
   ArrowUpRight,
   CaretRight,
@@ -81,4 +79,4 @@ export {
   CalendarBlank,
   Tag,
   Paperclip,
-} from "@phosphor-icons/react";
+} from "@phosphor-icons/react/dist/ssr";
