@@ -263,7 +263,7 @@ export default async function Home() {
                           <Link key={item.id} href={`/news/${item.slug}`} className="group flex gap-2.5">
                             <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f4f7fb]">
                               {item.image_url ? (
-                                <Image src={item.image_url} alt={item.title} width={56} height={56} className="h-full w-full object-cover" />
+                                <Image src={item.image_url} alt={item.title} width={56} height={56} sizes="56px" className="h-full w-full object-cover" />
                               ) : (
                                 <div className="flex h-full w-full items-center justify-center">
                                   <Megaphone className="h-5 w-5 text-[#082b59]/15" />
@@ -323,7 +323,7 @@ export default async function Home() {
                           <Link key={item.slug} href={`/activities/${item.slug}`} className="group flex gap-2.5">
                             <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f4f7fb]">
                               {item.image_url ? (
-                                <Image src={item.image_url} alt={item.title} width={56} height={56} className="h-full w-full object-cover" />
+                                <Image src={item.image_url} alt={item.title} width={56} height={56} sizes="56px" className="h-full w-full object-cover" />
                               ) : (
                                 <div className="flex h-full w-full items-center justify-center">
                                   <CalendarBlank className="h-5 w-5 text-[#082b59]/15" />
@@ -381,9 +381,9 @@ export default async function Home() {
                           <Link key={f.id} href="/profile#fasilitas" className="group flex gap-2.5">
                             <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f4f7fb]">
                               {f.image_url ? (
-                                <Image src={f.image_url} alt={f.name} width={56} height={56} className="h-full w-full object-cover" />
+                                <Image src={f.image_url} alt={f.name} width={56} height={56} sizes="56px" className="h-full w-full object-cover" />
                               ) : (
-                                <Image src={FACILITY_FALLBACKS[f.name] || "/images/Ruang-Kelas.jpg"} alt={f.name} width={56} height={56} className="h-full w-full object-cover" />
+                                <Image src={FACILITY_FALLBACKS[f.name] || "/images/Ruang-Kelas.jpg"} alt={f.name} width={56} height={56} sizes="56px" className="h-full w-full object-cover" />
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
@@ -439,7 +439,7 @@ export default async function Home() {
                           <Link key={a.id} href="/achievements" className="group flex gap-2.5">
                             <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f4f7fb]">
                               {a.image_url ? (
-                                <Image src={a.image_url} alt={a.title} width={56} height={56} className="h-full w-full object-cover" />
+                                <Image src={a.image_url} alt={a.title} width={56} height={56} sizes="56px" className="h-full w-full object-cover" />
                               ) : (
                                 <div className="flex h-full w-full items-center justify-center">
                                   <Trophy className="h-5 w-5 text-[#082b59]/15" />

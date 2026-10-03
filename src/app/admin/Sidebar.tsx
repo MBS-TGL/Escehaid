@@ -61,7 +61,7 @@ export default function AdminSidebar({
         {/* Brand */}
         <div className="flex h-16 items-center gap-3 border-b border-slate-200/80 px-5">
           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg">
-            <Image src="/images/Logo-Sekolah.png" alt="Logo SMP Muhammadiyah 4 Tanggul" width={40} height={40} className="h-10 w-10 rounded-lg object-contain" />
+            <Image src="/images/Logo-Sekolah.png" alt="Logo SMP Muhammadiyah 4 Tanggul" width={40} height={40} sizes="40px" className="h-10 w-10 rounded-lg object-contain" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold text-[#082b59]">SMP Muhammadiyah 4</p>

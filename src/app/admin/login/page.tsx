@@ -83,7 +83,7 @@ function LoginForm() {
 
         <div className={`relative z-10 flex flex-col justify-between p-12 w-full transition-all duration-700 ease-out ${mounted ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-6"}`}>
           <div className="flex items-center gap-3">
-            <Image src="/images/Logo-Sekolah.png" alt="Logo" width={40} height={40} className="object-contain w-auto h-auto" />
+            <Image src="/images/Logo-Sekolah.png" alt="Logo" width={40} height={40} sizes="44px" className="object-contain w-auto h-auto" />
             <div>
               <span className="text-white font-bold text-sm tracking-tight block">SMP Muhammadiyah 4</span>
               <span className="text-white/50 text-xs">Tanggul, Jember</span>
@@ -141,7 +141,7 @@ function LoginForm() {
                     {resetSuccess ? (
                       <CheckCircle className="h-7 w-7 text-emerald-600" />
                     ) : (
-                      <Image src="/images/Logo-Sekolah.png" alt="Logo" width={36} height={36} className="object-contain" />
+                      <Image src="/images/Logo-Sekolah.png" alt="Logo" width={36} height={36} sizes="44px" className="object-contain" />
                     )}
                   </div>
                   <h2 className="text-2xl font-extrabold text-[#082b59] mb-2">
@@ -203,7 +203,7 @@ function LoginForm() {
                 {/* Mobile header */}
                 <div className="text-center mb-10 lg:hidden">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 shadow-lg bg-[#082b59] overflow-hidden">
-                    <Image src="/images/Logo-Sekolah.png" alt="Logo" width={44} height={44} className="object-contain" />
+                    <Image src="/images/Logo-Sekolah.png" alt="Logo" width={44} height={44} sizes="44px" className="object-contain" />
                   </div>
                   <h2 className="text-3xl font-extrabold text-[#082b59] mb-2">Admin Panel</h2>
                   <p className="text-slate-500 text-sm">SMP Muhammadiyah 4 Tanggul</p>

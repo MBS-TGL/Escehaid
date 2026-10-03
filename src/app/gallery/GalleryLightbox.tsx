@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Gallery } from "@/lib/supabase";
 import Image from "next/image";
 import { X } from "@/components/Icons";
+import { getYoutubeId, youtubeThumb, youtubeEmbedUrl } from "@/lib/youtube";
 
 export default function GalleryLightbox({
   items,
@@ -18,6 +19,7 @@ export default function GalleryLightbox({
   const [selected, setSelected] = useState<Gallery | null>(null);
   const router = useRouter();
   const hasMore = items.length === perPage;
+  const selectedYtId = selected ? getYoutubeId(selected.url) : null;
 
   function close() {
     setSelected(null);
@@ -26,36 +28,54 @@ export default function GalleryLightbox({
   return (
     <>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-        {items.map((item) => (
-          <div key={item.id}>
-            <button
-              onClick={() => setSelected(item)}
-              className="group relative block aspect-square w-full overflow-hidden rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] text-left"
-            >
-              {item.media_type === "foto" ? (
-                <Image
-                  src={item.thumbnail_url || item.url}
-                  alt={item.title}
-                  width={400}
-                  height={300}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-[#082b59]">
-                  <span className="text-4xl text-white/80">&#9654;</span>
-                </div>
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#082b59]/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-              <div className="absolute bottom-0 left-0 right-0 p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                <p className="text-sm font-semibold text-white">{item.title}</p>
-                {item.category && (
-                  <p className="mt-1 text-xs text-white/70">{item.category}</p>
+        {items.map((item) => {
+          const ytId = item.media_type === "video" ? getYoutubeId(item.url) : null;
+          // Thumbnail kecil: foto pakai thumbnail_url, video pakai thumbnail
+          // YouTube — gambar penuh/video hanya dimuat saat diklik.
+          const thumb =
+            item.media_type === "foto"
+              ? item.thumbnail_url || item.url
+              : item.thumbnail_url || (ytId ? youtubeThumb(ytId) : "");
+
+          return (
+            <div key={item.id}>
+              <button
+                onClick={() => setSelected(item)}
+                className="group relative block aspect-square w-full overflow-hidden rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] text-left"
+              >
+                {thumb ? (
+                  <Image
+                    src={thumb}
+                    alt={item.title}
+                    width={400}
+                    height={400}
+                    sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-[#082b59]">
+                    <span className="text-4xl text-white/80">&#9654;</span>
+                  </div>
                 )}
-              </div>
-            </button>
-          </div>
-        ))}
+                {item.media_type === "video" && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/25 transition-colors group-hover:bg-black/40">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/85 text-lg text-[#082b59] shadow-lg">
+                      &#9654;
+                    </span>
+                  </span>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#082b59]/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <div className="absolute bottom-0 left-0 right-0 p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                  <p className="text-sm font-semibold text-white">{item.title}</p>
+                  {item.category && (
+                    <p className="mt-1 text-xs text-white/70">{item.category}</p>
+                  )}
+                </div>
+              </button>
+            </div>
+          );
+        })}
       </div>
 
       {hasMore && (
@@ -97,18 +117,33 @@ export default function GalleryLightbox({
             onClick={(e) => e.stopPropagation()}
           >
             {selected.media_type === "video" ? (
-              <video
-                src={selected.url}
-                controls
-                autoPlay
-                className="w-full rounded-xl"
-              />
+              selectedYtId ? (
+                // Video YouTube → embed (eggress Supabase nol)
+                <iframe
+                  src={youtubeEmbedUrl(selectedYtId, true)}
+                  title={selected.title}
+                  className="aspect-video w-full rounded-xl"
+                  allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                  allowFullScreen
+                  loading="lazy"
+                />
+              ) : (
+                <video
+                  src={selected.url}
+                  controls
+                  playsInline
+                  preload="none"
+                  poster={selected.thumbnail_url || undefined}
+                  className="w-full rounded-xl bg-black"
+                />
+              )
             ) : (
               <img
                 src={selected.url}
                 alt={selected.title}
                 className="w-full rounded-xl object-contain max-h-[80vh]"
                 loading="lazy"
+                decoding="async"
               />
             )}
 

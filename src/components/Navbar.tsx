@@ -49,6 +49,7 @@ export default function Navbar() {
               alt="Logo SMP Muhammadiyah 4 Tanggul"
               width={140}
               height={180}
+              sizes="40px"
               priority
               className="h-8 w-auto shrink-0 md:h-9"
             />

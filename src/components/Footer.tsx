@@ -17,6 +17,7 @@ export default function Footer() {
                 alt="Logo SMP Muhammadiyah 4 Tanggul"
                 width={32}
                 height={42}
+                sizes="32px"
                 className="shrink-0"
               />
               <div className="flex flex-col leading-tight">

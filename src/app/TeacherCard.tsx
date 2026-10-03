@@ -56,7 +56,7 @@ export default function TeacherCard({ teacher }: { teacher: Teacher }) {
           src={teacher.photo_url}
           alt={teacher.name}
           fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 240px"
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
       ) : (

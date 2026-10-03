@@ -7,7 +7,7 @@ import {
   sendContactEmail,
   sendContactAdminEmail,
 } from "./notifications";
-import { compressImage } from "./compress-image";
+import { compressImage, TEACHER_PHOTO } from "./compress-image";
 
 interface NewsWithAuthor extends News {
   author_name?: string;
@@ -54,7 +54,7 @@ export async function getNewsListPaginated(
 
   let query = supabase
     .from("news")
-    .select("id, title, slug, summary, cover_position, image_url, category, is_published, published_at, created_at, user_profiles(full_name)", { count: "exact" })
+    .select("id, title, slug, summary, cover_image_position, image_url, category, is_published, published_at, created_at, user_profiles(full_name)", { count: "exact" })
     .eq("is_published", true)
     .order("published_at", { ascending: false });
 
@@ -1192,7 +1192,7 @@ export async function uploadTeacherPhoto(
   file: File,
   teacherId: string
 ): Promise<{ url: string | null; error?: string }> {
-  const compressed = await compressImage(file);
+  const compressed = await compressImage(file, TEACHER_PHOTO);
   const path = `teachers/${teacherId}.jpg`;
 
   await cleanupOldFiles("teachers", teacherId);

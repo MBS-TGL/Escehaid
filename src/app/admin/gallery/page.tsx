@@ -30,11 +30,21 @@ import {
   Checks,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
+import { getYoutubeId, youtubeThumb, youtubeEmbedUrl } from "@/lib/youtube";
 
 const PAGE_SIZE = 12;
 
 type SortField = "created_at" | "title" | "category";
 type SortDir = "asc" | "desc";
+
+/** Preview kecil untuk kartu galeri: thumbnail lokal / thumbnail YouTube / "" */
+function galleryThumb(item: Gallery): string {
+  if (item.media_type !== "foto") {
+    const yt = getYoutubeId(item.url);
+    return item.thumbnail_url || (yt ? youtubeThumb(yt) : "");
+  }
+  return item.thumbnail_url || item.url;
+}
 
 interface FormData {
   title: string;
@@ -345,8 +355,8 @@ export default function AdminGalleryPage() {
                   </div>
                   <div onClick={() => setViewItem(item)} className="cursor-pointer">
                     <div className="aspect-square bg-slate-100 flex items-center justify-center">
-                      {item.url ? (
-                        <img src={item.url} alt={item.title} loading="lazy" className="h-full w-full object-cover" />
+                      {galleryThumb(item) ? (
+                        <img src={galleryThumb(item)} alt={item.title} loading="lazy" className="h-full w-full object-cover" />
                       ) : item.media_type === "video" ? (
                         <Video className="h-10 w-10 text-slate-300 sm:h-12 sm:w-12" />
                       ) : (
@@ -399,12 +409,23 @@ export default function AdminGalleryPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setViewItem(null)}>
           <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="aspect-video bg-slate-100 flex items-center justify-center">
-              {viewItem.url ? (
-                viewItem.media_type === "video" ? (
-                  <video src={viewItem.url} controls className="h-full w-full object-cover" />
+              {viewItem.media_type === "video" ? (
+                getYoutubeId(viewItem.url) ? (
+                  <iframe
+                    src={youtubeEmbedUrl(getYoutubeId(viewItem.url)!)}
+                    title={viewItem.title}
+                    className="h-full w-full"
+                    allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                    allowFullScreen
+                    loading="lazy"
+                  />
+                ) : viewItem.url ? (
+                  <video src={viewItem.url} controls preload="none" poster={viewItem.thumbnail_url || undefined} className="h-full w-full object-cover" />
                 ) : (
-                  <img src={viewItem.url} alt={viewItem.title} loading="lazy" className="h-full w-full object-cover" />
+                  <Video className="h-16 w-16 text-slate-300" />
                 )
+              ) : viewItem.url ? (
+                <img src={viewItem.url} alt={viewItem.title} loading="lazy" className="h-full w-full object-cover" />
               ) : (
                 <ImageSquare className="h-16 w-16 text-slate-300" />
               )}
@@ -539,7 +560,17 @@ export default function AdminGalleryPage() {
             {imagePreview ? (
               <div className="relative mb-3 overflow-hidden rounded-xl border border-slate-200">
                 {form.media_type === "video" ? (
-                  <video src={imagePreview} className="h-40 w-full object-cover" />
+                  getYoutubeId(imagePreview) ? (
+                    <iframe
+                      src={youtubeEmbedUrl(getYoutubeId(imagePreview)!)}
+                      title="Preview video"
+                      className="h-40 w-full bg-black"
+                      allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <video src={imagePreview} preload="none" className="h-40 w-full object-cover bg-black" />
+                  )
                 ) : (
                   <img src={imagePreview} alt="Preview" className="h-40 w-full object-cover" />
                 )}

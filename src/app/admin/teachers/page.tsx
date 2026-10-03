@@ -9,7 +9,7 @@ import {
   deleteTeacherBulk,
   uploadTeacherPhoto,
 } from "@/lib/queries";
-import { compressImage } from "@/lib/compress-image";
+import { compressImage, TEACHER_PHOTO } from "@/lib/compress-image";
 import type { Teacher } from "@/lib/supabase";
 import { StatCard, StatCardRow, ConfirmModal, SlideOver } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
@@ -118,7 +118,7 @@ export default function AdminTeachersPage() {
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    compressImage(file).then((compressed) => {
+    compressImage(file, TEACHER_PHOTO).then((compressed) => {
       setFormPhotoFile(compressed);
       setFormPhotoPreview(URL.createObjectURL(compressed));
     });
