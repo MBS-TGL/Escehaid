@@ -22,35 +22,44 @@ export const viewport: Viewport = {
   themeColor: "#082b59",
 };
 
-export const metadata: Metadata = {
-  metadataBase: new URL("https://www.smpmuh4tanggul.sch.id"),
-  title: {
-    template: "%s | SMP Muhammadiyah 4 Tanggul",
-    default: "SMP Muhammadiyah 4 Tanggul",
-  },
-  description: "SMP Muhammadiyah 4 Tanggul - Sekolah unggulan dengan program Tahfidz, keberbakatan, dan kepesantrenan. Daftar SPMB online di sini.",
-  openGraph: {
-    type: "website",
-    locale: "id_ID",
-    siteName: "SMP Muhammadiyah 4 Tanggul",
-    images: [
-      {
-        url: "/og-image.jpg",
-        width: 1200,
-        height: 630,
-        alt: "SMP Muhammadiyah 4 Tanggul",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    images: ["/og-image.jpg"],
-  },
-  icons: {
-    icon: "/images/Logo-Favicon.png",
-  },
-  manifest: "/manifest.json",
-};
+// Judul dinamis dari database: default = nama sekolah, halaman lain otomatis
+// "Judul Halaman | Nama Sekolah" via template. getSchoolProfile sudah di-wrap
+// `cache` React — query yang sama dengan RootLayout pada request yang sama.
+export async function generateMetadata(): Promise<Metadata> {
+  const profile = await getSchoolProfile();
+  const schoolName = profile?.school_name?.trim() || null;
+
+  return {
+    metadataBase: new URL("https://www.smpmuh4tanggul.sch.id"),
+    // Profil null/kosong → tanpa template; tiap halaman pakai judulnya sendiri.
+    title: schoolName
+      ? { default: schoolName, template: `%s | ${schoolName}` }
+      : undefined,
+    description: "SMP Muhammadiyah 4 Tanggul - Sekolah unggulan dengan program Tahfidz, keberbakatan, dan kepesantrenan. Daftar SPMB online di sini.",
+    openGraph: {
+      type: "website",
+      locale: "id_ID",
+      // og:title mengikuti judul halaman (fallback Next.js) → ikut schoolName.
+      siteName: schoolName ?? undefined,
+      images: [
+        {
+          url: "/og-image.jpg",
+          width: 1200,
+          height: 630,
+          alt: "SMP Muhammadiyah 4 Tanggul",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      images: ["/og-image.jpg"],
+    },
+    icons: {
+      icon: "/images/Logo-Favicon.png",
+    },
+    manifest: "/manifest.json",
+  };
+}
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Satu query profil per request — `cache` dari React membaginya dengan

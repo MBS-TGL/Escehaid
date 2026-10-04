@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import DashboardLayout from "./DashboardLayout";
 
 export const metadata: Metadata = {
-  title: "Admin Panel | SMP Muhammadiyah 4 Tanggul",
+  // Template root layout menambahkan "| Nama Sekolah" otomatis.
+  title: "Admin Panel",
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

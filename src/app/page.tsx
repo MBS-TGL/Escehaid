@@ -29,7 +29,7 @@ const FACILITY_FALLBACKS: Record<string, string> = {
 };
 
 export const metadata = {
-  title: "Beranda",
+  // Tanpa `title` → memakai default dari root layout (nama sekolah dari DB).
   description: "SMP Muhammadiyah 4 Tanggul - Sekolah unggulan dengan program Tahfidz, keberbakatan, dan kepesantrenan. Daftar SPMB online sekarang.",
   alternates: { canonical: "/" },
 };
