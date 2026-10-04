@@ -136,7 +136,7 @@ export default function ContactForm() {
               <CSSFadeIn>
                 <div className="overflow-hidden rounded-2xl border border-[#dce3ed]">
                   <iframe
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3947.8!2d113.455!3d-8.1515!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2dd6fb0000000001%3A0x0!2sSMP%20Muhammadiyah%204%20Tanggul!5e0!3m2!1sid!2sid!4v1"
+                    src="https://www.google.com/maps?q=-8.1513593,113.4549174&z=16&output=embed"
                     width="100%"
                     height="220"
                     style={{ border: 0 }}
@@ -153,7 +153,7 @@ export default function ContactForm() {
                 <div className="rounded-2xl border border-[#dce3ed] bg-white p-5">
                   <h3 className="text-sm font-bold text-[#082b59]">Informasi Sekolah</h3>
                   <div className="mt-3 space-y-2.5">
-                    <a href="https://maps.app.goo.gl/v5AwkkHae5poMRWR9" target="_blank" rel="noopener noreferrer"
+                    <a href="https://www.google.com/maps/search/?api=1&query=SMP+Muhammadiyah+Boarding+School+Tanggul&query_place_id=ChIJlyAggZqL1i0Rzrz73pvElWo" target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-3 rounded-xl bg-[#f4f7fb] px-4 py-2.5 transition-colors hover:bg-[#082b59]/5">
                       <MapPin className="h-4 w-4 shrink-0 text-[#1767b1]" />
                       <div className="min-w-0">
