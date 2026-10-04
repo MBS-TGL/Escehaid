@@ -30,6 +30,7 @@ export {
   ChartBar,
   Medal,
   Trophy,
+  HandCoins,
   Note,
   MedalMilitary,
   House,

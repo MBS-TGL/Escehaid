@@ -1,4 +1,4 @@
-import { FileText, CheckCircle, Clock, Warning, GraduationCap, BookOpen, House, Download } from "@/components/Icons";
+import { FileText, Clock, GraduationCap, BookOpen, House, Download, CheckCircle, Trophy, HandCoins } from "@/components/Icons";
 import Link from "next/link";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import { getPublishedWaves, getWaveStatus, getSchoolProfile, registrationHref } from "@/lib/queries";
@@ -6,31 +6,89 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "SPMB",
-  description: "Informasi Penerimaan Peserta Didik Baru (SPMB) SMP Muhammadiyah 4 Tanggul - Jadwal, persyaratan, dan biaya.",
+  description: "Sistem Penerimaan Murid Baru (SPMB) SMP Muhammadiyah 4 Tanggul - jadwal gelombang, jalur pendaftaran, dan cara mendaftar.",
   alternates: { canonical: "/admission" },
 };
 
 export const revalidate = 3600;
 
-/** Badge status gelombang untuk halaman publik. */
+const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]";
+const container = "mx-auto max-w-7xl px-6";
+
 const waveStatusBadges: Record<string, { label: string; cls: string }> = {
   upcoming: { label: "Akan dibuka", cls: "border border-blue-100 bg-blue-50 text-[#1767b1]" },
-  open: { label: "Dibuka", cls: "border border-emerald-100 bg-emerald-50 text-emerald-600" },
+  open: { label: "Dibuka", cls: "border border-emerald-100 bg-emerald-50 text-emerald-700" },
   closed: { label: "Ditutup", cls: "border border-slate-200 bg-slate-100 text-slate-500" },
 };
 
-/** Format "YYYY-MM-DD" → "20 Oktober 2026" (id-ID), tanpa geser zona waktu. */
+/** "YYYY-MM-DD" → "20 Oktober 2026", tanpa geser zona waktu. */
 function formatWaveDate(dateStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
   if (!y || !m || !d) return dateStr;
   return new Date(y, m - 1, d).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 }
 
+/** Sisa hari sampai tanggal selesai (inklusif), dihitung berdasarkan tanggal WIB. */
+function daysLeft(endDate: string): number {
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+  const utc = (s: string) => {
+    const [y, m, d] = s.split("-").map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.round((utc(endDate) - utc(today)) / 86400000);
+}
+
+/* Ikon lokal kecil */
+const svgProps = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": true } as const;
+const ChevronRightIcon = ({ className }: { className?: string }) => (
+  <svg {...svgProps} strokeWidth={2} className={className}><path d="m9 6 6 6-6 6" /></svg>
+);
+
+function SectionHeading({ title, desc, compact }: { title: string; desc?: string; compact?: boolean }) {
+  return (
+    <div className={`${compact ? "mb-5" : "mb-6"} max-w-2xl`}>
+      <h2 className={`font-bold text-[#082b59] ${compact ? "text-xl md:text-2xl" : "text-2xl md:text-3xl"}`}>{title}</h2>
+      {desc && <p className="mt-1.5 text-sm leading-relaxed text-slate-500 md:text-base">{desc}</p>}
+    </div>
+  );
+}
+
 export default async function SPMBPage() {
   const [waves, profile] = await Promise.all([getPublishedWaves(), getSchoolProfile()]);
+  const registerHref = registrationHref(profile);
+
+  const openWave = waves.find((w) => getWaveStatus(w) === "open");
+  const nextWave = openWave ? undefined : waves.find((w) => getWaveStatus(w) === "upcoming");
+  const statusWave = openWave ?? nextWave;
+  const remaining = openWave ? daysLeft(openWave.end_date) : null;
+
+  const jalur = [
+    { icon: FileText, color: "bg-[#082b59]/10 text-[#082b59]", title: "Jalur Reguler", desc: "Pendaftaran terbuka untuk semua calon murid." },
+    { icon: Trophy, color: "bg-[#f4d21f]/25 text-[#082b59]", title: "Jalur Prestasi", desc: "Untuk calon murid berprestasi di bidang akademik maupun non-akademik." },
+    { icon: HandCoins, color: "bg-emerald-100 text-emerald-700", title: "Jalur Beasiswa", desc: "Untuk calon murid dari keluarga dengan keterbatasan ekonomi.." },
+  ];
+
+  const alur = [
+    { title: "Daftar online", desc: "Isi formulir pendaftaran pada gelombang yang sedang dibuka." },
+    { title: "Pengumuman hasil", desc: "Hasil penerimaan diumumkan melalui website sekolah." },
+    { title: "Daftar ulang", desc: "Calon murid yang diterima melakukan daftar ulang dan pembayaran sesuai jadwal pada pengumuman." },
+  ];
+
+  const program = [
+    { icon: House, title: "SMP Boarding", desc: "Program asrama penuh sejak 2018/2019. Siswa dibimbing 24 jam oleh ustadz kompeten.", color: "bg-[#1767b1]/10 text-[#1767b1]" },
+    { icon: GraduationCap, title: "SMP Reguler", desc: "Pembelajaran penuh hari (full day) Senin-Sabtu pukul 07.00-15.00, meliputi mapel umum dan keagamaan.", color: "bg-[#f4d21f]/20 text-[#082b59]" },
+    { icon: BookOpen, title: "SMA Boarding", desc: "Program asrama penuh untuk jenjang SMA dengan kurikulum Tahfidz dan keunggulan akademik.", color: "bg-[#082b59]/10 text-[#082b59]" },
+  ];
+
+  const alasan = [
+    { icon: CheckCircle, title: "Terakreditasi A", desc: "Mutu pendidikan sekolah diakui dengan akreditasi A." },
+    { icon: BookOpen, title: "Pembinaan kepesantrenan", desc: "Program kepesantrenan di lingkungan boarding, termasuk tahfidz Al-Qur'an." },
+    { icon: House, title: "Dua kampus terpisah", desc: "Kampus putra di Patemon dan kampus putri di Asrama Tahfidz Al-Qur'an Bambu Kuning." },
+  ];
 
   return (
-    <div>
+    <div className={openWave ? "pb-20 md:pb-0" : ""}>
+      {/* Hero (sama dengan halaman lain) */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-12 text-white md:py-16">
         <div className="absolute inset-0 opacity-[0.04]">
           <GraduationCap className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
@@ -42,161 +100,238 @@ export default async function SPMBPage() {
         <div className="relative mx-auto max-w-7xl px-6 text-center">
           <CSSFadeIn>
             <h1 className="text-3xl font-bold md:text-4xl">SPMB Online</h1>
-            <p className="mt-3 text-base text-white/70">Pendaftaran Peserta Didik Baru SMP Muhammadiyah 4 Tanggul</p>
+            <p className="mt-3 text-base text-white/70">Sistem Penerimaan Murid Baru SMP Muhammadiyah 4 Tanggul</p>
           </CSSFadeIn>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-16" style={{ contentVisibility: "auto" } as React.CSSProperties}>
-        {/* Program Unggulan */}
-        <CSSFadeIn>
-          <div className="mb-16">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Jenjang &amp; Program</p>
-            <h2 className="mt-3 mb-8 text-2xl font-bold text-[#082b59]">Pilihan Program Pendidikan</h2>
-            <CSSStagger stagger={100} className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {[
-                { icon: House, title: "SMP Boarding (MBS)", desc: "Program asrama penuh sejak 2018/2019. Siswa dibimbing 24 jam oleh ustadz kompeten.", color: "bg-[#1767b1]/10 text-[#1767b1]" },
-                { icon: GraduationCap, title: "SMP Reguler", desc: "Pembelajaran penuh hari (full day) Senin-Sabtu pukul 07.00-15.00, meliputi mapel umum dan keagamaan.", color: "bg-[#f4d21f]/20 text-[#082b59]" },
-                { icon: BookOpen, title: "SMA Boarding", desc: "Program asrama penuh untuk jenjang SMA dengan kurikulum Tahfidz dan keunggulan akademik.", color: "bg-[#082b59]/10 text-[#082b59]" },
-              ].map((item) => (
-                <div key={item.title}>
-                  <div className="flex h-full gap-4 rounded-2xl border border-[#dce3ed] bg-white p-5 transition-all hover:shadow-lg hover:shadow-[#082b59]/5">
-                    <div className={`${item.color} flex h-11 w-11 shrink-0 items-center justify-center rounded-xl`}>
-                      <item.icon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-[#082b59]">{item.title}</h3>
-                      <p className="mt-1 text-sm leading-relaxed text-slate-500">{item.desc}</p>
-                    </div>
-                  </div>
+      {/* Status gelombang: menumpang di tepi bawah hero */}
+      {statusWave && (
+        <div className="relative z-10 mx-auto -mt-7 max-w-5xl px-6">
+          <div className="flex flex-col gap-4 rounded-2xl border border-[#dce3ed] bg-white p-5 shadow-xl shadow-[#082b59]/10 md:flex-row md:items-center md:justify-between md:p-6">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#082b59] text-white">
+                <Clock className="h-6 w-6" />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold text-[#082b59]">{statusWave.name}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${waveStatusBadges[openWave ? "open" : "upcoming"].cls}`}>
+                    {openWave ? "Dibuka" : "Akan dibuka"}
+                  </span>
                 </div>
-              ))}
-            </CSSStagger>
-          </div>
-        </CSSFadeIn>
-
-        <div className="grid gap-12 lg:grid-cols-2">
-          {/* Jalur Pendaftaran */}
-          <CSSFadeIn>
-            <div>
-              <h2 className="mb-6 text-2xl font-bold text-[#082b59]">Jalur Pendaftaran</h2>
-              <CSSStagger stagger={100} className="space-y-4">
-                {[
-                  { icon: FileText, color: "bg-[#082b59]/10 text-[#082b59]", title: "Jalur Reguler", desc: "Pendaftaran untuk semua siswa" },
-                  { icon: CheckCircle, color: "bg-emerald-100 text-emerald-600", title: "Jalur Prestasi", desc: "Untuk siswa berprestasi akademik/non-akademik" },
-                  { icon: Warning, color: "bg-amber-100 text-amber-600", title: "Jalur Beasiswa", desc: "Untuk siswa kurang mampu" },
-                ].map((jalur) => (
-                  <div key={jalur.title}>
-                    <div className="rounded-2xl border border-[#dce3ed] bg-white p-6 shadow-sm transition-all hover:shadow-lg hover:shadow-[#082b59]/5">
-                      <div className="flex items-start gap-4">
-                        <div className={`${jalur.color} rounded-xl p-2.5`}>
-                          <jalur.icon className="h-6 w-6" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-[#082b59]">{jalur.title}</h3>
-                          <p className="mt-1 text-sm text-slate-600">{jalur.desc}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </CSSStagger>
+                <p className="mt-0.5 text-sm text-slate-500">
+                  {openWave ? `Pendaftaran sampai ${formatWaveDate(openWave.end_date)}` : `Dibuka ${formatWaveDate(statusWave.start_date)}`}
+                  {remaining !== null && remaining <= 30 && (
+                    <span className="ml-2 font-semibold text-amber-600">{remaining <= 0 ? "Hari terakhir" : `Tersisa ${remaining} hari`}</span>
+                  )}
+                </p>
+              </div>
             </div>
-          </CSSFadeIn>
+            {openWave && (
+              <Link
+                href={registerHref}
+                className={`inline-flex items-center justify-center rounded-xl bg-[#f4d21f] px-6 py-3 text-sm font-bold text-[#082b59] transition-colors hover:bg-[#ffe14d] ${focusRing}`}
+              >
+                Daftar Sekarang
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
-          {/* Biaya & Pendaftaran */}
+      {/* Jadwal */}
+      <section id="schedule" className="scroll-mt-28 py-10 md:py-12">
+        <div className={container}>
           <CSSFadeIn>
-            <div>
-              <h2 className="mb-6 text-2xl font-bold text-[#082b59]">Jadwal Pendaftaran</h2>
-              {/* Gelombang pendaftaran (dari tabel spmb_waves) */}
+            <SectionHeading compact title="Jadwal Pendaftaran" desc="Pilih gelombang yang sedang dibuka, lalu daftar secara online." />
+            <div className="overflow-hidden rounded-2xl border border-[#dce3ed] bg-white shadow-sm">
               {waves.length === 0 ? (
-                <div className="rounded-2xl border border-[#dce3ed] bg-white p-6 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1767b1]/10">
-                      <Clock className="h-5 w-5 text-[#1767b1]" />
-                    </div>
-                    <p className="text-sm text-slate-500">Jadwal gelombang pendaftaran akan segera diumumkan.</p>
-                  </div>
-                </div>
+                <p className="px-5 py-4 text-sm text-slate-500">Jadwal gelombang pendaftaran akan segera diumumkan.</p>
               ) : (
-                <div className="space-y-4">
+                <ul className="divide-y divide-[#dce3ed]">
                   {waves.map((wave) => {
-                    const badge = waveStatusBadges[getWaveStatus(wave)] || waveStatusBadges.closed;
+                    const status = getWaveStatus(wave);
+                    const badge = waveStatusBadges[status] || waveStatusBadges.closed;
                     return (
-                      <div key={wave.id} className="rounded-2xl border border-[#dce3ed] bg-white p-6 shadow-sm">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1767b1]/10">
-                            <Clock className="h-5 w-5 text-[#1767b1]" />
+                      <li
+                        key={wave.id}
+                        className={`flex flex-col gap-1 border-l-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 ${status === "open" ? "border-[#1767b1] bg-[#1767b1]/[0.04]" : "border-transparent"
+                          } ${status === "closed" ? "opacity-70" : ""}`}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-semibold text-[#082b59]">{wave.name}</h3>
+                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${badge.cls}`}>{badge.label}</span>
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-medium text-[#082b59]">{wave.name}</span>
-                              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${badge.cls}`}>
-                                {badge.label}
-                              </span>
-                            </div>
-                            <div className="text-sm text-slate-500">
-                              {formatWaveDate(wave.start_date)} - {formatWaveDate(wave.end_date)}
-                            </div>
-                          </div>
+                          {wave.note && <p className="mt-0.5 text-sm text-slate-500">{wave.note}</p>}
                         </div>
-                        {wave.note && (
-                          <p className="mt-3 text-sm leading-relaxed text-slate-500">{wave.note}</p>
-                        )}
-                      </div>
+                        <p className="shrink-0 text-sm text-slate-600 sm:text-right">
+                          <time dateTime={wave.start_date}>{formatWaveDate(wave.start_date)}</time>
+                          {" - "}
+                          <time dateTime={wave.end_date}>{formatWaveDate(wave.end_date)}</time>
+                        </p>
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
               )}
-
-              {/* Brosur */}
-              <div className="mt-4 rounded-2xl border border-[#dce3ed] bg-white p-6 shadow-sm">
-                <p className="mb-4 text-sm leading-relaxed text-slate-500">
-                  Rincian biaya pendidikan, boarding, dan kegiatan dapat dilihat pada brosur resmi sekolah.
-                </p>
+              <div className="border-t border-[#dce3ed] bg-[#f6f8fb] px-5 py-3 text-sm text-slate-500">
+                Rincian biaya pendidikan, boarding, dan kegiatan ada pada{" "}
                 <a
                   href="https://smpmuh4tanggul.sch.id/info-spmb/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1767b1] hover:text-[#082b59]"
+                  className={`font-semibold text-[#1767b1] underline underline-offset-4 hover:text-[#082b59] ${focusRing}`}
                 >
-                  Lihat Brosur Lengkap <FileText className="h-4 w-4" />
+                  brosur resmi sekolah
                 </a>
-              </div>
-
-              <h2 className="mb-6 mt-8 text-2xl font-bold text-[#082b59]">Cara Mendaftar</h2>
-              <div className="space-y-3">
-                <Link
-                  href={registrationHref(profile)}
-                  className="flex items-center gap-3 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm transition-all hover:border-[#1767b1]/30 hover:shadow-lg"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#082b59] text-white">
-                    <FileText className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-[#082b59]">Daftar Online</div>
-                    <div className="text-xs text-slate-500">Isi formulir pendaftaran</div>
-                  </div>
-                </Link>
-                <a
-                  href="https://docs.google.com/document/d/1SEownLgB4jmY9nIfZhTSSg-Y1LtfL0eH/edit?usp=sharing&ouid=109565226300801463501&rtpof=true&sd=true"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm transition-all hover:border-[#1767b1]/30 hover:shadow-lg"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1767b1] text-white">
-                    <Download className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-[#082b59]">Unduh Formulir Offline</div>
-                    <div className="text-xs text-slate-500">Isi dan kumpulkan di Kantor MBS Tanggul</div>
-                  </div>
-                </a>
+                .
               </div>
             </div>
           </CSSFadeIn>
         </div>
       </section>
+
+      {/* Jalur + Alur (satu baris, dua kolom) */}
+      <section className="bg-[#f6f8fb] py-10 md:py-12">
+        <div className={container}>
+          <CSSFadeIn>
+            <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
+              <div>
+                <SectionHeading compact title="Jalur Pendaftaran" desc="Syarat tiap jalur ada pada brosur resmi sekolah." />
+                <div className="space-y-3">
+                  {jalur.map((j) => (
+                    <div key={j.title} className="flex items-start gap-4 rounded-xl border border-[#dce3ed] bg-white p-4 transition-shadow hover:shadow-md">
+                      <div className={`${j.color} flex h-10 w-10 shrink-0 items-center justify-center rounded-lg`}>
+                        <j.icon className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-[#082b59]">{j.title}</h3>
+                        <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{j.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <SectionHeading compact title="Alur Pendaftaran" desc="Tiga langkah hingga resmi menjadi murid." />
+                <ol className="rounded-xl border border-[#dce3ed] bg-white p-5">
+                  {alur.map((step, i) => (
+                    <li key={step.title} className="relative flex gap-4 pb-5 last:pb-0">
+                      {i < alur.length - 1 && <span className="absolute left-[17px] top-9 bottom-1 w-px bg-[#dce3ed]" aria-hidden="true" />}
+                      <span className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#082b59] text-sm font-bold text-white" aria-hidden="true">
+                        {i + 1}
+                      </span>
+                      <div>
+                        <h3 className="font-semibold text-[#082b59]">{step.title}</h3>
+                        <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{step.desc}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+          </CSSFadeIn>
+        </div>
+      </section>
+
+      {/* Program + Mengapa (satu baris, dua kolom) */}
+      <section className="py-10 md:py-12">
+        <div className={container}>
+          <CSSFadeIn>
+            <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
+              <div>
+                <SectionHeading compact title="Pilihan Program Pendidikan" desc="Sesuaikan dengan kebutuhan keluarga." />
+                <div className="space-y-3">
+                  {program.map((item) => (
+                    <div key={item.title} className="flex items-start gap-4 rounded-xl border border-[#dce3ed] bg-white p-4 transition-shadow hover:shadow-md">
+                      <div className={`${item.color} flex h-10 w-10 shrink-0 items-center justify-center rounded-lg`}>
+                        <item.icon className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-[#082b59]">{item.title}</h3>
+                        <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{item.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <SectionHeading compact title="Mengapa SMP Muhammadiyah 4 Tanggul" desc="Di bawah naungan Pimpinan Cabang Muhammadiyah Tanggul." />
+                <div className="rounded-xl border border-[#dce3ed] bg-white p-5">
+                  <div className="space-y-4">
+                    {alasan.map((a) => (
+                      <div key={a.title} className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#1767b1]/10 text-[#1767b1]">
+                          <a.icon className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-[#082b59]">{a.title}</h3>
+                          <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{a.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-4 border-t border-[#dce3ed] pt-4 text-sm text-slate-600">
+                    Pada SPMB Indent 2027/2028, 35 calon murid telah dinyatakan diterima.{" "}
+                    <Link href="/news" className={`whitespace-nowrap font-semibold text-[#1767b1] underline underline-offset-4 hover:text-[#082b59] ${focusRing}`}>
+                      Lihat pengumuman
+                    </Link>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CSSFadeIn>
+        </div>
+      </section>
+
+      {/* CTA penutup (ramping) */}
+      <section className="bg-[#f6f8fb] py-10 md:py-12">
+        <div className={container}>
+          <div className="flex flex-col items-center justify-between gap-5 rounded-2xl bg-gradient-to-br from-[#082b59] to-[#0d4a8a] px-6 py-8 text-white md:flex-row md:px-10">
+            <div className="text-center md:text-left">
+              <h2 className="text-xl font-bold md:text-2xl">Siap mendaftarkan putra-putri Anda?</h2>
+              <p className="mt-1 text-sm text-white/70">Daftar online hanya beberapa menit. Formulir offline dikumpulkan di Kantor MBS Tanggul.</p>
+            </div>
+            <div className="flex flex-col items-center gap-3 sm:flex-row">
+              <Link
+                href={registerHref}
+                className={`inline-flex items-center justify-center gap-2 rounded-xl bg-[#f4d21f] px-6 py-3 text-sm font-bold text-[#082b59] transition-colors hover:bg-[#ffe14d] ${focusRing}`}
+              >
+                Daftar Online
+                <ChevronRightIcon className="h-4 w-4" />
+              </Link>
+              <a
+                href="https://docs.google.com/document/d/1SEownLgB4jmY9nIfZhTSSg-Y1LtfL0eH/edit?usp=sharing&ouid=109565226300801463501&rtpof=true&sd=true"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10 ${focusRing}`}
+              >
+                <Download className="h-4 w-4" />
+                Formulir Offline
+              </a>
+              <Link href="/contact" className={`text-sm font-semibold text-white/90 underline underline-offset-4 hover:text-white ${focusRing}`}>
+                Hubungi Panitia
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA menempel di layar kecil, hanya saat ada gelombang yang dibuka */}
+      {openWave && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dce3ed] bg-white/95 p-3 backdrop-blur md:hidden">
+          <Link
+            href={registerHref}
+            className={`flex w-full items-center justify-center rounded-xl bg-[#082b59] px-5 py-3 text-sm font-bold text-white ${focusRing}`}
+          >
+            Daftar Sekarang
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
