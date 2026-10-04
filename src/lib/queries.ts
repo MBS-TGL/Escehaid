@@ -808,21 +808,59 @@ export async function updateRegistrationBulkStatus(
   return { success: true };
 }
 
+/** Kunci berkas pada jsonb documents pendaftar (kunci lain = data teks, bukan path). */
+const REG_DOC_KEYS = ["kk", "akta", "surat_sekolah", "ktp_ortu", "bukti_transfer"] as const;
+
+/** Kumpulkan path file berkas dari jsonb documents (abaikan nilai yang bukan path). */
+function collectRegDocPaths(documents: Record<string, unknown> | null | undefined): string[] {
+  if (!documents) return [];
+  return REG_DOC_KEYS.map((k) => documents[k]).filter(
+    (v): v is string => typeof v === "string" && v.length > 0 && !v.startsWith("http")
+  );
+}
+
+/** Hapus file berkas pendaftar di bucket spmb-documents (best-effort, tidak menggagalkan delete). */
+async function removeRegDocFiles(paths: string[]): Promise<void> {
+  if (paths.length === 0) return;
+  try {
+    const { error } = await supabase.storage.from("spmb-documents").remove(paths);
+    if (error) console.warn("[removeRegDocFiles] remove failed:", error.message);
+  } catch (e) {
+    console.warn("[removeRegDocFiles] error:", e);
+  }
+}
+
 export async function deleteRegistration(id: string): Promise<{ error?: string }> {
+  // Ambil path berkas SEBELUM row dihapus supaya dokumen sensitif tidak jadi orphan
+  const { data: row } = await supabase
+    .from("spmb_registrations")
+    .select("documents")
+    .eq("id", id)
+    .single();
   const { error } = await supabase.from("spmb_registrations").delete().eq("id", id);
   if (error) {
     console.error("Error deleting registration:", error);
     return { error: error.message };
   }
+  removeRegDocFiles(collectRegDocPaths(row?.documents)).catch(() => {});
   return {};
 }
 
 export async function deleteRegistrationBulk(ids: string[]): Promise<{ error?: string }> {
+  const { data: rows } = await supabase
+    .from("spmb_registrations")
+    .select("documents")
+    .in("id", ids);
   const { error } = await supabase.from("spmb_registrations").delete().in("id", ids);
   if (error) {
     console.error("Error bulk deleting registrations:", error);
     return { error: error.message };
   }
+  const docPaths: string[] = [];
+  for (const row of rows || []) {
+    docPaths.push(...collectRegDocPaths(row.documents));
+  }
+  removeRegDocFiles(docPaths).catch(() => {});
   return {};
 }
 
@@ -899,6 +937,13 @@ export async function updateFacility(
     is_active?: boolean;
   }
 ): Promise<{ data: Facility | null; error?: string }> {
+  // Ambil URL gambar lama dulu supaya file lama bisa dibersihkan bila berganti
+  let oldImageUrl: string | null = null;
+  if (typeof facility.image_url === "string") {
+    const { data: current } = await supabase.from("facilities").select("image_url").eq("id", id).single();
+    oldImageUrl = current?.image_url || null;
+  }
+
   const { data, error } = await supabase
     .from("facilities")
     .update(facility)
@@ -910,23 +955,34 @@ export async function updateFacility(
     console.error("Error updating facility:", error);
     return { data: null, error: error.message };
   }
+  // Bersihkan file lama hanya bila URL benar-benar berubah (best-effort)
+  if (oldImageUrl && oldImageUrl !== facility.image_url) {
+    deleteStorageFileByUrl(oldImageUrl).catch(() => {});
+  }
   return { data };
 }
 
 export async function deleteFacility(id: string): Promise<{ error?: string }> {
+  // Ambil URL gambar SEBELUM row dihapus supaya file storage tidak jadi orphan
+  const { data: row } = await supabase.from("facilities").select("image_url").eq("id", id).single();
   const { error } = await supabase.from("facilities").delete().eq("id", id);
   if (error) {
     console.error("Error deleting facility:", error);
     return { error: error.message };
   }
+  if (row?.image_url) deleteStorageFileByUrl(row.image_url).catch(() => {});
   return {};
 }
 
 export async function deleteFacilityBulk(ids: string[]): Promise<{ error?: string }> {
+  const { data: rows } = await supabase.from("facilities").select("image_url").in("id", ids);
   const { error } = await supabase.from("facilities").delete().in("id", ids);
   if (error) {
     console.error("Error bulk deleting facilities:", error);
     return { error: error.message };
+  }
+  for (const row of rows || []) {
+    if (row.image_url) deleteStorageFileByUrl(row.image_url).catch(() => {});
   }
   return {};
 }
@@ -1052,6 +1108,12 @@ export async function updateArticle(
     is_published?: boolean;
   }
 ): Promise<{ data: Article | null; error?: string }> {
+  // Ambil URL gambar lama supaya file lama bisa dibersihkan bila berganti
+  let oldImageUrl: string | null = null;
+  if (typeof article.image_url === "string") {
+    const { data: current } = await supabase.from("articles").select("image_url").eq("id", id).single();
+    oldImageUrl = current?.image_url || null;
+  }
   if (article.title && !article.slug) {
     article.slug = article.title
       .toLowerCase()
@@ -1069,23 +1131,34 @@ export async function updateArticle(
     console.error("Error updating article:", error);
     return { data: null, error: error.message };
   }
+  // Bersihkan file lama hanya bila URL benar-benar berubah (best-effort)
+  if (oldImageUrl && oldImageUrl !== article.image_url) {
+    deleteStorageFileByUrl(oldImageUrl).catch(() => {});
+  }
   return { data };
 }
 
 export async function deleteArticle(id: string): Promise<{ error?: string }> {
+  // Ambil URL gambar SEBELUM row dihapus supaya file storage tidak jadi orphan
+  const { data: row } = await supabase.from("articles").select("image_url").eq("id", id).single();
   const { error } = await supabase.from("articles").delete().eq("id", id);
   if (error) {
     console.error("Error deleting article:", error);
     return { error: error.message };
   }
+  if (row?.image_url) deleteStorageFileByUrl(row.image_url).catch(() => {});
   return {};
 }
 
 export async function deleteArticleBulk(ids: string[]): Promise<{ error?: string }> {
+  const { data: rows } = await supabase.from("articles").select("image_url").in("id", ids);
   const { error } = await supabase.from("articles").delete().in("id", ids);
   if (error) {
     console.error("Error bulk deleting articles:", error);
     return { error: error.message };
+  }
+  for (const row of rows || []) {
+    if (row.image_url) deleteStorageFileByUrl(row.image_url).catch(() => {});
   }
   return {};
 }
@@ -1232,6 +1305,12 @@ export async function updateActivity(
     is_published?: boolean;
   }
 ): Promise<{ data: Activity | null; error?: string }> {
+  // Ambil URL gambar lama supaya file lama bisa dibersihkan bila berganti
+  let oldImageUrl: string | null = null;
+  if (typeof activity.image_url === "string") {
+    const { data: current } = await supabase.from("activities").select("image_url").eq("id", id).single();
+    oldImageUrl = current?.image_url || null;
+  }
   if (activity.title && !activity.slug) {
     activity.slug = activity.title
       .toLowerCase()
@@ -1249,23 +1328,34 @@ export async function updateActivity(
     console.error("Error updating activity:", error);
     return { data: null, error: error.message };
   }
+  // Bersihkan file lama hanya bila URL benar-benar berubah (best-effort)
+  if (oldImageUrl && oldImageUrl !== activity.image_url) {
+    deleteStorageFileByUrl(oldImageUrl).catch(() => {});
+  }
   return { data };
 }
 
 export async function deleteActivity(id: string): Promise<{ error?: string }> {
+  // Ambil URL gambar SEBELUM row dihapus supaya file storage tidak jadi orphan
+  const { data: row } = await supabase.from("activities").select("image_url").eq("id", id).single();
   const { error } = await supabase.from("activities").delete().eq("id", id);
   if (error) {
     console.error("Error deleting activity:", error);
     return { error: error.message };
   }
+  if (row?.image_url) deleteStorageFileByUrl(row.image_url).catch(() => {});
   return {};
 }
 
 export async function deleteActivityBulk(ids: string[]): Promise<{ error?: string }> {
+  const { data: rows } = await supabase.from("activities").select("image_url").in("id", ids);
   const { error } = await supabase.from("activities").delete().in("id", ids);
   if (error) {
     console.error("Error bulk deleting activities:", error);
     return { error: error.message };
+  }
+  for (const row of rows || []) {
+    if (row.image_url) deleteStorageFileByUrl(row.image_url).catch(() => {});
   }
   return {};
 }
@@ -1359,6 +1449,13 @@ export async function updateGallery(
     media_type?: string;
   }
 ): Promise<{ data: Gallery | null; error?: string }> {
+  // Ambil URL gambar lama supaya file lama bisa dibersihkan bila berganti
+  let oldImageUrl: string | null = null;
+  if (typeof gallery.url === "string") {
+    const { data: current } = await supabase.from("gallery").select("url").eq("id", id).single();
+    oldImageUrl = current?.url || null;
+  }
+
   const { data, error } = await supabase
     .from("gallery")
     .update(gallery)
@@ -1370,23 +1467,34 @@ export async function updateGallery(
     console.error("Error updating gallery:", error);
     return { data: null, error: error.message };
   }
+  // Bersihkan file lama hanya bila URL benar-benar berubah (best-effort)
+  if (oldImageUrl && oldImageUrl !== gallery.url) {
+    deleteStorageFileByUrl(oldImageUrl).catch(() => {});
+  }
   return { data };
 }
 
 export async function deleteGallery(id: string): Promise<{ error?: string }> {
+  // Ambil URL gambar SEBELUM row dihapus supaya file storage tidak jadi orphan
+  const { data: row } = await supabase.from("gallery").select("url").eq("id", id).single();
   const { error } = await supabase.from("gallery").delete().eq("id", id);
   if (error) {
     console.error("Error deleting gallery:", error);
     return { error: error.message };
   }
+  if (row?.url) deleteStorageFileByUrl(row.url).catch(() => {});
   return {};
 }
 
 export async function deleteGalleryBulk(ids: string[]): Promise<{ error?: string }> {
+  const { data: rows } = await supabase.from("gallery").select("url").in("id", ids);
   const { error } = await supabase.from("gallery").delete().in("id", ids);
   if (error) {
     console.error("Error bulk deleting gallery:", error);
     return { error: error.message };
+  }
+  for (const row of rows || []) {
+    if (row.url) deleteStorageFileByUrl(row.url).catch(() => {});
   }
   return {};
 }
@@ -1458,6 +1566,13 @@ export async function updateAchievement(
     sort_order?: number;
   }
 ): Promise<{ data: Achievement | null; error?: string }> {
+  // Ambil URL gambar lama supaya file lama bisa dibersihkan bila berganti
+  let oldImageUrl: string | null = null;
+  if (typeof achievement.image_url === "string") {
+    const { data: current } = await supabase.from("achievements").select("image_url").eq("id", id).single();
+    oldImageUrl = current?.image_url || null;
+  }
+
   const { data, error } = await supabase
     .from("achievements")
     .update(achievement)
@@ -1469,23 +1584,34 @@ export async function updateAchievement(
     console.error("Error updating achievement:", error);
     return { data: null, error: error.message };
   }
+  // Bersihkan file lama hanya bila URL benar-benar berubah (best-effort)
+  if (oldImageUrl && oldImageUrl !== achievement.image_url) {
+    deleteStorageFileByUrl(oldImageUrl).catch(() => {});
+  }
   return { data };
 }
 
 export async function deleteAchievement(id: string): Promise<{ error?: string }> {
+  // Ambil URL gambar SEBELUM row dihapus supaya file storage tidak jadi orphan
+  const { data: row } = await supabase.from("achievements").select("image_url").eq("id", id).single();
   const { error } = await supabase.from("achievements").delete().eq("id", id);
   if (error) {
     console.error("Error deleting achievement:", error);
     return { error: error.message };
   }
+  if (row?.image_url) deleteStorageFileByUrl(row.image_url).catch(() => {});
   return {};
 }
 
 export async function deleteAchievementBulk(ids: string[]): Promise<{ error?: string }> {
+  const { data: rows } = await supabase.from("achievements").select("image_url").in("id", ids);
   const { error } = await supabase.from("achievements").delete().in("id", ids);
   if (error) {
     console.error("Error bulk deleting achievements:", error);
     return { error: error.message };
+  }
+  for (const row of rows || []) {
+    if (row.image_url) deleteStorageFileByUrl(row.image_url).catch(() => {});
   }
   return {};
 }
@@ -1866,20 +1992,37 @@ export async function createTeacher(data: { name: string; position?: string; pho
 }
 
 export async function updateTeacher(id: string, data: Partial<Pick<Teacher, "name" | "position" | "photo_url" | "sort_order" | "is_active">>): Promise<{ error?: string }> {
+  // Ambil URL foto lama supaya file lama bisa dibersihkan bila berganti
+  let oldPhotoUrl: string | null = null;
+  if (typeof data.photo_url === "string") {
+    const { data: current } = await supabase.from("teachers").select("photo_url").eq("id", id).single();
+    oldPhotoUrl = current?.photo_url || null;
+  }
   const { error } = await supabase.from("teachers").update(data).eq("id", id);
   if (error) return { error: error.message };
+  // Bersihkan file lama hanya bila URL benar-benar berubah (best-effort)
+  if (oldPhotoUrl && oldPhotoUrl !== data.photo_url) {
+    deleteStorageFileByUrl(oldPhotoUrl).catch(() => {});
+  }
   return {};
 }
 
 export async function deleteTeacher(id: string): Promise<{ error?: string }> {
+  // Ambil URL foto SEBELUM row dihapus supaya file storage tidak jadi orphan
+  const { data: row } = await supabase.from("teachers").select("photo_url").eq("id", id).single();
   const { error } = await supabase.from("teachers").delete().eq("id", id);
   if (error) return { error: error.message };
+  if (row?.photo_url) deleteStorageFileByUrl(row.photo_url).catch(() => {});
   return {};
 }
 
 export async function deleteTeacherBulk(ids: string[]): Promise<{ error?: string }> {
+  const { data: rows } = await supabase.from("teachers").select("photo_url").in("id", ids);
   const { error } = await supabase.from("teachers").delete().in("id", ids);
   if (error) return { error: error.message };
+  for (const row of rows || []) {
+    if (row.photo_url) deleteStorageFileByUrl(row.photo_url).catch(() => {});
+  }
   return {};
 }
 
