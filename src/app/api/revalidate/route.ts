@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { canAccessAdminPanel } from "@/lib/auth";
 
-const ALLOWED_PATHS = new Set(["/", "/news", "/admission"]);
+const ALLOWED_PATHS = new Set(["/", "/news", "/admission", "/admission/register"]);
 function isAllowedPath(p: unknown): boolean {
   if (typeof p !== "string") return false;
   if (!p.startsWith("/")) return false;

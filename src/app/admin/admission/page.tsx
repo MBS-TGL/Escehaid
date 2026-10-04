@@ -13,6 +13,8 @@ import {
   updateWave,
   deleteWave,
   getWaveStatus,
+  getSchoolProfile,
+  setRegistrationMode,
   revalidatePaths,
 } from "@/lib/queries";
 import { StatCard, StatCardRow, SlideOver } from "@/components/ui";
@@ -125,6 +127,9 @@ export default function AdminSPMBPage() {
 
   // Gelombang pendaftaran
   const [mainTab, setMainTab] = useState<MainTab>("registrations");
+  /** Mode sumber pendaftaran (kartu "Sumber Pendaftaran" di tab Gelombang). */
+  const [regMode, setRegMode] = useState<"google_form" | "internal">("google_form");
+  const [regModeSaving, setRegModeSaving] = useState(false);
   const [waves, setWaves] = useState<SpmbWave[]>([]);
   const [wavesLoading, setWavesLoading] = useState(true);
   const [wavesError, setWavesError] = useState<string | null>(null);
@@ -157,6 +162,35 @@ export default function AdminSPMBPage() {
 
   // Selalu muat gelombang (dipakai tab Gelombang + label nama gelombang di detail pendaftar)
   useEffect(() => { fetchWaves(); }, [fetchWaves]);
+
+  // Muat mode sumber pendaftaran (kartu di tab Gelombang)
+  useEffect(() => {
+    let alive = true;
+    getSchoolProfile().then((p) => {
+      if (alive) setRegMode(p?.registration_mode === "internal" ? "internal" : "google_form");
+    });
+    return () => { alive = false; };
+  }, []);
+
+  /** Ganti mode sumber pendaftaran, lalu muat ulang halaman publik terkait. */
+  const handleChangeRegMode = async (mode: "google_form" | "internal") => {
+    if (mode === regMode || regModeSaving) return;
+    setRegModeSaving(true);
+    const { error } = await setRegistrationMode(mode);
+    setRegModeSaving(false);
+    if (error) {
+      toast(error, "error");
+      return;
+    }
+    setRegMode(mode);
+    toast(
+      mode === "internal"
+        ? "Mode Form Internal — tombol Daftar kini menuju /admission/register"
+        : "Mode Google Form — tombol Daftar kini menuju Google Form",
+      "success"
+    );
+    revalidatePaths(["/", "/admission", "/admission/register"]).catch(() => {});
+  };
 
   /** Nama gelombang untuk wave_id; "" bila tidak ada / belum termuat. */
   const waveLabel = (id?: string | null): string => (id ? waves.find((w) => w.id === id)?.name || "" : "");
@@ -416,6 +450,26 @@ export default function AdminSPMBPage() {
       <div className="p-4 sm:p-6 lg:p-8">
         {/* Header + Tab */}
         <PageHeader active={mainTab} onSelect={setMainTab} />
+
+        {/* ── SUMBER PENDAFTARAN (MODE REGISTRASI) ─────────── */}
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-[#082b59]">Sumber Pendaftaran</p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Pilih tujuan tombol Daftar di website. Mode Google Form juga mengalihkan halaman form bawaan ke Google Form.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button onClick={() => handleChangeRegMode("google_form")} disabled={regModeSaving}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${regMode === "google_form" ? "border-[#082b59] bg-[#082b59] text-white" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"}`}>
+              Google Form
+            </button>
+            <button onClick={() => handleChangeRegMode("internal")} disabled={regModeSaving}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${regMode === "internal" ? "border-[#082b59] bg-[#082b59] text-white" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"}`}>
+              Form Internal
+            </button>
+          </div>
+        </div>
 
         {/* Toolbar */}
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

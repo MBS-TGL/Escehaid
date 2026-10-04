@@ -533,6 +533,43 @@ export async function revalidatePaths(paths: string[]): Promise<void> {
   await postRevalidate(unique, "revalidatePaths");
 }
 
+// ============ SUMBER PENDAFTARAN (MODE REGISTRASI) ============
+/** URL Google Form penerimaan — sumber tunggal semua CTA "Daftar" + redirect halaman form. */
+export const GOOGLE_FORM_URL =
+  "https://docs.google.com/forms/d/e/1FAIpQLScGq3QR_ohqV-lBPtM7wgS-1IqXeUVqvFGwm3XO3VSJGBjw8w/viewform";
+
+/**
+ * Tujuan CTA "Daftar" berdasarkan school_profile.registration_mode.
+ * - "internal" → form bawaan /admission/register
+ * - selain itu (termasuk kolom belum ada / null) → Google Form — perilaku default.
+ */
+export function registrationHref(
+  profile: Pick<SchoolProfile, "registration_mode"> | null | undefined
+): string {
+  return profile?.registration_mode === "internal" ? "/admission/register" : GOOGLE_FORM_URL;
+}
+
+/**
+ * Simpan mode sumber pendaftaran (admin — policy "Staff manage school_profile").
+ * Pakai .select() supaya kegagalan RLS yang diam-diam (0 baris) tetap terdeteksi.
+ */
+export async function setRegistrationMode(
+  mode: "google_form" | "internal"
+): Promise<{ error?: string }> {
+  const { data, error } = await supabase
+    .from("school_profile")
+    .update({ registration_mode: mode })
+    .select("registration_mode");
+  if (error) {
+    console.error("Error saving registration mode:", error);
+    return { error: error.message };
+  }
+  if (!data || data.length === 0) {
+    return { error: "Mode tidak tersimpan — tidak ada baris yang terupdate (cek policy RLS)." };
+  }
+  return {};
+}
+
 // ============ NEWS ATTACHMENT (lampiran file) ============
 export const ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 

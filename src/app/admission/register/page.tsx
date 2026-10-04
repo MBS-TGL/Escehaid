@@ -1,6 +1,8 @@
 import SPMBForm from "./SPMBForm";
 import { CSSFadeIn } from "@/components/CSSAnimations";
 import { FileText, CheckCircle, Phone } from "@/components/Icons";
+import { getSchoolProfile, GOOGLE_FORM_URL } from "@/lib/queries";
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -11,7 +13,14 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600;
 
-export default function SPMBRegisterPage() {
+export default async function SPMBRegisterPage() {
+  // Mode Google Form (dipilih lewat toggle admin) → alihkan otomatis ke form Google.
+  // Kolom registration_mode belum ada (sebelum migrasi) → halaman tetap tampil seperti biasa.
+  const profile = await getSchoolProfile();
+  if (profile?.registration_mode === "google_form") {
+    redirect(GOOGLE_FORM_URL);
+  }
+
   return (
     <div>
       <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-12 text-white md:py-16">

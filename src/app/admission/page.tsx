@@ -1,7 +1,7 @@
 import { FileText, CheckCircle, Clock, Warning, GraduationCap, BookOpen, House, Download } from "@/components/Icons";
 import Link from "next/link";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
-import { getPublishedWaves, getWaveStatus } from "@/lib/queries";
+import { getPublishedWaves, getWaveStatus, getSchoolProfile, registrationHref } from "@/lib/queries";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -27,7 +27,7 @@ function formatWaveDate(dateStr: string): string {
 }
 
 export default async function SPMBPage() {
-  const waves = await getPublishedWaves();
+  const [waves, profile] = await Promise.all([getPublishedWaves(), getSchoolProfile()]);
 
   return (
     <div>
@@ -168,7 +168,7 @@ export default async function SPMBPage() {
               <h2 className="mb-6 mt-8 text-2xl font-bold text-[#082b59]">Cara Mendaftar</h2>
               <div className="space-y-3">
                 <Link
-                  href="https://docs.google.com/forms/d/e/1FAIpQLScGq3QR_ohqV-lBPtM7wgS-1IqXeUVqvFGwm3XO3VSJGBjw8w/viewform"
+                  href={registrationHref(profile)}
                   className="flex items-center gap-3 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm transition-all hover:border-[#1767b1]/30 hover:shadow-lg"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#082b59] text-white">
