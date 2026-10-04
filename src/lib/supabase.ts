@@ -14,6 +14,8 @@ export interface SchoolProfile {
   website: string;
   /** Mode sumber pendaftaran: "google_form" (default) | "internal". Bisa null bila kolom belum ada. */
   registration_mode?: string | null;
+  /** Link Google Form kustom dari admin; null/kosong → pakai GOOGLE_FORM_URL bawaan. */
+  google_form_url?: string | null;
   vision: string;
   mission: string;
   history: string;

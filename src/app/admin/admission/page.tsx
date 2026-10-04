@@ -15,6 +15,7 @@ import {
   getWaveStatus,
   getSchoolProfile,
   setRegistrationMode,
+  GOOGLE_FORM_URL,
   revalidatePaths,
 } from "@/lib/queries";
 import { StatCard, StatCardRow, SlideOver } from "@/components/ui";
@@ -130,6 +131,10 @@ export default function AdminSPMBPage() {
   /** Mode sumber pendaftaran (kartu "Sumber Pendaftaran" di tab Gelombang). */
   const [regMode, setRegMode] = useState<"google_form" | "internal">("google_form");
   const [regModeSaving, setRegModeSaving] = useState(false);
+  /** Link Google Form tersimpan + draft isi modal + status modal. */
+  const [regUrl, setRegUrl] = useState(GOOGLE_FORM_URL);
+  const [googleUrlDraft, setGoogleUrlDraft] = useState(GOOGLE_FORM_URL);
+  const [googleModal, setGoogleModal] = useState(false);
   const [waves, setWaves] = useState<SpmbWave[]>([]);
   const [wavesLoading, setWavesLoading] = useState(true);
   const [wavesError, setWavesError] = useState<string | null>(null);
@@ -163,16 +168,20 @@ export default function AdminSPMBPage() {
   // Selalu muat gelombang (dipakai tab Gelombang + label nama gelombang di detail pendaftar)
   useEffect(() => { fetchWaves(); }, [fetchWaves]);
 
-  // Muat mode sumber pendaftaran (kartu di tab Gelombang)
+  // Muat mode sumber pendaftaran + link Google Form tersimpan (kartu di tab Gelombang)
   useEffect(() => {
     let alive = true;
     getSchoolProfile().then((p) => {
-      if (alive) setRegMode(p?.registration_mode === "internal" ? "internal" : "google_form");
+      if (!alive) return;
+      const savedUrl = p?.google_form_url?.trim() || GOOGLE_FORM_URL;
+      setRegMode(p?.registration_mode === "internal" ? "internal" : "google_form");
+      setRegUrl(savedUrl);
+      setGoogleUrlDraft(savedUrl);
     });
     return () => { alive = false; };
   }, []);
 
-  /** Ganti mode sumber pendaftaran, lalu muat ulang halaman publik terkait. */
+  /** Ganti mode ke Form Internal, lalu muat ulang halaman publik terkait. */
   const handleChangeRegMode = async (mode: "google_form" | "internal") => {
     if (mode === regMode || regModeSaving) return;
     setRegModeSaving(true);
@@ -187,6 +196,32 @@ export default function AdminSPMBPage() {
       mode === "internal"
         ? "Mode Form Internal — tombol Daftar kini menuju /admission/register"
         : "Mode Google Form — tombol Daftar kini menuju Google Form",
+      "success"
+    );
+    revalidatePaths(["/", "/admission", "/admission/register"]).catch(() => {});
+  };
+
+  /** Simpan link Google Form dari modal, aktifkan mode Google Form, muat ulang halaman publik. */
+  const handleSaveGoogleUrl = async () => {
+    const url = googleUrlDraft.trim();
+    if (url && !/^https:\/\/[^\s]+\.[^\s]+/.test(url)) {
+      toast("Link tidak valid — harus diawali https://", "error");
+      return;
+    }
+    setRegModeSaving(true);
+    const { error } = await setRegistrationMode("google_form", url || null);
+    setRegModeSaving(false);
+    if (error) {
+      toast(error, "error");
+      return;
+    }
+    const saved = url || GOOGLE_FORM_URL;
+    setRegMode("google_form");
+    setRegUrl(saved);
+    setGoogleUrlDraft(saved);
+    setGoogleModal(false);
+    toast(
+      url ? "Link Google Form disimpan — tombol Daftar mengarah ke link tersebut" : "Mode Google Form aktif dengan link bawaan",
       "success"
     );
     revalidatePaths(["/", "/admission", "/admission/register"]).catch(() => {});
@@ -456,11 +491,14 @@ export default function AdminSPMBPage() {
           <div className="min-w-0">
             <p className="text-sm font-bold text-[#082b59]">Sumber Pendaftaran</p>
             <p className="mt-0.5 text-xs text-slate-500">
-              Pilih tujuan tombol Daftar di website. Mode Google Form juga mengalihkan halaman form bawaan ke Google Form.
+              Pilih tujuan tombol Daftar di website. Klik Google Form untuk mengatur link formulir; mode ini juga mengalihkan halaman form bawaan ke Google Form.
             </p>
+            {regMode === "google_form" && (
+              <p className="mt-1 truncate text-[11px] text-slate-400" title={regUrl}>{regUrl}</p>
+            )}
           </div>
           <div className="flex items-center gap-2 self-start sm:self-auto">
-            <button onClick={() => handleChangeRegMode("google_form")} disabled={regModeSaving}
+            <button onClick={() => setGoogleModal(true)} disabled={regModeSaving}
               className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${regMode === "google_form" ? "border-[#082b59] bg-[#082b59] text-white" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"}`}>
               Google Form
             </button>
@@ -470,6 +508,46 @@ export default function AdminSPMBPage() {
             </button>
           </div>
         </div>
+
+        {/* ── MODAL LINK GOOGLE FORM ─────────────────────── */}
+        {googleModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+            onClick={() => !regModeSaving && setGoogleModal(false)}>
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#082b59]/10">
+                <GraduationCap className="h-6 w-6 text-[#082b59]" />
+              </div>
+              <h3 className="text-center text-lg font-bold text-slate-800">Link Google Form</h3>
+              <p className="mt-2 text-center text-sm text-slate-500">
+                Tombol &ldquo;Daftar&rdquo; di website akan mengarah ke link ini. Kosongkan untuk kembali memakai link bawaan.
+              </p>
+              <input
+                type="url"
+                inputMode="url"
+                maxLength={500}
+                value={googleUrlDraft}
+                onChange={(e) => setGoogleUrlDraft(e.target.value)}
+                placeholder={GOOGLE_FORM_URL}
+                disabled={regModeSaving}
+                className="mt-4 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60"
+              />
+              <div className="mt-5 flex gap-3">
+                <button onClick={() => { setGoogleUrlDraft(regUrl); setGoogleModal(false); }} disabled={regModeSaving}
+                  className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                  Batal
+                </button>
+                <button onClick={handleSaveGoogleUrl} disabled={regModeSaving}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#082b59] py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
+                  {regModeSaving ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    "Simpan & Aktifkan"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Toolbar */}
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -539,22 +539,27 @@ export const GOOGLE_FORM_URL =
   "https://docs.google.com/forms/d/e/1FAIpQLScGq3QR_ohqV-lBPtM7wgS-1IqXeUVqvFGwm3XO3VSJGBjw8w/viewform";
 
 /**
- * Tujuan CTA "Daftar" berdasarkan school_profile.registration_mode.
+ * Tujuan CTA "Daftar" berdasarkan school_profile.registration_mode + google_form_url.
  * - "internal" → form bawaan /admission/register
- * - selain itu (termasuk kolom belum ada / null) → Google Form — perilaku default.
+ * - mode Google Form → link kustom admin (bila ada), kalau kosong → GOOGLE_FORM_URL bawaan
+ * - kolom belum ada / null → Google Form — perilaku default.
  */
 export function registrationHref(
-  profile: Pick<SchoolProfile, "registration_mode"> | null | undefined
+  profile: Pick<SchoolProfile, "registration_mode" | "google_form_url"> | null | undefined
 ): string {
-  return profile?.registration_mode === "internal" ? "/admission/register" : GOOGLE_FORM_URL;
+  if (profile?.registration_mode === "internal") return "/admission/register";
+  return profile?.google_form_url?.trim() || GOOGLE_FORM_URL;
 }
 
 /**
  * Simpan mode sumber pendaftaran (admin — policy "Staff manage school_profile").
+ * Mode "google_form" + googleFormUrl (bila diberikan; null = kembali ke link bawaan)
+ * ikut disimpan ke school_profile.google_form_url.
  * Pakai .select() supaya kegagalan RLS yang diam-diam (0 baris) tetap terdeteksi.
  */
 export async function setRegistrationMode(
-  mode: "google_form" | "internal"
+  mode: "google_form" | "internal",
+  googleFormUrl?: string | null
 ): Promise<{ error?: string }> {
   try {
     // PostgREST menolak UPDATE tanpa WHERE ("UPDATE requires a WHERE clause"),
@@ -563,9 +568,15 @@ export async function setRegistrationMode(
     if (!profile?.id) {
       return { error: "Profil sekolah tidak ditemukan — mode tidak tersimpan." };
     }
+    const payload: { registration_mode: string; google_form_url?: string | null } = {
+      registration_mode: mode,
+    };
+    if (mode === "google_form" && googleFormUrl !== undefined) {
+      payload.google_form_url = googleFormUrl;
+    }
     const { data, error } = await supabase
       .from("school_profile")
-      .update({ registration_mode: mode })
+      .update(payload)
       .eq("id", profile.id)
       .select("registration_mode");
     if (error) {

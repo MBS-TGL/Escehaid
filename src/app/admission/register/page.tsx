@@ -14,11 +14,11 @@ export const metadata: Metadata = {
 export const revalidate = 3600;
 
 export default async function SPMBRegisterPage() {
-  // Mode Google Form (dipilih lewat toggle admin) → alihkan otomatis ke form Google.
-  // Kolom registration_mode belum ada (sebelum migrasi) → halaman tetap tampil seperti biasa.
+  // Mode Google Form (toggle admin) → alihkan ke link Google Form yang diatur admin;
+  // link kosong → pakai link bawaan. Kolom belum ada (sebelum migrasi) → halaman tetap tampil.
   const profile = await getSchoolProfile();
   if (profile?.registration_mode === "google_form") {
-    redirect(GOOGLE_FORM_URL);
+    redirect(profile.google_form_url?.trim() || GOOGLE_FORM_URL);
   }
 
   return (
