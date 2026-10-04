@@ -16,6 +16,10 @@ export interface SchoolProfile {
   registration_mode?: string | null;
   /** Link Google Form kustom dari admin; null/kosong → pakai GOOGLE_FORM_URL bawaan. */
   google_form_url?: string | null;
+  /** Tautan brosur SPMB (kolom text nullable di DB). */
+  spmb_brochure_url: string | null;
+  /** Tautan form pendaftaran offline SPMB (kolom text nullable di DB). */
+  spmb_offline_form_url: string | null;
   vision: string;
   mission: string;
   history: string;

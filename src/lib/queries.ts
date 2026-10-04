@@ -594,6 +594,39 @@ export async function setRegistrationMode(
   }
 }
 
+/**
+ * Simpan tautan dokumen SPMB (brosur + formulir offline) ke school_profile (admin).
+ * Pola sama dengan setRegistrationMode: ambil id dulu, UPDATE ... WHERE id, deteksi 0 baris.
+ */
+export async function setSpmbDocuments(docs: {
+  spmb_brochure_url: string | null;
+  spmb_offline_form_url: string | null;
+}): Promise<{ error?: string }> {
+  try {
+    const profile = await getSchoolProfile();
+    if (!profile?.id) {
+      return { error: "Profil sekolah tidak ditemukan — dokumen tidak tersimpan." };
+    }
+    const { data, error } = await supabase
+      .from("school_profile")
+      .update(docs)
+      .eq("id", profile.id)
+      .select("spmb_brochure_url, spmb_offline_form_url");
+    if (error) {
+      console.error("Error saving spmb documents:", error);
+      return { error: error.message };
+    }
+    if (!data || data.length === 0) {
+      return { error: "Tidak tersimpan — tidak ada baris yang terupdate (cek policy RLS)." };
+    }
+    return {};
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("Error saving spmb documents:", e);
+    return { error: message };
+  }
+}
+
 // ============ NEWS ATTACHMENT (lampiran file) ============
 export const ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 

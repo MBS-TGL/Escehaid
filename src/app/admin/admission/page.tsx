@@ -15,6 +15,7 @@ import {
   getWaveStatus,
   getSchoolProfile,
   setRegistrationMode,
+  setSpmbDocuments,
   GOOGLE_FORM_URL,
   revalidatePaths,
 } from "@/lib/queries";
@@ -135,6 +136,12 @@ export default function AdminSPMBPage() {
   const [regUrl, setRegUrl] = useState(GOOGLE_FORM_URL);
   const [googleUrlDraft, setGoogleUrlDraft] = useState(GOOGLE_FORM_URL);
   const [googleModal, setGoogleModal] = useState(false);
+  /** Kartu "Dokumen SPMB": draft input, error per-input, status simpan. */
+  const [docBrochure, setDocBrochure] = useState("");
+  const [docOffline, setDocOffline] = useState("");
+  const [docBrochureErr, setDocBrochureErr] = useState<string | null>(null);
+  const [docOfflineErr, setDocOfflineErr] = useState<string | null>(null);
+  const [docSaving, setDocSaving] = useState(false);
   const [waves, setWaves] = useState<SpmbWave[]>([]);
   const [wavesLoading, setWavesLoading] = useState(true);
   const [wavesError, setWavesError] = useState<string | null>(null);
@@ -177,6 +184,8 @@ export default function AdminSPMBPage() {
       setRegMode(p?.registration_mode === "internal" ? "internal" : "google_form");
       setRegUrl(savedUrl);
       setGoogleUrlDraft(savedUrl);
+      setDocBrochure(p?.spmb_brochure_url?.trim() || "");
+      setDocOffline(p?.spmb_offline_form_url?.trim() || "");
     });
     return () => { alive = false; };
   }, []);
@@ -225,6 +234,45 @@ export default function AdminSPMBPage() {
       "success"
     );
     revalidatePaths(["/", "/admission", "/admission/register"]).catch(() => {});
+  };
+
+  /** Simpan dokumen SPMB (brosur + formulir offline) ke school_profile, lalu revalidasi /admission. */
+  const handleSaveDocs = async () => {
+    const brochure = docBrochure.trim();
+    const offlineRaw = docOffline.trim();
+    // Validasi https:// (CHECK constraint di database) — pesan tampil di input, tidak dikirim ke DB.
+    let valid = true;
+    if (brochure && !brochure.startsWith("https://")) {
+      setDocBrochureErr("Link harus diawali https://");
+      valid = false;
+    } else {
+      setDocBrochureErr(null);
+    }
+    if (offlineRaw && !offlineRaw.startsWith("https://")) {
+      setDocOfflineErr("Link harus diawali https://");
+      valid = false;
+    } else {
+      setDocOfflineErr(null);
+    }
+    if (!valid) return;
+    // Share link Google Drive (file/d/<ID>/...) → link unduh langsung (khusus formulir offline).
+    const driveId = offlineRaw.match(/^https:\/\/drive\.google\.com\/file\/d\/([^/?#]+)/)?.[1];
+    const offline = driveId ? `https://drive.google.com/uc?export=download&id=${driveId}` : offlineRaw;
+
+    setDocSaving(true);
+    const { error } = await setSpmbDocuments({
+      spmb_brochure_url: brochure || null,
+      spmb_offline_form_url: offline || null,
+    });
+    setDocSaving(false);
+    if (error) {
+      toast(error, "error");
+      return;
+    }
+    setDocBrochure(brochure);
+    setDocOffline(offline);
+    toast("Dokumen SPMB disimpan", "success");
+    revalidatePaths(["/admission"]).catch(() => {});
   };
 
   /** Nama gelombang untuk wave_id; "" bila tidak ada / belum termuat. */
@@ -505,6 +553,54 @@ export default function AdminSPMBPage() {
             <button onClick={() => handleChangeRegMode("internal")} disabled={regModeSaving}
               className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${regMode === "internal" ? "border-[#082b59] bg-[#082b59] text-white" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"}`}>
               Form Internal
+            </button>
+          </div>
+        </div>
+
+        {/* ── DOKUMEN SPMB (BROSUR + FORMULIR OFFLINE) ──── */}
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm">
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-[#082b59]">Dokumen SPMB</p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Tautan brosur dan formulir pendaftaran offline yang tampil di halaman SPMB.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Link brosur SPMB</label>
+              <input type="url" inputMode="url" maxLength={500} value={docBrochure}
+                onChange={(e) => { setDocBrochure(e.target.value); setDocBrochureErr(null); }}
+                placeholder="https://..." disabled={docSaving}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
+              {docBrochureErr ? (
+                <p className="mt-1.5 text-xs font-medium text-red-600">{docBrochureErr}</p>
+              ) : (
+                <p className="mt-1.5 text-xs text-slate-400">
+                  Dipakai pada tautan &ldquo;brosur resmi sekolah&rdquo; di halaman SPMB. Kosongkan untuk memakai halaman info-spmb bawaan.
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Link formulir offline</label>
+              <input type="url" inputMode="url" maxLength={500} value={docOffline}
+                onChange={(e) => { setDocOffline(e.target.value); setDocOfflineErr(null); }}
+                placeholder="https://..." disabled={docSaving}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
+              {docOfflineErr ? (
+                <p className="mt-1.5 text-xs font-medium text-red-600">{docOfflineErr}</p>
+              ) : (
+                <p className="mt-1.5 text-xs text-slate-400">Kosongkan untuk menyembunyikan tombol Formulir Offline.</p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button onClick={handleSaveDocs} disabled={docSaving}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
+              {docSaving ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : (
+                "Simpan"
+              )}
             </button>
           </div>
         </div>
