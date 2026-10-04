@@ -442,7 +442,7 @@ export default function SPMBForm() {
               </div>
               <div className="rounded-xl bg-[#f4f7fb] p-4 text-sm text-slate-600">
                 <p className="font-medium text-[#082b59]">Informasi Penting:</p>
-                <p className="mt-1">Transfer pendaftaran Rp. 200.000 ke:</p>
+                <p className="mt-1">Transfer pendaftaran sesuai nominal gelombang yang dipilih ke:</p>
                 <p className="font-medium">Bank Muamalat - No. Rek: 7310065863</p>
                 <p>A.N Majelis Dikdasmen dan PNF Muhammadiyah Tanggul</p>
               </div>
@@ -579,7 +579,7 @@ export default function SPMBForm() {
 
               <div data-field="doc_bukti_transfer">
                 <FileUpload
-                  label="Bukti Transfer Pendaftaran Rp. 200.000"
+                  label="Bukti Transfer Pendaftaran"
                   required
                   value={docs.bukti_transfer}
                   onChange={(file) => updateDoc("bukti_transfer", file)}

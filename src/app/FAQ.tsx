@@ -4,33 +4,7 @@ import { useState } from "react";
 import { CaretDown } from "@phosphor-icons/react";
 import Link from "next/link";
 import { CSSFadeIn } from "@/components/CSSAnimations";
-
-const faqs = [
-  {
-    q: "Bagaimana cara mendaftarkan anak ke SMP Muhammadiyah 4 Tanggul?",
-    a: "Pendaftaran dapat dilakukan secara online melalui halaman SPMB kami. Isi data calon peserta didik, lengkapi dokumen yang diperlukan, dan ikuti tahapan seleksi yang akan diinformasikan oleh panitia.",
-  },
-  {
-    q: "Apa saja program unggulan yang tersedia?",
-    a: "Kami memiliki 2 program unggulan: Boarding School (program asrama) dan Full-day School (pembelajaran sehari penuh dengan pembiasaan ibadah).",
-  },
-  {
-    q: "Berapa biaya masuk dan SPP per bulan?",
-    a: "Informasi lengkap mengenai biaya pendidikan dapat dilihat di halaman SPMB atau menghubungi bagian administrasi sekolah. Kami juga menyediakan beasiswa bagi siswa berprestasi.",
-  },
-  {
-    q: "Apakah tersedia fasilitas asrama?",
-    a: "Ya, kami menyediakan fasilitas asrama yang nyaman dan aman bagi siswa program Boarding School. Asrama dilengkapi dengan fasilitas penunjang pembelajaran dan pembiasaan ibadah.",
-  },
-  {
-    q: "Bagaimana dengan kurikulum yang diterapkan?",
-    a: "Kami menggunakan Kurikulum Merdeka yang dipadukan dengan ISMUBA (Al-Islam, Kemuhammadiyahan, dan Bahasa Arab) sebagai kurikulum khas Muhammadiyah. Pembelajaran terintegrasi antara sains, teknologi, dan nilai-nilai keislaman.",
-  },
-  {
-    q: "Apakah ada kegiatan ekstrakurikuler?",
-    a: "Tentu! Kami menyediakan berbagai kegiatan ekstrakurikuler seperti Sepak Bola, Futsal, Bulu Tangkis, Hizbul Wathan, Catur, Qiroah, dan masih banyak lagi untuk mengembangkan bakat siswa.",
-  },
-];
+import { faqs } from "./faq-data";
 
 function FAQItem({ q, a, index }: { q: string; a: string; index: number }) {
   const [isOpen, setIsOpen] = useState(false);

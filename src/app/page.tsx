@@ -5,6 +5,7 @@ import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, H
 import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList, registrationHref } from "@/lib/queries";
 import { FadeIn } from "@/components/Animations";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
+import { faqs } from "./faq-data";
 
 const FAQ = dynamic(() => import("./FAQ"), { loading: () => <div className="h-96" /> });
 const WhatsAppButton = dynamic(() => import("./WhatsAppButton"));
@@ -27,7 +28,7 @@ const FACILITY_FALLBACKS: Record<string, string> = {
 };
 
 export const metadata = {
-  title: "Beranda | SMP Muhammadiyah 4 Tanggul",
+  title: "Beranda",
   description: "SMP Muhammadiyah 4 Tanggul - Sekolah unggulan dengan program Tahfidz, keberbakatan, dan kepesantrenan. Daftar SPMB online sekarang.",
   alternates: { canonical: "/" },
 };
@@ -50,56 +51,11 @@ export default async function Home() {
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: [
-      {
-        "@type": "Question",
-        name: "Bagaimana cara mendaftarkan anak ke SMP Muhammadiyah 4 Tanggul?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Pendaftaran dapat dilakukan secara online melalui halaman SPMB kami. Isi data calon peserta didik, lengkapi dokumen yang diperlukan, dan ikuti tahapan seleksi yang akan diinformasikan oleh panitia.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Apa saja program unggulan yang tersedia?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Kami memiliki 6 program unggulan: Program Tahfidz, Program Keberbakatan, Program Bahasa, Program Kepesantrenan, Program Akademik, dan 7 Golden Habits.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Berapa biaya masuk dan SPP per bulan?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Informasi lengkap mengenai biaya pendidikan dapat dilihat di halaman SPMB atau menghubungi bagian administrasi sekolah. Kami juga menyediakan beasiswa bagi siswa berprestasi.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Apakah tersedia fasilitas asrama?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Ya, kami menyediakan fasilitas asrama yang nyaman dan aman bagi siswa program Boarding School. Asrama dilengkapi dengan fasilitas penunjang pembelajaran dan pembiasaan ibadah.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Bagaimana dengan kurikulum yang diterapkan?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Kami menggunakan Kurikulum Merdeka yang dipadukan dengan ISMUBA (Al-Islam, Kemuhammadiyahan, dan Bahasa Arab) sebagai kurikulum khas Muhammadiyah.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Apakah ada kegiatan ekstrakurikuler?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Tentu! Kami menyediakan berbagai kegiatan ekstrakurikuler seperti Sepak Bola, Futsal, Bulu Tangkis, Hizbul Wathan, Catur, Qiroah, dan masih banyak lagi.",
-        },
-      },
-    ],
+    mainEntity: faqs.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
   };
 
   return (

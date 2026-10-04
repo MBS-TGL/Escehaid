@@ -81,14 +81,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       "https://youtube.com/@MBSTANGGUL",
       "https://facebook.com/mbs.tanggul",
     ],
-    foundingDate: "2003",
+    foundingDate: "2016",
     motto: "Pusat Kaderisasi Da'i & Ulama Hafidz",
     schoolType: "Sekolah Menengah Pertama (SMP)",
     educationalLevel: "Sekolah Menengah Pertama",
     curriculum: "Kurikulum Merdeka",
     numberOfStudents: {
       "@type": "QuantitativeValue",
-      value: 300,
+      value: 164,
     },
     availableLanguage: ["id", "ar", "en"],
     contactPoint: {

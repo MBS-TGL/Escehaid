@@ -186,20 +186,20 @@ export default function ContactForm() {
                   <h3 className="text-sm font-bold text-[#082b59]">Contact Person SPMB</h3>
                   <div className="mt-3 space-y-2.5">
                     {[
-                      ["Bu Azizah", "0852-5934-1209"],
-                      ["Bu Lusi", "0823-0232-6820"],
-                      ["Pak Arif", "0858-0673-8160"],
-                    ].map(([name, phone]) => (
+                      ["Bu Azizah", "6285259341209", "0852-5934-1209"],
+                      ["Bu Lusi", "6282302326820", "0823-0232-6820"],
+                      ["Pak Arif", "6285806738160", "0858-0673-8160"],
+                    ].map(([name, wa, display]) => (
                       <div key={name} className="flex items-center justify-between rounded-xl bg-[#f4f7fb] px-4 py-2.5">
                         <span className="text-sm text-slate-600">{name}</span>
                         <a
-                          href={`https://wa.me/${phone.replace(/[^0-9]/g, "")}`}
+                          href={`https://wa.me/${wa}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1767b1] transition-colors hover:text-[#082b59]"
                         >
                           <WhatsappLogo className="h-4 w-4" weight="fill" />
-                          {phone}
+                          {display}
                         </a>
                       </div>
                     ))}

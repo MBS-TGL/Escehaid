@@ -51,13 +51,12 @@ export default async function SPMBPage() {
         {/* Program Unggulan */}
         <CSSFadeIn>
           <div className="mb-16">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Program Unggulan</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Jenjang &amp; Program</p>
             <h2 className="mt-3 mb-8 text-2xl font-bold text-[#082b59]">Pilihan Program Pendidikan</h2>
-            <CSSStagger stagger={100} className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+            <CSSStagger stagger={100} className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
               {[
-                { icon: BookOpen, title: "Program Kepesantrenan", desc: "Tahfidz Qur'an 30 Juz, Baca Kitab Kuning, Muhadhoroh 3 Bahasa, dan Golden Habit.", color: "bg-[#082b59]/10 text-[#082b59]" },
                 { icon: House, title: "SMP Boarding (MBS)", desc: "Program asrama penuh sejak 2018/2019. Siswa dibimbing 24 jam oleh ustadz kompeten.", color: "bg-[#1767b1]/10 text-[#1767b1]" },
-                { icon: GraduationCap, title: "SMP Full Day School", desc: "Pembelajaran Senin-Sabtu pukul 07.30-15.00 meliputi mapel umum dan keagamaan.", color: "bg-[#f4d21f]/20 text-[#082b59]" },
+                { icon: GraduationCap, title: "SMP Reguler", desc: "Pembelajaran penuh hari (full day) Senin-Sabtu pukul 07.00-15.00, meliputi mapel umum dan keagamaan.", color: "bg-[#f4d21f]/20 text-[#082b59]" },
                 { icon: BookOpen, title: "SMA Boarding", desc: "Program asrama penuh untuk jenjang SMA dengan kurikulum Tahfidz dan keunggulan akademik.", color: "bg-[#082b59]/10 text-[#082b59]" },
               ].map((item) => (
                 <div key={item.title}>
