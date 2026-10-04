@@ -14,6 +14,7 @@ export const revalidate = 3600;
 
 const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]";
 const container = "mx-auto max-w-7xl px-6";
+const DEFAULT_BROCHURE_URL = "https://smpmuh4tanggul.sch.id/info-spmb/";
 
 const waveStatusBadges: Record<string, { label: string; cls: string }> = {
   upcoming: { label: "Akan dibuka", cls: "border border-blue-100 bg-blue-50 text-[#1767b1]" },
@@ -44,7 +45,7 @@ const ChevronRightIcon = ({ className }: { className?: string }) => (
   <svg {...svgProps} strokeWidth={2} className={className}><path d="m9 6 6 6-6 6" /></svg>
 );
 
-function SectionHeading({ title, desc, compact }: { title: string; desc?: string; compact?: boolean }) {
+function SectionHeading({ title, desc, compact }: { title: string; desc?: React.ReactNode; compact?: boolean }) {
   return (
     <div className={`${compact ? "mb-5" : "mb-6"} max-w-2xl`}>
       <h2 className={`font-bold text-[#082b59] ${compact ? "text-xl md:text-2xl" : "text-2xl md:text-3xl"}`}>{title}</h2>
@@ -56,6 +57,8 @@ function SectionHeading({ title, desc, compact }: { title: string; desc?: string
 export default async function SPMBPage() {
   const [waves, profile] = await Promise.all([getPublishedWaves(), getSchoolProfile()]);
   const registerHref = registrationHref(profile);
+  const brochureHref = profile?.spmb_brochure_url || DEFAULT_BROCHURE_URL;
+  const offlineFormHref = profile?.spmb_offline_form_url ?? null;
 
   const openWave = waves.find((w) => getWaveStatus(w) === "open");
   const nextWave = openWave ? undefined : waves.find((w) => getWaveStatus(w) === "upcoming");
@@ -65,7 +68,7 @@ export default async function SPMBPage() {
   const jalur = [
     { icon: FileText, color: "bg-[#082b59]/10 text-[#082b59]", title: "Jalur Reguler", desc: "Pendaftaran terbuka untuk semua calon murid." },
     { icon: Trophy, color: "bg-[#f4d21f]/25 text-[#082b59]", title: "Jalur Prestasi", desc: "Untuk calon murid berprestasi di bidang akademik maupun non-akademik." },
-    { icon: HandCoins, color: "bg-emerald-100 text-emerald-700", title: "Jalur Beasiswa", desc: "Untuk calon murid dari keluarga dengan keterbatasan ekonomi.." },
+    { icon: HandCoins, color: "bg-emerald-100 text-emerald-700", title: "Jalur Beasiswa", desc: "Untuk calon murid dari keluarga dengan keterbatasan ekonomi." },
   ];
 
   const alur = [
@@ -179,7 +182,7 @@ export default async function SPMBPage() {
               <div className="border-t border-[#dce3ed] bg-[#f6f8fb] px-5 py-3 text-sm text-slate-500">
                 Rincian biaya pendidikan, boarding, dan kegiatan ada pada{" "}
                 <a
-                  href="https://smpmuh4tanggul.sch.id/info-spmb/"
+                  href={brochureHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`font-semibold text-[#1767b1] underline underline-offset-4 hover:text-[#082b59] ${focusRing}`}
@@ -199,7 +202,24 @@ export default async function SPMBPage() {
           <CSSFadeIn>
             <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
               <div>
-                <SectionHeading compact title="Jalur Pendaftaran" desc="Syarat tiap jalur ada pada brosur resmi sekolah." />
+                <SectionHeading
+                  compact
+                  title="Jalur Pendaftaran"
+                  desc={
+                    <>
+                      Syarat lengkap tiap jalur ada di{" "}
+                      <a
+                        href={brochureHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`font-semibold text-[#1767b1] underline underline-offset-4 hover:text-[#082b59] ${focusRing}`}
+                      >
+                        brosur resmi sekolah
+                      </a>
+                      .
+                    </>
+                  }
+                />
                 <div className="space-y-3">
                   {jalur.map((j) => (
                     <div key={j.title} className="flex items-start gap-4 rounded-xl border border-[#dce3ed] bg-white p-4 transition-shadow hover:shadow-md">
@@ -304,15 +324,17 @@ export default async function SPMBPage() {
                 Daftar Online
                 <ChevronRightIcon className="h-4 w-4" />
               </Link>
-              <a
-                href="https://docs.google.com/document/d/1SEownLgB4jmY9nIfZhTSSg-Y1LtfL0eH/edit?usp=sharing&ouid=109565226300801463501&rtpof=true&sd=true"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10 ${focusRing}`}
-              >
-                <Download className="h-4 w-4" />
-                Formulir Offline
-              </a>
+              {offlineFormHref && (
+                <a
+                  href={offlineFormHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10 ${focusRing}`}
+                >
+                  <Download className="h-4 w-4" />
+                  Formulir Offline
+                </a>
+              )}
               <Link href="/contact" className={`text-sm font-semibold text-white/90 underline underline-offset-4 hover:text-white ${focusRing}`}>
                 Hubungi Panitia
               </Link>
