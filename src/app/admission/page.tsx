@@ -1,4 +1,4 @@
-import { FileText, Clock, GraduationCap, BookOpen, House, Download, CheckCircle, Trophy, HandCoins } from "@/components/Icons";
+import { FileText, GraduationCap, BookOpen, House, Download, CheckCircle, Trophy, HandCoins } from "@/components/Icons";
 import Link from "next/link";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import { getPublishedWaves, getWaveStatus, getSchoolProfile, registrationHref } from "@/lib/queries";
@@ -61,8 +61,6 @@ export default async function SPMBPage() {
   const offlineFormHref = profile?.spmb_offline_form_url ?? null;
 
   const openWave = waves.find((w) => getWaveStatus(w) === "open");
-  const nextWave = openWave ? undefined : waves.find((w) => getWaveStatus(w) === "upcoming");
-  const statusWave = openWave ?? nextWave;
   const remaining = openWave ? daysLeft(openWave.end_date) : null;
 
   const jalur = [
@@ -108,41 +106,6 @@ export default async function SPMBPage() {
         </div>
       </section>
 
-      {/* Status gelombang: menumpang di tepi bawah hero */}
-      {statusWave && (
-        <div className="relative z-10 mx-auto -mt-7 max-w-5xl px-6">
-          <div className="flex flex-col gap-4 rounded-2xl border border-[#dce3ed] bg-white p-5 shadow-xl shadow-[#082b59]/10 md:flex-row md:items-center md:justify-between md:p-6">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#082b59] text-white">
-                <Clock className="h-6 w-6" />
-              </div>
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold text-[#082b59]">{statusWave.name}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${waveStatusBadges[openWave ? "open" : "upcoming"].cls}`}>
-                    {openWave ? "Dibuka" : "Akan dibuka"}
-                  </span>
-                </div>
-                <p className="mt-0.5 text-sm text-slate-500">
-                  {openWave ? `Pendaftaran sampai ${formatWaveDate(openWave.end_date)}` : `Dibuka ${formatWaveDate(statusWave.start_date)}`}
-                  {remaining !== null && remaining <= 30 && (
-                    <span className="ml-2 font-semibold text-amber-600">{remaining <= 0 ? "Hari terakhir" : `Tersisa ${remaining} hari`}</span>
-                  )}
-                </p>
-              </div>
-            </div>
-            {openWave && (
-              <Link
-                href={registerHref}
-                className={`inline-flex items-center justify-center rounded-xl bg-[#f4d21f] px-6 py-3 text-sm font-bold text-[#082b59] transition-colors hover:bg-[#ffe14d] ${focusRing}`}
-              >
-                Daftar Sekarang
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Jadwal */}
       <section id="schedule" className="scroll-mt-28 py-10 md:py-12">
         <div className={container}>
@@ -156,6 +119,7 @@ export default async function SPMBPage() {
                   {waves.map((wave) => {
                     const status = getWaveStatus(wave);
                     const badge = waveStatusBadges[status] || waveStatusBadges.closed;
+                    const isCurrent = wave.id === openWave?.id;
                     return (
                       <li
                         key={wave.id}
@@ -169,11 +133,26 @@ export default async function SPMBPage() {
                           </div>
                           {wave.note && <p className="mt-0.5 text-sm text-slate-500">{wave.note}</p>}
                         </div>
-                        <p className="shrink-0 text-sm text-slate-600 sm:text-right">
-                          <time dateTime={wave.start_date}>{formatWaveDate(wave.start_date)}</time>
-                          {" - "}
-                          <time dateTime={wave.end_date}>{formatWaveDate(wave.end_date)}</time>
-                        </p>
+                        <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-5">
+                          <p className="text-sm text-slate-600 sm:text-right">
+                            <time dateTime={wave.start_date}>{formatWaveDate(wave.start_date)}</time>
+                            {" - "}
+                            <time dateTime={wave.end_date}>{formatWaveDate(wave.end_date)}</time>
+                            {isCurrent && remaining !== null && remaining <= 30 && (
+                              <span className="mt-0.5 block text-xs font-semibold text-amber-600">
+                                {remaining <= 0 ? "Hari terakhir" : `Tersisa ${remaining} hari`}
+                              </span>
+                            )}
+                          </p>
+                          {isCurrent && (
+                            <Link
+                              href={registerHref}
+                              className={`hidden items-center justify-center rounded-lg bg-[#f4d21f] px-4 py-2 text-sm font-bold text-[#082b59] transition-colors hover:bg-[#ffe14d] sm:inline-flex ${focusRing}`}
+                            >
+                              Daftar Sekarang
+                            </Link>
+                          )}
+                        </div>
                       </li>
                     );
                   })}
