@@ -8,6 +8,7 @@ import {
   deleteFacility,
   deleteFacilityBulk,
   uploadFacilityImage,
+  revalidateFacilities,
 } from "@/lib/queries";
 import { compressImage } from "@/lib/compress-image";
 import { StatCard, StatCardRow, Modal, ConfirmModal, SlideOver } from "@/components/ui";
@@ -243,6 +244,9 @@ export default function AdminFacilitiesPage() {
       toast("Fasilitas berhasil dibuat", "success");
     }
 
+    // Segarkan ISR "/" dan "/profile" (fire-and-forget, pola sama dgn news)
+    revalidateFacilities().catch(() => {});
+
     setFormOpen(false);
     setFormSaving(false);
     fetchFacilities();
@@ -251,6 +255,7 @@ export default function AdminFacilitiesPage() {
   async function handleDelete() {
     if (!deleteItem) return;
     await deleteFacility(deleteItem.id);
+    revalidateFacilities().catch(() => {});
     toast("Fasilitas berhasil dihapus", "success");
     setDeleteItem(null);
     setSelectedIds((s) => { const n = new Set(s); n.delete(deleteItem.id); return n; });
@@ -261,6 +266,7 @@ export default function AdminFacilitiesPage() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
     await deleteFacilityBulk(ids);
+    revalidateFacilities().catch(() => {});
     toast(`${ids.length} fasilitas berhasil dihapus`, "success");
     setSelectedIds(new Set());
     setBulkDelete(false);
@@ -269,6 +275,7 @@ export default function AdminFacilitiesPage() {
 
   async function handleToggleActive(item: Facility) {
     await updateFacility(item.id, { is_active: !item.is_active });
+    revalidateFacilities().catch(() => {});
     toast(`Fasilitas ${!item.is_active ? "diaktifkan" : "dinonaktifkan"}`, "success");
     fetchFacilities();
   }

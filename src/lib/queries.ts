@@ -535,6 +535,15 @@ export async function revalidateNews(
 }
 
 /**
+ * Invalidasi ISR untuk halaman yang menampilkan fasilitas (beranda + profil)
+ * via API route /api/revalidate. Dipanggil dari client component admin
+ * setelah create/update/delete/toggle fasilitas.
+ */
+export async function revalidateFacilities(): Promise<void> {
+  await postRevalidate(["/", "/profile"], "revalidateFacilities");
+}
+
+/**
  * Revalidate path publik tertentu (mis. "/admission") via API route /api/revalidate.
  * Dipanggil dari client component admin setelah create/update/delete/toggle gelombang.
  * `type` opsional: "layout" → revalidatePath(path, "layout") di server
