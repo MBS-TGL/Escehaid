@@ -556,18 +556,31 @@ export function registrationHref(
 export async function setRegistrationMode(
   mode: "google_form" | "internal"
 ): Promise<{ error?: string }> {
-  const { data, error } = await supabase
-    .from("school_profile")
-    .update({ registration_mode: mode })
-    .select("registration_mode");
-  if (error) {
-    console.error("Error saving registration mode:", error);
-    return { error: error.message };
+  try {
+    // PostgREST menolak UPDATE tanpa WHERE ("UPDATE requires a WHERE clause"),
+    // jadi ambil id profil (tabel singleton) dulu lalu filter berdasarkan id.
+    const profile = await getSchoolProfile();
+    if (!profile?.id) {
+      return { error: "Profil sekolah tidak ditemukan — mode tidak tersimpan." };
+    }
+    const { data, error } = await supabase
+      .from("school_profile")
+      .update({ registration_mode: mode })
+      .eq("id", profile.id)
+      .select("registration_mode");
+    if (error) {
+      console.error("Error saving registration mode:", error);
+      return { error: error.message };
+    }
+    if (!data || data.length === 0) {
+      return { error: "Mode tidak tersimpan — tidak ada baris yang terupdate (cek policy RLS)." };
+    }
+    return {};
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("Error saving registration mode:", e);
+    return { error: message };
   }
-  if (!data || data.length === 0) {
-    return { error: "Mode tidak tersimpan — tidak ada baris yang terupdate (cek policy RLS)." };
-  }
-  return {};
 }
 
 // ============ NEWS ATTACHMENT (lampiran file) ============
