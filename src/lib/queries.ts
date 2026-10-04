@@ -686,6 +686,17 @@ export async function submitRegistration(registration: {
   registration_path: "reguler" | "prestasi" | "beasiswa";
   documents?: Record<string, string | null>;
 }): Promise<{ success: boolean; error?: string }> {
+  // Fase 4: catat gelombang yang sedang "open" saat pendaftar mengirim form.
+  // Kalau tidak ada gelombang terbuka (atau gagal membaca), wave_id = null dan
+  // pendaftaran TETAP disimpan — jangan blokir.
+  let waveId: string | null = null;
+  try {
+    const now = new Date();
+    waveId = (await getPublishedWaves()).find((w) => getWaveStatus(w, now) === "open")?.id ?? null;
+  } catch {
+    waveId = null;
+  }
+
   const { error } = await supabase.from("spmb_registrations").insert({
     full_name: registration.full_name,
     birth_place: registration.birth_place,
@@ -698,6 +709,7 @@ export async function submitRegistration(registration: {
     previous_school: registration.previous_school,
     registration_path: registration.registration_path,
     documents: registration.documents || {},
+    wave_id: waveId,
   });
 
   if (error) {

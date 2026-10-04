@@ -155,7 +155,11 @@ export default function AdminSPMBPage() {
     setWavesLoading(false);
   }, []);
 
-  useEffect(() => { if (mainTab === "waves") fetchWaves(); }, [mainTab, fetchWaves]);
+  // Selalu muat gelombang (dipakai tab Gelombang + label nama gelombang di detail pendaftar)
+  useEffect(() => { fetchWaves(); }, [fetchWaves]);
+
+  /** Nama gelombang untuk wave_id; "" bila tidak ada / belum termuat. */
+  const waveLabel = (id?: string | null): string => (id ? waves.find((w) => w.id === id)?.name || "" : "");
 
   // Generate signed URLs when viewItem changes
   useEffect(() => {
@@ -824,6 +828,12 @@ export default function AdminSPMBPage() {
                     <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white">
                       {pathLabels[viewItem.registration_path] || viewItem.registration_path}
                     </span>
+                    {waveLabel(viewItem.wave_id) && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white">
+                        <CalendarBlank className="h-2.5 w-2.5" />
+                        {waveLabel(viewItem.wave_id)}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <button onClick={() => setViewItem(null)} className="ml-auto shrink-0 rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white"><X className="h-5 w-5" /></button>
