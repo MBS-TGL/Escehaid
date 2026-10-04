@@ -67,7 +67,7 @@ export interface News {
   summary: string;
   content: string;
   category: "berita" | "pengumuman" | "agenda";
-  image_url: string;
+  image_url: string | null;
   cover_image_position: "top" | "center" | "bottom";
   writer_name: string;
   editor_name: string;

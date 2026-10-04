@@ -309,14 +309,14 @@ export default function AdminBeritaPage() {
     // ── Simpan baris berita ──
     let newsId = editItem?.id || "";
     if (editItem) {
-      const { error } = await updateNews(editItem.id, { ...form, image_url: imageUrl });
+      const { error } = await updateNews(editItem.id, { ...form, image_url: imageUrl || null });
       if (error) { setFormError(error); setFormSaving(false); return; }
 
       // Hapus file lama di storage jika gambar diganti atau dikosongkan
       // Gunakan folder-based cleanup: list semua file di news/<id>/, hapus semua kecuali keepUrl
       cleanupNewsImageFolder(editItem.id, imageUrl || null).catch(() => {});
     } else {
-      const { data, error } = await createNews({ ...form, image_url: imageUrl });
+      const { data, error } = await createNews({ ...form, image_url: imageUrl || null });
       if (error) { setFormError(error); setFormSaving(false); return; }
       newsId = data?.id || "";
     }

@@ -186,7 +186,7 @@ export async function createNews(news: {
   summary?: string;
   content?: string;
   category?: string;
-  image_url?: string;
+  image_url?: string | null;
   cover_image_position?: string;
   writer_name?: string;
   editor_name?: string;
@@ -240,7 +240,7 @@ export async function updateNews(
     summary?: string;
     content?: string;
     category?: string;
-    image_url?: string;
+    image_url?: string | null;
     cover_image_position?: string;
     writer_name?: string;
     editor_name?: string;

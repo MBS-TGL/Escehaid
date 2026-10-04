@@ -39,6 +39,11 @@ async function drawAndEncode(
 ): Promise<Blob> {
   const canvas = new OffscreenCanvas(w, h);
   const ctx = canvas.getContext("2d")!;
+  // JPEG tidak punya alpha: isi latar putih dulu supaya PNG/WebP transparan
+  // jadi latar putih, bukan hitam (default canvas saat alpha dibuang).
+  // Untuk gambar buram/opacity penuh hasilnya identik — drawImage menimpa putih.
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, w, h);
   ctx.drawImage(bitmap, 0, 0, w, h);
   return canvas.convertToBlob({ type: "image/jpeg", quality });
 }
