@@ -4,6 +4,7 @@ import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
 import PublicShell from "@/components/PublicShell";
+import { getSchoolProfile } from "@/lib/queries";
 
 const jakartaSans = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -22,7 +23,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://smpmuh4tanggul.web.id"),
+  metadataBase: new URL("https://smpmuh4tanggul.sch.id"),
   title: {
     template: "%s | SMP Muhammadiyah 4 Tanggul",
     default: "SMP Muhammadiyah 4 Tanggul",
@@ -51,15 +52,20 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Satu query profil per request — `cache` dari React membaginya dengan
+  // halaman yang ikut memanggil getSchoolProfile() pada render yang sama.
+  // Diteruskan ke PublicShell → Footer (kontak SPMB di footer).
+  const profile = await getSchoolProfile();
+
   const schoolJsonLd = {
     "@context": "https://schema.org",
     "@type": ["EducationalOrganization", "School"],
     name: "SMP Muhammadiyah 4 Tanggul",
     alternateName: "MBS Tanggul",
-    url: "https://smpmuh4tanggul.web.id",
-    logo: "https://smpmuh4tanggul.web.id/images/Logo-Sekolah.png",
-    image: "https://smpmuh4tanggul.web.id/images/Logo-Sekolah.png",
+    url: "https://smpmuh4tanggul.sch.id",
+    logo: "https://smpmuh4tanggul.sch.id/images/Logo-Sekolah.png",
+    image: "https://smpmuh4tanggul.sch.id/images/Logo-Sekolah.png",
     description: "SMP Muhammadiyah 4 Tanggul - Sekolah unggulan dengan program Tahfidz, keberbakatan, dan kepesantrenan di Tanggul, Jember.",
     address: {
       "@type": "PostalAddress",
@@ -103,12 +109,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: "SMP Muhammadiyah 4 Tanggul",
-    url: "https://smpmuh4tanggul.web.id",
+    url: "https://smpmuh4tanggul.sch.id",
     potentialAction: {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: "https://smpmuh4tanggul.web.id/news?search={search_term_string}",
+        urlTemplate: "https://smpmuh4tanggul.sch.id/news?search={search_term_string}",
       },
       "query-input": "required name=search_term_string",
     },
@@ -146,7 +152,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           `}
         </Script>
         <ToastProvider>
-          <PublicShell>{children}</PublicShell>
+          <PublicShell profile={profile}>{children}</PublicShell>
         </ToastProvider>
       </body>
     </html>

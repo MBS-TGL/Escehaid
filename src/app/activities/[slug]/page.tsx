@@ -50,7 +50,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
     notFound();
   }
 
-  const activityUrl = `https://smpmuh4tanggul.web.id/activities/${activity.slug}`;
+  const activityUrl = `https://smpmuh4tanggul.sch.id/activities/${activity.slug}`;
 
   const eventJsonLd = {
     "@context": "https://schema.org",
@@ -61,20 +61,20 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
     startDate: activity.activity_date || undefined,
     location: activity.location
       ? {
-          "@type": "Place",
-          name: activity.location,
-          address: {
-            "@type": "PostalAddress",
-            addressLocality: "Tanggul",
-            addressRegion: "Jember",
-            addressCountry: "ID",
-          },
-        }
+        "@type": "Place",
+        name: activity.location,
+        address: {
+          "@type": "PostalAddress",
+          addressLocality: "Tanggul",
+          addressRegion: "Jember",
+          addressCountry: "ID",
+        },
+      }
       : undefined,
     organizer: {
       "@type": "Organization",
       name: "SMP Muhammadiyah 4 Tanggul",
-      url: "https://smpmuh4tanggul.web.id",
+      url: "https://smpmuh4tanggul.sch.id",
     },
     eventStatus: "https://schema.org/EventCompleted",
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
@@ -84,8 +84,8 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Beranda", item: "https://smpmuh4tanggul.web.id" },
-      { "@type": "ListItem", position: 2, name: "Kegiatan", item: "https://smpmuh4tanggul.web.id/activities" },
+      { "@type": "ListItem", position: 1, name: "Beranda", item: "https://smpmuh4tanggul.sch.id" },
+      { "@type": "ListItem", position: 2, name: "Kegiatan", item: "https://smpmuh4tanggul.sch.id/activities" },
       { "@type": "ListItem", position: 3, name: activity.title, item: activityUrl },
     ],
   };

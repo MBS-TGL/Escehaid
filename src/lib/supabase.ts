@@ -20,6 +20,10 @@ export interface SchoolProfile {
   spmb_brochure_url: string | null;
   /** Tautan form pendaftaran offline SPMB (kolom text nullable di DB). */
   spmb_offline_form_url: string | null;
+  /** Nomor WhatsApp panitia SPMB (kolom text nullable). Tampil di footer & CTA /admission. */
+  spmb_contact_phone: string | null;
+  /** Sorotan hasil seleksi di halaman SPMB; null/kosong → blok tidak dirender. */
+  spmb_highlight_text: string | null;
   vision: string;
   mission: string;
   history: string;

@@ -6,6 +6,7 @@ import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeach
 import { FadeIn } from "@/components/Animations";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import { faqs } from "./faq-data";
+import { SITE } from "@/lib/site-config";
 
 const FAQ = dynamic(() => import("./FAQ"), { loading: () => <div className="h-96" /> });
 const WhatsAppButton = dynamic(() => import("./WhatsAppButton"));
@@ -75,7 +76,7 @@ export default async function Home() {
           <div className="text-white">
             <FadeIn delay={0.1}>
               <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-[#f4d21f]/30 bg-[#f4d21f]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[#f4d21f]">
-                Pusat Kaderisasi Da&apos;i &amp; Ulama Hafidz &middot; School of Talents
+                Pusat Kaderisasi Da&apos;i &amp; Ulama Hafidz &middot; {SITE.tagline}
               </div>
             </FadeIn>
 

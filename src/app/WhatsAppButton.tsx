@@ -16,7 +16,7 @@ export default function WhatsAppButton() {
   const message = "Assalamualaikum, saya ingin bertanya tentang SMP Muhammadiyah 4 Tanggul.";
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+    <div className="fixed bottom-24 right-4 z-50 flex flex-col items-end gap-3 md:bottom-6 md:right-6">
       {/* Chat Panel */}
       <div
         className="w-[300px] rounded-2xl bg-white p-5 shadow-2xl border border-[#dce3ed]"

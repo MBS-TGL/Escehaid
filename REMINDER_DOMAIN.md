@@ -1,7 +1,7 @@
 # Reminder: Ganti Domain ke .sch.id
 
 ## Status Domain
-- **Sekarang**: `smpmuh4tanggul.web.id` (deploy test)
+- **Sekarang**: `smpmuh4tanggul.sch.id` (deploy test)
 - **Target**: `smpmuh4tanggul.sch.id` (domain resmi)
 - **Deadline**: 17 September 2026 (domain .sch.id habis masa kepemilikan operator lama)
 
@@ -13,11 +13,11 @@
 - [ ] `src/app/layout.tsx` → ganti `metadataBase` ke `https://smpmuh4tanggul.sch.id`
 - [ ] `src/app/sitemap.ts` → ganti `BASE_URL` ke `https://smpmuh4tanggul.sch.id`
 - [ ] `src/app/robots.ts` → ganti `sitemap:` ke `https://smpmuh4tanggul.sch.id/sitemap.xml`
-- [ ] Cari link hardcoded lain yang masih pakai `smpmuh4tanggul.web.id` (grep di seluruh codebase)
+- [ ] Cari link hardcoded lain yang masih pakai `smpmuh4tanggul.sch.id` (grep di seluruh codebase)
 
 ### 2. Setup di Vercel
 - [ ] Tambahkan domain `smpmuh4tanggul.sch.id` di Vercel Dashboard → Project → Settings → Domains
-- [ ] Setup redirect `smpmuh4tanggul.web.id` → `smpmuh4tanggul.sch.id` (agar link lama tetap jalan)
+- [ ] Setup redirect `smpmuh4tanggul.sch.id` → `smpmuh4tanggul.sch.id` (agar link lama tetap jalan)
 - [ ] Pastikan SSL/TLS aktif untuk domain baru
 - [ ] Update DNS records (A / CNAME) sesuai instruksi Vercel
 
@@ -35,10 +35,10 @@
 - [ ] Beri tahu operator/CSMP bahwa domain sudah berganti
 
 ### 5. Cleanup
-- [ ] Pastikan redirect `.web.id` → `.sch.id` sudah jalan
+- [ ] Pastikan redirect `.sch.id` → `.sch.id` sudah jalan
 - [ ] Test semua halaman utama via domain baru
 - [ ] Test Google Search Console → Coverage (pastikan tidak ada error)
-- [ ] Hapus properti lama `.web.id` di Search Console (opsional, setelah yakin redirect jalan)
+- [ ] Hapus properti lama `.sch.id` di Search Console (opsional, setelah yakin redirect jalan)
 
 ---
 
@@ -52,7 +52,7 @@ src/app/robots.ts           → sitemap URL
 
 ## Grep Command untuk Cari Link Lama
 ```bash
-grep -r "smpmuh4tanggul.web.id" src/ public/
+grep -r "smpmuh4tanggul.sch.id" src/ public/
 ```
 
 ---

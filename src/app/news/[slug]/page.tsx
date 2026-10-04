@@ -72,7 +72,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
   const publishDate = new Date(berita.published_at || berita.created_at);
   const objectPosition = positionMap[berita.cover_image_position || "center"] || positionMap.center;
 
-  const shareUrl = `https://smpmuh4tanggul.web.id/news/${berita.slug}`;
+  const shareUrl = `https://smpmuh4tanggul.sch.id/news/${berita.slug}`;
   const shareText = encodeURIComponent(berita.title);
 
   const newsJsonLd = {
@@ -92,7 +92,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
       name: "SMP Muhammadiyah 4 Tanggul",
       logo: {
         "@type": "ImageObject",
-        url: "https://smpmuh4tanggul.web.id/images/Logo-Sekolah.png",
+        url: "https://smpmuh4tanggul.sch.id/images/Logo-Sekolah.png",
       },
     },
     mainEntityOfPage: {
@@ -106,8 +106,8 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Beranda", item: "https://smpmuh4tanggul.web.id" },
-      { "@type": "ListItem", position: 2, name: "Berita", item: "https://smpmuh4tanggul.web.id/news" },
+      { "@type": "ListItem", position: 1, name: "Beranda", item: "https://smpmuh4tanggul.sch.id" },
+      { "@type": "ListItem", position: 2, name: "Berita", item: "https://smpmuh4tanggul.sch.id/news" },
       { "@type": "ListItem", position: 3, name: berita.title, item: shareUrl },
     ],
   };

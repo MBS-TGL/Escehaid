@@ -30,14 +30,16 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
     <div className="min-h-screen bg-slate-50">
       {currentPage > 1 && <link rel="prev" href={`/news?page=${currentPage - 1}${search ? `&search=${search}` : ""}`} />}
       {currentPage < totalPages && <link rel="next" href={`/news?page=${currentPage + 1}${search ? `&search=${search}` : ""}`} />}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        itemListElement: [
-          { "@type": "ListItem", position: 1, name: "Beranda", item: "https://smpmuh4tanggul.web.id" },
-          { "@type": "ListItem", position: 2, name: "Berita", item: "https://smpmuh4tanggul.web.id/news" },
-        ],
-      }) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{
+        __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Beranda", item: "https://smpmuh4tanggul.sch.id" },
+            { "@type": "ListItem", position: 2, name: "Berita", item: "https://smpmuh4tanggul.sch.id/news" },
+          ],
+        })
+      }} />
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-12 text-white md:py-16">
         <div className="absolute inset-0 opacity-[0.04]">

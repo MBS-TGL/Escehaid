@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 2. Validasi body ──────────────────────────────────────
-  let body: { paths?: unknown };
+  let body: { paths?: unknown; type?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -79,6 +79,12 @@ export async function POST(req: NextRequest) {
   }
   if (body.paths.length > 50) {
     return NextResponse.json({ error: "Too many paths (max 50)" }, { status: 400 });
+  }
+
+  // type opsional: hanya "page" | "layout" (dipakai revalidatePath di bawah)
+  const type = body.type;
+  if (type !== undefined && type !== "page" && type !== "layout") {
+    return NextResponse.json({ error: "Invalid type (use 'page' or 'layout')" }, { status: 400 });
   }
 
   const invalid = body.paths.find((p) => !isAllowedPath(p));
@@ -93,7 +99,7 @@ export async function POST(req: NextRequest) {
 
   // ── 3. Revalidate ─────────────────────────────────────────
   for (const p of paths) {
-    revalidatePath(p);
+    revalidatePath(p, type as "page" | "layout" | undefined);
   }
 
   return NextResponse.json({ revalidated: paths });

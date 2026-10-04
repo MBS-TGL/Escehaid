@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { supabase } from "./supabase";
 import type { SchoolProfile, News, Gallery, SpmbRegistration, SpmbWave, Teacher, Facility, Article, Activity, Achievement, ContactMessage } from "./supabase";
 import type { UserProfile } from "./auth";
@@ -30,18 +31,26 @@ async function cleanupOldFiles(folder: string, id: string) {
 }
 
 // ============ SCHOOL PROFILE ============
-export async function getSchoolProfile(): Promise<SchoolProfile | null> {
-  const { data, error } = await supabase
-    .from("school_profile")
-    .select("*")
-    .single();
+/**
+ * Ambil profil sekolah (satu baris). Dibungkus `cache` dari React agar
+ * layout, footer, dan halaman yang dirender pada request yang sama
+ * berbagi SATU query. (Pada client build, `cache` hanya pembungkus
+ * passthrough — aman dipanggil dari komponen client.)
+ */
+export const getSchoolProfile = cache(
+  async function getSchoolProfile(): Promise<SchoolProfile | null> {
+    const { data, error } = await supabase
+      .from("school_profile")
+      .select("*")
+      .single();
 
-  if (error) {
-    console.error("Error fetching profile:", error);
-    return null;
+    if (error) {
+      console.error("Error fetching profile:", error);
+      return null;
+    }
+    return data;
   }
-  return data;
-}
+);
 
 // ============ NEWS ============
 const NEWS_LIST_COLUMNS =
@@ -464,8 +473,13 @@ export async function cleanupNewsImageFolder(
 /**
  * Kirim daftar path ke POST /api/revalidate, lalu catat status HTTP +
  * pesan error dari server bila gagal (untuk debugging admin/developer).
+ * `type` opsional ("page" | "layout") diteruskan ke revalidatePath di server.
  */
-async function postRevalidate(paths: string[], logLabel: string): Promise<void> {
+async function postRevalidate(
+  paths: string[],
+  logLabel: string,
+  type?: "page" | "layout"
+): Promise<void> {
   try {
     // Ambil session token untuk otorisasi di server
     const { data: { session } } = await supabase.auth.getSession();
@@ -476,7 +490,7 @@ async function postRevalidate(paths: string[], logLabel: string): Promise<void> 
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ paths }),
+      body: JSON.stringify(type ? { paths, type } : { paths }),
     });
 
     if (!res.ok) {
@@ -523,14 +537,20 @@ export async function revalidateNews(
 /**
  * Revalidate path publik tertentu (mis. "/admission") via API route /api/revalidate.
  * Dipanggil dari client component admin setelah create/update/delete/toggle gelombang.
+ * `type` opsional: "layout" → revalidatePath(path, "layout") di server
+ * (me-revalidate layout + semua halaman di bawahnya — dipakai untuk "/",
+ * karena footer & banner ada di root layout).
  * Kredensial & whitelist path dicek di server (route /api/revalidate).
  */
-export async function revalidatePaths(paths: string[]): Promise<void> {
+export async function revalidatePaths(
+  paths: string[],
+  type?: "page" | "layout"
+): Promise<void> {
   const unique = Array.from(
-    new Set(paths.filter((p) => typeof p === "string" && p.startsWith("/") && p.length > 1))
+    new Set(paths.filter((p) => typeof p === "string" && p.startsWith("/")))
   );
   if (unique.length === 0) return;
-  await postRevalidate(unique, "revalidatePaths");
+  await postRevalidate(unique, "revalidatePaths", type);
 }
 
 // ============ SUMBER PENDAFTARAN (MODE REGISTRASI) ============
@@ -595,12 +615,15 @@ export async function setRegistrationMode(
 }
 
 /**
- * Simpan tautan dokumen SPMB (brosur + formulir offline) ke school_profile (admin).
+ * Simpan pengaturan SPMB (brosur, formulir offline, nomor WA panitia,
+ * sorotan hasil seleksi) ke school_profile (admin).
  * Pola sama dengan setRegistrationMode: ambil id dulu, UPDATE ... WHERE id, deteksi 0 baris.
  */
 export async function setSpmbDocuments(docs: {
   spmb_brochure_url: string | null;
   spmb_offline_form_url: string | null;
+  spmb_contact_phone: string | null;
+  spmb_highlight_text: string | null;
 }): Promise<{ error?: string }> {
   try {
     const profile = await getSchoolProfile();
@@ -611,7 +634,7 @@ export async function setSpmbDocuments(docs: {
       .from("school_profile")
       .update(docs)
       .eq("id", profile.id)
-      .select("spmb_brochure_url, spmb_offline_form_url");
+      .select("spmb_brochure_url, spmb_offline_form_url, spmb_contact_phone, spmb_highlight_text");
     if (error) {
       console.error("Error saving spmb documents:", error);
       return { error: error.message };

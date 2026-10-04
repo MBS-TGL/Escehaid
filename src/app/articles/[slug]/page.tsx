@@ -47,7 +47,7 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
     );
   }
 
-  const articleUrl = `https://smpmuh4tanggul.web.id/articles/${article.slug}`;
+  const articleUrl = `https://smpmuh4tanggul.sch.id/articles/${article.slug}`;
 
   const articleJsonLd = {
     "@context": "https://schema.org",
@@ -66,7 +66,7 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
       name: "SMP Muhammadiyah 4 Tanggul",
       logo: {
         "@type": "ImageObject",
-        url: "https://smpmuh4tanggul.web.id/images/Logo-Sekolah.png",
+        url: "https://smpmuh4tanggul.sch.id/images/Logo-Sekolah.png",
       },
     },
     mainEntityOfPage: {
@@ -80,8 +80,8 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Beranda", item: "https://smpmuh4tanggul.web.id" },
-      { "@type": "ListItem", position: 2, name: "Artikel", item: "https://smpmuh4tanggul.web.id/articles" },
+      { "@type": "ListItem", position: 1, name: "Beranda", item: "https://smpmuh4tanggul.sch.id" },
+      { "@type": "ListItem", position: 2, name: "Artikel", item: "https://smpmuh4tanggul.sch.id/articles" },
       { "@type": "ListItem", position: 3, name: article.title, item: articleUrl },
     ],
   };

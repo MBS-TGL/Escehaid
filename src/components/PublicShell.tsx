@@ -3,9 +3,17 @@
 import { usePathname } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import { RunningText } from "@/components/RunningText";
+import type { SchoolProfile } from "@/lib/supabase";
 
-export default function PublicShell({ children }: { children: React.ReactNode }) {
+export default function PublicShell({
+  children,
+  profile,
+}: {
+  children: React.ReactNode;
+  profile: SchoolProfile | null;
+}) {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/admin");
 
@@ -16,7 +24,8 @@ export default function PublicShell({ children }: { children: React.ReactNode })
       <RunningText />
       <Navbar />
       <main className="flex-1">{children}</main>
-      <Footer />
+      <Footer profile={profile} />
+      <MobileBottomNav />
     </>
   );
 }

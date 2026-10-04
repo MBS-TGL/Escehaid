@@ -2,6 +2,7 @@ import { FileText, GraduationCap, BookOpen, House, Download, CheckCircle, Trophy
 import Link from "next/link";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import { getPublishedWaves, getWaveStatus, getSchoolProfile, registrationHref } from "@/lib/queries";
+import { SITE, waLink } from "@/lib/site-config";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -59,6 +60,9 @@ export default async function SPMBPage() {
   const registerHref = registrationHref(profile);
   const brochureHref = profile?.spmb_brochure_url || DEFAULT_BROCHURE_URL;
   const offlineFormHref = profile?.spmb_offline_form_url ?? null;
+  const spmbPhone = profile?.spmb_contact_phone?.trim() || "";
+  const highlightText = profile?.spmb_highlight_text?.trim() || "";
+  const accreditation = profile?.accreditation?.trim() || "A";
 
   const openWave = waves.find((w) => getWaveStatus(w) === "open");
   const remaining = openWave ? daysLeft(openWave.end_date) : null;
@@ -82,13 +86,13 @@ export default async function SPMBPage() {
   ];
 
   const alasan = [
-    { icon: CheckCircle, title: "Terakreditasi A", desc: "Mutu pendidikan sekolah diakui dengan akreditasi A." },
+    { icon: CheckCircle, title: `Terakreditasi ${accreditation}`, desc: `Mutu pendidikan sekolah diakui dengan akreditasi ${accreditation}.` },
     { icon: BookOpen, title: "Pembinaan kepesantrenan", desc: "Program kepesantrenan di lingkungan boarding, termasuk tahfidz Al-Qur'an." },
     { icon: House, title: "Dua kampus terpisah", desc: "Kampus putra di Patemon dan kampus putri di Asrama Tahfidz Al-Qur'an Bambu Kuning." },
   ];
 
   return (
-    <div className={openWave ? "pb-20 md:pb-0" : ""}>
+    <div>
       {/* Hero (sama dengan halaman lain) */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-12 text-white md:py-16">
         <div className="absolute inset-0 opacity-[0.04]">
@@ -274,12 +278,14 @@ export default async function SPMBPage() {
                       </div>
                     ))}
                   </div>
-                  <p className="mt-4 border-t border-[#dce3ed] pt-4 text-sm text-slate-600">
-                    Pada SPMB Indent 2027/2028, 35 calon murid telah dinyatakan diterima.{" "}
-                    <Link href="/news" className={`whitespace-nowrap font-semibold text-[#1767b1] underline underline-offset-4 hover:text-[#082b59] ${focusRing}`}>
-                      Lihat pengumuman
-                    </Link>
-                  </p>
+                  {highlightText && (
+                    <p className="mt-4 border-t border-[#dce3ed] pt-4 text-sm text-slate-600">
+                      {highlightText}{" "}
+                      <Link href="/news" className={`whitespace-nowrap font-semibold text-[#1767b1] underline underline-offset-4 hover:text-[#082b59] ${focusRing}`}>
+                        Lihat pengumuman
+                      </Link>
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -293,7 +299,7 @@ export default async function SPMBPage() {
           <div className="flex flex-col items-center justify-between gap-5 rounded-2xl bg-gradient-to-br from-[#082b59] to-[#0d4a8a] px-6 py-8 text-white md:flex-row md:px-10">
             <div className="text-center md:text-left">
               <h2 className="text-xl font-bold md:text-2xl">Siap mendaftarkan putra-putri Anda?</h2>
-              <p className="mt-1 text-sm text-white/70">Daftar online hanya beberapa menit. Formulir offline dikumpulkan di Kantor MBS Tanggul.</p>
+              <p className="mt-1 text-sm text-white/70">Daftar online hanya beberapa menit. Formulir offline dikumpulkan di {SITE.spmb.submitLocation}.</p>
             </div>
             <div className="flex flex-col items-center gap-3 sm:flex-row">
               <Link
@@ -314,25 +320,19 @@ export default async function SPMBPage() {
                   Formulir Offline
                 </a>
               )}
-              <Link href="/contact" className={`text-sm font-semibold text-white/90 underline underline-offset-4 hover:text-white ${focusRing}`}>
-                Hubungi Panitia
-              </Link>
+              {spmbPhone ? (
+                <a href={`https://wa.me/${waLink(spmbPhone)}`} target="_blank" rel="noopener noreferrer" className={`text-sm font-semibold text-white/90 underline underline-offset-4 hover:text-white ${focusRing}`}>
+                  Hubungi Panitia
+                </a>
+              ) : (
+                <Link href="/contact" className={`text-sm font-semibold text-white/90 underline underline-offset-4 hover:text-white ${focusRing}`}>
+                  Hubungi Panitia
+                </Link>
+              )}
             </div>
           </div>
         </div>
       </section>
-
-      {/* CTA menempel di layar kecil, hanya saat ada gelombang yang dibuka */}
-      {openWave && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dce3ed] bg-white/95 p-3 backdrop-blur md:hidden">
-          <Link
-            href={registerHref}
-            className={`flex w-full items-center justify-center rounded-xl bg-[#082b59] px-5 py-3 text-sm font-bold text-white ${focusRing}`}
-          >
-            Daftar Sekarang
-          </Link>
-        </div>
-      )}
     </div>
   );
 }

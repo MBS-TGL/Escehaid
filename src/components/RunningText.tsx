@@ -2,7 +2,8 @@
 
 import { Megaphone } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { getActiveAnnouncements } from "@/lib/queries";
+import { getPublishedWaves, getWaveStatus } from "@/lib/queries";
+import { SITE } from "@/lib/site-config";
 
 const SPEED_PX_PER_SEC = 70; // ganti di sini kalau mau lebih cepet/lambat
 const MIN_COPIES = 2; // minimal 2 salinan biar loop selalu punya "pasangan"
@@ -30,20 +31,21 @@ export function RunningText() {
   useEffect(() => {
     let cancelled = false;
 
-    getActiveAnnouncements()
-      .then((items) => {
+    // Banner SPMB hanya tampil bila ada gelombang berstatus "open";
+    // tanpa gelombang terbuka (atau saat gagal memuat) → tidak dirender.
+    getPublishedWaves()
+      .then((waves) => {
         if (cancelled) return;
+        const hasOpenWave = waves.some((w) => getWaveStatus(w) === "open");
         setText(
-          items.length > 0
-            ? items.join("  •  ")
-            : "Selamat Datang di Website SMP Muhammadiyah 4 Tanggul"
+          hasOpenWave
+            ? `SPMB ${SITE.spmb.academicYear} Sudah Dibuka! Segera Daftar di Halaman SPMB`
+            : ""
         );
       })
       .catch((err) => {
-        console.error("Failed to load announcements:", err);
-        if (!cancelled) {
-          setText("Selamat Datang di Website SMP Muhammadiyah 4 Tanggul");
-        }
+        console.error("Failed to load wave status:", err);
+        if (!cancelled) setText("");
       });
 
     return () => {

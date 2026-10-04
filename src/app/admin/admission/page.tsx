@@ -141,15 +141,20 @@ export default function AdminSPMBPage() {
   const [regUrl, setRegUrl] = useState(GOOGLE_FORM_URL);
   const [googleUrlDraft, setGoogleUrlDraft] = useState(GOOGLE_FORM_URL);
   const [googleModal, setGoogleModal] = useState(false);
-  /** Kartu "Dokumen SPMB": draft input, error per-input, status simpan. */
+  /** Kartu "Pengaturan SPMB": draft input, error per-input, status simpan. */
   const [docBrochure, setDocBrochure] = useState("");
   const [docOffline, setDocOffline] = useState("");
+  const [docPhone, setDocPhone] = useState("");
+  const [docHighlight, setDocHighlight] = useState("");
   const [docBrochureErr, setDocBrochureErr] = useState<string | null>(null);
   const [docOfflineErr, setDocOfflineErr] = useState<string | null>(null);
+  const [docPhoneErr, setDocPhoneErr] = useState<string | null>(null);
   const [docSaving, setDocSaving] = useState(false);
   /** Nilai tersimpan — tombol Simpan hanya aktif bila draft berbeda (dirty). */
   const [docBrochureSaved, setDocBrochureSaved] = useState("");
   const [docOfflineSaved, setDocOfflineSaved] = useState("");
+  const [docPhoneSaved, setDocPhoneSaved] = useState("");
+  const [docHighlightSaved, setDocHighlightSaved] = useState("");
   const [waves, setWaves] = useState<SpmbWave[]>([]);
   const [wavesLoading, setWavesLoading] = useState(true);
   const [wavesError, setWavesError] = useState<string | null>(null);
@@ -194,10 +199,16 @@ export default function AdminSPMBPage() {
       setGoogleUrlDraft(savedUrl);
       const brochureVal = p?.spmb_brochure_url?.trim() || "";
       const offlineVal = p?.spmb_offline_form_url?.trim() || "";
+      const phoneVal = p?.spmb_contact_phone?.trim() || "";
+      const highlightVal = p?.spmb_highlight_text?.trim() || "";
       setDocBrochure(brochureVal);
       setDocBrochureSaved(brochureVal);
       setDocOffline(offlineVal);
       setDocOfflineSaved(offlineVal);
+      setDocPhone(phoneVal);
+      setDocPhoneSaved(phoneVal);
+      setDocHighlight(highlightVal);
+      setDocHighlightSaved(highlightVal);
     });
     return () => { alive = false; };
   }, []);
@@ -248,13 +259,19 @@ export default function AdminSPMBPage() {
     revalidatePaths(["/", "/admission", "/admission/register"]).catch(() => { });
   };
 
-  /** Benar bila draft dokumen berbeda dari nilai tersimpan (tombol Simpan hanya aktif saat dirty). */
-  const docDirty = docBrochure.trim() !== docBrochureSaved || docOffline.trim() !== docOfflineSaved;
+  /** Benar bila draft pengaturan SPMB berbeda dari nilai tersimpan (tombol Simpan hanya aktif saat dirty). */
+  const docDirty =
+    docBrochure.trim() !== docBrochureSaved ||
+    docOffline.trim() !== docOfflineSaved ||
+    docPhone.trim() !== docPhoneSaved ||
+    docHighlight.trim() !== docHighlightSaved;
 
-  /** Simpan dokumen SPMB (brosur + formulir offline) ke school_profile, lalu revalidasi /admission. */
+  /** Simpan pengaturan SPMB (brosur, formulir offline, WA panitia, sorotan) ke school_profile, lalu revalidasi root layout. */
   const handleSaveDocs = async () => {
     const brochure = docBrochure.trim();
     const offlineRaw = docOffline.trim();
+    const phone = docPhone.trim();
+    const highlight = docHighlight.trim();
     // Validasi https:// (CHECK constraint di database) — pesan tampil di input, tidak dikirim ke DB.
     let valid = true;
     if (brochure && !brochure.startsWith("https://")) {
@@ -269,6 +286,16 @@ export default function AdminSPMBPage() {
     } else {
       setDocOfflineErr(null);
     }
+    // Validasi nomor WA: hanya angka/spasi/"-"/"+", maksimal 20 karakter.
+    if (phone && !/^[\d\s+-]+$/.test(phone)) {
+      setDocPhoneErr("Hanya boleh angka, spasi, tanda - dan +");
+      valid = false;
+    } else if (phone.length > 20) {
+      setDocPhoneErr("Maksimal 20 karakter");
+      valid = false;
+    } else {
+      setDocPhoneErr(null);
+    }
     if (!valid) return;
     // Share link Google Drive (file/d/<ID>/...) → link unduh langsung (khusus formulir offline).
     const driveId = offlineRaw.match(/^https:\/\/drive\.google\.com\/file\/d\/([^/?#]+)/)?.[1];
@@ -278,6 +305,8 @@ export default function AdminSPMBPage() {
     const { error } = await setSpmbDocuments({
       spmb_brochure_url: brochure || null,
       spmb_offline_form_url: offline || null,
+      spmb_contact_phone: phone || null,
+      spmb_highlight_text: highlight || null,
     });
     setDocSaving(false);
     if (error) {
@@ -288,8 +317,13 @@ export default function AdminSPMBPage() {
     setDocOffline(offline);
     setDocBrochureSaved(brochure);
     setDocOfflineSaved(offline);
-    toast("Dokumen SPMB disimpan", "success");
-    revalidatePaths(["/admission"]).catch(() => { });
+    setDocPhone(phone);
+    setDocPhoneSaved(phone);
+    setDocHighlight(highlight);
+    setDocHighlightSaved(highlight);
+    toast("Pengaturan SPMB disimpan", "success");
+    // Footer & banner ada di root layout → revalidate layout (ikut me-refresh semua halaman di bawahnya).
+    revalidatePaths(["/"], "layout").catch(() => { });
   };
 
   /** Nama gelombang untuk wave_id; "" bila tidak ada / belum termuat. */
@@ -706,12 +740,12 @@ export default function AdminSPMBPage() {
           </div>
         </div>
 
-        {/* ── DOKUMEN SPMB (BROSUR + FORMULIR OFFLINE) ──── */}
+        {/* ── PENGATURAN SPMB (DOKUMEN + KONTAK + SOROTAN) ──── */}
         <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm">
           <div className="min-w-0">
-            <p className="text-sm font-bold text-[#082b59]">Dokumen SPMB</p>
+            <p className="text-sm font-bold text-[#082b59]">Pengaturan SPMB</p>
             <p className="mt-0.5 text-xs text-slate-500">
-              Tautan brosur dan formulir pendaftaran offline yang tampil di halaman SPMB.
+              Tautan dokumen, nomor WhatsApp panitia, dan sorotan yang tampil di halaman SPMB.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -762,6 +796,32 @@ export default function AdminSPMBPage() {
                   Kosongkan untuk menyembunyikan tombol Formulir Offline. Link Google Drive otomatis diubah menjadi link unduh langsung saat disimpan.
                 </p>
               )}
+            </div>
+            <div>
+              <label htmlFor="doc-phone" className="mb-1 block text-xs font-semibold text-slate-700">Nomor WhatsApp panitia</label>
+              <input id="doc-phone" type="tel" inputMode="tel" maxLength={20} value={docPhone}
+                onChange={(e) => { setDocPhone(e.target.value); setDocPhoneErr(null); }}
+                aria-invalid={!!docPhoneErr} aria-describedby="doc-phone-desc"
+                placeholder="0858-0673-8160" disabled={docSaving}
+                className="w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
+              {docPhoneErr ? (
+                <p id="doc-phone-desc" className="mt-1 text-xs font-medium text-red-600">{docPhoneErr}</p>
+              ) : (
+                <p id="doc-phone-desc" className="mt-1 text-xs text-slate-400">
+                  Dipakai pada tautan Hubungi Panitia dan footer. Contoh: 0858-0673-8160.
+                </p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="doc-highlight" className="mb-1 block text-xs font-semibold text-slate-700">Sorotan hasil seleksi</label>
+              <textarea id="doc-highlight" rows={2} value={docHighlight}
+                onChange={(e) => setDocHighlight(e.target.value)}
+                aria-describedby="doc-highlight-desc" disabled={docSaving}
+                placeholder="Pada SPMB Indent 2027/2028, 35 calon murid telah dinyatakan diterima."
+                className="w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
+              <p id="doc-highlight-desc" className="mt-1 text-xs text-slate-400">
+                Tampil di halaman SPMB. Kosongkan untuk menyembunyikan.
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2 self-start sm:self-auto">
