@@ -43,6 +43,12 @@ CREATE TABLE public.school_profile (
   accreditation text DEFAULT 'A'::text,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  registration_mode text NOT NULL DEFAULT 'google_form'::text,
+  google_form_url text,
+  spmb_brochure_url text CHECK (spmb_brochure_url IS NULL OR spmb_brochure_url ~ '^https://'::text),
+  spmb_offline_form_url text CHECK (spmb_offline_form_url IS NULL OR spmb_offline_form_url ~ '^https://'::text),
+  spmb_contact_phone text,
+  spmb_highlight_text text,
   CONSTRAINT school_profile_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.news (
@@ -203,4 +209,16 @@ CREATE TABLE public.spmb_waves (
   sort_order integer NOT NULL DEFAULT 0,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT spmb_waves_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.notifications (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  title text NOT NULL,
+  message text NOT NULL,
+  type text NOT NULL DEFAULT 'info'::text CHECK (type = ANY (ARRAY['info'::text, 'success'::text, 'warning'::text, 'error'::text])),
+  link text,
+  is_read boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT notifications_pkey PRIMARY KEY (id),
+  CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
