@@ -23,7 +23,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://smpmuh4tanggul.sch.id"),
+  metadataBase: new URL("https://www.smpmuh4tanggul.sch.id"),
   title: {
     template: "%s | SMP Muhammadiyah 4 Tanggul",
     default: "SMP Muhammadiyah 4 Tanggul",
@@ -63,9 +63,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     "@type": ["EducationalOrganization", "School"],
     name: "SMP Muhammadiyah 4 Tanggul",
     alternateName: "MBS Tanggul",
-    url: "https://smpmuh4tanggul.sch.id",
-    logo: "https://smpmuh4tanggul.sch.id/images/Logo-Sekolah.png",
-    image: "https://smpmuh4tanggul.sch.id/images/Logo-Sekolah.png",
+    url: "https://www.smpmuh4tanggul.sch.id",
+    logo: "https://www.smpmuh4tanggul.sch.id/images/Logo-Sekolah.png",
+    image: "https://www.smpmuh4tanggul.sch.id/images/Logo-Sekolah.png",
     description: "SMP Muhammadiyah 4 Tanggul - Sekolah unggulan dengan program Tahfidz, keberbakatan, dan kepesantrenan di Tanggul, Jember.",
     address: {
       "@type": "PostalAddress",
@@ -109,12 +109,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: "SMP Muhammadiyah 4 Tanggul",
-    url: "https://smpmuh4tanggul.sch.id",
+    url: "https://www.smpmuh4tanggul.sch.id",
     potentialAction: {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: "https://smpmuh4tanggul.sch.id/news?search={search_term_string}",
+        urlTemplate: "https://www.smpmuh4tanggul.sch.id/news?search={search_term_string}",
       },
       "query-input": "required name=search_term_string",
     },

@@ -22,8 +22,8 @@ export default async function ArtikelPage() {
           "@context": "https://schema.org",
           "@type": "BreadcrumbList",
           itemListElement: [
-            { "@type": "ListItem", position: 1, name: "Beranda", item: "https://smpmuh4tanggul.sch.id" },
-            { "@type": "ListItem", position: 2, name: "Artikel", item: "https://smpmuh4tanggul.sch.id/articles" },
+            { "@type": "ListItem", position: 1, name: "Beranda", item: "https://www.smpmuh4tanggul.sch.id" },
+            { "@type": "ListItem", position: 2, name: "Artikel", item: "https://www.smpmuh4tanggul.sch.id/articles" },
           ],
         })
       }} />

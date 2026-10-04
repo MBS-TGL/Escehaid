@@ -10,9 +10,9 @@
 ## Checklist Ketika Domain .sch Sudah Di Tangan
 
 ### 1. Update di Codebase
-- [ ] `src/app/layout.tsx` → ganti `metadataBase` ke `https://smpmuh4tanggul.sch.id`
-- [ ] `src/app/sitemap.ts` → ganti `BASE_URL` ke `https://smpmuh4tanggul.sch.id`
-- [ ] `src/app/robots.ts` → ganti `sitemap:` ke `https://smpmuh4tanggul.sch.id/sitemap.xml`
+- [ ] `src/app/layout.tsx` → ganti `metadataBase` ke `https://www.smpmuh4tanggul.sch.id`
+- [ ] `src/app/sitemap.ts` → ganti `BASE_URL` ke `https://www.smpmuh4tanggul.sch.id`
+- [ ] `src/app/robots.ts` → ganti `sitemap:` ke `https://www.smpmuh4tanggul.sch.id/sitemap.xml`
 - [ ] Cari link hardcoded lain yang masih pakai `smpmuh4tanggul.sch.id` (grep di seluruh codebase)
 
 ### 2. Setup di Vercel
@@ -22,9 +22,9 @@
 - [ ] Update DNS records (A / CNAME) sesuai instruksi Vercel
 
 ### 3. Google Search Console
-- [ ] Tambahkan properti baru: `https://smpmuh4tanggul.sch.id`
+- [ ] Tambahkan properti baru: `https://www.smpmuh4tanggul.sch.id`
 - [ ] Verifikasi kepemilikan (DNS TXT record atau HTML file)
-- [ ] Submit sitemap baru: `https://smpmuh4tanggul.sch.id/sitemap.xml`
+- [ ] Submit sitemap baru: `https://www.smpmuh4tanggul.sch.id/sitemap.xml`
 - [ ] Request indexing untuk halaman utama
 
 ### 4. External Services

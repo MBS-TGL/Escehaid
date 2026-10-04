@@ -32,8 +32,8 @@ export default async function ActivitiesPage() {
           "@context": "https://schema.org",
           "@type": "BreadcrumbList",
           itemListElement: [
-            { "@type": "ListItem", position: 1, name: "Beranda", item: "https://smpmuh4tanggul.sch.id" },
-            { "@type": "ListItem", position: 2, name: "Kegiatan", item: "https://smpmuh4tanggul.sch.id/activities" },
+            { "@type": "ListItem", position: 1, name: "Beranda", item: "https://www.smpmuh4tanggul.sch.id" },
+            { "@type": "ListItem", position: 2, name: "Kegiatan", item: "https://www.smpmuh4tanggul.sch.id/activities" },
           ],
         })
       }} />

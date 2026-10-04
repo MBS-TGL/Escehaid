@@ -123,7 +123,7 @@ export async function sendRegistrationAdminEmail(reg: {
           </tr>
         </table>
         <p style="margin:16px 0 0;">
-          <a href="https://smpmuh4tanggul.sch.id/admin/admission" style="background:#1767b1;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;">Lihat di Admin</a>
+          <a href="https://www.smpmuh4tanggul.sch.id/admin/admission" style="background:#1767b1;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;">Lihat di Admin</a>
         </p>
       </div>
     </div>`;
@@ -223,7 +223,7 @@ export async function sendContactAdminEmail(msg: {
           <p style="margin:8px 0 0;color:#1e293b;white-space:pre-wrap;">${msg.message}</p>
         </div>
         <p style="margin:16px 0 0;">
-          <a href="https://smpmuh4tanggul.sch.id/admin/contact" style="background:#1767b1;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;">Lihat di Admin</a>
+          <a href="https://www.smpmuh4tanggul.sch.id/admin/contact" style="background:#1767b1;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;">Lihat di Admin</a>
         </p>
       </div>
     </div>`;

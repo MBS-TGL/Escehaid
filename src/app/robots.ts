@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/admin/", "/api/"],
       },
     ],
-    sitemap: "https://smpmuh4tanggul.sch.id/sitemap.xml",
+    sitemap: "https://www.smpmuh4tanggul.sch.id/sitemap.xml",
   };
 }

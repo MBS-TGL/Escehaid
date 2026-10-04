@@ -15,7 +15,7 @@ export const revalidate = 3600;
 
 const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]";
 const container = "mx-auto max-w-7xl px-6";
-const DEFAULT_BROCHURE_URL = "https://smpmuh4tanggul.sch.id/info-spmb/";
+const DEFAULT_BROCHURE_URL = "https://www.smpmuh4tanggul.sch.id/info-spmb/";
 
 const waveStatusBadges: Record<string, { label: string; cls: string }> = {
   upcoming: { label: "Akan dibuka", cls: "border border-blue-100 bg-blue-50 text-[#1767b1]" },

@@ -30,7 +30,17 @@ const nextConfig: NextConfig = {
     {
       source: "/_next/static/(.*)",
       headers: [
-        { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        {
+          key: "Cache-Control",
+          // Prod: file chunk sudah content-hashed → immutable aman.
+          // Dev: nama chunk tidak di-hash (app/layout.js), jadi immutable
+          // bikin JS lama bertahan di browser → hydration mismatch saat
+          // kode berubah. Dev selalu revalidasi (ETag).
+          value:
+            process.env.NODE_ENV === "production"
+              ? "public, max-age=31536000, immutable"
+              : "no-cache",
+        },
       ],
     },
     {

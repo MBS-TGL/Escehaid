@@ -35,8 +35,8 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
           "@context": "https://schema.org",
           "@type": "BreadcrumbList",
           itemListElement: [
-            { "@type": "ListItem", position: 1, name: "Beranda", item: "https://smpmuh4tanggul.sch.id" },
-            { "@type": "ListItem", position: 2, name: "Berita", item: "https://smpmuh4tanggul.sch.id/news" },
+            { "@type": "ListItem", position: 1, name: "Beranda", item: "https://www.smpmuh4tanggul.sch.id" },
+            { "@type": "ListItem", position: 2, name: "Berita", item: "https://www.smpmuh4tanggul.sch.id/news" },
           ],
         })
       }} />
