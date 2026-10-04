@@ -54,6 +54,11 @@ import {
 
 const PAGE_SIZE = 10;
 
+/* Ikon "buka di tab baru" — SVG inline gaya file ini (sama dengan tombol Buka pada preview lampiran). */
+const ExternalIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+);
+
 const statusConfig: Record<string, { label: string; color: string; bg: string; icon: React.ElementType }> = {
   pending: { label: "Menunggu", color: "text-amber-700", bg: "bg-amber-50 border-amber-200", icon: Clock },
   accepted: { label: "Diterima", color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200", icon: CheckCircle },
@@ -142,6 +147,9 @@ export default function AdminSPMBPage() {
   const [docBrochureErr, setDocBrochureErr] = useState<string | null>(null);
   const [docOfflineErr, setDocOfflineErr] = useState<string | null>(null);
   const [docSaving, setDocSaving] = useState(false);
+  /** Nilai tersimpan — tombol Simpan hanya aktif bila draft berbeda (dirty). */
+  const [docBrochureSaved, setDocBrochureSaved] = useState("");
+  const [docOfflineSaved, setDocOfflineSaved] = useState("");
   const [waves, setWaves] = useState<SpmbWave[]>([]);
   const [wavesLoading, setWavesLoading] = useState(true);
   const [wavesError, setWavesError] = useState<string | null>(null);
@@ -184,8 +192,12 @@ export default function AdminSPMBPage() {
       setRegMode(p?.registration_mode === "internal" ? "internal" : "google_form");
       setRegUrl(savedUrl);
       setGoogleUrlDraft(savedUrl);
-      setDocBrochure(p?.spmb_brochure_url?.trim() || "");
-      setDocOffline(p?.spmb_offline_form_url?.trim() || "");
+      const brochureVal = p?.spmb_brochure_url?.trim() || "";
+      const offlineVal = p?.spmb_offline_form_url?.trim() || "";
+      setDocBrochure(brochureVal);
+      setDocBrochureSaved(brochureVal);
+      setDocOffline(offlineVal);
+      setDocOfflineSaved(offlineVal);
     });
     return () => { alive = false; };
   }, []);
@@ -207,7 +219,7 @@ export default function AdminSPMBPage() {
         : "Mode Google Form — tombol Daftar kini menuju Google Form",
       "success"
     );
-    revalidatePaths(["/", "/admission", "/admission/register"]).catch(() => {});
+    revalidatePaths(["/", "/admission", "/admission/register"]).catch(() => { });
   };
 
   /** Simpan link Google Form dari modal, aktifkan mode Google Form, muat ulang halaman publik. */
@@ -233,8 +245,11 @@ export default function AdminSPMBPage() {
       url ? "Link Google Form disimpan — tombol Daftar mengarah ke link tersebut" : "Mode Google Form aktif dengan link bawaan",
       "success"
     );
-    revalidatePaths(["/", "/admission", "/admission/register"]).catch(() => {});
+    revalidatePaths(["/", "/admission", "/admission/register"]).catch(() => { });
   };
+
+  /** Benar bila draft dokumen berbeda dari nilai tersimpan (tombol Simpan hanya aktif saat dirty). */
+  const docDirty = docBrochure.trim() !== docBrochureSaved || docOffline.trim() !== docOfflineSaved;
 
   /** Simpan dokumen SPMB (brosur + formulir offline) ke school_profile, lalu revalidasi /admission. */
   const handleSaveDocs = async () => {
@@ -271,8 +286,10 @@ export default function AdminSPMBPage() {
     }
     setDocBrochure(brochure);
     setDocOffline(offline);
+    setDocBrochureSaved(brochure);
+    setDocOfflineSaved(offline);
     toast("Dokumen SPMB disimpan", "success");
-    revalidatePaths(["/admission"]).catch(() => {});
+    revalidatePaths(["/admission"]).catch(() => { });
   };
 
   /** Nama gelombang untuk wave_id; "" bila tidak ada / belum termuat. */
@@ -534,77 +551,6 @@ export default function AdminSPMBPage() {
         {/* Header + Tab */}
         <PageHeader active={mainTab} onSelect={setMainTab} />
 
-        {/* ── SUMBER PENDAFTARAN (MODE REGISTRASI) ─────────── */}
-        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-[#082b59]">Sumber Pendaftaran</p>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Pilih tujuan tombol Daftar di website. Klik Google Form untuk mengatur link formulir; mode ini juga mengalihkan halaman form bawaan ke Google Form.
-            </p>
-            {regMode === "google_form" && (
-              <p className="mt-1 truncate text-[11px] text-slate-400" title={regUrl}>{regUrl}</p>
-            )}
-          </div>
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <button onClick={() => setGoogleModal(true)} disabled={regModeSaving}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${regMode === "google_form" ? "border-[#082b59] bg-[#082b59] text-white" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"}`}>
-              Google Form
-            </button>
-            <button onClick={() => handleChangeRegMode("internal")} disabled={regModeSaving}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${regMode === "internal" ? "border-[#082b59] bg-[#082b59] text-white" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"}`}>
-              Form Internal
-            </button>
-          </div>
-        </div>
-
-        {/* ── DOKUMEN SPMB (BROSUR + FORMULIR OFFLINE) ──── */}
-        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm">
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-[#082b59]">Dokumen SPMB</p>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Tautan brosur dan formulir pendaftaran offline yang tampil di halaman SPMB.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Link brosur SPMB</label>
-              <input type="url" inputMode="url" maxLength={500} value={docBrochure}
-                onChange={(e) => { setDocBrochure(e.target.value); setDocBrochureErr(null); }}
-                placeholder="https://..." disabled={docSaving}
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
-              {docBrochureErr ? (
-                <p className="mt-1.5 text-xs font-medium text-red-600">{docBrochureErr}</p>
-              ) : (
-                <p className="mt-1.5 text-xs text-slate-400">
-                  Dipakai pada tautan &ldquo;brosur resmi sekolah&rdquo; di halaman SPMB. Kosongkan untuk memakai halaman info-spmb bawaan.
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Link formulir offline</label>
-              <input type="url" inputMode="url" maxLength={500} value={docOffline}
-                onChange={(e) => { setDocOffline(e.target.value); setDocOfflineErr(null); }}
-                placeholder="https://..." disabled={docSaving}
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
-              {docOfflineErr ? (
-                <p className="mt-1.5 text-xs font-medium text-red-600">{docOfflineErr}</p>
-              ) : (
-                <p className="mt-1.5 text-xs text-slate-400">Kosongkan untuk menyembunyikan tombol Formulir Offline.</p>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <button onClick={handleSaveDocs} disabled={docSaving}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
-              {docSaving ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              ) : (
-                "Simpan"
-              )}
-            </button>
-          </div>
-        </div>
-
         {/* ── MODAL LINK GOOGLE FORM ─────────────────────── */}
         {googleModal && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
@@ -732,6 +678,102 @@ export default function AdminSPMBPage() {
               })}
             </ul>
           )}
+        </div>
+
+        {/* ── PENGATURAN PENDAFTARAN (SUMBER + DOKUMEN) ─── */}
+        <h2 className="mb-3 mt-8 text-sm font-bold text-[#082b59]">Pengaturan Pendaftaran</h2>
+
+        {/* ── SUMBER PENDAFTARAN (MODE REGISTRASI) ─────────── */}
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-[#082b59]">Sumber Pendaftaran</p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Pilih tujuan tombol Daftar di website. Klik Google Form untuk mengatur link formulir; mode ini juga mengalihkan halaman form bawaan ke Google Form.
+            </p>
+            {regMode === "google_form" && (
+              <p className="mt-1 truncate text-[11px] text-slate-400" title={regUrl}>{regUrl}</p>
+            )}
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button onClick={() => setGoogleModal(true)} disabled={regModeSaving}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${regMode === "google_form" ? "border-[#082b59] bg-[#082b59] text-white" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"}`}>
+              Google Form
+            </button>
+            <button onClick={() => handleChangeRegMode("internal")} disabled={regModeSaving}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${regMode === "internal" ? "border-[#082b59] bg-[#082b59] text-white" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"}`}>
+              Form Internal
+            </button>
+          </div>
+        </div>
+
+        {/* ── DOKUMEN SPMB (BROSUR + FORMULIR OFFLINE) ──── */}
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm">
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-[#082b59]">Dokumen SPMB</p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Tautan brosur dan formulir pendaftaran offline yang tampil di halaman SPMB.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="doc-brochure" className="mb-1 block text-xs font-semibold text-slate-700">Link brosur SPMB</label>
+              <div className="flex gap-2">
+                <input id="doc-brochure" type="url" inputMode="url" maxLength={500} value={docBrochure}
+                  onChange={(e) => { setDocBrochure(e.target.value); setDocBrochureErr(null); }}
+                  aria-invalid={!!docBrochureErr} aria-describedby="doc-brochure-desc"
+                  placeholder="https://drive.google.com/file/d/..." disabled={docSaving}
+                  className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
+                {docBrochure.trim().startsWith("https://") && (
+                  <a href={docBrochure.trim()} target="_blank" rel="noopener noreferrer"
+                    aria-label="Buka link di tab baru" title="Buka link di tab baru"
+                    className="flex shrink-0 items-center justify-center rounded-lg border border-slate-200 px-2.5 text-slate-500 transition-colors hover:border-[#1767b1] hover:text-[#1767b1]">
+                    <ExternalIcon className="h-3.5 w-3.5" />
+                  </a>
+                )}
+              </div>
+              {docBrochureErr ? (
+                <p id="doc-brochure-desc" className="mt-1 text-xs font-medium text-red-600">{docBrochureErr}</p>
+              ) : (
+                <p id="doc-brochure-desc" className="mt-1 text-xs text-slate-400">
+                  Dipakai pada tautan &ldquo;brosur resmi sekolah&rdquo; di halaman SPMB. Kosongkan untuk memakai halaman info SPMB di website sekolah.
+                </p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="doc-offline" className="mb-1 block text-xs font-semibold text-slate-700">Link formulir offline</label>
+              <div className="flex gap-2">
+                <input id="doc-offline" type="url" inputMode="url" maxLength={500} value={docOffline}
+                  onChange={(e) => { setDocOffline(e.target.value); setDocOfflineErr(null); }}
+                  aria-invalid={!!docOfflineErr} aria-describedby="doc-offline-desc"
+                  placeholder="https://drive.google.com/file/d/..." disabled={docSaving}
+                  className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
+                {docOffline.trim().startsWith("https://") && (
+                  <a href={docOffline.trim()} target="_blank" rel="noopener noreferrer"
+                    aria-label="Buka link di tab baru" title="Buka link di tab baru"
+                    className="flex shrink-0 items-center justify-center rounded-lg border border-slate-200 px-2.5 text-slate-500 transition-colors hover:border-[#1767b1] hover:text-[#1767b1]">
+                    <ExternalIcon className="h-3.5 w-3.5" />
+                  </a>
+                )}
+              </div>
+              {docOfflineErr ? (
+                <p id="doc-offline-desc" className="mt-1 text-xs font-medium text-red-600">{docOfflineErr}</p>
+              ) : (
+                <p id="doc-offline-desc" className="mt-1 text-xs text-slate-400">
+                  Kosongkan untuk menyembunyikan tombol Formulir Offline. Link Google Drive otomatis diubah menjadi link unduh langsung saat disimpan.
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button onClick={handleSaveDocs} disabled={docSaving || !docDirty}
+              className="flex items-center justify-center gap-2 rounded-lg bg-[#082b59] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1767b1] disabled:opacity-50 disabled:cursor-not-allowed">
+              {docSaving ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : (
+                "Simpan"
+              )}
+            </button>
+          </div>
         </div>
 
         {/* ── FORM TAMBAH/EDIT GELOMBANG (SLIDE-OVER) ─────── */}
@@ -1331,7 +1373,7 @@ export default function AdminSPMBPage() {
 function PageHeader({ active, onSelect }: { active: MainTab; onSelect: (tab: MainTab) => void }) {
   const tabs: { key: MainTab; label: string; icon: React.ElementType }[] = [
     { key: "registrations", label: "Pendaftar", icon: Users },
-    { key: "waves", label: "Gelombang Pendaftaran", icon: CalendarBlank },
+    { key: "waves", label: "Gelombang & Pengaturan", icon: CalendarBlank },
   ];
   return (
     <>
