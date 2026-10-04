@@ -71,8 +71,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     },
     geo: {
       "@type": "GeoCoordinates",
-      latitude: -8.1515,
-      longitude: 113.455,
+      latitude: -8.1519069,
+      longitude: 113.4547709,
     },
     telephone: "+6285806738160",
     email: "smpm4tangguljember@gmail.com",

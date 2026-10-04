@@ -75,7 +75,7 @@ export default function ContactForm() {
                       placeholder="Masukkan nama lengkap"
                     />
                   </div>
-                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-3">
                     <div>
                       <label className="mb-1.5 block text-sm font-medium text-[#082b59]">Email *</label>
                       <input
@@ -136,7 +136,7 @@ export default function ContactForm() {
               <CSSFadeIn>
                 <div className="overflow-hidden rounded-2xl border border-[#dce3ed]">
                   <iframe
-                    src="https://www.google.com/maps?q=-8.1513593,113.4549174&z=16&output=embed"
+                    src="https://www.google.com/maps?q=-8.1519069,113.4547709&z=16&output=embed"
                     width="100%"
                     height="220"
                     style={{ border: 0 }}
@@ -153,7 +153,7 @@ export default function ContactForm() {
                 <div className="rounded-2xl border border-[#dce3ed] bg-white p-5">
                   <h3 className="text-sm font-bold text-[#082b59]">Informasi Sekolah</h3>
                   <div className="mt-3 space-y-2.5">
-                    <a href="https://www.google.com/maps/search/?api=1&query=SMP+Muhammadiyah+Boarding+School+Tanggul&query_place_id=ChIJlyAggZqL1i0Rzrz73pvElWo" target="_blank" rel="noopener noreferrer"
+                    <a href="https://www.google.com/maps/search/?api=1&query=MBS+TANGGUL+JEMBER&query_place_id=ChIJ4U5j9O2L1i0RHVhDHWhtwi8" target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-3 rounded-xl bg-[#f4f7fb] px-4 py-2.5 transition-colors hover:bg-[#082b59]/5">
                       <MapPin className="h-4 w-4 shrink-0 text-[#1767b1]" />
                       <div className="min-w-0">
@@ -186,9 +186,9 @@ export default function ContactForm() {
                   <h3 className="text-sm font-bold text-[#082b59]">Contact Person SPMB</h3>
                   <div className="mt-3 space-y-2.5">
                     {[
-                      ["Bu Azizah", "6285259341209", "0852-5934-1209"],
-                      ["Bu Lusi", "6282302326820", "0823-0232-6820"],
-                      ["Pak Arif", "6285806738160", "0858-0673-8160"],
+                      ["Ustadzah Azizah", "6285259341209", "0852-5934-1209"],
+                      ["Ustadzah Lucy", "6282302326820", "0823-0232-6820"],
+                      ["Ustadz Arif", "6285806738160", "0858-0673-8160"],
                     ].map(([name, wa, display]) => (
                       <div key={name} className="flex items-center justify-between rounded-xl bg-[#f4f7fb] px-4 py-2.5">
                         <span className="text-sm text-slate-600">{name}</span>
