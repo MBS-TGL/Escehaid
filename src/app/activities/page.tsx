@@ -37,14 +37,14 @@ export default async function ActivitiesPage() {
           ],
         })
       }} />
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-12 text-white md:py-16">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-16 text-white">
         <div className="absolute inset-0 opacity-20">
           <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
         </div>
         <div className="relative mx-auto max-w-7xl px-6 text-center">
           <CSSFadeIn>
-            <h1 className="text-3xl font-bold md:text-4xl">Kegiatan Sekolah</h1>
-            <p className="mt-3 text-base text-white/70">Kajian, peringatan, lomba, dan aktivitas lainnya</p>
+            <h1 className="text-3xl font-bold md:text-4xl text-balance">Kegiatan Sekolah</h1>
+            <p className="mt-3 text-base text-white/70 text-balance">Kajian, peringatan, lomba, dan aktivitas lainnya</p>
           </CSSFadeIn>
         </div>
       </section>

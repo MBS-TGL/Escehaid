@@ -4,10 +4,11 @@ export default function BeritaLoading() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Hero skeleton */}
-      <section className="relative bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-12 md:py-16">
+      <section className="relative bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-16">
         <div className="relative mx-auto max-w-7xl px-4 text-center sm:px-6">
           <SkeletonBlock className="mx-auto h-9 w-40 !bg-white/20" />
-          <SkeletonBlock className="mx-auto mt-3 h-4 w-64 !bg-white/10" />
+          <SkeletonBlock className="mx-auto mt-3 h-4 w-64 max-w-full !bg-white/10" />
+          <SkeletonBlock className="mx-auto mt-2 h-4 w-44 !bg-white/10" />
         </div>
       </section>
 

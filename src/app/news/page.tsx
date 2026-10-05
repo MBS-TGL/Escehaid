@@ -41,8 +41,8 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
         })
       }} />
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-12 text-white md:py-16">
-        <div className="absolute inset-0 opacity-[0.04]">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-16 text-white">
+        <div className="absolute inset-0 hidden opacity-[0.04] sm:block">
           <Newspaper className="absolute -left-10 -top-10 h-64 w-64 -rotate-12" weight="fill" />
           <Newspaper className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
         </div>
@@ -51,8 +51,8 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
         </div>
         <div className="relative mx-auto max-w-7xl px-4 text-center sm:px-6">
           <CSSFadeIn>
-            <h1 className="text-3xl font-bold md:text-4xl">Berita</h1>
-            <p className="mt-3 text-base text-white/70">Informasi terkini dari SMP Muhammadiyah 4 Tanggul</p>
+            <h1 className="text-3xl font-bold md:text-4xl text-balance">Berita</h1>
+            <p className="mt-3 text-base text-white/70 text-balance">Informasi terkini dari SMP Muhammadiyah 4 Tanggul</p>
             {search && (
               <p className="mt-2 text-sm text-white/50">Hasil pencarian: &quot;{search}&quot;</p>
             )}
