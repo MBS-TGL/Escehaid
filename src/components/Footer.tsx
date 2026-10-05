@@ -10,9 +10,9 @@ export default function Footer({ profile }: { profile: SchoolProfile | null }) {
   const spmbPhone = profile?.spmb_contact_phone?.trim() || "";
 
   return (
-    <footer className="bg-[#082b59] pb-20 text-white md:pb-0">
-      <div className="mx-auto max-w-[1296px] px-6 py-8 md:px-10 md:py-10">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-[1.2fr_1fr_1fr]">
+    <footer className="bg-[#082b59] pb-[calc(env(safe-area-inset-bottom)_+_76px)] text-white md:pb-0">
+      <div className="mx-auto max-w-[1296px] px-6 py-6 md:px-10 md:py-10">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-[1.2fr_1fr_1fr] md:gap-8">
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2.5">
@@ -92,7 +92,7 @@ export default function Footer({ profile }: { profile: SchoolProfile | null }) {
                     rel="noopener noreferrer"
                     className="text-xs text-white/50 transition-colors hover:text-[#f4d21f]"
                   >
-                    {SITE.spmb.contactLabel}: {spmbPhone}
+                    {spmbPhone}
                   </a>
                 </li>
               )}
@@ -104,7 +104,7 @@ export default function Footer({ profile }: { profile: SchoolProfile | null }) {
           </div>
         </div>
 
-        <div className="mt-6 border-t border-white/10 pt-4 text-center text-xs text-white/30">
+        <div className="mt-4 border-t border-white/10 pt-4 text-center text-xs text-white/30 md:mt-6">
           &copy; {new Date().getFullYear()} SMP Muhammadiyah 4 Tanggul. Hak cipta dilindungi.
         </div>
       </div>

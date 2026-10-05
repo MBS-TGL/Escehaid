@@ -12,7 +12,6 @@ export const SITE = {
   },
   spmb: {
     academicYear: "2027/2028",
-    contactLabel: "Ketua SPMB",
     submitLocation: "Kantor MBS Tanggul",
   },
 } as const;

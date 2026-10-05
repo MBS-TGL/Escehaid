@@ -51,7 +51,7 @@ function BottomLink({
       <Link
         href={href}
         aria-current={active ? "page" : undefined}
-        className={`flex h-full flex-col items-center justify-center gap-1 px-1 py-2.5 text-[11px] leading-none transition-colors active:bg-[#082b59]/5 ${
+        className={`flex h-full flex-col items-center justify-center gap-1 rounded-[24px] px-1 py-2.5 text-[11px] leading-none transition-colors active:bg-[#082b59]/5 ${
           active ? "font-semibold text-[#082b59]" : "font-medium text-slate-500"
         }`}
       >
@@ -85,26 +85,38 @@ export default function MobileBottomNav() {
 
   return (
     <>
-      {/* Bar utama */}
+      {/* Bar utama — kartu melayang; layer latar punya cekungan notch di
+          tepi atas tengah tempat bola SPMB duduk (mask memotong bar+shadow). */}
       <nav
         aria-label="Navigasi utama"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dce3ed] bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
+        className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)_+_10px)] z-40 md:hidden"
       >
-        <ul className="grid grid-cols-5">
+        <div
+          aria-hidden
+          className="absolute inset-0 rounded-[24px] bg-white/95 shadow-[0_8px_30px_rgba(8,43,89,0.14)] backdrop-blur-xl [-webkit-mask-image:radial-gradient(circle_30px_at_50%_0,transparent_29px,black_31px)] [mask-image:radial-gradient(circle_30px_at_50%_0,transparent_29px,black_31px)]"
+        />
+        <ul className="relative grid grid-cols-5">
           <BottomLink href="/" label="Beranda" icon={House} active={isActive("/")} />
           <BottomLink href="/news" label="Berita" icon={Newspaper} active={isActive("/news")} />
 
-          {/* SPMB — CTA emas di tengah */}
+          {/* SPMB — CTA emas: bola dipasang absolut di tepi atas bar
+              (pusat pas di garis, seperti referensi) sehingga label tetap
+              sejajar item lain; duduk di cekungan notch layer latar. */}
           <li>
             <Link
               href="/admission"
               aria-current={isActive("/admission") ? "page" : undefined}
-              className="flex h-full flex-col items-center justify-center gap-1.5 px-1 py-2.5 text-[11px] font-bold leading-none text-[#082b59]"
+              className="relative flex h-full flex-col items-center justify-center gap-1 px-1 py-2.5 text-[11px] font-bold leading-none text-[#082b59]"
             >
-              <span className="-mt-5 flex h-11 w-11 items-center justify-center rounded-full bg-[#f4d21f] shadow-[0_4px_14px_rgba(8,43,89,0.18)] transition-transform active:scale-95 motion-reduce:transition-none">
+              <span aria-hidden className="h-6 w-6" />
+              <span>SPMB</span>
+              <span
+                className={`absolute left-1/2 top-0 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#f4d21f] shadow-[0_6px_18px_rgba(244,210,31,0.5),0_2px_6px_rgba(8,43,89,0.12)] transition-transform active:scale-95 motion-reduce:transition-none ${
+                  isActive("/admission") ? "ring-4 ring-[#082b59]/15" : ""
+                }`}
+              >
                 <FileText className="h-5 w-5" weight="fill" />
               </span>
-              SPMB
             </Link>
           </li>
 
@@ -117,7 +129,7 @@ export default function MobileBottomNav() {
               onClick={() => setSheetOpen(true)}
               aria-expanded={sheetOpen}
               aria-controls="menu-lainnya"
-              className="flex h-full w-full flex-col items-center justify-center gap-1 px-1 py-2.5 text-[11px] font-medium leading-none text-slate-500 transition-colors active:bg-[#082b59]/5"
+              className="flex h-full w-full flex-col items-center justify-center gap-1 rounded-[24px] px-1 py-2.5 text-[11px] font-medium leading-none text-slate-500 transition-colors active:bg-[#082b59]/5"
             >
               <List className="h-6 w-6" />
               <span>Lainnya</span>
