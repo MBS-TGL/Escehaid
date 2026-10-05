@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
   },
   images: {
     formats: ["image/avif", "image/webp"],
+    // Hasil optimizer di-cache 1 hari (default cuma 60 dtk) → kurangi
+    // re-optimasi & egress. Aman: URL upload kini selalu ber-v= unik,
+    // jadi gambar yang diganti selalu punya cache key baru.
+    minimumCacheTTL: 86400,
     // Batasi kandidat lebar supaya tidak pernah minta 2560/3840px
     // (default Next sampai 3840 → boros byte & egress).
     deviceSizes: [640, 750, 828, 1080, 1200, 1600, 1920],

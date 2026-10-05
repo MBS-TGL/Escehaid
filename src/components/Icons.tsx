@@ -78,6 +78,7 @@ export {
   BookmarkSimple,
   LinkSimple,
   CalendarBlank,
+  SquaresFour,
   Tag,
   Paperclip,
 } from "@phosphor-icons/react/dist/ssr";

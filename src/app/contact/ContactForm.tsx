@@ -187,7 +187,7 @@ export default function ContactForm() {
                   <div className="mt-3 space-y-2.5">
                     {[
                       ["Ustadzah Azizah", "6285259341209", "0852-5934-1209"],
-                      ["Ustadzah Lucy", "6282302326820", "0823-0232-6820"],
+                      ["Ustadzah Lusi", "6282302326820", "0823-0232-6820"],
                       ["Ustadz Arif", "6285806738160", "0858-0673-8160"],
                     ].map(([name, wa, display]) => (
                       <div key={name} className="flex items-center justify-between rounded-xl bg-[#f4f7fb] px-4 py-2.5">

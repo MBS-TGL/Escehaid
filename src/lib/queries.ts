@@ -380,7 +380,7 @@ export async function uploadNewsImage(
 
   const { error: uploadError } = await supabase.storage
     .from("images")
-    .upload(path, compressed, { upsert: false });
+    .upload(path, compressed, { upsert: false, cacheControl: "31536000" });
 
   if (uploadError) {
     console.error("Error uploading image:", uploadError);
@@ -708,6 +708,7 @@ export async function uploadNewsAttachment(
   const { error: uploadError } = await storage.upload(path, file, {
     upsert: true,
     contentType: file.type,
+    cacheControl: "31536000",
   });
 
   if (uploadError) {
@@ -730,7 +731,7 @@ export async function uploadNewsAttachment(
     /* best-effort */
   }
 
-  return { url: publicUrl };
+  return { url: `${publicUrl}?v=${Date.now()}` };
 }
 
 /** Hapus semua lampiran milik sebuah berita (dipanggil saat berita dihapus). */
@@ -1125,13 +1126,13 @@ export async function uploadFacilityImage(
 
   const { error: uploadError } = await supabase.storage
     .from("images")
-    .upload(path, compressed, { upsert: true });
+    .upload(path, compressed, { upsert: true, cacheControl: "31536000" });
   if (uploadError) {
     console.error("Error uploading facility image:", uploadError);
     return { url: null, error: uploadError.message };
   }
   const { data } = supabase.storage.from("images").getPublicUrl(path);
-  return { url: data.publicUrl };
+  return { url: `${data.publicUrl}?v=${Date.now()}` };
 }
 
 // ============ ARTICLES ============
@@ -1329,13 +1330,13 @@ export async function uploadArticleImage(
 
   const { error: uploadError } = await supabase.storage
     .from("images")
-    .upload(path, compressed, { upsert: true });
+    .upload(path, compressed, { upsert: true, cacheControl: "31536000" });
   if (uploadError) {
     console.error("Error uploading article image:", uploadError);
     return { url: null, error: uploadError.message };
   }
   const { data } = supabase.storage.from("images").getPublicUrl(path);
-  return { url: data.publicUrl };
+  return { url: `${data.publicUrl}?v=${Date.now()}` };
 }
 
 // ============ ACTIVITIES CRUD ============
@@ -1522,13 +1523,13 @@ export async function uploadActivityImage(
 
   const { error: uploadError } = await supabase.storage
     .from("images")
-    .upload(path, compressed, { upsert: true });
+    .upload(path, compressed, { upsert: true, cacheControl: "31536000" });
   if (uploadError) {
     console.error("Error uploading activity image:", uploadError);
     return { url: null, error: uploadError.message };
   }
   const { data } = supabase.storage.from("images").getPublicUrl(path);
-  return { url: data.publicUrl };
+  return { url: `${data.publicUrl}?v=${Date.now()}` };
 }
 
 // ============ GALLERY CRUD ============
@@ -1637,13 +1638,13 @@ export async function uploadGalleryImage(
 
   const { error: uploadError } = await supabase.storage
     .from("images")
-    .upload(path, compressed, { upsert: true });
+    .upload(path, compressed, { upsert: true, cacheControl: "31536000" });
   if (uploadError) {
     console.error("Error uploading gallery image:", uploadError);
     return { url: null, error: uploadError.message };
   }
   const { data } = supabase.storage.from("images").getPublicUrl(path);
-  return { url: data.publicUrl };
+  return { url: `${data.publicUrl}?v=${Date.now()}` };
 }
 
 // ============ ACHIEVEMENTS ============
@@ -1754,13 +1755,13 @@ export async function uploadAchievementImage(
 
   const { error: uploadError } = await supabase.storage
     .from("images")
-    .upload(path, compressed, { upsert: true });
+    .upload(path, compressed, { upsert: true, cacheControl: "31536000" });
   if (uploadError) {
     console.error("Error uploading achievement image:", uploadError);
     return { url: null, error: uploadError.message };
   }
   const { data } = supabase.storage.from("images").getPublicUrl(path);
-  return { url: data.publicUrl };
+  return { url: `${data.publicUrl}?v=${Date.now()}` };
 }
 
 export async function uploadTeacherPhoto(
@@ -1775,7 +1776,7 @@ export async function uploadTeacherPhoto(
 
   const { error: uploadError } = await supabase.storage
     .from("images")
-    .upload(path, compressed, { upsert: true });
+    .upload(path, compressed, { upsert: true, cacheControl: "31536000" });
 
   if (uploadError) {
     console.error("Error uploading teacher photo:", uploadError);
@@ -1783,7 +1784,7 @@ export async function uploadTeacherPhoto(
   }
 
   const { data } = supabase.storage.from("images").getPublicUrl(path);
-  return { url: data.publicUrl };
+  return { url: `${data.publicUrl}?v=${Date.now()}` };
 }
 
 // ============ CONTACT MESSAGES CRUD ============
@@ -2272,19 +2273,96 @@ export async function notifyAllAdmins(
   type: "info" | "success" | "warning" | "error" = "info",
   link?: string
 ): Promise<void> {
-  const { data: admins } = await supabase
-    .from("user_profiles")
-    .select("id")
-    .in("role", ["developer", "admin"])
-    .eq("is_active", true);
+  // Dipanggil dari form publik (anon) → tidak bisa baca user_profiles (RLS),
+  // jadi semua langkah (baca daftar admin + insert) dilakukan fungsi Postgres
+  // security definer notify_admins(). Lihat SQL "notify_admins".
+  const { error } = await supabase.rpc("notify_admins", {
+    p_title: title,
+    p_message: message,
+    p_type: type,
+    p_link: link ?? null,
+  });
+  if (error) console.warn("notifyAllAdmins gagal:", error.message);
+}
 
-  if (!admins || admins.length === 0) return;
+// ============ PORTAL APPS (grid aplikasi di /portal) ============
 
-  await Promise.all(
-    admins.map((admin) =>
-      createNotification(admin.id, title, message, type, link)
+export interface PortalApp {
+  id: string;
+  label: string;
+  description: string;
+  href: string;
+  icon: string;
+  color: string;
+  is_external: boolean;
+  is_coming_soon: boolean;
+}
+
+/** Aplikasi portal yang aktif saja, diurut sort_order (baca publik). */
+export async function getPortalApps(): Promise<PortalApp[]> {
+  const { data, error } = await supabase
+    .from("portal_apps")
+    .select(
+      "id, label, description, href, icon, color, is_external, is_coming_soon"
     )
-  );
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+  if (error) {
+    console.error("Error fetching portal apps:", error);
+    return [];
+  }
+  return data ?? [];
+}
+
+/** Semua aplikasi (termasuk nonaktif) untuk halaman admin /admin/portal. */
+export interface PortalAppAdmin extends PortalApp {
+  is_active: boolean;
+  sort_order: number;
+}
+
+export async function getPortalAppsAdmin(): Promise<PortalAppAdmin[]> {
+  const { data, error } = await supabase
+    .from("portal_apps")
+    .select(
+      "id, label, description, href, icon, color, is_external, is_coming_soon, is_active, sort_order"
+    )
+    .order("sort_order", { ascending: true });
+  if (error) {
+    console.error("Error fetching portal apps (admin):", error);
+    return [];
+  }
+  return data ?? [];
+}
+
+export type PortalAppInput = Omit<PortalAppAdmin, "id">;
+
+export async function createPortalApp(input: PortalAppInput): Promise<{ error?: string }> {
+  const { error } = await supabase.from("portal_apps").insert(input);
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function updatePortalApp(
+  id: string,
+  input: Partial<PortalAppInput>
+): Promise<{ error?: string }> {
+  const { error } = await supabase.from("portal_apps").update(input).eq("id", id);
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function deletePortalApp(id: string): Promise<{ error?: string }> {
+  const { error } = await supabase.from("portal_apps").delete().eq("id", id);
+  if (error) return { error: error.message };
+  return {};
+}
+
+/**
+ * Invalidasi ISR halaman /portal via API route /api/revalidate.
+ * Dipanggil dari halaman admin /admin/portal setelah simpan/hapus.
+ */
+export async function revalidatePortal(): Promise<void> {
+  await postRevalidate(["/portal"], "revalidatePortal");
 }
 
 // ============ SPMB WAVES (Gelombang Pendaftaran) ============

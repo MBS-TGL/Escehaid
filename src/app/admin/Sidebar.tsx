@@ -15,6 +15,7 @@ import {
   CaretRight,
   X,
   Tag,
+  SquaresFour,
 } from "@/components/Icons";
 
 const navItems = [
@@ -30,6 +31,7 @@ const navItems = [
   { label: "Kelola Pesan", href: "/admin/contact", icon: Envelope },
   { label: "Kelola Pengumuman", href: "/admin/announcements", icon: Megaphone },
   { label: "Kelola Agenda", href: "/admin/agenda", icon: CalendarBlank },
+  { label: "Kelola Portal", href: "/admin/portal", icon: SquaresFour },
   { label: "Kategori", href: "/admin/categories", icon: Tag },
 ];
 
@@ -76,7 +78,8 @@ export default function AdminSidebar({
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
+        {/* Scroll tetap jalan, bar scrollbar disembunyikan (pola .scrollbar-hide). */}
+        <nav className="flex-1 overflow-y-auto scrollbar-hide px-3 py-4">
           <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
             Menu
           </p>

@@ -56,6 +56,7 @@ export default function Footer({ profile }: { profile: SchoolProfile | null }) {
             <h3 className="text-xs font-semibold uppercase tracking-wider text-white/60">Menu</h3>
             <ul className="mt-2.5 grid grid-cols-2 gap-x-6 gap-y-1.5">
               {[
+                ["/portal", "Portal"],
                 ["/profile", "Profil Sekolah"],
                 ["/admission", "SPMB Online"],
                 ["/news", "Berita"],

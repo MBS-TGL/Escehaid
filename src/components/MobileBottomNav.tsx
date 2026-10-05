@@ -15,6 +15,7 @@ import {
   Note,
   ChatCircle,
   CaretRight,
+  SquaresFour,
 } from "@/components/Icons";
 
 /**
@@ -29,6 +30,7 @@ import {
 type NavIcon = React.ComponentType<{ className?: string; weight?: "regular" | "fill" }>;
 
 const sheetLinks = [
+  { href: "/portal", label: "Portal", icon: SquaresFour },
   { href: "/profile", label: "Profil", icon: User },
   { href: "/achievements", label: "Prestasi", icon: Trophy },
   { href: "/articles", label: "Artikel", icon: Note },

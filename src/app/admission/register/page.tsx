@@ -51,7 +51,7 @@ export default async function SPMBRegisterPage() {
             <div className="grid gap-2 text-sm sm:grid-cols-3">
               {[
                 ["Ustadzah Azizah", "6285259341209"],
-                ["Ustadzah Lucy", "6282302326820"],
+                ["Ustadzah Lusi", "6282302326820"],
                 ["Ustadz Arif", "6285806738160"],
               ].map(([name, wa]) => (
                 <a
