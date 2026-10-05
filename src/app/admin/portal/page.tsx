@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import {
   getPortalAppsAdmin,
   createPortalApp,
@@ -18,7 +18,13 @@ import {
   Trash,
   FloppyDisk,
 } from "@/components/Icons";
-import { PORTAL_ICONS, PORTAL_ICON_LABELS, PORTAL_COLORS } from "@/lib/portal-theme";
+import {
+  PORTAL_ICONS,
+  PORTAL_ICON_LABELS,
+  PORTAL_COLORS,
+  resolvePortalColor,
+  normalizeHex,
+} from "@/lib/portal-theme";
 
 const ICON_NAMES = Object.keys(PORTAL_ICONS);
 const COLOR_KEYS = Object.keys(PORTAL_COLORS);
@@ -38,24 +44,72 @@ const EMPTY_FORM: PortalAppInput = {
 const inputClass =
   "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20";
 
-function resolveTheme(icon: string, color: string) {
-  return {
-    Icon: PORTAL_ICONS[icon] ?? SquaresFour,
-    c: PORTAL_COLORS[color] ?? PORTAL_COLORS.navy,
-  };
+function resolveIcon(name: string) {
+  return PORTAL_ICONS[name] ?? SquaresFour;
 }
 
 const focusRing =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]";
+const triggerClass = `${inputClass} flex items-center justify-between gap-3 bg-white text-left`;
+const popoverClass =
+  "absolute left-0 right-0 top-full z-30 mt-1.5 rounded-xl border border-slate-200 bg-white shadow-lg";
+
+function ChevronDown({ open }: { open: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
+    >
+      <path d="M5 8l5 5 5-5" />
+    </svg>
+  );
+}
+
+/** Buka/tutup dropdown; tutup saat klik di luar atau tekan Escape. */
+function usePopover() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey, true);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey, true);
+    };
+  }, [open]);
+
+  return { open, setOpen, ref };
+}
 
 function ThemeChip({ icon, color }: { icon: string; color: string }) {
-  const { Icon, c } = resolveTheme(icon, color);
+  const Icon = resolveIcon(icon);
+  const rc = resolvePortalColor(color);
   return (
     <span className="inline-flex items-center gap-2 text-xs text-slate-500">
-      <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${c.box} ${c.ink}`}>
+      <span
+        className={`flex h-7 w-7 items-center justify-center rounded-lg ${rc.tileClass}`}
+        style={rc.tileStyle}
+      >
         <Icon className="h-4 w-4" weight="fill" />
       </span>
-      {PORTAL_ICON_LABELS[icon] ?? icon} · {c.label}
+      {PORTAL_ICON_LABELS[icon] ?? icon} · {rc.label}
     </span>
   );
 }
@@ -73,7 +127,8 @@ function TilePreview({
   color: string;
   soon: boolean;
 }) {
-  const { Icon, c } = resolveTheme(icon, color);
+  const Icon = resolveIcon(icon);
+  const rc = resolvePortalColor(color);
   return (
     <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-4">
       <p className="mb-3 text-xs font-semibold text-slate-500">Pratinjau di halaman portal</p>
@@ -81,7 +136,10 @@ function TilePreview({
         className={`mx-auto flex w-36 flex-col items-center gap-1.5 rounded-2xl border border-[#dce3ed] bg-white px-2 py-4 text-center ${soon ? "opacity-60" : ""
           }`}
       >
-        <span className={`flex h-12 w-12 items-center justify-center rounded-xl ${c.box} ${c.ink}`}>
+        <span
+          className={`flex h-12 w-12 items-center justify-center rounded-xl ${rc.tileClass}`}
+          style={rc.tileStyle}
+        >
           <Icon className="h-6 w-6" weight="fill" />
         </span>
         <span className="break-words text-sm font-semibold text-slate-800">
@@ -104,72 +162,208 @@ function IconPicker({
   color: string;
   onChange: (name: string) => void;
 }) {
-  const { c } = resolveTheme(value, color);
+  const { open, setOpen, ref } = usePopover();
+  const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const rc = resolvePortalColor(color);
+  const Current = resolveIcon(value);
+
+  useEffect(() => {
+    if (open) searchRef.current?.focus();
+    else setQuery("");
+  }, [open]);
+
+  const q = query.trim().toLowerCase();
+  const names = q
+    ? ICON_NAMES.filter(
+      (n) => n.toLowerCase().includes(q) || (PORTAL_ICON_LABELS[n] ?? "").toLowerCase().includes(q),
+    )
+    : ICON_NAMES;
+
+  function pick(name: string) {
+    onChange(name);
+    setOpen(false);
+  }
+
   return (
-    <div>
-      <div
-        role="radiogroup"
-        aria-label="Ikon"
-        className="grid max-h-52 grid-cols-5 gap-2 overflow-y-auto rounded-xl border border-slate-200 p-2"
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className={triggerClass}
       >
-        {ICON_NAMES.map((name) => {
-          const Icon = PORTAL_ICONS[name];
-          const selected = name === value;
-          const label = PORTAL_ICON_LABELS[name] ?? name;
-          return (
-            <button
-              key={name}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              aria-label={label}
-              title={label}
-              onClick={() => onChange(name)}
-              className={`flex aspect-square items-center justify-center rounded-lg border transition-colors ${focusRing} ${selected
-                  ? `border-[#082b59] ${c.box} ${c.ink}`
-                  : "border-transparent text-slate-400 hover:bg-slate-50 hover:text-slate-600"
-                }`}
+        <span className="flex min-w-0 items-center gap-3">
+          <span
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${rc.tileClass}`}
+            style={rc.tileStyle}
+          >
+            <Current className="h-5 w-5" weight="fill" />
+          </span>
+          <span className="truncate">{PORTAL_ICON_LABELS[value] ?? value}</span>
+          <span className="truncate text-xs text-slate-400">{value}</span>
+        </span>
+        <ChevronDown open={open} />
+      </button>
+
+      {open && (
+        <div className={popoverClass}>
+          <div className="border-b border-slate-100 p-2">
+            <input
+              ref={searchRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (names[0]) pick(names[0]);
+                }
+              }}
+              placeholder="Cari ikon, mis. buku atau kalender"
+              aria-label="Cari ikon"
+              className={inputClass}
+            />
+          </div>
+          {names.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-slate-400">Ikon tidak ditemukan</p>
+          ) : (
+            <div
+              role="listbox"
+              aria-label="Ikon"
+              className="grid max-h-56 grid-cols-6 gap-1 overflow-y-auto p-2"
             >
-              <Icon className="h-6 w-6" weight={selected ? "fill" : "regular"} />
-            </button>
-          );
-        })}
-      </div>
-      <p className="mt-1.5 text-xs text-slate-400">
-        Ikon terpilih: {PORTAL_ICON_LABELS[value] ?? value}
-      </p>
+              {names.map((name) => {
+                const Icon = PORTAL_ICONS[name];
+                const selected = name === value;
+                const label = PORTAL_ICON_LABELS[name] ?? name;
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    aria-label={label}
+                    title={label}
+                    onClick={() => pick(name)}
+                    style={selected ? rc.tileStyle : undefined}
+                    className={`flex h-11 items-center justify-center rounded-lg transition-colors ${focusRing} ${selected
+                        ? `${rc.tileClass} ring-2 ring-[#082b59]`
+                        : "text-slate-500 hover:bg-slate-100"
+                      }`}
+                  >
+                    <Icon className="h-6 w-6" weight={selected ? "fill" : "regular"} />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 function ColorPicker({ value, onChange }: { value: string; onChange: (key: string) => void }) {
-  const current = PORTAL_COLORS[value];
+  const { open, setOpen, ref } = usePopover();
+  const rc = resolvePortalColor(value);
+  const [draft, setDraft] = useState("");
+
+  // Sinkronkan kotak hex dengan nilai saat ini (kosong bila memakai preset).
+  useEffect(() => {
+    setDraft(PORTAL_COLORS[value] ? "" : normalizeHex(value) ?? "");
+  }, [value]);
+
+  function commitDraft() {
+    const hex = normalizeHex(draft);
+    if (hex) onChange(hex);
+    else setDraft(PORTAL_COLORS[value] ? "" : normalizeHex(value) ?? "");
+  }
+
   return (
-    <div>
-      <div role="radiogroup" aria-label="Warna" className="flex flex-wrap gap-2.5">
-        {COLOR_KEYS.map((key) => {
-          const c = PORTAL_COLORS[key];
-          const selected = key === value;
-          return (
-            <button
-              key={key}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              aria-label={c.label}
-              title={c.label}
-              onClick={() => onChange(key)}
-              className={`h-9 w-9 rounded-full ring-2 ring-offset-2 transition-shadow ${focusRing} ${selected ? "ring-[#082b59]" : "ring-transparent hover:ring-slate-200"
-                }`}
-            >
-              <span className={`flex h-full w-full items-center justify-center rounded-full ${c.dot}`}>
-                {selected && <span className="h-2.5 w-2.5 rounded-full bg-white" />}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      <p className="mt-2 text-xs text-slate-400">Warna terpilih: {current?.label ?? value}</p>
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className={triggerClass}
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span className={`h-6 w-6 shrink-0 rounded-full ${rc.dotClass}`} style={rc.dotStyle} />
+          <span className="truncate">{rc.label}</span>
+        </span>
+        <ChevronDown open={open} />
+      </button>
+
+      {open && (
+        <div className={`${popoverClass} p-3`}>
+          <div role="listbox" aria-label="Warna preset" className="grid grid-cols-6 gap-2.5">
+            {COLOR_KEYS.map((key) => {
+              const c = PORTAL_COLORS[key];
+              const selected = key === value;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  aria-label={c.label}
+                  title={c.label}
+                  onClick={() => {
+                    onChange(key);
+                    setOpen(false);
+                  }}
+                  className={`h-9 w-9 justify-self-center rounded-full ring-2 ring-offset-2 transition-shadow ${focusRing} ${selected ? "ring-[#082b59]" : "ring-transparent hover:ring-slate-200"
+                    }`}
+                >
+                  <span className={`flex h-full w-full items-center justify-center rounded-full ${c.dot}`}>
+                    {selected && <span className="h-2.5 w-2.5 rounded-full bg-white" />}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 border-t border-slate-100 pt-3">
+            <p className="mb-2 text-xs font-semibold text-slate-500">Warna kustom</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                aria-label="Pilih warna kustom"
+                value={normalizeHex(value) ?? "#7c3aed"}
+                onChange={(e) => onChange(e.target.value.toLowerCase())}
+                className={`h-10 w-12 shrink-0 cursor-pointer rounded-lg border bg-white p-1 ${rc.custom ? "border-[#082b59] ring-2 ring-[#082b59]/30" : "border-slate-200"
+                  }`}
+              />
+              <input
+                type="text"
+                value={draft}
+                maxLength={7}
+                placeholder="#7c3aed"
+                aria-label="Kode warna hex"
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setDraft(v);
+                  if (/^#?[0-9a-f]{6}$/i.test(v.trim())) onChange(normalizeHex(v) as string);
+                }}
+                onBlur={commitDraft}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    commitDraft();
+                  }
+                }}
+                className={inputClass}
+              />
+            </div>
+            <p className="mt-1.5 text-xs text-slate-400">
+              Pilih dari kotak warna atau ketik kode hex, mis. #7c3aed.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

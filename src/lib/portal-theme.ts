@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { ComponentType, CSSProperties } from "react";
 import {
     House,
     HandCoins,
@@ -80,3 +80,52 @@ export const PORTAL_COLORS: Record<string, { label: string; box: string; ink: st
     teal: { label: "Tosca", box: "bg-teal-50", ink: "text-teal-600", dot: "bg-teal-500" },
     slate: { label: "Abu-abu", box: "bg-slate-100", ink: "text-slate-600", dot: "bg-slate-500" },
 };
+
+/** Terima "#abc", "abc", "#aabbcc"; kembalikan "#aabbcc" huruf kecil, atau null bila tidak valid. */
+export function normalizeHex(value: string): string | null {
+    const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value.trim());
+    if (!m) return null;
+    let hex = m[1].toLowerCase();
+    if (hex.length === 3) hex = hex.split("").map((ch) => ch + ch).join("");
+    return `#${hex}`;
+}
+
+export interface ResolvedPortalColor {
+    label: string;
+    /** Kelas untuk kotak ikon (latar + warna ikon). Kosong untuk warna kustom. */
+    tileClass: string;
+    /** Style untuk kotak ikon pada warna kustom. */
+    tileStyle?: CSSProperties;
+    /** Kelas / style untuk bulatan swatch. */
+    dotClass: string;
+    dotStyle?: CSSProperties;
+    custom: boolean;
+}
+
+/**
+ * Nilai kolom `color` bisa kunci preset ("navy", "sky", ...) atau hex kustom ("#7c3aed").
+ * Warna kustom memakai inline style karena Tailwind tidak bisa membuat kelas dari nilai dinamis.
+ */
+export function resolvePortalColor(color: string): ResolvedPortalColor {
+    const preset = PORTAL_COLORS[color];
+    if (preset) {
+        return {
+            label: preset.label,
+            tileClass: `${preset.box} ${preset.ink}`,
+            dotClass: preset.dot,
+            custom: false,
+        };
+    }
+    const hex = normalizeHex(color);
+    if (hex) {
+        return {
+            label: `Kustom ${hex}`,
+            tileClass: "",
+            tileStyle: { backgroundColor: `${hex}1f`, color: hex },
+            dotClass: "",
+            dotStyle: { backgroundColor: hex },
+            custom: true,
+        };
+    }
+    return resolvePortalColor("navy");
+}
