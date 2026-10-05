@@ -21,6 +21,7 @@ import {
 import {
   PORTAL_ICONS,
   PORTAL_ICON_LABELS,
+  PORTAL_ICON_SEARCH,
   PORTAL_COLORS,
   resolvePortalColor,
   normalizeHex,
@@ -174,11 +175,7 @@ function IconPicker({
   }, [open]);
 
   const q = query.trim().toLowerCase();
-  const names = q
-    ? ICON_NAMES.filter(
-      (n) => n.toLowerCase().includes(q) || (PORTAL_ICON_LABELS[n] ?? "").toLowerCase().includes(q),
-    )
-    : ICON_NAMES;
+  const names = q ? ICON_NAMES.filter((n) => PORTAL_ICON_SEARCH[n].includes(q)) : ICON_NAMES;
 
   function pick(name: string) {
     onChange(name);
@@ -221,7 +218,7 @@ function IconPicker({
                   if (names[0]) pick(names[0]);
                 }
               }}
-              placeholder="Cari ikon, mis. buku atau kalender"
+              placeholder={`Cari ${ICON_NAMES.length} ikon, mis. uang, buku, masjid`}
               aria-label="Cari ikon"
               className={inputClass}
             />
@@ -232,7 +229,7 @@ function IconPicker({
             <div
               role="listbox"
               aria-label="Ikon"
-              className="grid max-h-56 grid-cols-6 gap-1 overflow-y-auto p-2"
+              className="grid max-h-64 grid-cols-6 gap-1 overflow-y-auto p-2"
             >
               {names.map((name) => {
                 const Icon = PORTAL_ICONS[name];

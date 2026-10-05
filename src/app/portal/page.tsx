@@ -217,44 +217,6 @@ export default async function PortalPage() {
           </div>
         </CSSFadeIn>
 
-        {/* Agenda sekolah */}
-        <CSSFadeIn>
-          <div className="mt-10 rounded-2xl border border-[#dce3ed] bg-white p-5 sm:p-6">
-            <div className="flex items-center gap-2">
-              <CalendarBlank className="h-5 w-5 text-[#082b59]" weight="fill" />
-              <h2 className="text-base font-bold text-[#082b59]">Agenda Sekolah</h2>
-            </div>
-
-            {agenda.length === 0 ? (
-              <div className="py-8 text-center">
-                <p className="text-sm text-slate-500">Belum ada agenda.</p>
-                <p className="mt-1 text-xs text-slate-400">Nantikan jadwal kegiatan terbaru dari sekolah kami.</p>
-              </div>
-            ) : (
-              <ul className="mt-3 divide-y divide-[#dce3ed]">
-                {agenda.map((item) => {
-                  const { tgl, bln, thn, date } = parseDate(item.event_date);
-                  return (
-                    <li key={item.id} className="flex items-center gap-4 py-3">
-                      <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-[#082b59]/5 text-[#082b59]">
-                        <span className="text-sm font-bold leading-none">{String(tgl).padStart(2, "0")}</span>
-                        <span className="mt-0.5 text-[10px] font-semibold uppercase leading-none">
-                          {BULAN_PENDEK[bln - 1]}
-                        </span>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-800">{item.title}</p>
-                        <p className="text-xs text-slate-500">
-                          {HARI[date.getDay()]}, {tgl} {BULAN[bln - 1]} {thn}
-                        </p>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        </CSSFadeIn>
       </section>
     </div>
   );
