@@ -136,6 +136,9 @@ export interface Article {
   published_at: string;
   created_at: string;
   updated_at: string;
+  // Kolom opsional: hanya ada setelah SQL ALTER TABLE dijalankan
+  author_name?: string | null;
+  editor_name?: string | null;
 }
 
 export interface Activity {

@@ -15,8 +15,14 @@ interface NewsWithAuthor extends News {
 }
 
 export interface ArticleWithAuthor extends Article {
-  author_name?: string;
+  author_name?: string | null;
 }
+
+/** Baris `articles` hasil select: kolom author_name (bila ada) + join profil. */
+type ArticleRow = Article & {
+  author_name?: string | null;
+  user_profiles?: { full_name: string | null } | null;
+};
 
 async function cleanupOldFiles(folder: string, id: string) {
   const { data } = await supabase.storage.from("images").list(folder);
@@ -1157,26 +1163,41 @@ export async function uploadFacilityImage(
 }
 
 // ============ ARTICLES ============
+/**
+ * Kolom list publik (tanpa content) — dipakai dua kali: dengan `author_name`
+ * (kolom hasil ALTER TABLE) dan tanpanya bila kolom belum ada.
+ */
+const ARTICLE_LIST_COLUMNS =
+  "id, title, slug, excerpt, image_url, category, is_published, published_at, created_at, user_profiles(full_name)";
+
 export async function getArticleList(limit?: number): Promise<ArticleWithAuthor[]> {
-  let query = supabase
-    .from("articles")
-    .select("id, title, slug, excerpt, image_url, category, is_published, published_at, created_at, user_profiles(full_name)")
-    .eq("is_published", true)
-    .order("published_at", { ascending: false });
+  const run = async (columns: string) => {
+    let query = supabase
+      .from("articles")
+      .select(columns)
+      .eq("is_published", true)
+      .order("published_at", { ascending: false });
+    if (limit) query = query.limit(limit);
+    // select dengan string runtime tidak bisa di-infer Supabase → cast manual
+    return (await query) as unknown as {
+      data: ArticleRow[] | null;
+      error: { message?: string } | null;
+    };
+  };
 
-  if (limit) {
-    query = query.limit(limit);
+  // Coba dengan author_name dulu; bila kolom belum ada (42703), ulang tanpa itu.
+  let { data, error } = await run(`${ARTICLE_LIST_COLUMNS}, author_name`);
+  if (error && /author_name/.test(error.message || "")) {
+    ({ data, error } = await run(ARTICLE_LIST_COLUMNS));
   }
-
-  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching articles:", error);
     return [];
   }
-  return (data || []).map((item: any) => ({
+  return (data || []).map((item: ArticleRow) => ({
     ...item,
-    author_name: item.user_profiles?.full_name ?? null,
+    author_name: item.author_name ?? item.user_profiles?.full_name ?? null,
   }));
 }
 
@@ -1192,9 +1213,10 @@ export async function getArticleBySlug(slug: string): Promise<ArticleWithAuthor 
     return null;
   }
   if (!data) return null;
+  // Kolom author_name (bila ada) menang; artikel lama fallback ke nama profil.
   return {
     ...data,
-    author_name: data.user_profiles?.full_name ?? null,
+    author_name: data.author_name ?? data.user_profiles?.full_name ?? null,
   };
 }
 
@@ -1209,10 +1231,33 @@ export async function getArticleListAll(): Promise<ArticleWithAuthor[]> {
     console.error("Error fetching all articles:", error);
     return [];
   }
-  return (data || []).map((item: any) => ({
+  return (data || []).map((item: ArticleRow) => ({
     ...item,
-    author_name: item.user_profiles?.full_name ?? null,
+    author_name: item.author_name ?? item.user_profiles?.full_name ?? null,
   }));
+}
+
+/**
+ * Deteksi kolom author_name/editor_name di tabel articles (hasil SQL ALTER
+ * yang belum/belum dijalankan). Field form hanya ditampilkan bila kolomnya ada
+ * supaya payload insert/update tidak pernah menyertakan kolom tak dikenal.
+ */
+export async function getArticleColumnSupport(): Promise<{
+  author_name: boolean;
+  editor_name: boolean;
+}> {
+  const exists = async (column: string) => {
+    const { error } = await supabase.from("articles").select(column).limit(1);
+    if (!error) return true;
+    // 42703 / "does not exist" = kolom belum dibuat; error lain dianggap ada
+    // supaya field tetap tampil dan error sesungguhnya muncul saat simpan.
+    return !(error.code === "42703" || /does not exist/.test(error.message || ""));
+  };
+  const [author_name, editor_name] = await Promise.all([
+    exists("author_name"),
+    exists("editor_name"),
+  ]);
+  return { author_name, editor_name };
 }
 
 /**
@@ -1259,14 +1304,19 @@ export async function createArticle(article: {
   category?: string;
   image_url?: string;
   is_published?: boolean;
+  author_name?: string;
+  editor_name?: string;
+  published_at?: string;
 }): Promise<{ data: Article | null; error?: string }> {
   const { data: { user } } = await supabase.auth.getUser();
   // Slug unik: dari slug form bila diisi, selain itu dari judul
   const baseSlug = article.slug ? slugify(article.slug) : slugify(article.title);
   const slug = await generateUniqueArticleSlug(baseSlug || "artikel");
   const payload: Record<string, unknown> = { ...article, slug, author_id: user?.id };
-  // Isi published_at saat artikel langsung diterbitkan
-  if (payload.is_published) payload.published_at = new Date().toISOString();
+  // Isi published_at saat pertama terbit; tanggal eksplisit dari form menang.
+  if (payload.is_published && !payload.published_at) {
+    payload.published_at = new Date().toISOString();
+  }
   const { data, error } = await supabase
     .from("articles")
     .insert(payload)
@@ -1291,6 +1341,8 @@ export async function updateArticle(
     image_url?: string;
     is_published?: boolean;
     published_at?: string;
+    author_name?: string;
+    editor_name?: string;
   }
 ): Promise<{ data: Article | null; error?: string }> {
   // Baris lama: URL gambar (untuk bersihkan file) + published_at (untuk
@@ -1312,8 +1364,9 @@ export async function updateArticle(
     const base = slugify(article.slug) || slugify(article.title || "") || "artikel";
     article.slug = await generateUniqueArticleSlug(base, id);
   }
-  // Isi published_at hanya saat pertama kali menjadi terbit
-  if (article.is_published === true && !currentPublishedAt) {
+  // Isi published_at hanya saat pertama kali menjadi terbit, dan tidak
+  // menimpa tanggal eksplisit yang dikirim form (Tanggal Publish).
+  if (article.is_published === true && !currentPublishedAt && !article.published_at) {
     article.published_at = new Date().toISOString();
   }
   const { data, error } = await supabase

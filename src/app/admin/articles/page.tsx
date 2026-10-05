@@ -3,6 +3,8 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   getArticleListAll,
+  getArticleColumnSupport,
+  getCategoryList,
   createArticle,
   updateArticle,
   deleteArticle,
@@ -15,7 +17,9 @@ import {
   revalidatePaths,
   type ArticleWithAuthor,
 } from "@/lib/queries";
-import { StatCard, StatCardRow, SlideOver } from "@/components/ui";
+import { StatCard, StatCardRow, SlideOver, RichTextEditor } from "@/components/ui";
+import { sanitize } from "@/lib/sanitize";
+import { compressImage } from "@/lib/compress-image";
 import {
   Note,
   MagnifyingGlass,
@@ -55,7 +59,11 @@ interface FormData {
   content: string;
   category: string;
   image_url: string;
+  author_name: string;
+  editor_name: string;
   is_published: boolean;
+  // datetime-local dalam zona WIB; dikonversi ke UTC sebelum dikirim
+  published_at: string;
 }
 
 const emptyForm: FormData = {
@@ -65,8 +73,50 @@ const emptyForm: FormData = {
   content: "",
   category: "",
   image_url: "",
+  author_name: "",
+  editor_name: "",
   is_published: false,
+  published_at: "",
 };
+
+// ── WIB (UTC+7) ⇄ UTC untuk field Tanggal Publish ──────────────
+const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+function utcToWibInput(iso?: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return new Date(d.getTime() + WIB_OFFSET_MS).toISOString().slice(0, 16);
+}
+
+function wibInputToUtc(value: string): string | undefined {
+  if (!value) return undefined;
+  const d = new Date(`${value}:00+07:00`);
+  return isNaN(d.getTime()) ? undefined : d.toISOString();
+}
+
+// ── Konten lama (teks polos) → HTML untuk editor rich text ─────
+function looksLikeHtml(text: string): boolean {
+  return /<\/?[a-z][\s\S]*>/i.test(text);
+}
+
+function plainTextToHtml(text: string): string {
+  if (!text.trim()) return "";
+  const escaped = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  // Paragraf = baris kosong; baris tunggal dalam paragraf = <br>
+  return escaped
+    .split(/\n{2,}/)
+    .map((para) => `<p>${para.replace(/\r?\n/g, "<br>")}</p>`)
+    .join("");
+}
+
+function toEditorContent(text: string): string {
+  if (!text.trim()) return "";
+  return looksLikeHtml(text) ? text : plainTextToHtml(text);
+}
 
 export default function AdminArticlesPage() {
   const { toast } = useToast();
@@ -99,6 +149,13 @@ export default function AdminArticlesPage() {
   const [confirmClose, setConfirmClose] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [imageUploading, setImageUploading] = useState(false);
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [dbCategories, setDbCategories] = useState<string[]>([]);
+  // Hasil probe kolom author_name/editor_name — field hanya tampil bila ada
+  const [colSupport, setColSupport] = useState({ author_name: false, editor_name: false });
+  // Paksa remount RichTextEditor tiap form dibuka (sinkron nilai awal)
+  const [formKey, setFormKey] = useState(0);
 
   const fetchArticles = useCallback(async () => {
     const data = await getArticleListAll();
@@ -108,21 +165,29 @@ export default function AdminArticlesPage() {
 
   useEffect(() => { fetchArticles(); }, [fetchArticles]);
 
+  // Probe kolom author_name/editor_name + kategori dari tabel categories
+  useEffect(() => {
+    getArticleColumnSupport().then(setColSupport);
+    getCategoryList("artikel")
+      .then((rows) => setDbCategories(rows.map((r) => r.name).filter(Boolean)))
+      .catch(() => {});
+  }, []);
+
   // True bila form/sampul berubah dibanding kondisi awal dibuka
   const isDirty = useMemo(
     () => JSON.stringify(form) !== JSON.stringify(initialForm) || imageFile !== null,
     [form, initialForm, imageFile]
   );
 
-  // Saran kategori dari data (kapitalisasi pertama yang dipakai jadi acuan)
+  // Saran kategori dari DB: nama unik di tabel articles ∪ tabel categories
   const categoryOptions = useMemo(() => {
     const map = new Map<string, string>();
-    for (const item of articles) {
-      const c = (item.category || "").trim();
-      if (c && !map.has(c.toLowerCase())) map.set(c.toLowerCase(), c);
+    for (const c of [...dbCategories, ...articles.map((i) => i.category || "")]) {
+      const v = (c || "").trim();
+      if (v && !map.has(v.toLowerCase())) map.set(v.toLowerCase(), v);
     }
     return Array.from(map.values()).sort((a, b) => a.localeCompare(b, "id"));
-  }, [articles]);
+  }, [articles, dbCategories]);
 
   const filtered = useMemo(() => {
     let result = articles.filter((item) => {
@@ -196,6 +261,8 @@ export default function AdminArticlesPage() {
     setImageFile(null);
     setImagePreview("");
     setFormError("");
+    setAddingCategory(false);
+    setFormKey((k) => k + 1);
     setFormOpen(true);
   }
 
@@ -204,10 +271,15 @@ export default function AdminArticlesPage() {
       title: item.title,
       slug: item.slug || "",
       excerpt: item.excerpt || "",
-      content: item.content || "",
+      // Konten lama berupa teks polos → dikonversi ke HTML untuk editor.
+      // Nilai yang sama dipakai untuk dirty-check, jadi tak dianggap berubah.
+      content: toEditorContent(item.content || ""),
       category: item.category || "",
       image_url: item.image_url || "",
+      author_name: item.author_name || "",
+      editor_name: item.editor_name || "",
       is_published: item.is_published,
+      published_at: utcToWibInput(item.published_at),
     };
     setEditItem(item);
     setForm(next);
@@ -218,6 +290,8 @@ export default function AdminArticlesPage() {
     setImageFile(null);
     setImagePreview(item.image_url || "");
     setFormError("");
+    setAddingCategory(false);
+    setFormKey((k) => k + 1);
     setFormOpen(true);
   }
 
@@ -245,13 +319,49 @@ export default function AdminArticlesPage() {
     }));
   }
 
+  // Kompres → revoke URL lama → preview (pola sama dengan form berita)
+  async function applyImageFile(file: File) {
+    if (!file.type.startsWith("image/")) return;
+    setImageUploading(true);
+    try {
+      const compressed = await compressImage(file);
+      if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
+      setImageFile(compressed);
+      setImagePreview(URL.createObjectURL(compressed));
+    } catch {
+      setFormError("Gagal memproses gambar. Coba gambar lain.");
+    } finally {
+      setImageUploading(false);
+    }
+  }
+
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file) return;
-    if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    e.target.value = ""; // izinkan memilih file yang sama lagi
+    if (file) applyImageFile(file);
   }
+
+  // Ctrl+V gambar dari clipboard → sampul (aktif selama form terbuka)
+  useEffect(() => {
+    if (!formOpen) return;
+    const handlePaste = async (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            applyImageFile(file);
+          }
+          break;
+        }
+      }
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formOpen, imagePreview]);
 
   function removeImage() {
     if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
@@ -293,12 +403,24 @@ export default function AdminArticlesPage() {
       imageUrl = uploaded.url;
     }
 
-    const payload: FormData = {
-      ...form,
-      category: normalizeCategory(form.category),
+    const dateChanged = form.published_at !== initialForm.published_at;
+    const publishedAtUtc = dateChanged ? wibInputToUtc(form.published_at) : undefined;
+
+    // Kolom author_name/editor_name hanya dikirim bila ada di DB (probe colSupport)
+    const payload: Partial<FormData> & { title: string } = {
+      title: form.title,
       slug: form.slug.trim() ? slugify(form.slug) : "",
+      excerpt: form.excerpt,
+      content: form.content,
+      category: normalizeCategory(form.category),
       image_url: imageUrl,
+      is_published: form.is_published,
     };
+    if (colSupport.author_name) payload.author_name = form.author_name;
+    if (colSupport.editor_name) payload.editor_name = form.editor_name;
+    // Tanggal Publish hanya dikirim bila diubah dari nilai awal form —
+    // supaya edit biasa tidak menimpa published_at lama.
+    if (publishedAtUtc) payload.published_at = publishedAtUtc;
 
     if (editItem) {
       const { data, error } = await updateArticle(editItem.id, payload);
@@ -384,7 +506,9 @@ export default function AdminArticlesPage() {
   const slugReadonly = !!editItem?.is_published && !slugOverride;
   const excerptLength = form.excerpt.length;
   const excerptOver = excerptLength > EXCERPT_MAX;
-  const wordCount = form.content.trim() ? form.content.trim().split(/\s+/).length : 0;
+  // Hitung kata dari teks polos (tag HTML tidak ikut dihitung)
+  const contentText = form.content.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").trim();
+  const wordCount = contentText ? contentText.split(/\s+/).length : 0;
   const readMinutes = Math.ceil(wordCount / WORDS_PER_MINUTE);
 
   return (
@@ -633,7 +757,16 @@ export default function AdminArticlesPage() {
                 <span>{viewItem.published_at ? new Date(viewItem.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"}</span>
               </div>
               {viewItem.excerpt && <p className="mb-4 text-sm text-slate-600 italic border-l-2 border-[#f4d21f] pl-3">{viewItem.excerpt}</p>}
-              <div className="prose prose-sm max-w-none text-slate-700 leading-relaxed whitespace-pre-wrap">{viewItem.content || "Tidak ada konten"}</div>
+              {looksLikeHtml(viewItem.content || "") ? (
+                <div
+                  className="prose prose-sm max-w-none text-slate-700 leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: sanitize(viewItem.content) }}
+                />
+              ) : (
+                <div className="prose prose-sm max-w-none text-slate-700 leading-relaxed whitespace-pre-wrap">
+                  {viewItem.content || "Tidak ada konten"}
+                </div>
+              )}
             </div>
             <div className="flex gap-3 border-t border-slate-100 px-6 py-4">
               <button onClick={() => { setViewItem(null); openEdit(viewItem); }}
@@ -771,31 +904,93 @@ export default function AdminArticlesPage() {
 
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Kategori</label>
-            <input type="text" list="article-categories" value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
-              onBlur={() => setForm((f) => ({ ...f, category: normalizeCategory(f.category) }))}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
-              placeholder="Pilih saran atau ketik kategori baru" />
-            <datalist id="article-categories">
-              {categoryOptions.map((c) => <option key={c} value={c} />)}
-            </datalist>
+            <div className="flex flex-wrap items-center gap-2">
+              {categoryOptions.map((c) => (
+                <button key={c} type="button"
+                  onClick={() => { setForm((f) => ({ ...f, category: c })); setAddingCategory(false); }}
+                  className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
+                    form.category.trim().toLowerCase() === c.toLowerCase()
+                      ? "border-[#1767b1] bg-[#1767b1]/10 text-[#1767b1] shadow-sm"
+                      : "border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700"
+                  }`}>
+                  {c}
+                </button>
+              ))}
+              {!addingCategory && form.category.trim() &&
+                !categoryOptions.some((c) => c.toLowerCase() === form.category.trim().toLowerCase()) && (
+                <span className="rounded-lg border border-[#1767b1] bg-[#1767b1]/10 px-3 py-2 text-xs font-semibold text-[#1767b1]">
+                  {form.category.trim()}
+                </span>
+              )}
+              {addingCategory ? (
+                <input
+                  autoFocus
+                  type="text"
+                  value={form.category}
+                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                  onBlur={() => {
+                    setForm((f) => ({ ...f, category: normalizeCategory(f.category) }));
+                    setAddingCategory(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); }
+                    if (e.key === "Escape") setAddingCategory(false);
+                  }}
+                  placeholder="Nama kategori baru"
+                  className="w-44 rounded-lg border border-[#1767b1] px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                />
+              ) : (
+                <button type="button" onClick={() => setAddingCategory(true)}
+                  className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs font-semibold text-slate-500 transition-colors hover:border-[#1767b1]/40 hover:text-[#1767b1]">
+                  + Kategori baru
+                </button>
+              )}
+            </div>
+            <p className="mt-1.5 text-[11px] text-slate-400">
+              Pilih kategori yang sudah ada, atau tambah baru — &ldquo;tips&rdquo; dan &ldquo;Tips&rdquo; tidak jadi dua kategori.
+            </p>
           </div>
 
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Gambar Sampul</label>
-            <p className="mb-2 text-xs text-slate-400">Disarankan rasio 16:9 (mis. 1280×720) agar tidak terpotong.</p>
+            <p className="mb-2 text-xs text-slate-400">Disarankan rasio 16:9 (mis. 1280×720) agar tidak terpotong. Bisa diklik, diseret-lepas, atau Ctrl+V dari clipboard.</p>
+            {imageUploading && (
+              <div className="mb-2 flex items-center gap-2 text-xs text-[#1767b1]">
+                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#1767b1] border-t-transparent" />
+                Memproses gambar...
+              </div>
+            )}
             {imagePreview ? (
               <div className="relative mb-3 overflow-hidden rounded-xl border border-slate-200">
                 <img src={imagePreview} alt="Preview" className="aspect-video w-full object-cover" />
-                <button onClick={removeImage}
-                  className="absolute right-2 top-2 rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
-                  <X className="h-4 w-4" />
-                </button>
+                <div className="absolute right-2 top-2 flex items-center gap-1.5">
+                  <label
+                    className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-black/50 px-2 py-1.5 text-white transition-colors hover:bg-black/70"
+                    title="Ganti gambar">
+                    <ImageIcon className="h-4 w-4" />
+                    <span className="text-[11px] font-semibold">Ganti</span>
+                    <input id="cover-image-input" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                  </label>
+                  <button onClick={removeImage} title="Hapus gambar"
+                    className="rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ) : (
-              <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50">
+              <label
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add("border-[#1767b1]", "bg-[#1767b1]/5"); }}
+                onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("border-[#1767b1]", "bg-[#1767b1]/5"); }}
+                onDrop={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.currentTarget.classList.remove("border-[#1767b1]", "bg-[#1767b1]/5");
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) applyImageFile(file);
+                }}
+                className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50">
                 <ImageIcon className="h-8 w-8 text-slate-300" />
-                <span className="text-xs text-slate-400">Klik untuk upload gambar</span>
+                <span className="text-xs text-slate-400">Klik, seret-lepas, atau Ctrl+V untuk upload gambar</span>
                 <input id="cover-image-input" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
               </label>
             )}
@@ -817,29 +1012,68 @@ export default function AdminArticlesPage() {
             )}
           </div>
 
+          {(colSupport.author_name || colSupport.editor_name) && (
+            <div className={`grid gap-4 ${colSupport.author_name && colSupport.editor_name ? "grid-cols-2" : "grid-cols-1"}`}>
+              {colSupport.author_name && (
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Penulis</label>
+                  <input type="text" value={form.author_name}
+                    onChange={(e) => setForm({ ...form, author_name: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                    placeholder="Nama penulis (opsional)" />
+                </div>
+              )}
+              {colSupport.editor_name && (
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Editor</label>
+                  <input type="text" value={form.editor_name}
+                    onChange={(e) => setForm({ ...form, editor_name: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                    placeholder="Nama editor (opsional)" />
+                </div>
+              )}
+            </div>
+          )}
+
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Konten</label>
-            <textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })}
-              rows={12}
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-y"
-              placeholder="Tulis konten artikel di sini..." />
+            <RichTextEditor
+              key={formKey}
+              value={form.content}
+              onChange={(val) => setForm((f) => ({ ...f, content: val }))}
+            />
             <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-slate-400">
               <span>{wordCount} kata · {readMinutes} menit baca</span>
             </div>
-            <p className="mt-1 text-xs text-slate-400">
-              {"Tekan Enter dua kali untuk paragraf baru. Boleh memakai HTML dasar (<b>, <i>, <ul>, <ol>, <h2>)."}
-            </p>
           </div>
 
-          <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4">
-            <div>
-              <p className="text-sm font-semibold text-slate-700">Terbitkan Sekarang</p>
-              <p className="text-xs text-slate-400">{form.is_published ? "Artikel akan langsung tampil di website" : "Artikel disimpan sebagai draft"}</p>
+          <div className="space-y-3 rounded-xl border border-slate-200 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-700">Terbitkan Sekarang</p>
+                <p className="text-xs text-slate-400">{form.is_published ? "Artikel akan langsung tampil di website" : "Artikel disimpan sebagai draft"}</p>
+              </div>
+              <button type="button" onClick={() => setForm({ ...form, is_published: !form.is_published })}
+                className={`relative h-6 w-11 rounded-full transition-colors ${form.is_published ? "bg-[#1767b1]" : "bg-slate-300"}`}>
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_published ? "left-[22px]" : "left-0.5"}`} />
+              </button>
             </div>
-            <button type="button" onClick={() => setForm({ ...form, is_published: !form.is_published })}
-              className={`relative h-6 w-11 rounded-full transition-colors ${form.is_published ? "bg-[#1767b1]" : "bg-slate-300"}`}>
-              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_published ? "left-[22px]" : "left-0.5"}`} />
-            </button>
+            <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3">
+              <label className="whitespace-nowrap text-xs font-semibold text-slate-500">Tanggal Publish</label>
+              <input type="datetime-local" value={form.published_at}
+                onChange={(e) => setForm({ ...form, published_at: e.target.value })}
+                className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+              {form.published_at && (
+                <button type="button" onClick={() => setForm({ ...form, published_at: "" })}
+                  className="text-[11px] font-medium text-slate-400 hover:text-slate-600">
+                  Reset
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] leading-relaxed text-slate-400">
+              Zona waktu WIB. Kosongkan untuk memakai waktu simpan otomatis saat terbit.
+              Tanggal ini menentukan urutan &amp; tanggal tampil saja — <span className="font-semibold text-slate-500">bukan jadwal tayang</span> (sama seperti di form Berita).
+            </p>
           </div>
         </div>
       </SlideOver>
