@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy } from "@/components/Icons";
+import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock } from "@/components/Icons";
 import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList, registrationHref } from "@/lib/queries";
 import { FadeIn } from "@/components/Animations";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
@@ -20,6 +20,13 @@ function capitalizeCategory(cat: string): string {
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join("-");
 }
+
+/** Gaya badge kategori berita — sinkron dengan categoryConfig di /news. */
+const NEWS_BADGE: Record<string, string> = {
+  berita: "border-blue-200 bg-blue-50 text-blue-700",
+  pengumuman: "border-amber-200 bg-amber-50 text-amber-700",
+  agenda: "border-purple-200 bg-purple-50 text-purple-700",
+};
 
 const FACILITY_FALLBACKS: Record<string, string> = {
   "Ruang Kelas": "/images/Ruang-Kelas.jpg",
@@ -190,7 +197,9 @@ export default async function Home() {
                   <h3 className="text-lg font-bold text-[#082b59]">Berita</h3>
                   <div className="mt-1.5 h-1 w-10 rounded-full bg-[#f4d21f]" />
                 </div>
-                <div className="flex flex-1 flex-col">
+                {/* Tanpa flex-1: sisa ruang kolom jatuh SETELAH tombol, bukan
+                    memecah jarak antara kartu berita dan "Selengkapnya". */}
+                <div className="flex flex-col">
                   {beritaRaw.length === 0 ? (
                     <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-[#dce3ed] bg-[#f4f7fb] py-10 text-center">
                       <Megaphone className="h-9 w-9 text-[#082b59]/15" />
@@ -199,8 +208,11 @@ export default async function Home() {
                     </div>
                   ) : (
                     <>
-                      <Link href="/news" className="group block overflow-hidden rounded-xl">
-                        <div className="relative aspect-[4/3] overflow-hidden bg-[#f4f7fb]">
+                      <Link
+                        href={`/news/${beritaRaw[0].slug}`}
+                        className="group block overflow-hidden rounded-xl border border-[#dce3ed] bg-white transition-all hover:border-[#1767b1]/30 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+                      >
+                        <div className="relative aspect-video overflow-hidden bg-[#f4f7fb]">
                           {beritaRaw[0]?.image_url ? (
                             <Image src={beritaRaw[0].image_url} alt={beritaRaw[0].title} fill sizes="(max-width: 768px) 100vw, 320px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
                           ) : (
@@ -208,10 +220,20 @@ export default async function Home() {
                               <Megaphone className="h-12 w-12 text-[#082b59]/10" />
                             </div>
                           )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#082b59]/80 via-[#082b59]/20 to-transparent" />
-                          <div className="absolute bottom-0 left-0 right-0 p-3.5">
-                            <p className="text-[10px] font-bold text-white/70">Terbit: {beritaRaw[0]?.published_at ? new Date(beritaRaw[0].published_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"}</p>
-                            <h4 className="mt-0.5 line-clamp-2 text-sm font-semibold text-white">{beritaRaw[0]?.title || "Berita terbaru sekolah"}</h4>
+                        </div>
+                        <div className="p-3.5">
+                          <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${NEWS_BADGE[beritaRaw[0]?.category] ?? "border-slate-200 bg-slate-50 text-slate-600"}`}>
+                            {beritaRaw[0]?.category || "Berita"}
+                          </span>
+                          <h4 className="mt-2 line-clamp-2 text-sm font-bold text-[#082b59] transition-colors group-hover:text-[#1767b1]">
+                            {beritaRaw[0]?.title || "Berita terbaru sekolah"}
+                          </h4>
+                          {beritaRaw[0]?.summary && (
+                            <p className="mt-1 line-clamp-2 text-xs text-slate-600">{beritaRaw[0].summary}</p>
+                          )}
+                          <div className="mt-2 flex items-center gap-1 text-[10px] text-slate-400">
+                            <Clock className="h-3 w-3" />
+                            {beritaRaw[0]?.published_at ? new Date(beritaRaw[0].published_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"}
                           </div>
                         </div>
                       </Link>

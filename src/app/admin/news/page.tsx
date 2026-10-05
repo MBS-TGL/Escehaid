@@ -822,6 +822,9 @@ export default function AdminBeritaPage() {
                 <input id="cover-image-input" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
               </label>
             )}
+            <p className="mt-2 text-xs text-slate-400">
+              Disarankan rasio 16:9 (mis. 1280×720) agar tidak terpotong.
+            </p>
           </div>
 
           {/* Attachment (lampiran file) */}

@@ -76,15 +76,15 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
               <CSSFadeIn>
                 <Link
                   href={`/news/${berita[0].slug}`}
-                  className="group block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg"
+                  className="group grid overflow-hidden rounded-2xl border border-[#dce3ed] bg-white shadow-sm transition-all hover:border-[#1767b1]/30 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] lg:grid-cols-5"
                 >
-                  <div className="relative h-[280px] overflow-hidden md:h-[400px]">
+                  <div className="relative aspect-video overflow-hidden bg-slate-100 lg:col-span-3">
                     {berita[0].image_url ? (
                       <Image
                         src={berita[0].image_url}
                         alt={berita[0].title}
                         fill
-                        sizes="(max-width: 768px) 100vw, 1280px"
+                        sizes="(max-width: 1024px) 100vw, 60vw"
                         className="object-cover transition-transform duration-700 group-hover:scale-105"
                         priority
                       />
@@ -93,28 +93,27 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                         <span className="text-7xl font-bold text-white/20">{berita[0].title[0]}</span>
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-                      <span className={`inline-flex items-center rounded-md border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${categoryConfig[berita[0].category]?.bg || "bg-slate-100"} ${categoryConfig[berita[0].category]?.color || "text-slate-600"} ${categoryConfig[berita[0].category]?.border || "border-slate-200"}`}>
-                        {categoryConfig[berita[0].category]?.label || berita[0].category}
+                  </div>
+                  <div className="flex flex-col justify-center gap-3 p-6 lg:col-span-2 lg:p-8">
+                    <span className={`inline-flex w-fit items-center rounded-md border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${categoryConfig[berita[0].category]?.bg || "bg-slate-100"} ${categoryConfig[berita[0].category]?.color || "text-slate-600"} ${categoryConfig[berita[0].category]?.border || "border-slate-200"}`}>
+                      {categoryConfig[berita[0].category]?.label || berita[0].category}
+                    </span>
+                    <h2 className="text-xl font-bold leading-snug text-[#082b59] line-clamp-2 md:text-2xl">{berita[0].title}</h2>
+                    {berita[0].summary && (
+                      <p className="text-sm text-slate-600 line-clamp-2">{berita[0].summary}</p>
+                    )}
+                    <div className="flex items-center gap-3 text-slate-400">
+                      <span className="flex items-center gap-1 text-xs">
+                        <Clock className="h-3 w-3" />
+                        {new Date(berita[0].published_at || berita[0].created_at).toLocaleDateString("id-ID", {
+                          day: "numeric", month: "long", year: "numeric",
+                        })}
                       </span>
-                      <h2 className="mt-3 text-2xl font-bold text-white md:text-3xl">{berita[0].title}</h2>
-                      {berita[0].summary && (
-                        <p className="mt-2 max-w-2xl text-sm text-white/70 line-clamp-2">{berita[0].summary}</p>
-                      )}
-                      <div className="mt-3 flex items-center gap-3 text-white/50">
+                      {berita[0].attachment_url && (
                         <span className="flex items-center gap-1 text-xs">
-                          <Clock className="h-3 w-3" />
-                          {new Date(berita[0].published_at || berita[0].created_at).toLocaleDateString("id-ID", {
-                            day: "numeric", month: "long", year: "numeric",
-                          })}
+                          <Paperclip className="h-3 w-3" /> Lampiran
                         </span>
-                        {berita[0].attachment_url && (
-                          <span className="flex items-center gap-1 text-xs">
-                            <Paperclip className="h-3 w-3" /> Lampiran
-                          </span>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </div>
                 </Link>
@@ -130,9 +129,9 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                     <div key={item.id}>
                       <Link
                         href={`/news/${item.slug}`}
-                        className="group block overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all hover:border-[#1767b1]/30 hover:shadow-lg"
+                        className="group block overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:border-[#1767b1]/30 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
                       >
-                        <div className="relative h-44 overflow-hidden bg-slate-100">
+                        <div className="relative aspect-video overflow-hidden bg-slate-100">
                           {item.image_url ? (
                             <Image
                               src={item.image_url}
@@ -148,22 +147,24 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                           )}
                         </div>
                         <div className="p-4">
-                          <div className="flex items-center gap-2">
-                            <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${cat.bg} ${cat.color} ${cat.border}`}>
-                              {cat.label}
-                            </span>
-                            <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                          <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${cat.bg} ${cat.color} ${cat.border}`}>
+                            {cat.label}
+                          </span>
+                          <h3 className="mt-2 text-sm font-bold text-[#082b59] line-clamp-2 transition-colors group-hover:text-[#1767b1]">{item.title}</h3>
+                          {item.summary && (
+                            <p className="mt-1.5 text-xs text-slate-600 line-clamp-2">{item.summary}</p>
+                          )}
+                          <div className="mt-2.5 flex items-center gap-3 text-slate-400">
+                            <span className="flex items-center gap-1 text-[11px]">
                               <Clock className="h-3 w-3" />
                               {new Date(item.published_at || item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
                             </span>
                             {item.attachment_url && (
-                              <Paperclip className="h-3.5 w-3.5 text-[#1767b1]" aria-label="Ada lampiran" />
+                              <span className="flex items-center gap-1 text-[11px]">
+                                <Paperclip className="h-3 w-3" /> Lampiran
+                              </span>
                             )}
                           </div>
-                          <h3 className="mt-2 text-sm font-semibold text-slate-800 line-clamp-2 group-hover:text-[#1767b1]">{item.title}</h3>
-                          {item.summary && (
-                            <p className="mt-1.5 text-xs text-slate-500 line-clamp-2">{item.summary}</p>
-                          )}
                         </div>
                       </Link>
                     </div>

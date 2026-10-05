@@ -229,7 +229,7 @@ function IconPicker({
             <div
               role="listbox"
               aria-label="Ikon"
-              className="grid max-h-64 grid-cols-6 gap-1 overflow-y-auto p-2"
+              className="grid max-h-52 grid-cols-6 gap-1 overflow-y-auto p-2"
             >
               {names.map((name) => {
                 const Icon = PORTAL_ICONS[name];
