@@ -10,9 +10,12 @@ import {
   togglePublishArticle,
   togglePublishArticleBulk,
   uploadArticleImage,
+  slugify,
+  revalidateArticles,
+  revalidatePaths,
+  type ArticleWithAuthor,
 } from "@/lib/queries";
 import { StatCard, StatCardRow, SlideOver } from "@/components/ui";
-import type { Article } from "@/lib/supabase";
 import {
   Note,
   MagnifyingGlass,
@@ -32,18 +35,22 @@ import {
   FloppyDisk,
   ArrowUp,
   ArrowDown,
+  ArrowUpRight,
   SortAscending,
   Checks,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
 
 const PAGE_SIZE = 10;
+const EXCERPT_MAX = 160;
+const WORDS_PER_MINUTE = 200;
 
 type SortField = "created_at" | "title" | "category";
 type SortDir = "asc" | "desc";
 
 interface FormData {
   title: string;
+  slug: string;
   excerpt: string;
   content: string;
   category: string;
@@ -53,6 +60,7 @@ interface FormData {
 
 const emptyForm: FormData = {
   title: "",
+  slug: "",
   excerpt: "",
   content: "",
   category: "",
@@ -62,7 +70,7 @@ const emptyForm: FormData = {
 
 export default function AdminArticlesPage() {
   const { toast } = useToast();
-  const [articles, setArticles] = useState<Article[]>([]);
+  const [articles, setArticles] = useState<ArticleWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
@@ -74,32 +82,53 @@ export default function AdminArticlesPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Modals
-  const [viewItem, setViewItem] = useState<Article | null>(null);
-  const [deleteItem, setDeleteItem] = useState<Article | null>(null);
+  const [viewItem, setViewItem] = useState<ArticleWithAuthor | null>(null);
+  const [deleteItem, setDeleteItem] = useState<ArticleWithAuthor | null>(null);
   const [bulkDelete, setBulkDelete] = useState(false);
 
   // Form panel
   const [formOpen, setFormOpen] = useState(false);
-  const [editItem, setEditItem] = useState<Article | null>(null);
+  const [editItem, setEditItem] = useState<ArticleWithAuthor | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
+  const [initialForm, setInitialForm] = useState<FormData>(emptyForm);
   const [formSaving, setFormSaving] = useState(false);
   const [formError, setFormError] = useState("");
+  const [titleError, setTitleError] = useState("");
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [slugOverride, setSlugOverride] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
 
   const fetchArticles = useCallback(async () => {
     const data = await getArticleListAll();
-    setArticles(data as Article[]);
+    setArticles(data);
     setLoading(false);
   }, []);
 
   useEffect(() => { fetchArticles(); }, [fetchArticles]);
 
+  // True bila form/sampul berubah dibanding kondisi awal dibuka
+  const isDirty = useMemo(
+    () => JSON.stringify(form) !== JSON.stringify(initialForm) || imageFile !== null,
+    [form, initialForm, imageFile]
+  );
+
+  // Saran kategori dari data (kapitalisasi pertama yang dipakai jadi acuan)
+  const categoryOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const item of articles) {
+      const c = (item.category || "").trim();
+      if (c && !map.has(c.toLowerCase())) map.set(c.toLowerCase(), c);
+    }
+    return Array.from(map.values()).sort((a, b) => a.localeCompare(b, "id"));
+  }, [articles]);
+
   const filtered = useMemo(() => {
     let result = articles.filter((item) => {
       const matchSearch =
         item.title.toLowerCase().includes(search.toLowerCase()) ||
-        (item as any).excerpt?.toLowerCase().includes(search.toLowerCase());
+        (item.excerpt || "").toLowerCase().includes(search.toLowerCase());
       const matchFilter =
         filter === "all" ||
         (filter === "published" && item.is_published) ||
@@ -160,37 +189,95 @@ export default function AdminArticlesPage() {
   function openCreate() {
     setEditItem(null);
     setForm(emptyForm);
+    setInitialForm(emptyForm);
+    setSlugTouched(false);
+    setSlugOverride(false);
+    setTitleError("");
     setImageFile(null);
     setImagePreview("");
     setFormError("");
     setFormOpen(true);
   }
 
-  function openEdit(item: Article) {
-    setEditItem(item);
-    setForm({
+  function openEdit(item: ArticleWithAuthor) {
+    const next: FormData = {
       title: item.title,
-      excerpt: (item as any).excerpt || "",
+      slug: item.slug || "",
+      excerpt: item.excerpt || "",
       content: item.content || "",
       category: item.category || "",
       image_url: item.image_url || "",
       is_published: item.is_published,
-    });
+    };
+    setEditItem(item);
+    setForm(next);
+    setInitialForm(next);
+    setSlugTouched(true);
+    setSlugOverride(false);
+    setTitleError("");
     setImageFile(null);
     setImagePreview(item.image_url || "");
     setFormError("");
     setFormOpen(true);
   }
 
+  function closeForm() {
+    if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
+    setConfirmClose(false);
+    setFormOpen(false);
+    setImagePreview("");
+    setImageFile(null);
+  }
+
+  function requestClose() {
+    if (formSaving) return;
+    if (isDirty) { setConfirmClose(true); return; }
+    closeForm();
+  }
+
+  function handleTitleChange(value: string) {
+    setTitleError("");
+    setForm((prev) => ({
+      ...prev,
+      title: value,
+      // Slug otomatis dari judul hanya saat artikel baru & belum diedit manual
+      slug: !editItem && !slugTouched ? slugify(value) : prev.slug,
+    }));
+  }
+
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
   }
 
+  function removeImage() {
+    if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
+    setImageFile(null);
+    setImagePreview("");
+    setForm({ ...form, image_url: "" });
+  }
+
+  function normalizeCategory(value: string): string {
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+    const hit = categoryOptions.find((c) => c.toLowerCase() === trimmed.toLowerCase());
+    return hit ?? trimmed;
+  }
+
+  // Revalidate /articles + halaman detail (dibatasi 49 path, limit route 50)
+  function revalidateBulk(slugs: (string | null | undefined)[]) {
+    const paths = Array.from(new Set([
+      "/articles",
+      ...slugs.filter((s): s is string => !!s).map((s) => `/articles/${s}`),
+    ])).slice(0, 49);
+    revalidatePaths(paths).catch(() => {});
+  }
+
   async function handleSave() {
-    if (!form.title.trim()) { setFormError("Judul wajib diisi."); return; }
+    if (!form.title.trim()) { setTitleError("Judul wajib diisi."); return; }
     setFormSaving(true);
     setFormError("");
 
@@ -206,17 +293,26 @@ export default function AdminArticlesPage() {
       imageUrl = uploaded.url;
     }
 
+    const payload: FormData = {
+      ...form,
+      category: normalizeCategory(form.category),
+      slug: form.slug.trim() ? slugify(form.slug) : "",
+      image_url: imageUrl,
+    };
+
     if (editItem) {
-      const { error } = await updateArticle(editItem.id, { ...form, image_url: imageUrl });
+      const { data, error } = await updateArticle(editItem.id, payload);
       if (error) { setFormError(error); toast(error, "error"); setFormSaving(false); return; }
+      revalidateArticles(data?.slug, editItem.slug).catch(() => {});
       toast("Artikel berhasil diperbarui", "success");
     } else {
-      const { error } = await createArticle({ ...form, image_url: imageUrl });
+      const { data, error } = await createArticle(payload);
       if (error) { setFormError(error); toast(error, "error"); setFormSaving(false); return; }
-      toast("Artikel berhasil diterbitkan", "success");
+      revalidateArticles(data?.slug).catch(() => {});
+      toast(payload.is_published ? "Artikel berhasil diterbitkan" : "Draft tersimpan", "success");
     }
 
-    setFormOpen(false);
+    closeForm();
     setFormSaving(false);
     fetchArticles();
   }
@@ -225,6 +321,7 @@ export default function AdminArticlesPage() {
     if (!deleteItem) return;
     try {
       await deleteArticle(deleteItem.id);
+      revalidateArticles(undefined, deleteItem.slug).catch(() => {});
       toast("Artikel berhasil dihapus", "success");
     } catch (e: any) {
       toast(e?.message || "Gagal menghapus artikel", "error");
@@ -237,8 +334,10 @@ export default function AdminArticlesPage() {
   async function handleBulkDelete() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
+    const slugs = ids.map((id) => articles.find((a) => a.id === id)?.slug);
     try {
       await deleteArticleBulk(ids);
+      revalidateBulk(slugs);
       toast(`${ids.length} artikel berhasil dihapus`, "success");
     } catch (e: any) {
       toast(e?.message || "Gagal menghapus artikel", "error");
@@ -251,8 +350,10 @@ export default function AdminArticlesPage() {
   async function handleBulkPublish(publish: boolean) {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
+    const slugs = ids.map((id) => articles.find((a) => a.id === id)?.slug);
     try {
       await togglePublishArticleBulk(ids, publish);
+      revalidateBulk(slugs);
       toast(`${ids.length} artikel berhasil ${publish ? "diterbitkan" : "draft"}`, "success");
     } catch (e: any) {
       toast(e?.message || "Gagal memperbarui status artikel", "error");
@@ -261,9 +362,10 @@ export default function AdminArticlesPage() {
     fetchArticles();
   }
 
-  async function handleTogglePublish(item: Article) {
+  async function handleTogglePublish(item: ArticleWithAuthor) {
     try {
       await togglePublishArticle(item.id, !item.is_published);
+      revalidateArticles(item.slug).catch(() => {});
       toast(`Artikel berhasil ${!item.is_published ? "diterbitkan" : "draft"}`, "success");
     } catch (e: any) {
       toast(e?.message || "Gagal memperbarui status artikel", "error");
@@ -277,6 +379,13 @@ export default function AdminArticlesPage() {
       ? <ArrowUp className="h-3 w-3 text-[#1767b1]" />
       : <ArrowDown className="h-3 w-3 text-[#1767b1]" />;
   };
+
+  // Slug field readonly untuk artikel terbit, kecuali ditekan "Ubah slug"
+  const slugReadonly = !!editItem?.is_published && !slugOverride;
+  const excerptLength = form.excerpt.length;
+  const excerptOver = excerptLength > EXCERPT_MAX;
+  const wordCount = form.content.trim() ? form.content.trim().split(/\s+/).length : 0;
+  const readMinutes = Math.ceil(wordCount / WORDS_PER_MINUTE);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -409,7 +518,7 @@ export default function AdminArticlesPage() {
                         )}
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-slate-800 line-clamp-1">{item.title}</p>
-                          {(item as any).excerpt && <p className="mt-0.5 text-xs text-slate-400 line-clamp-1">{(item as any).excerpt}</p>}
+                          {item.excerpt && <p className="mt-0.5 text-xs text-slate-400 line-clamp-1">{item.excerpt}</p>}
                         </div>
                       </div>
                     </td>
@@ -423,7 +532,7 @@ export default function AdminArticlesPage() {
                         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100">
                           <User className="h-3 w-3 text-slate-400" />
                         </div>
-                        <span className="text-xs text-slate-500">{(item as any).author_name || "-"}</span>
+                        <span className="text-xs text-slate-500">{item.author_name || "-"}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
@@ -445,6 +554,12 @@ export default function AdminArticlesPage() {
                         <button onClick={() => setViewItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat">
                           <Eye className="h-4 w-4" />
                         </button>
+                        {item.is_published && (
+                          <a href={`/articles/${item.slug}`} target="_blank" rel="noopener noreferrer"
+                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat di Website">
+                            <ArrowUpRight className="h-4 w-4" />
+                          </a>
+                        )}
                         <button onClick={() => openEdit(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
                           <PencilSimple className="h-4 w-4" />
                         </button>
@@ -514,10 +629,10 @@ export default function AdminArticlesPage() {
             </div>
             <div className="max-h-[50vh] overflow-y-auto px-6 py-5">
               <div className="mb-4 flex items-center gap-4 text-xs text-slate-500">
-                <span>Oleh: {(viewItem as any).author_name || "Tidak diketahui"}</span>
+                <span>Oleh: {viewItem.author_name || "Tidak diketahui"}</span>
                 <span>{viewItem.published_at ? new Date(viewItem.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"}</span>
               </div>
-              {(viewItem as any).excerpt && <p className="mb-4 text-sm text-slate-600 italic border-l-2 border-[#f4d21f] pl-3">{(viewItem as any).excerpt}</p>}
+              {viewItem.excerpt && <p className="mb-4 text-sm text-slate-600 italic border-l-2 border-[#f4d21f] pl-3">{viewItem.excerpt}</p>}
               <div className="prose prose-sm max-w-none text-slate-700 leading-relaxed whitespace-pre-wrap">{viewItem.content || "Tidak ada konten"}</div>
             </div>
             <div className="flex gap-3 border-t border-slate-100 px-6 py-4">
@@ -525,10 +640,12 @@ export default function AdminArticlesPage() {
                 className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                 <PencilSimple className="h-4 w-4" /> Edit
               </button>
-              <a href={`/articles/${(viewItem as any).slug}`} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1]">
-                <Eye className="h-4 w-4" /> Lihat di Website
-              </a>
+              {viewItem.is_published && (
+                <a href={`/articles/${viewItem.slug}`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1]">
+                  <Eye className="h-4 w-4" /> Lihat di Website
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -568,15 +685,31 @@ export default function AdminArticlesPage() {
         </div>
       )}
 
+      {/* ── UNSAVED CHANGES CONFIRM ─────────────────── */}
+      {confirmClose && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 mx-auto">
+              <Warning className="h-6 w-6 text-amber-600" />
+            </div>
+            <h3 className="text-center text-lg font-bold text-slate-800">Perubahan belum disimpan. Tutup tanpa menyimpan?</h3>
+            <div className="mt-6 flex gap-3">
+              <button onClick={() => setConfirmClose(false)} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Batal</button>
+              <button onClick={closeForm} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700">Tutup</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── CREATE/EDIT FORM PANEL ──────────────────── */}
       <SlideOver
         open={formOpen}
-        onClose={() => !formSaving && setFormOpen(false)}
+        onClose={requestClose}
         title={editItem ? "Edit Artikel" : "Buat Artikel Baru"}
         description={editItem ? "Perbarui informasi artikel" : "Isi form untuk menerbitkan artikel"}
         footer={
           <div className="flex w-full items-center justify-between">
-            <button onClick={() => setFormOpen(false)} disabled={formSaving}
+            <button onClick={requestClose} disabled={formSaving}
               className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
               Batal
             </button>
@@ -587,7 +720,7 @@ export default function AdminArticlesPage() {
               ) : (
                 <>
                   <FloppyDisk className="h-4 w-4" />
-                  {editItem ? "Simpan Perubahan" : "Terbitkan"}
+                  {editItem ? "Simpan Perubahan" : form.is_published ? "Terbitkan" : "Simpan Draft"}
                 </>
               )}
             </button>
@@ -603,24 +736,58 @@ export default function AdminArticlesPage() {
         <div className="space-y-5">
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Judul <span className="text-red-500">*</span></label>
-            <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+            <input type="text" value={form.title} onChange={(e) => handleTitleChange(e.target.value)}
+              className={`w-full rounded-xl border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 ${titleError ? "border-red-300 focus:border-red-400 focus:ring-red-100" : "border-slate-200 focus:border-[#1767b1] focus:ring-[#1767b1]/20"}`}
               placeholder="Judul artikel" />
+            {titleError && <p className="mt-1 text-xs font-medium text-red-500">{titleError}</p>}
+          </div>
+
+          <div>
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <label className="text-sm font-semibold text-slate-700">Slug</label>
+              {slugReadonly && (
+                <button type="button" onClick={() => setSlugOverride(true)}
+                  className="text-xs font-semibold text-[#1767b1] hover:underline">
+                  Ubah slug
+                </button>
+              )}
+            </div>
+            <input type="text" value={form.slug} readOnly={slugReadonly}
+              onChange={(e) => { setSlugTouched(true); setForm({ ...form, slug: e.target.value }); }}
+              onBlur={() => { if (form.slug) setForm((f) => ({ ...f, slug: slugify(f.slug) })); }}
+              className={`w-full rounded-xl border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 ${slugReadonly ? "cursor-not-allowed bg-slate-50 text-slate-500" : "border-slate-200 focus:border-[#1767b1] focus:ring-[#1767b1]/20"}`}
+              placeholder="otomatis dari judul" />
+            {slugOverride && editItem?.is_published && (
+              <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-amber-600">
+                <Warning className="h-3.5 w-3.5 shrink-0" /> Tautan lama akan mati
+              </p>
+            )}
+            {form.slug && (
+              <p className="mt-1.5 break-all text-xs text-slate-400">
+                smpmuh4tanggul.sch.id/articles/<span className="font-medium text-slate-500">{form.slug}</span>
+              </p>
+            )}
           </div>
 
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Kategori</label>
-            <input type="text" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}
+            <input type="text" list="article-categories" value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value })}
+              onBlur={() => setForm((f) => ({ ...f, category: normalizeCategory(f.category) }))}
               className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
-              placeholder="Contoh: Tips, Eduukasi, Opini" />
+              placeholder="Pilih saran atau ketik kategori baru" />
+            <datalist id="article-categories">
+              {categoryOptions.map((c) => <option key={c} value={c} />)}
+            </datalist>
           </div>
 
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Gambar Sampul</label>
+            <p className="mb-2 text-xs text-slate-400">Disarankan rasio 16:9 (mis. 1280×720) agar tidak terpotong.</p>
             {imagePreview ? (
               <div className="relative mb-3 overflow-hidden rounded-xl border border-slate-200">
-                <img src={imagePreview} alt="Preview" className="h-40 w-full object-cover" />
-                <button onClick={() => { setImageFile(null); setImagePreview(""); setForm({ ...form, image_url: "" }); }}
+                <img src={imagePreview} alt="Preview" className="aspect-video w-full object-cover" />
+                <button onClick={removeImage}
                   className="absolute right-2 top-2 rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
                   <X className="h-4 w-4" />
                 </button>
@@ -635,11 +802,19 @@ export default function AdminArticlesPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Ringkasan</label>
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <label className="text-sm font-semibold text-slate-700">Ringkasan</label>
+              <span className={`text-[11px] font-medium ${excerptOver ? "text-red-500" : "text-slate-400"}`}>
+                {excerptLength}/{EXCERPT_MAX}
+              </span>
+            </div>
             <textarea value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })}
               rows={3}
               className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-none"
               placeholder="Ringkasan singkat artikel (opsional)" />
+            {excerptOver && (
+              <p className="mt-1 text-xs font-medium text-red-500">Melebihi {EXCERPT_MAX} karakter — disarankan maksimal {EXCERPT_MAX} karakter.</p>
+            )}
           </div>
 
           <div>
@@ -648,6 +823,12 @@ export default function AdminArticlesPage() {
               rows={12}
               className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-y"
               placeholder="Tulis konten artikel di sini..." />
+            <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-slate-400">
+              <span>{wordCount} kata · {readMinutes} menit baca</span>
+            </div>
+            <p className="mt-1 text-xs text-slate-400">
+              {"Tekan Enter dua kali untuk paragraf baru. Boleh memakai HTML dasar (<b>, <i>, <ul>, <ol>, <h2>)."}
+            </p>
           </div>
 
           <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4">

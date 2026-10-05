@@ -10,12 +10,14 @@ const ALLOWED_PATHS = new Set([
   "/admission",
   "/admission/register",
   "/portal",
+  "/articles",
 ]);
 function isAllowedPath(p: unknown): boolean {
   if (typeof p !== "string") return false;
   if (!p.startsWith("/")) return false;
   if (ALLOWED_PATHS.has(p)) return true;
   if (p.startsWith("/news/") && p.length > 6) return true;
+  if (p.startsWith("/articles/") && p.length > 10) return true;
   return false;
 }
 

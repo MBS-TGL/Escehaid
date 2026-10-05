@@ -212,11 +212,12 @@ export default async function Home() {
                         href={`/news/${beritaRaw[0].slug}`}
                         className="group block overflow-hidden rounded-xl border border-[#dce3ed] bg-white transition-all hover:border-[#1767b1]/30 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
                       >
-                        <div className="relative aspect-video overflow-hidden bg-[#f4f7fb]">
+                        <div className="overflow-hidden bg-[#f4f7fb]">
                           {beritaRaw[0]?.image_url ? (
-                            <Image src={beritaRaw[0].image_url} alt={beritaRaw[0].title} fill sizes="(max-width: 768px) 100vw, 320px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                            // Tinggi natural (mengikuti rasio poster) agar tidak ter-crop
+                            <Image src={beritaRaw[0].image_url} alt={beritaRaw[0].title} width={1280} height={720} sizes="(max-width: 768px) 100vw, 320px" className="h-auto w-full transition-transform duration-500 group-hover:scale-105" />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center">
+                            <div className="flex aspect-video w-full items-center justify-center">
                               <Megaphone className="h-12 w-12 text-[#082b59]/10" />
                             </div>
                           )}

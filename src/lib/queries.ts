@@ -14,7 +14,7 @@ interface NewsWithAuthor extends News {
   author_name?: string;
 }
 
-interface ArticleWithAuthor extends Article {
+export interface ArticleWithAuthor extends Article {
   author_name?: string;
 }
 
@@ -532,6 +532,27 @@ export async function revalidateNews(
     )
   );
   await postRevalidate(paths, "revalidateNews");
+}
+
+/**
+ * Invalidasi ISR halaman artikel (/articles + /articles/[slug])
+ * via API route /api/revalidate. Dipanggil dari client component admin
+ * artikel setelah create/update/delete/togglePublish/bulk.
+ */
+export async function revalidateArticles(
+  slug?: string,
+  oldSlug?: string
+): Promise<void> {
+  const paths = Array.from(
+    new Set(
+      [
+        slug ? `/articles/${slug}` : null,
+        oldSlug && oldSlug !== slug ? `/articles/${oldSlug}` : null,
+        "/articles",
+      ].filter(Boolean) as string[]
+    )
+  );
+  await postRevalidate(paths, "revalidateArticles");
 }
 
 /**
@@ -1194,6 +1215,42 @@ export async function getArticleListAll(): Promise<ArticleWithAuthor[]> {
   }));
 }
 
+/**
+ * Normalisasi teks menjadi slug URL: huruf kecil, tanpa aksen (NFD),
+ * non-alfanumerik jadi "-", rapikan "-" di awal/akhir, maksimal 70 karakter.
+ * Dipakai oleh createArticle/updateArticle dan form admin artikel.
+ */
+export function slugify(text: string): string {
+  const slug = text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-+|-+$)/g, "");
+  return slug.slice(0, 70).replace(/-+$/, "");
+}
+
+/**
+ * Cari slug yang belum dipakai: bila `base` sudah ada, tambah sufiks
+ * -2, -3, dst. `excludeId` = id artikel sendiri (agar slug yang tidak
+ * berubah tidak ikut dianggap "duplikat" saat edit).
+ */
+async function generateUniqueArticleSlug(base: string, excludeId?: string): Promise<string> {
+  const { data } = await supabase
+    .from("articles")
+    .select("id, slug")
+    .like("slug", `${base}%`);
+  const rows = data || [];
+  const own = excludeId ? rows.find((r) => r.id === excludeId) : undefined;
+  if (own && own.slug === base) return base;
+  const used = new Set(rows.filter((r) => r.id !== excludeId).map((r) => r.slug));
+  if (!used.has(base)) return base;
+  const root = base.slice(0, 66).replace(/-+$/, "") || base;
+  let suffix = 2;
+  while (used.has(`${root}-${suffix}`)) suffix++;
+  return `${root}-${suffix}`;
+}
+
 export async function createArticle(article: {
   title: string;
   slug?: string;
@@ -1204,15 +1261,15 @@ export async function createArticle(article: {
   is_published?: boolean;
 }): Promise<{ data: Article | null; error?: string }> {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!article.slug) {
-    article.slug = article.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
-  }
+  // Slug unik: dari slug form bila diisi, selain itu dari judul
+  const baseSlug = article.slug ? slugify(article.slug) : slugify(article.title);
+  const slug = await generateUniqueArticleSlug(baseSlug || "artikel");
+  const payload: Record<string, unknown> = { ...article, slug, author_id: user?.id };
+  // Isi published_at saat artikel langsung diterbitkan
+  if (payload.is_published) payload.published_at = new Date().toISOString();
   const { data, error } = await supabase
     .from("articles")
-    .insert({ ...article, author_id: user?.id })
+    .insert(payload)
     .select()
     .single();
 
@@ -1233,19 +1290,31 @@ export async function updateArticle(
     category?: string;
     image_url?: string;
     is_published?: boolean;
+    published_at?: string;
   }
 ): Promise<{ data: Article | null; error?: string }> {
-  // Ambil URL gambar lama supaya file lama bisa dibersihkan bila berganti
+  // Baris lama: URL gambar (untuk bersihkan file) + published_at (untuk
+  // tahu apakah ini pertama kali terbit — jangan menimpa tanggal lama).
   let oldImageUrl: string | null = null;
-  if (typeof article.image_url === "string") {
-    const { data: current } = await supabase.from("articles").select("image_url").eq("id", id).single();
+  let currentPublishedAt: string | null = null;
+  if (typeof article.image_url === "string" || article.is_published !== undefined) {
+    const { data: current } = await supabase
+      .from("articles")
+      .select("image_url, published_at")
+      .eq("id", id)
+      .single();
     oldImageUrl = current?.image_url || null;
+    currentPublishedAt = current?.published_at || null;
   }
-  if (article.title && !article.slug) {
-    article.slug = article.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
+  // Slug TIDAK di-regenerate dari judul: hanya berubah bila form mengirim
+  // slug eksplisit (dan tetap dicek keunikannya).
+  if (typeof article.slug === "string") {
+    const base = slugify(article.slug) || slugify(article.title || "") || "artikel";
+    article.slug = await generateUniqueArticleSlug(base, id);
+  }
+  // Isi published_at hanya saat pertama kali menjadi terbit
+  if (article.is_published === true && !currentPublishedAt) {
+    article.published_at = new Date().toISOString();
   }
   const { data, error } = await supabase
     .from("articles")
@@ -1295,7 +1364,15 @@ export async function togglePublishArticle(
   is_published: boolean
 ): Promise<{ error?: string }> {
   const update: Record<string, any> = { is_published };
-  if (is_published) update.published_at = new Date().toISOString();
+  if (is_published) {
+    // Isi published_at HANYA bila belum ada (jangan menimpa nilai lama)
+    const { data: current } = await supabase
+      .from("articles")
+      .select("published_at")
+      .eq("id", id)
+      .single();
+    if (!current?.published_at) update.published_at = new Date().toISOString();
+  }
   const { error } = await supabase.from("articles").update(update).eq("id", id);
   if (error) {
     console.error("Error toggling article publish:", error);
@@ -1308,9 +1385,38 @@ export async function togglePublishArticleBulk(
   ids: string[],
   is_published: boolean
 ): Promise<{ error?: string }> {
-  const update: Record<string, any> = { is_published };
-  if (is_published) update.published_at = new Date().toISOString();
-  const { error } = await supabase.from("articles").update(update).in("id", ids);
+  // Publish massal: isi published_at hanya untuk baris yang belum punya
+  if (is_published) {
+    const { data: rows } = await supabase
+      .from("articles")
+      .select("published_at")
+      .in("id", ids);
+    const unstamped = (rows || []).filter((r) => !r.published_at).length;
+    const { error } = await supabase
+      .from("articles")
+      .update({ is_published })
+      .in("id", ids);
+    if (error) {
+      console.error("Error bulk toggling article publish:", error);
+      return { error: error.message };
+    }
+    if (unstamped > 0) {
+      const { error: stampError } = await supabase
+        .from("articles")
+        .update({ published_at: new Date().toISOString() })
+        .in("id", ids)
+        .is("published_at", null);
+      if (stampError) {
+        console.error("Error stamping published_at:", stampError);
+        return { error: stampError.message };
+      }
+    }
+    return {};
+  }
+  const { error } = await supabase
+    .from("articles")
+    .update({ is_published })
+    .in("id", ids);
   if (error) {
     console.error("Error bulk toggling article publish:", error);
     return { error: error.message };

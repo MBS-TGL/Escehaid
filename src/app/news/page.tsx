@@ -78,18 +78,20 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                   href={`/news/${berita[0].slug}`}
                   className="group grid overflow-hidden rounded-2xl border border-[#dce3ed] bg-white shadow-sm transition-all hover:border-[#1767b1]/30 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] lg:grid-cols-5"
                 >
-                  <div className="relative aspect-video overflow-hidden bg-slate-100 lg:col-span-3">
+                  <div className="relative overflow-hidden bg-slate-100 lg:col-span-3">
                     {berita[0].image_url ? (
+                      // Tinggi natural mengikuti rasio poster — tanpa crop
                       <Image
                         src={berita[0].image_url}
                         alt={berita[0].title}
-                        fill
+                        width={1600}
+                        height={900}
                         sizes="(max-width: 1024px) 100vw, 60vw"
-                        className="object-cover transition-transform duration-700 group-hover:scale-105"
+                        className="h-auto w-full transition-transform duration-700 group-hover:scale-105"
                         priority
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#082b59] to-[#1767b1]">
+                      <div className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-[#082b59] to-[#1767b1]">
                         <span className="text-7xl font-bold text-white/20">{berita[0].title[0]}</span>
                       </div>
                     )}
@@ -131,17 +133,18 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                         href={`/news/${item.slug}`}
                         className="group block overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:border-[#1767b1]/30 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
                       >
-                        <div className="relative aspect-video overflow-hidden bg-slate-100">
+                        <div className="overflow-hidden bg-slate-100">
                           {item.image_url ? (
                             <Image
                               src={item.image_url}
                               alt={item.title}
-                              fill
+                              width={1280}
+                              height={720}
                               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                              className="object-cover transition-transform duration-500 group-hover:scale-105"
+                              className="h-auto w-full transition-transform duration-500 group-hover:scale-105"
                             />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#082b59] to-[#1767b1]">
+                            <div className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-[#082b59] to-[#1767b1]">
                               <span className="text-3xl font-bold text-white/20">{item.title[0]}</span>
                             </div>
                           )}
