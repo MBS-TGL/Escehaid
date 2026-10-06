@@ -6,7 +6,13 @@ import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeach
 import { FadeIn } from "@/components/Animations";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import { faqs } from "./faq-data";
-import { SITE } from "@/lib/site-config";
+import {
+  SITE,
+  capitalizeCategory,
+  achievementCategoryMeta,
+  achievementLevelLabel,
+} from "@/lib/site-config";
+import type { Achievement } from "@/lib/supabase";
 
 const FAQ = dynamic(() => import("./FAQ"), { loading: () => <div className="h-96" /> });
 const WhatsAppButton = dynamic(() => import("./WhatsAppButton"));
@@ -14,11 +20,25 @@ const HeroCarousel = dynamic(() => import("./HeroCarousel"), { loading: () => <d
 const TeacherCarousel = dynamic(() => import("./TeacherCarousel"), { loading: () => <div className="h-64 rounded-2xl bg-slate-100" /> });
 const CountdownEvent = dynamic(() => import("@/components/CountdownEvent"));
 
-function capitalizeCategory(cat: string): string {
-  return cat
-    .split("-")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join("-");
+/**
+ * Baris meta prestasi "Peringkat · Tingkat · Kategori · Tahun" — label diambil
+ * dari konstanta bersama di site-config, sama persis dengan halaman /achievements.
+ */
+function prestasiMeta(a?: Achievement): string {
+  if (!a) return "";
+  const parts = [
+    a.rank_label?.trim() || null,
+    achievementLevelLabel(a.level) || a.level?.trim() || null,
+    achievementCategoryMeta(a.category)?.label || capitalizeCategory(a.category || "Prestasi"),
+    String(a.year || "-"),
+  ];
+  return parts.filter(Boolean).join(" · ");
+}
+
+/** Ikon kategori prestasi dari sumber bersama; fallback Trophy. */
+function PrestasiIcon({ category, className }: { category?: string | null; className?: string }) {
+  const Icon = achievementCategoryMeta(category)?.icon || Trophy;
+  return <Icon className={className} />;
 }
 
 /** Gaya badge kategori berita — sinkron dengan categoryConfig di /news. */
@@ -55,6 +75,15 @@ export default async function Home() {
     getSchoolProfile(),
     getAchievementList(),
   ]);
+
+  // Urutan prestasi di beranda disamakan dengan halaman /achievements:
+  // unggulan dulu, lalu tahun menurun, lalu terbit menurun.
+  const achievementsSorted = [...achievements].sort(
+    (a, b) =>
+      Number(b.is_featured || false) - Number(a.is_featured || false) ||
+      (b.year || 0) - (a.year || 0) ||
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
 
   const faqJsonLd = {
     "@context": "https://schema.org",
@@ -390,7 +419,7 @@ export default async function Home() {
                   <div className="mt-1.5 h-1 w-10 rounded-full bg-[#f4d21f]" />
                 </div>
                 <div className="flex flex-1 flex-col">
-                  {achievements.length === 0 ? (
+                  {achievementsSorted.length === 0 ? (
                     <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-[#dce3ed] bg-[#f4f7fb] py-10 text-center">
                       <Trophy className="h-9 w-9 text-[#082b59]/15" />
                       <p className="mt-2.5 text-sm font-medium text-slate-500">Belum ada prestasi</p>
@@ -400,34 +429,34 @@ export default async function Home() {
                     <>
                       <Link href="/achievements" className="group block overflow-hidden rounded-xl">
                         <div className="relative aspect-[4/3] overflow-hidden bg-[#f4f7fb]">
-                          {achievements[0]?.image_url ? (
-                            <Image src={achievements[0].image_url} alt={achievements[0].title} fill sizes="(max-width: 768px) 100vw, 320px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                          {achievementsSorted[0]?.image_url ? (
+                            <Image src={achievementsSorted[0].image_url} alt={achievementsSorted[0].image_alt || achievementsSorted[0].title} fill sizes="(max-width: 768px) 100vw, 320px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
                           ) : (
                             <div className="flex h-full w-full items-center justify-center">
-                              <Trophy className="h-12 w-12 text-[#082b59]/10" />
+                              <PrestasiIcon category={achievementsSorted[0]?.category} className="h-12 w-12 text-[#082b59]/10" />
                             </div>
                           )}
                           <div className="absolute inset-0 bg-gradient-to-t from-[#082b59]/80 via-[#082b59]/20 to-transparent" />
                           <div className="absolute bottom-0 left-0 right-0 p-3.5">
-                            <p className="text-[10px] font-bold text-white/70">{capitalizeCategory(achievements[0]?.category || "Prestasi")} · {achievements[0]?.year || "-"}</p>
-                            <h4 className="mt-0.5 line-clamp-2 text-sm font-semibold text-white">{achievements[0]?.title || "Prestasi sekolah"}</h4>
+                            <p className="text-[10px] font-bold text-white/70">{prestasiMeta(achievementsSorted[0])}</p>
+                            <h4 className="mt-0.5 line-clamp-2 text-sm font-semibold text-white">{achievementsSorted[0]?.title || "Prestasi sekolah"}</h4>
                           </div>
                         </div>
                       </Link>
                       <div className="mt-2.5 space-y-2.5">
-                        {achievements.slice(1, 3).map((a) => (
+                        {achievementsSorted.slice(1, 3).map((a) => (
                           <Link key={a.id} href="/achievements" className="group flex gap-2.5">
                             <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f4f7fb]">
                               {a.image_url ? (
-                                <Image src={a.image_url} alt={a.title} width={56} height={56} sizes="56px" className="h-full w-full object-cover" />
+                                <Image src={a.image_url} alt={a.image_alt || a.title} width={56} height={56} sizes="56px" className="h-full w-full object-cover" />
                               ) : (
                                 <div className="flex h-full w-full items-center justify-center">
-                                  <Trophy className="h-5 w-5 text-[#082b59]/15" />
+                                  <PrestasiIcon category={a.category} className="h-5 w-5 text-[#082b59]/15" />
                                 </div>
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-[10px] text-slate-400">{capitalizeCategory(a.category)} · {a.year}</p>
+                              <p className="text-[10px] text-slate-400">{prestasiMeta(a)}</p>
                               <h5 className="mt-0.5 line-clamp-2 text-xs font-medium text-[#082b59] transition-colors group-hover:text-[#1767b1]">{a.title}</h5>
                             </div>
                           </Link>

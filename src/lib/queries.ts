@@ -2110,6 +2110,32 @@ export async function createAchievement(achievement: {
   return { data };
 }
 
+/**
+ * Hapus file gambar prestasi BILA file itu tidak lagi dipakai baris mana pun.
+ * Tombol Duplikat menyalin `image_url` apa adanya, sehingga beberapa baris bisa
+ * berbagi SATU file — file hanya boleh dihapus setelah baris terakhir pemakainya
+ * hilang. Perbandingan memakai path (tanpa `?v=`) agar URL beda query cache
+ * dianggap file yang sama; sekaligus melindungi file yang baru saja diunggah
+ * (path-nya masih dirujuk baris ini).
+ */
+async function pruneAchievementImageFiles(urls: (string | null | undefined)[]): Promise<void> {
+  const targets = [...new Set(urls.filter((u): u is string => !!u))];
+  if (targets.length === 0) return;
+  const { data: rows, error } = await supabase.from("achievements").select("image_url");
+  if (error) {
+    // Gagal memastikan → jangan hapus apa pun (file sisa lebih baik daripada gambar rusak).
+    console.warn("[pruneAchievementImageFiles] cek referensi gagal, file tidak dihapus:", error.message);
+    return;
+  }
+  const usedPaths = new Set(
+    (rows || []).map((r) => storagePathFromUrl(r.image_url || "")).filter((p): p is string => !!p)
+  );
+  for (const url of targets) {
+    const path = storagePathFromUrl(url);
+    if (path && !usedPaths.has(path)) deleteStorageFileByUrl(url).catch(() => {});
+  }
+}
+
 export async function updateAchievement(
   id: string,
   achievement: {
@@ -2146,22 +2172,24 @@ export async function updateAchievement(
     console.error("Error updating achievement:", error);
     return { data: null, error: error.message };
   }
-  // Bersihkan file lama hanya bila URL benar-benar berubah (best-effort)
+  // Bersihkan file lama hanya bila URL benar-benar berubah dan tidak masih
+  // dipakai baris lain (best-effort; bandingkan path, bukan URL ?v=).
   if (oldImageUrl && oldImageUrl !== achievement.image_url) {
-    deleteStorageFileByUrl(oldImageUrl).catch(() => {});
+    await pruneAchievementImageFiles([oldImageUrl]);
   }
   return { data };
 }
 
 export async function deleteAchievement(id: string): Promise<{ error?: string }> {
-  // Ambil URL gambar SEBELUM row dihapus supaya file storage tidak jadi orphan
+  // Ambil URL gambar SEBELUM row dihapus; file baru dihapus bila baris lain
+  // (mis. hasil Duplikat) tidak lagi memakainya.
   const { data: row } = await supabase.from("achievements").select("image_url").eq("id", id).single();
   const { error } = await supabase.from("achievements").delete().eq("id", id);
   if (error) {
     console.error("Error deleting achievement:", error);
     return { error: error.message };
   }
-  if (row?.image_url) deleteStorageFileByUrl(row.image_url).catch(() => {});
+  if (row?.image_url) await pruneAchievementImageFiles([row.image_url]);
   return {};
 }
 
@@ -2172,9 +2200,7 @@ export async function deleteAchievementBulk(ids: string[]): Promise<{ error?: st
     console.error("Error bulk deleting achievements:", error);
     return { error: error.message };
   }
-  for (const row of rows || []) {
-    if (row.image_url) deleteStorageFileByUrl(row.image_url).catch(() => {});
-  }
+  await pruneAchievementImageFiles((rows || []).map((r) => r.image_url));
   return {};
 }
 
@@ -2184,9 +2210,11 @@ export async function uploadAchievementImage(
 ): Promise<{ url: string | null; error?: string }> {
   const { file: compressed, error: compressError } = await tryCompressImage(file);
   if (!compressed) return { url: null, error: compressError };
-  const path = `achievements/${achievementId}.jpg`;
-
-  await cleanupOldFiles("achievements", achievementId);
+  // Nama file unik tiap unggahan: baris hasil Duplikat berbagi SATU file,
+  // jadi file tidak boleh ditimpa/dibersihkan di sini — pembersihan file lama
+  // dilakukan oleh update/delete dengan guard referensi (lihat di bawah).
+  const rand = Math.random().toString(36).slice(2, 8);
+  const path = `achievements/${achievementId}-${Date.now()}-${rand}.jpg`;
 
   const { error: uploadError } = await supabase.storage
     .from("images")

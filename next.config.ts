@@ -1,4 +1,12 @@
 import type { NextConfig } from "next";
+import { setDefaultResultOrder } from "node:dns";
+
+// Jaringan lokal memakai DNS64/NAT64 → DNS mengembalikan alamat IPv6 lebih
+// dulu, tetapi jalur IPv6 dari mesin ini ke Supabase/host lain sering putus
+// (ECONNRESET — teruji 0/12 percobaan gagal vs 12/12 pakai IPv4). Akibatnya
+// query server-side (getSchoolProfile, proxy.ts) gagal & login dipantulkan
+// loop. Paksa IPv4 lebih dulu; bila IPv4 tak tersedia, IPv6 tetap jadi cadangan.
+setDefaultResultOrder("ipv4first");
 
 const nextConfig: NextConfig = {
   typescript: {

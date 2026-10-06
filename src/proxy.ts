@@ -1,5 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { setDefaultResultOrder } from "node:dns";
+
+// Sebaris pengaman yang sama dengan next.config.ts: bila proses proxy berjalan
+// terpisah, query user_profiles tetap memakai IPv4 lebih dulu (hindari
+// ECONNRESET yang membuat user dilempar balik ke halaman login).
+setDefaultResultOrder("ipv4first");
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
