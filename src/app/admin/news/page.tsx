@@ -15,6 +15,8 @@ import {
   attachmentKind,
   revalidateNews,
   cleanupNewsImageFolder,
+  newsHasScheduledColumns,
+  slugify,
 } from "@/lib/queries";
 import { compressImage } from "@/lib/compress-image";
 import { sanitize } from "@/lib/sanitize";
@@ -45,6 +47,10 @@ import {
   Checks,
   Paperclip,
   Download,
+  BookmarkSimple,
+  Files,
+  Desktop,
+  DeviceMobile,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
 
@@ -61,6 +67,7 @@ type SortDir = "asc" | "desc";
 
 interface FormData {
   title: string;
+  slug: string;
   summary: string;
   content: string;
   category: string;
@@ -68,7 +75,10 @@ interface FormData {
   cover_image_position: string;
   writer_name: string;
   editor_name: string;
+  image_alt: string;
+  is_pinned: boolean;
   published_at: string;
+  expires_at: string;
   is_published: boolean;
   attachment_url: string;
   attachment_name: string;
@@ -76,6 +86,7 @@ interface FormData {
 
 const emptyForm: FormData = {
   title: "",
+  slug: "",
   summary: "",
   content: "",
   category: "berita",
@@ -83,13 +94,83 @@ const emptyForm: FormData = {
   cover_image_position: "center",
   writer_name: "",
   editor_name: "",
+  image_alt: "",
+  is_pinned: false,
   published_at: "",
+  expires_at: "",
   is_published: false,
   attachment_url: "",
   attachment_name: "",
 };
 
 const ATTACHMENT_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.odt,.txt,.zip";
+
+/** Domain pratinjau URL/OG — sama dengan BASE_URL di src/app/sitemap.ts. */
+const SITE_URL = "https://www.smpmuh4tanggul.sch.id";
+const MAX_PINNED = 3;
+const AUTOSAVE_DELAY_MS = 5000;
+
+// ── Status tayang (badge daftar) ────────────────────────────────
+type NewsStatus = "draft" | "scheduled" | "live" | "expired";
+
+function newsStatus(item: News): NewsStatus {
+  if (!item.is_published) return "draft";
+  if (item.expires_at && new Date(item.expires_at).getTime() <= Date.now()) return "expired";
+  if (item.published_at && new Date(item.published_at).getTime() > Date.now()) return "scheduled";
+  return "live";
+}
+
+const STATUS_TEXT: Record<NewsStatus, string> = {
+  draft: "Draft",
+  scheduled: "Terjadwal",
+  live: "Terbit",
+  expired: "Kedaluwarsa",
+};
+
+const STATUS_BADGE_CLS: Record<NewsStatus, string> = {
+  draft: "bg-slate-100 text-slate-600 border border-slate-300 hover:bg-slate-200",
+  scheduled: "bg-[#f4d21f]/20 text-[#7a6600] border border-[#f4d21f] hover:bg-[#f4d21f]/30",
+  live: "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100",
+  expired: "bg-red-50 text-red-500 border border-red-200 hover:bg-red-100",
+};
+
+// ── WIB (UTC+7) ⇄ UTC untuk Tanggal Publish & Tampil sampai ────
+const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+function utcToWibInput(iso?: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return new Date(d.getTime() + WIB_OFFSET_MS).toISOString().slice(0, 16);
+}
+
+function wibInputToUtc(value: string): string | undefined {
+  if (!value) return undefined;
+  const d = new Date(`${value}:00+07:00`);
+  return isNaN(d.getTime()) ? undefined : d.toISOString();
+}
+
+// ── Autosave draft lokal ────────────────────────────────────────
+function autosaveKey(edit: News | null): string {
+  return edit ? `news:edit:${edit.id}` : "news:new";
+}
+
+function formatSavedAt(ts: number): string {
+  return new Date(ts).toLocaleString("id-ID", {
+    day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+  });
+}
+
+/** "2026-10-06T14:30" (nilai input WIB) → "6 Oktober 2026, 14:30". */
+function formatWibInput(value: string): string {
+  if (!value) return "";
+  const [datePart, timePart = ""] = value.split("T");
+  const [y, m, d] = datePart.split("-").map(Number);
+  if (!y || !m || !d) return value;
+  const bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  return `${d} ${bulan[m - 1]} ${y}, ${timePart.replace(":", ".")}`;
+}
 
 export default function AdminBeritaPage() {
   const { toast } = useToast();
@@ -119,6 +200,40 @@ export default function AdminBeritaPage() {
   const [imagePreview, setImagePreview] = useState<string>("");
   const [imageUploading, setImageUploading] = useState(false);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+
+  // Form tahap 2: slug, autosave, pratinjau, pin, kolom tahap 1
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [slugUnlocked, setSlugUnlocked] = useState(false);
+  const [baseline, setBaseline] = useState<string>("");
+  const [pendingDraft, setPendingDraft] = useState<{ key: string; savedAt: number; data: FormData } | null>(null);
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
+  const [colSupport, setColSupport] = useState(false);
+
+  // Probe kolom tahap 1 (image_alt/is_pinned/expires_at) — sekali per muat halaman
+  useEffect(() => {
+    let alive = true;
+    newsHasScheduledColumns()
+      .then((ok) => { if (alive) setColSupport(ok); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  const isFormDirty = formOpen && baseline !== "" && JSON.stringify(form) !== baseline;
+  // Slug dikunci bila berita sudah pernah terbit (diungkai manual lewat tombol)
+  const slugLocked = editItem !== null && editItem.is_published && !slugUnlocked;
+
+  // Autosave: debounce 5 detik setelah ada perubahan (hanya field teks)
+  useEffect(() => {
+    if (!formOpen || !isFormDirty) return;
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(autosaveKey(editItem), JSON.stringify({ form, savedAt: Date.now() }));
+      } catch { /* storage penuh/diizinkan — abaikan */ }
+    }, AUTOSAVE_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [formOpen, isFormDirty, form, editItem]);
 
   // Fetch
   const fetchNews = useCallback(async () => {
@@ -222,20 +337,40 @@ export default function AdminBeritaPage() {
   }
 
   // Form handlers
+  function checkPendingDraft(edit: News | null) {
+    const key = autosaveKey(edit);
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.form && typeof parsed.form === "object") {
+          setPendingDraft({ key, savedAt: parsed.savedAt || 0, data: parsed.form });
+          return;
+        }
+      }
+    } catch { /* draft rusak → abaikan */ }
+    setPendingDraft(null);
+  }
+
   function openCreate() {
+    const next = { ...emptyForm };
     setEditItem(null);
-    setForm(emptyForm);
+    setForm(next);
+    setBaseline(JSON.stringify(next));
     setImageFile(null);
     setImagePreview("");
     setAttachmentFile(null);
     setFormError("");
+    setSlugTouched(false);
+    setSlugUnlocked(false);
+    checkPendingDraft(null);
     setFormOpen(true);
   }
 
   function openEdit(item: News) {
-    setEditItem(item);
-    setForm({
+    const next: FormData = {
       title: item.title,
+      slug: item.slug || "",
       summary: item.summary || "",
       content: item.content || "",
       category: item.category,
@@ -243,16 +378,122 @@ export default function AdminBeritaPage() {
       cover_image_position: item.cover_image_position || "center",
       writer_name: item.writer_name || "",
       editor_name: item.editor_name || "",
-      published_at: item.published_at ? new Date(item.published_at).toISOString().slice(0, 16) : "",
+      image_alt: item.image_alt || "",
+      is_pinned: !!item.is_pinned,
+      published_at: utcToWibInput(item.published_at),
+      expires_at: utcToWibInput(item.expires_at),
       is_published: item.is_published,
       attachment_url: item.attachment_url || "",
       attachment_name: item.attachment_name || "",
-    });
+    };
+    setEditItem(item);
+    setForm(next);
+    setBaseline(JSON.stringify(next));
     setImageFile(null);
     setImagePreview(item.image_url || "");
     setAttachmentFile(null);
     setFormError("");
+    setSlugTouched(false);
+    setSlugUnlocked(false);
+    checkPendingDraft(item);
     setFormOpen(true);
+  }
+
+  // ── Autosave: pulihkan / buang draft lokal ──
+  function restoreDraft() {
+    if (!pendingDraft) return;
+    const restored = { ...emptyForm };
+    (Object.keys(emptyForm) as (keyof FormData)[]).forEach((k) => {
+      const v = (pendingDraft.data as unknown as Record<string, unknown>)[k];
+      if (v !== undefined) (restored as unknown as Record<string, unknown>)[k] = v;
+    });
+    setForm(restored);
+    setImagePreview(restored.image_url || "");
+    setPendingDraft(null);
+  }
+
+  function discardDraft() {
+    if (!pendingDraft) return;
+    try { localStorage.removeItem(pendingDraft.key); } catch { /* noop */ }
+    setPendingDraft(null);
+  }
+
+  function closeForm() {
+    setFormOpen(false);
+    setPendingDraft(null);
+  }
+
+  /** Batal / X / Esc — bila form berubah, minta konfirmasi dulu. */
+  function requestClose() {
+    if (formSaving) return;
+    if (isFormDirty) { setConfirmClose(true); return; }
+    closeForm();
+  }
+
+  // ── Sematan (maksimal 3 aktif) ──
+  function countActivePins(excludeId?: string): number {
+    return news.filter(
+      (n) =>
+        n.id !== excludeId &&
+        n.is_pinned &&
+        (!n.expires_at || new Date(n.expires_at).getTime() > Date.now())
+    ).length;
+  }
+
+  function togglePin() {
+    if (!form.is_pinned && countActivePins(editItem?.id) >= MAX_PINNED) {
+      toast(`Maksimal ${MAX_PINNED} berita disematkan aktif. Lepas sematan lain terlebih dahulu.`, "error");
+      return;
+    }
+    setForm((f) => ({ ...f, is_pinned: !f.is_pinned }));
+  }
+
+  // ── Duplikat: buka form baru terisi salinan (belum disimpan) ──
+  async function openDuplicate(item: News) {
+    const copied: FormData = {
+      ...emptyForm,
+      title: `${item.title} (Salinan)`,
+      summary: item.summary || "",
+      content: item.content || "",
+      category: item.category,
+      image_url: item.image_url || "",
+      cover_image_position: item.cover_image_position || "center",
+      writer_name: item.writer_name || "",
+      editor_name: item.editor_name || "",
+      image_alt: item.image_alt || "",
+    };
+    copied.slug = slugify(copied.title);
+    setViewItem(null);
+    setEditItem(null);
+    setForm(copied);
+    setBaseline(JSON.stringify(copied));
+    setImagePreview(copied.image_url || "");
+    setImageFile(null);
+    setAttachmentFile(null);
+    setFormError("");
+    setSlugTouched(false);
+    setSlugUnlocked(false);
+    checkPendingDraft(null);
+    setFormOpen(true);
+
+    // Salin sampul: unduh ulang jadi File agar ikut terunggah ke folder
+    // berita baru. Bila gagal, tetap pakai URL asli (lihat laporan).
+    if (copied.image_url) {
+      try {
+        const res = await fetch(copied.image_url);
+        const blob = await res.blob();
+        if (blob.type.startsWith("image/") && blob.size > 0) {
+          setImageFile(new File([blob], "cover-salinan", { type: blob.type }));
+        }
+      } catch { /* fallback: pakai URL asli */ }
+    }
+  }
+
+  function saveLabel(): string {
+    if (editItem) return "Simpan Perubahan";
+    if (!form.is_published) return "Simpan Draft";
+    const utc = wibInputToUtc(form.published_at);
+    return utc && new Date(utc).getTime() > Date.now() ? "Jadwalkan" : "Terbitkan";
   }
 
   async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -289,6 +530,16 @@ export default function AdminBeritaPage() {
       const invalid = checkAttachment(attachmentFile);
       if (invalid) { setFormError(invalid); return; }
     }
+    const publishedUtc = wibInputToUtc(form.published_at);
+    const expiresUtc = wibInputToUtc(form.expires_at);
+    if (publishedUtc && expiresUtc && new Date(expiresUtc).getTime() <= new Date(publishedUtc).getTime()) {
+      setFormError("Tampil sampai harus setelah Tanggal Publish.");
+      return;
+    }
+    if (form.is_pinned && countActivePins(editItem?.id) >= MAX_PINNED) {
+      setFormError(`Maksimal ${MAX_PINNED} berita disematkan aktif. Lepas sematan lain terlebih dahulu.`);
+      return;
+    }
     setFormSaving(true);
     setFormError("");
 
@@ -306,19 +557,33 @@ export default function AdminBeritaPage() {
       imageUrl = uploaded.url;
     }
 
+    // Terbit tanpa tanggal → stempel sekarang; draft tanpa tanggal → null
+    const finalPublished = publishedUtc || (form.is_published ? new Date().toISOString() : null);
+    const rowPayload = {
+      ...form,
+      slug: form.slug.trim() ? slugify(form.slug) : "",
+      image_url: imageUrl || null,
+      image_alt: form.image_alt.trim(),
+      published_at: finalPublished,
+      expires_at: expiresUtc || null,
+    };
+
     // ── Simpan baris berita ──
     let newsId = editItem?.id || "";
+    let savedSlug = "";
     if (editItem) {
-      const { error } = await updateNews(editItem.id, { ...form, image_url: imageUrl || null });
+      const { data, error } = await updateNews(editItem.id, rowPayload);
       if (error) { setFormError(error); setFormSaving(false); return; }
+      savedSlug = data?.slug || rowPayload.slug || editItem.slug;
 
       // Hapus file lama di storage jika gambar diganti atau dikosongkan
       // Gunakan folder-based cleanup: list semua file di news/<id>/, hapus semua kecuali keepUrl
       cleanupNewsImageFolder(editItem.id, imageUrl || null).catch(() => {});
     } else {
-      const { data, error } = await createNews({ ...form, image_url: imageUrl || null });
+      const { data, error } = await createNews(rowPayload);
       if (error) { setFormError(error); setFormSaving(false); return; }
       newsId = data?.id || "";
+      savedSlug = data?.slug || "";
     }
 
     // ── Upload lampiran bila ada ──
@@ -339,19 +604,26 @@ export default function AdminBeritaPage() {
     if (attachmentError) {
       toast(`Berita tersimpan, tapi lampiran gagal: ${attachmentError}`, "error");
     } else {
-      toast(editItem ? "Berita berhasil diperbarui" : "Berita berhasil diterbitkan", "success");
+      const successMsg = editItem
+        ? "Berita berhasil diperbarui"
+        : !form.is_published
+          ? "Berita disimpan sebagai draft"
+          : finalPublished && new Date(finalPublished).getTime() > Date.now()
+            ? "Berita berhasil dijadwalkan"
+            : "Berita berhasil diterbitkan";
+      toast(successMsg, "success");
     }
 
+    // Draft lokal tidak diperlukan lagi setelah tersimpan
+    try { localStorage.removeItem(autosaveKey(editItem)); } catch { /* noop */ }
+    setPendingDraft(null);
     setFormOpen(false);
     setFormSaving(false);
     fetchNews();
 
-    // Revalidate cache
-    const slug = (editItem
-      ? news.find(n => n.id === editItem.id)?.slug || editItem.slug
-      : "") || "";
-    const oldSlug = editItem?.slug;
-    revalidateNews(slug, oldSlug && oldSlug !== slug ? oldSlug : undefined).catch(() => {});
+    // Revalidate cache: /, /news, /news/<slug> (slug lama bila slug berubah)
+    const oldSlug = editItem && editItem.slug !== savedSlug ? editItem.slug : undefined;
+    revalidateNews(savedSlug, oldSlug).catch(() => {});
   }
 
   async function handleDelete() {
@@ -535,6 +807,9 @@ export default function AdminBeritaPage() {
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-slate-800 line-clamp-1">
                             {item.title}
+                            {item.is_pinned && (
+                              <BookmarkSimple weight="fill" className="ml-1.5 inline h-3.5 w-3.5 -translate-y-px text-[#f4d21f]" aria-label="Disematkan" />
+                            )}
                             {item.attachment_url && (
                               <Paperclip className="ml-1.5 inline h-3.5 w-3.5 -translate-y-px text-[#1767b1]" aria-label="Ada lampiran" />
                             )}
@@ -558,13 +833,18 @@ export default function AdminBeritaPage() {
                     </td>
                     <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => handleTogglePublish(item)}
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-                          item.is_published
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                            : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
-                        }`}>
-                        {item.is_published ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-                        {item.is_published ? "Publish" : "Draft"}
+                        title={item.is_published ? "Jadikan draft" : "Terbitkan sekarang"}
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${STATUS_BADGE_CLS[newsStatus(item)]}`}>
+                        {newsStatus(item) === "live" ? (
+                          <CheckCircle className="h-3 w-3" />
+                        ) : newsStatus(item) === "expired" ? (
+                          <Warning className="h-3 w-3" />
+                        ) : (
+                          <Clock className="h-3 w-3" />
+                        )}
+                        {newsStatus(item) === "scheduled" && item.published_at
+                          ? `Terjadwal · ${new Date(item.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}`
+                          : STATUS_TEXT[newsStatus(item)]}
                       </button>
                     </td>
                     <td className="hidden px-4 py-3.5 text-center text-sm text-slate-500 lg:table-cell">
@@ -577,6 +857,9 @@ export default function AdminBeritaPage() {
                         </button>
                         <button onClick={() => openEdit(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
                           <PencilSimple className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => openDuplicate(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-purple-50 hover:text-purple-600" title="Duplikat">
+                          <Files className="h-4 w-4" />
                         </button>
                         <button onClick={() => setDeleteItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
                           <Trash className="h-4 w-4" />
@@ -619,23 +902,39 @@ export default function AdminBeritaPage() {
         open={!!viewItem}
         onClose={() => setViewItem(null)}
         title={viewItem?.title}
-        description={viewItem ? `${categoryConfig[viewItem.category]?.label || viewItem.category} · ${viewItem.is_published ? "Published" : "Draft"}` : undefined}
+        description={viewItem ? `${categoryConfig[viewItem.category]?.label || viewItem.category} · ${STATUS_TEXT[newsStatus(viewItem)]}` : undefined}
         footer={
           <>
-            <button onClick={() => { setViewItem(null); openEdit(viewItem!); }}
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-              <PencilSimple className="h-4 w-4" /> Edit
-            </button>
-            <a href={`/news/${viewItem?.slug}`} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1]">
-              <Eye className="h-4 w-4" /> Lihat di Website
-            </a>
+            <div className="flex items-center gap-2">
+              <button onClick={() => { const v = viewItem; setViewItem(null); if (v) openDuplicate(v); }}
+                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                <Files className="h-4 w-4" /> Duplikat
+              </button>
+              <button onClick={() => { setViewItem(null); openEdit(viewItem!); }}
+                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                <PencilSimple className="h-4 w-4" /> Edit
+              </button>
+            </div>
+            {viewItem && newsStatus(viewItem) === "live" ? (
+              <a href={`/news/${viewItem.slug}`} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1]">
+                <Eye className="h-4 w-4" /> Lihat di Website
+              </a>
+            ) : viewItem ? (
+              <span className="self-center text-xs font-semibold text-slate-400">
+                {newsStatus(viewItem) === "scheduled"
+                  ? "Belum tayang — dijadwalkan"
+                  : newsStatus(viewItem) === "expired"
+                    ? "Masa tampil sudah berakhir"
+                    : "Draft — belum tayang di website"}
+              </span>
+            ) : null}
           </>
         }
       >
         {viewItem?.image_url && (
           <div className="mb-4 -mx-6 -mt-5 overflow-hidden">
-            <img src={viewItem.image_url} alt={viewItem.title} loading="lazy" className="h-48 w-full object-cover sm:h-64" />
+            <img src={viewItem.image_url} alt={viewItem.image_alt || viewItem.title} loading="lazy" className="h-48 w-full object-cover sm:h-64" />
           </div>
         )}
         {viewItem && (
@@ -691,29 +990,49 @@ export default function AdminBeritaPage() {
       {/* ── CREATE/EDIT FORM PANEL ──────────────────── */}
       <SlideOver
         open={formOpen}
-        onClose={() => !formSaving && setFormOpen(false)}
+        onClose={requestClose}
         title={editItem ? "Edit Berita" : "Buat Berita Baru"}
         description={editItem ? "Perbarui informasi berita" : "Isi form untuk menerbitkan berita"}
         footer={
-          <div className="flex w-full items-center justify-between">
-            <button onClick={() => setFormOpen(false)} disabled={formSaving}
+          <div className="flex w-full items-center justify-between gap-2">
+            <button onClick={requestClose} disabled={formSaving}
               className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
               Batal
             </button>
-            <button onClick={handleSave} disabled={formSaving}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
-              {formSaving ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              ) : (
-                <>
-                  <FloppyDisk className="h-4 w-4" />
-                  {editItem ? "Simpan Perubahan" : "Terbitkan"}
-                </>
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setPreviewOpen(true)} disabled={formSaving}
+                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                <Eye className="h-4 w-4" /> Pratinjau
+              </button>
+              <button onClick={handleSave} disabled={formSaving}
+                className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
+                {formSaving ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <>
+                    <FloppyDisk className="h-4 w-4" />
+                    {saveLabel()}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         }
       >
+        {pendingDraft && (
+          <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            <Clock className="h-4 w-4 shrink-0" />
+            <span className="flex-1">Ada draft yang belum disimpan ({formatSavedAt(pendingDraft.savedAt)}). Lanjutkan?</span>
+            <button type="button" onClick={restoreDraft}
+              className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
+              Lanjutkan
+            </button>
+            <button type="button" onClick={discardDraft}
+              className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100">
+              Buang
+            </button>
+          </div>
+        )}
         {formError && (
           <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             <Warning className="h-4 w-4 shrink-0" /> {formError}
@@ -724,10 +1043,52 @@ export default function AdminBeritaPage() {
           {/* Title */}
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Judul <span className="text-red-500">*</span></label>
-            <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
+            <input type="text" value={form.title}
+              onChange={(e) => {
+                const title = e.target.value;
+                // Slug otomatis dari judul selama belum diedit manual (mode buat baru)
+                setForm((prev) => ({
+                  ...prev,
+                  title,
+                  slug: !editItem && !slugTouched ? slugify(title) : prev.slug,
+                }));
+              }}
               className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
               placeholder="Judul berita" />
           </div>
+
+          {/* Slug */}
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Slug</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={form.slug}
+                readOnly={slugLocked}
+                onChange={(e) => { setSlugTouched(true); setForm({ ...form, slug: e.target.value }); }}
+                onBlur={() => { if (form.slug) setForm((f) => ({ ...f, slug: slugify(f.slug) })); }}
+                className={`w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 ${slugLocked ? "bg-slate-50 text-slate-500" : ""}`}
+                placeholder="otomatis dari judul"
+              />
+              {slugLocked && (
+                <button type="button" onClick={() => setSlugUnlocked(true)}
+                  className="shrink-0 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs font-semibold text-amber-700 hover:bg-amber-100">
+                  Ubah slug
+                </button>
+              )}
+            </div>
+            {editItem?.is_published && (
+              <p className="mt-1.5 text-xs text-amber-600">
+                Tautan lama akan mati — tidak ada redirect otomatis.
+              </p>
+            )}
+            <p className="mt-1 break-all text-xs text-slate-400">
+              {SITE_URL}/news/<span className={form.slug ? "text-slate-500" : "text-slate-300"}>{form.slug || "…"}</span>
+            </p>
+          </div>
+
+          {/* Pratinjau kartu saat dibagikan */}
+          <SharePreviewCard form={form} imagePreview={imagePreview} />
 
           {/* Category */}
           <div>
@@ -825,6 +1186,25 @@ export default function AdminBeritaPage() {
             <p className="mt-2 text-xs text-slate-400">
               Disarankan rasio 16:9 (mis. 1280×720) agar tidak terpotong.
             </p>
+            {colSupport && (
+              <div className="mt-3">
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Teks alternatif gambar</label>
+                <input
+                  type="text"
+                  maxLength={125}
+                  value={form.image_alt}
+                  onChange={(e) => setForm({ ...form, image_alt: e.target.value })}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                  placeholder="Deskripsi singkat isi gambar"
+                />
+                <div className="mt-1 flex items-center justify-between gap-3">
+                  <p className="text-xs text-slate-400">Untuk poster yang berisi teks, tuliskan isi pentingnya di sini.</p>
+                  <span className={`text-[11px] ${form.image_alt.length >= 125 ? "text-amber-600" : "text-slate-400"}`}>
+                    {form.image_alt.length}/125
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Attachment (lampiran file) */}
@@ -903,12 +1283,18 @@ export default function AdminBeritaPage() {
             <RichTextEditor value={form.content} onChange={(val) => setForm({ ...form, content: val })} />
           </div>
 
-          {/* Publish toggle + Date */}
+          {/* Publish toggle + Date + Sematan + Masa tampil */}
           <div className="rounded-xl border border-slate-200 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-slate-700">Terbitkan Sekarang</p>
-                <p className="text-xs text-slate-400">{form.is_published ? "Berita akan langsung tampil di website" : "Berita disimpan sebagai draft"}</p>
+                <p className="text-sm font-semibold text-slate-700">Terbitkan</p>
+                <p className="text-xs text-slate-400">
+                  {!form.is_published
+                    ? "Berita disimpan sebagai draft"
+                    : wibInputToUtc(form.published_at) && new Date(wibInputToUtc(form.published_at)!).getTime() > Date.now()
+                      ? "Belum tampil — menunggu jadwal tayang"
+                      : "Berita akan langsung tampil di website"}
+                </p>
               </div>
               <button type="button" onClick={() => setForm({ ...form, is_published: !form.is_published })}
                 className={`relative h-6 w-11 rounded-full transition-colors ${form.is_published ? "bg-[#1767b1]" : "bg-slate-300"}`}>
@@ -916,7 +1302,7 @@ export default function AdminBeritaPage() {
               </button>
             </div>
             <div className="flex items-center gap-3 border-t border-slate-100 pt-3">
-              <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Tanggal Publish</label>
+              <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Tanggal Publish (WIB)</label>
               <input type="datetime-local" value={form.published_at} onChange={(e) => setForm({ ...form, published_at: e.target.value })}
                 className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
               {form.published_at && (
@@ -924,9 +1310,190 @@ export default function AdminBeritaPage() {
                   className="text-[11px] text-slate-400 hover:text-slate-600">Reset</button>
               )}
             </div>
+            {form.is_published && wibInputToUtc(form.published_at) && new Date(wibInputToUtc(form.published_at)!).getTime() > Date.now() && (
+              <p className="flex items-center gap-1.5 rounded-lg border border-[#f4d21f]/50 bg-[#f4d21f]/15 px-2.5 py-1.5 text-xs font-medium text-[#7a6600]">
+                <Clock className="h-3.5 w-3.5 shrink-0" />
+                Akan tayang otomatis pada {formatWibInput(form.published_at)} WIB
+              </p>
+            )}
+            {colSupport && (
+              <div className="space-y-3 border-t border-slate-100 pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+                      <BookmarkSimple weight="fill" className="h-4 w-4 text-[#f4d21f]" /> Sematkan di atas
+                    </p>
+                    <p className="text-xs text-slate-400">Tampil lebih awal di /news &amp; beranda (maks {MAX_PINNED} aktif).</p>
+                  </div>
+                  <button type="button" onClick={togglePin}
+                    aria-pressed={form.is_pinned}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${form.is_pinned ? "bg-[#1767b1]" : "bg-slate-300"}`}>
+                    <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_pinned ? "left-[22px]" : "left-0.5"}`} />
+                  </button>
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Tampil sampai (WIB)</label>
+                  <input type="datetime-local" value={form.expires_at} onChange={(e) => setForm({ ...form, expires_at: e.target.value })}
+                    className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                  {form.expires_at && (
+                    <button type="button" onClick={() => setForm({ ...form, expires_at: "" })}
+                      className="text-[11px] text-slate-400 hover:text-slate-600">Reset</button>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400">Opsional — berita berhenti tampil otomatis setelah waktu ini.</p>
+              </div>
+            )}
           </div>
         </div>
       </SlideOver>
+
+      {/* ── KONFIRMASI TUTUP TANPA SIMPAN ───────────── */}
+      <ConfirmModal
+        open={confirmClose}
+        onClose={() => setConfirmClose(false)}
+        onConfirm={() => {
+          // "Tutup tanpa menyimpan" → buang juga draft autosave lokal
+          try { localStorage.removeItem(autosaveKey(editItem)); } catch { /* noop */ }
+          setConfirmClose(false);
+          closeForm();
+        }}
+        title="Perubahan belum disimpan?"
+        description="Tutup tanpa menyimpan?"
+        confirmLabel="Tutup Tanpa Simpan"
+        variant="warning"
+      />
+
+      {/* ── PRATINJAU (draft/terjadwal) — tanpa route baru ── */}
+      <Modal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        size={previewDevice === "mobile" ? "sm" : "xl"}
+        title="Pratinjau Berita"
+        description="Tampilan seperti halaman publik — berlaku untuk draft & terjadwal"
+        footer={
+          <>
+            <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
+              <button type="button" onClick={() => setPreviewDevice("desktop")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "desktop" ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                <Desktop className="h-3.5 w-3.5" /> Desktop
+              </button>
+              <button type="button" onClick={() => setPreviewDevice("mobile")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "mobile" ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                <DeviceMobile className="h-3.5 w-3.5" /> Mobile
+              </button>
+            </div>
+            <button onClick={() => setPreviewOpen(false)}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              Tutup
+            </button>
+          </>
+        }
+      >
+        <div className={previewDevice === "mobile" ? "mx-auto max-w-sm" : "mx-auto max-w-3xl"}>
+          {/* Meta — kategori, tanggal, penulis (seperti halaman detail publik) */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className={`inline-flex items-center rounded-md border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${categoryConfig[form.category]?.color || "bg-slate-100 text-slate-600 border-slate-200"}`}>
+              {categoryConfig[form.category]?.label || form.category}
+            </span>
+            <span className="flex items-center gap-1 text-xs text-slate-400">
+              <Clock className="h-3 w-3" />
+              {form.published_at ? formatWibInput(form.published_at) : "-"}
+            </span>
+            {form.writer_name && (
+              <span className="flex items-center gap-1 text-xs text-slate-400">
+                <User className="h-3 w-3" /> {form.writer_name}
+                <span className="text-[11px] text-slate-300">Penulis</span>
+              </span>
+            )}
+            {form.editor_name && (
+              <span className="flex items-center gap-1 text-xs text-slate-400">
+                <User className="h-3 w-3" /> {form.editor_name}
+                <span className="text-[11px] text-slate-300">Editor</span>
+              </span>
+            )}
+          </div>
+          <h1 className="mt-2 text-2xl font-black leading-snug text-[#082b59]">
+            {form.title || "Tanpa judul"}
+          </h1>
+          {imagePreview && (
+            <div className="mt-4 w-full overflow-hidden rounded-2xl shadow-md aspect-[1200/630]">
+              <img src={imagePreview} alt={form.image_alt || form.title || "Sampul"}
+                className="h-full w-full object-cover"
+                style={{
+                  objectPosition: form.cover_image_position === "top" ? "center 20%" : form.cover_image_position === "bottom" ? "center 80%" : "center center",
+                }} />
+            </div>
+          )}
+          {form.summary && (
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+              <div className="flex items-start gap-3">
+                <BookmarkSimple className="mt-0.5 h-4 w-4 shrink-0 text-[#f4d21f]" />
+                <p className="text-sm font-medium leading-relaxed text-slate-600">{form.summary}</p>
+              </div>
+            </div>
+          )}
+          {/* Konten — kelas prose DISALIN VERBATIM dari /news/[slug] + sanitize() */}
+          <div
+            className="prose prose-lg prose-slate max-w-none
+              prose-headings:text-[#082b59] prose-headings:font-extrabold prose-headings:scroll-mt-24
+              prose-p:text-gray-700 prose-p:leading-[1.75] prose-p:my-4
+              prose-a:text-[#1767b1] prose-a:no-underline prose-a:font-medium hover:prose-a:underline
+              prose-strong:text-[#082b59] prose-strong:font-bold
+              prose-em:text-slate-600
+              prose-img:rounded-2xl prose-img:shadow-md prose-img:my-8
+              prose-blockquote:border-l-4 prose-blockquote:border-[#f4d21f] prose-blockquote:bg-gradient-to-r prose-blockquote:from-amber-50 prose-blockquote:to-transparent prose-blockquote:py-4 prose-blockquote:pr-6 prose-blockquote:pl-6 prose-blockquote:rounded-r-xl prose-blockquote:italic prose-blockquote:text-slate-600
+              prose-li:text-gray-700 prose-li:leading-[1.7] prose-li:my-1 [&_li>p]:my-0
+              prose-ol:my-4 prose-ol:pl-6 prose-ul:my-4 prose-ul:pl-6
+              prose-code:text-[#1767b1] prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:font-normal prose-code:before:content-none prose-code:after:content-none
+              prose-pre:bg-[#082b59] prose-pre:text-white prose-pre:rounded-xl prose-pre:border prose-pre:border-slate-700
+              prose-hr:border-slate-200 prose-hr:my-12
+              prose-table:text-sm prose-table:border-collapse
+              prose-th:bg-slate-50 prose-th:text-left prose-th:font-semibold prose-th:px-4 prose-th:py-3 prose-th:border prose-th:border-slate-200
+              prose-td:px-4 prose-td:py-3 prose-td:border prose-td:border-slate-200"
+            dangerouslySetInnerHTML={{ __html: sanitize(form.content || "<p>Konten belum tersedia.</p>") }}
+          />
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+/** Kartu "Pratinjau saat dibagikan" — ikuti isi form secara langsung. */
+function SharePreviewCard({ form, imagePreview }: { form: FormData; imagePreview: string }) {
+  const domain = SITE_URL.replace(/^https?:\/\//, "");
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+        Pratinjau saat dibagikan
+      </label>
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        {imagePreview ? (
+          <div className="relative w-full bg-slate-100 aspect-[1.91/1]">
+            <img
+              src={imagePreview}
+              alt={form.image_alt || form.title || "Pratinjau sampul"}
+              className="h-full w-full object-cover"
+              style={{
+                objectPosition: form.cover_image_position === "top" ? "center 20%" : form.cover_image_position === "bottom" ? "center 80%" : "center center",
+              }}
+            />
+          </div>
+        ) : (
+          <div className="flex w-full items-center justify-center bg-gradient-to-br from-[#082b59] to-[#1767b1] aspect-[1.91/1]">
+            <ImageIcon className="h-10 w-10 text-white/25" />
+          </div>
+        )}
+        <div className="border-t border-slate-200 px-4 py-3">
+          <p className="text-[11px] uppercase tracking-wide text-slate-400">{domain}</p>
+          <p className="mt-1 line-clamp-2 text-sm font-bold text-slate-800">
+            {form.title || "Judul berita tampil di sini"}
+          </p>
+          <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">
+            {form.summary || "Ringkasan berita tampil di sini…"}
+          </p>
+        </div>
+      </div>
+      <p className="mt-1.5 text-[11px] text-slate-400">Kartu tautan di WhatsApp / Facebook.</p>
     </div>
   );
 }

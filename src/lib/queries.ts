@@ -62,15 +62,69 @@ export const getSchoolProfile = cache(
 const NEWS_LIST_COLUMNS =
   "id, title, slug, summary, cover_image_position, image_url, category, is_published, published_at, created_at, user_profiles(full_name)";
 
-async function queryNewsPage(columns: string, page: number, pageSize: number, search?: string) {
+/** Kolom Tahap 1 (image_alt/is_pinned/expires_at) — belum tentu ada di DB. */
+const NEWS_NEW_COLUMNS = "image_alt, is_pinned, expires_at";
+
+let newsNewColsPromise: Promise<boolean> | null = null;
+/**
+ * Probe sekali per proses: apakah kolom Tahap 1 sudah ada di tabel news?
+ * false → query publik/form memakai jalur lama tanpa kolom itu (aman sebelum SQL dijalankan).
+ */
+export function newsHasScheduledColumns(): Promise<boolean> {
+  if (!newsNewColsPromise) {
+    newsNewColsPromise = Promise.resolve(
+      supabase.from("news").select(NEWS_NEW_COLUMNS).limit(0)
+    ).then(
+      ({ error }) => !error || !/does not exist|42703/.test(error.message || ""),
+      () => false
+    );
+  }
+  return newsNewColsPromise;
+}
+
+/** "Sekarang" dalam ISO UTC presisi detik — aman untuk disisipkan ke sintaks .or(). */
+function newsNowIso(): string {
+  return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
+/**
+ * Filter publik berita — sama persis dengan policy SELECT Tahap 1:
+ * is_published = true AND (published_at IS NULL OR published_at <= now())
+ * AND (expires_at IS NULL OR expires_at > now()).
+ * `withExpires` false bila kolom expires_at belum ada (SQL tahap 1 belum jalan).
+ */
+function applyPublicNewsFilters(query: any, withExpires: boolean) {
+  const nowIso = newsNowIso();
+  let q = query
+    .eq("is_published", true)
+    .or(`published_at.is.null,published_at.lte.${nowIso}`);
+  if (withExpires) {
+    q = q.or(`expires_at.is.null,expires_at.gt.${nowIso}`);
+  }
+  return q;
+}
+
+async function queryNewsPage(
+  columns: string,
+  page: number,
+  pageSize: number,
+  search?: string,
+  newCols = false
+) {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
   let query = supabase
     .from("news")
-    .select(columns, { count: "exact" })
-    .eq("is_published", true)
-    .order("published_at", { ascending: false });
+    .select(columns, { count: "exact" });
+
+  query = applyPublicNewsFilters(query, newCols);
+
+  // Disematkan dulu, lalu terbaru (kolom is_pinned hanya bila sudah ada)
+  if (newCols) {
+    query = query.order("is_pinned", { ascending: false });
+  }
+  query = query.order("published_at", { ascending: false, nullsFirst: false });
 
   if (search) {
     query = query.ilike("title", `%${search}%`);
@@ -84,17 +138,20 @@ export async function getNewsListPaginated(
   pageSize: number = 9,
   search?: string
 ): Promise<{ items: NewsWithAuthor[]; total: number; totalPages: number }> {
+  const newCols = await newsHasScheduledColumns();
+  const base = `${NEWS_LIST_COLUMNS}${newCols ? `, ${NEWS_NEW_COLUMNS}` : ""}`;
   let { data, error, count } = await queryNewsPage(
-    `${NEWS_LIST_COLUMNS}, attachment_url`,
+    `${base}, attachment_url`,
     page,
     pageSize,
-    search
+    search,
+    newCols
   );
 
   // Kolom attachment_url belum ada (migration 005 belum dijalankan)
   // → jangan sampai halaman berita jadi kosong, ulangi tanpa kolom itu.
   if (error && /attachment_url/.test(error.message || "")) {
-    ({ data, error, count } = await queryNewsPage(NEWS_LIST_COLUMNS, page, pageSize, search));
+    ({ data, error, count } = await queryNewsPage(base, page, pageSize, search, newCols));
   }
 
   if (error) {
@@ -116,11 +173,20 @@ export async function getNewsListPaginated(
 }
 
 export async function getNewsList(limit?: number, search?: string): Promise<NewsWithAuthor[]> {
+  const newCols = await newsHasScheduledColumns();
   let query = supabase
     .from("news")
-    .select("id, title, slug, summary, image_url, category, published_at, created_at, user_profiles(full_name)")
-    .eq("is_published", true)
-    .order("published_at", { ascending: false });
+    .select(
+      `id, title, slug, summary, image_url, category, published_at, created_at${
+        newCols ? `, ${NEWS_NEW_COLUMNS}` : ""
+      }, user_profiles(full_name)`
+    );
+
+  query = applyPublicNewsFilters(query, newCols);
+  if (newCols) {
+    query = query.order("is_pinned", { ascending: false });
+  }
+  query = query.order("published_at", { ascending: false, nullsFirst: false });
 
   if (search) {
     query = query.ilike("title", `%${search}%`);
@@ -159,11 +225,16 @@ export async function getNewsListAll(): Promise<NewsWithAuthor[]> {
 }
 
 export async function getNewsBySlug(slug: string): Promise<NewsWithAuthor | null> {
-  const { data, error } = await supabase
+  const newCols = await newsHasScheduledColumns();
+  let query = supabase
     .from("news")
     .select("*, user_profiles(full_name)")
-    .eq("slug", slug)
-    .single();
+    .eq("slug", slug);
+
+  // Publik: draft/terjadwal/kedaluwarsa tidak boleh tampil (404)
+  query = applyPublicNewsFilters(query, newCols);
+
+  const { data, error } = await query.maybeSingle();
 
   if (error) {
     console.error("Error fetching news by slug:", error);
@@ -177,14 +248,20 @@ export async function getNewsBySlug(slug: string): Promise<NewsWithAuthor | null
 }
 
 export async function getRelatedNews(category: string, currentId: string, limit = 4): Promise<NewsWithAuthor[]> {
-  const { data, error } = await supabase
+  const newCols = await newsHasScheduledColumns();
+  let query = supabase
     .from("news")
     .select("*, user_profiles(full_name)")
-    .eq("is_published", true)
     .eq("category", category)
-    .neq("id", currentId)
-    .order("published_at", { ascending: false })
-    .limit(limit);
+    .neq("id", currentId);
+
+  query = applyPublicNewsFilters(query, newCols);
+  if (newCols) {
+    query = query.order("is_pinned", { ascending: false });
+  }
+  query = query.order("published_at", { ascending: false, nullsFirst: false }).limit(limit);
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching related news:", error);
@@ -196,8 +273,28 @@ export async function getRelatedNews(category: string, currentId: string, limit 
   }));
 }
 
+/**
+ * Sitemap: hanya berita yang tampil (filter publik yang sama) — draft &
+ * terjadwal tidak boleh bocor ke sitemap. Ringkas: slug + tanggal saja.
+ */
+export async function getNewsListForSitemap(): Promise<
+  Pick<News, "id" | "slug" | "published_at" | "updated_at">[]
+> {
+  const newCols = await newsHasScheduledColumns();
+  let query = supabase.from("news").select("id, slug, published_at, updated_at");
+  query = applyPublicNewsFilters(query, newCols);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("Error fetching news for sitemap:", error);
+    return [];
+  }
+  return (data || []) as Pick<News, "id" | "slug" | "published_at" | "updated_at">[];
+}
+
 export async function createNews(news: {
   title: string;
+  slug?: string;
   summary?: string;
   content?: string;
   category?: string;
@@ -205,25 +302,39 @@ export async function createNews(news: {
   cover_image_position?: string;
   writer_name?: string;
   editor_name?: string;
-  published_at?: string;
+  image_alt?: string;
+  is_pinned?: boolean;
+  expires_at?: string | null;
+  published_at?: string | null;
   is_published?: boolean;
   attachment_url?: string;
   attachment_name?: string;
 }): Promise<{ data: News | null; error?: string }> {
   const { data: { user } } = await supabase.auth.getUser();
+  const newCols = await newsHasScheduledColumns();
+  // Slug unik: dari slug form bila diisi, selain itu dari judul
+  const baseSlug = news.slug ? slugify(news.slug) : slugify(news.title);
+  const slug = await generateUniqueNewsSlug(baseSlug || "berita");
   const payload: Record<string, any> = {
     title: news.title,
+    slug,
     summary: news.summary,
     content: news.content,
     category: news.category,
     image_url: news.image_url,
     is_published: news.is_published,
     author_id: user?.id,
+    // Kosong → null (belum pernah terbit); terbit tanpa tanggal → now
+    published_at: news.published_at || (news.is_published ? new Date().toISOString() : null),
   };
   if (news.cover_image_position) payload.cover_image_position = news.cover_image_position;
   if (news.writer_name) payload.writer_name = news.writer_name;
   if (news.editor_name) payload.editor_name = news.editor_name;
-  if (news.published_at) payload.published_at = news.published_at;
+  if (newCols) {
+    payload.image_alt = news.image_alt || null;
+    payload.is_pinned = !!news.is_pinned;
+    payload.expires_at = news.expires_at || null;
+  }
   if (news.attachment_url) {
     payload.attachment_url = news.attachment_url;
     payload.attachment_name = news.attachment_name || "";
@@ -234,10 +345,13 @@ export async function createNews(news: {
     .select()
     .single();
 
-  // Kolom attachment belum ada (migration 005 belum jalan) → ulangi tanpa itu
-  if (error && /attachment/.test(error.message || "")) {
-    delete payload.attachment_url;
-    delete payload.attachment_name;
+  // Kolom opsional belum ada di DB → ulangi tanpa kolom itu
+  // (attachment: migration 005; image_alt/is_pinned/expires_at: SQL tahap 1)
+  if (error && /(attachment_url|image_alt|is_pinned|expires_at)/.test(error.message || "")) {
+    const msg = error.message || "";
+    (["attachment_url", "attachment_name", "image_alt", "is_pinned", "expires_at"] as const).forEach((k) => {
+      if (msg.includes(k)) delete payload[k];
+    });
     ({ data, error } = await supabase.from("news").insert(payload).select().single());
   }
 
@@ -252,6 +366,7 @@ export async function updateNews(
   id: string,
   news: {
     title?: string;
+    slug?: string;
     summary?: string;
     content?: string;
     category?: string;
@@ -259,14 +374,22 @@ export async function updateNews(
     cover_image_position?: string;
     writer_name?: string;
     editor_name?: string;
-    published_at?: string;
+    image_alt?: string;
+    is_pinned?: boolean;
+    expires_at?: string | null;
+    published_at?: string | null;
     is_published?: boolean;
     attachment_url?: string;
     attachment_name?: string;
   }
 ): Promise<{ data: News | null; error?: string }> {
+  const newCols = await newsHasScheduledColumns();
   const payload: Record<string, any> = {};
   if (news.title !== undefined) payload.title = news.title;
+  // Slug hanya disentuh bila dikirim; lewat generator agar tetap unik (kecuali milik sendiri)
+  if (news.slug !== undefined && news.slug) {
+    payload.slug = await generateUniqueNewsSlug(slugify(news.slug), id);
+  }
   if (news.summary !== undefined) payload.summary = news.summary;
   if (news.content !== undefined) payload.content = news.content;
   if (news.category !== undefined) payload.category = news.category;
@@ -275,7 +398,12 @@ export async function updateNews(
   if (news.cover_image_position) payload.cover_image_position = news.cover_image_position;
   if (news.writer_name) payload.writer_name = news.writer_name;
   if (news.editor_name) payload.editor_name = news.editor_name;
-  if (news.published_at) payload.published_at = news.published_at;
+  if ("published_at" in news) payload.published_at = news.published_at || null;
+  if (newCols) {
+    if (news.image_alt !== undefined) payload.image_alt = news.image_alt || null;
+    if (news.is_pinned !== undefined) payload.is_pinned = !!news.is_pinned;
+    if (news.expires_at !== undefined) payload.expires_at = news.expires_at || null;
+  }
   if (news.attachment_url !== undefined) {
     payload.attachment_url = news.attachment_url;
     payload.attachment_name = news.attachment_name || "";
@@ -287,10 +415,12 @@ export async function updateNews(
     .select()
     .single();
 
-  // Kolom attachment belum ada (migration 005 belum jalan) → ulangi tanpa itu
-  if (error && /attachment/.test(error.message || "")) {
-    delete payload.attachment_url;
-    delete payload.attachment_name;
+  // Kolom opsional belum ada di DB → ulangi tanpa kolom itu
+  if (error && /(attachment_url|image_alt|is_pinned|expires_at)/.test(error.message || "")) {
+    const msg = error.message || "";
+    (["attachment_url", "attachment_name", "image_alt", "is_pinned", "expires_at"] as const).forEach((k) => {
+      if (msg.includes(k)) delete payload[k];
+    });
     ({ data, error } = await supabase.from("news").update(payload).eq("id", id).select().single());
   }
 
@@ -1283,6 +1413,27 @@ export function slugify(text: string): string {
 async function generateUniqueArticleSlug(base: string, excludeId?: string): Promise<string> {
   const { data } = await supabase
     .from("articles")
+    .select("id, slug")
+    .like("slug", `${base}%`);
+  const rows = data || [];
+  const own = excludeId ? rows.find((r) => r.id === excludeId) : undefined;
+  if (own && own.slug === base) return base;
+  const used = new Set(rows.filter((r) => r.id !== excludeId).map((r) => r.slug));
+  if (!used.has(base)) return base;
+  const root = base.slice(0, 66).replace(/-+$/, "") || base;
+  let suffix = 2;
+  while (used.has(`${root}-${suffix}`)) suffix++;
+  return `${root}-${suffix}`;
+}
+
+/**
+ * Versi berita dari generateUniqueArticleSlug: sufiks -2, -3, dst.
+ * `excludeId` = id berita sendiri agar slug yang tidak berubah tidak
+ * dianggap duplikat saat edit. Dipakai createNews/updateNews.
+ */
+async function generateUniqueNewsSlug(base: string, excludeId?: string): Promise<string> {
+  const { data } = await supabase
+    .from("news")
     .select("id, slug")
     .like("slug", `${base}%`);
   const rows = data || [];

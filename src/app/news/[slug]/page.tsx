@@ -8,13 +8,21 @@ import { sanitize } from "@/lib/sanitize";
 import ImageZoom from "./ImageZoom";
 import AttachmentPanel from "./AttachmentPanel";
 
-export const revalidate = 3600;
+export const revalidate = 300;
+
+/** Potongan konten (teks polos) untuk fallback deskripsi OG. */
+function contentExcerpt(html: string | null | undefined): string {
+  if (!html) return "";
+  const text = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return text.length > 160 ? `${text.slice(0, 157).trimEnd()}…` : text;
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const berita = await getNewsBySlug(slug);
   if (!berita) return { title: "Berita Tidak Ditemukan" };
-  const description = berita.summary || berita.title;
+  const description = berita.summary || contentExcerpt(berita.content) || berita.title;
+  const imageAlt = berita.image_alt || berita.title;
   return {
     title: berita.title,
     description,
@@ -22,13 +30,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       title: berita.title,
       description,
       type: "article",
-      images: berita.image_url ? [{ url: berita.image_url, width: 1200, height: 630 }] : [],
+      // Next 16: publishedTime FLAT di objek openGraph (→ article:published_time)
+      publishedTime: berita.published_at || undefined,
+      // Ukuran gambar TANPA hardcode — biar crawler baca dimensi asli
+      images: berita.image_url ? [{ url: berita.image_url, alt: imageAlt }] : [],
     },
     twitter: {
       card: "summary_large_image",
       title: berita.title,
       description,
-      images: berita.image_url ? [berita.image_url] : [],
+      images: berita.image_url ? [{ url: berita.image_url, alt: imageAlt }] : [],
     },
     alternates: { canonical: `/news/${berita.slug}` },
   };
@@ -202,7 +213,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
               <div className="mb-6 w-full overflow-hidden rounded-2xl shadow-md aspect-[1200/630]">
                 <ImageZoom
                   src={berita.image_url}
-                  alt={berita.title}
+                  alt={berita.image_alt || berita.title}
                   objectPosition={objectPosition}
                 />
               </div>
@@ -286,7 +297,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
                       <Link key={item.id} href={`/news/${item.slug}`}
                         className="group flex gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-[#1767b1]/30 hover:shadow-md">
                         {item.image_url ? (
-                          <Image src={item.image_url} alt={item.title} width={80} height={80} sizes="80px" className="h-20 w-20 flex-shrink-0 rounded-lg object-cover" />
+                          <Image src={item.image_url} alt={item.image_alt || item.title} width={80} height={80} sizes="80px" className="h-20 w-20 flex-shrink-0 rounded-lg object-cover" />
                         ) : (
                           <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">
                             <Newspaper className="h-6 w-6 text-slate-300" />

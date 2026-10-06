@@ -41,9 +41,9 @@ export const metadata = {
   alternates: { canonical: "/" },
 };
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
-type NewsItem = { id: string | number; slug: string; title: string; summary: string; category: string; image_url?: string | null; published_at?: string };
+type NewsItem = { id: string | number; slug: string; title: string; summary: string; category: string; image_url?: string | null; image_alt?: string | null; published_at?: string };
 
 export default async function Home() {
   const [beritaRaw, dbFacilities, activities, articles, teachers, profile, achievements] = await Promise.all([
@@ -215,7 +215,7 @@ export default async function Home() {
                         <div className="overflow-hidden bg-[#f4f7fb]">
                           {beritaRaw[0]?.image_url ? (
                             // Tinggi natural (mengikuti rasio poster) agar tidak ter-crop
-                            <Image src={beritaRaw[0].image_url} alt={beritaRaw[0].title} width={1280} height={720} sizes="(max-width: 768px) 100vw, 320px" className="h-auto w-full transition-transform duration-500 group-hover:scale-105" />
+                            <Image src={beritaRaw[0].image_url} alt={beritaRaw[0].image_alt || beritaRaw[0].title} width={1280} height={720} sizes="(max-width: 768px) 100vw, 320px" className="h-auto w-full transition-transform duration-500 group-hover:scale-105" />
                           ) : (
                             <div className="flex aspect-video w-full items-center justify-center">
                               <Megaphone className="h-12 w-12 text-[#082b59]/10" />
@@ -243,7 +243,7 @@ export default async function Home() {
                           <Link key={item.id} href={`/news/${item.slug}`} className="group flex gap-2.5">
                             <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f4f7fb]">
                               {item.image_url ? (
-                                <Image src={item.image_url} alt={item.title} width={56} height={56} sizes="56px" className="h-full w-full object-cover" />
+                                <Image src={item.image_url} alt={item.image_alt || item.title} width={56} height={56} sizes="56px" className="h-full w-full object-cover" />
                               ) : (
                                 <div className="flex h-full w-full items-center justify-center">
                                   <Megaphone className="h-5 w-5 text-[#082b59]/15" />

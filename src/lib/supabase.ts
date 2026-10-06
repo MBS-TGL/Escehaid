@@ -88,6 +88,10 @@ export interface News {
   author_id: string | null;
   is_published: boolean;
   published_at: string;
+  /** Kolom Tahap 1 — bisa belum ada di DB (dicek via newsHasScheduledColumns). */
+  image_alt?: string | null;
+  is_pinned?: boolean;
+  expires_at?: string | null;
   created_at: string;
   updated_at: string;
 }

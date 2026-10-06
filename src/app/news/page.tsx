@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/news" },
 };
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
 const PAGE_SIZE = 9;
 
@@ -83,7 +83,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                       // Tinggi natural mengikuti rasio poster — tanpa crop
                       <Image
                         src={berita[0].image_url}
-                        alt={berita[0].title}
+                        alt={berita[0].image_alt || berita[0].title}
                         width={1600}
                         height={900}
                         sizes="(max-width: 1024px) 100vw, 60vw"
@@ -137,7 +137,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                           {item.image_url ? (
                             <Image
                               src={item.image_url}
-                              alt={item.title}
+                              alt={item.image_alt || item.title}
                               width={1280}
                               height={720}
                               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
