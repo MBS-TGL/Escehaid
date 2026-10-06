@@ -702,6 +702,15 @@ export async function revalidateFacilities(): Promise<void> {
 }
 
 /**
+ * Invalidasi ISR halaman prestasi (/achievements + beranda) via API route
+ * /api/revalidate. Dipanggil dari client component admin prestasi setelah
+ * create/update/delete/bulk/duplikat+simpan.
+ */
+export async function revalidateAchievements(): Promise<void> {
+  await postRevalidate(["/achievements", "/"], "revalidateAchievements");
+}
+
+/**
  * Revalidate path publik tertentu (mis. "/admission") via API route /api/revalidate.
  * Dipanggil dari client component admin setelah create/update/delete/toggle gelombang.
  * `type` opsional: "layout" → revalidatePath(path, "layout") di server
@@ -2080,6 +2089,13 @@ export async function createAchievement(achievement: {
   year?: number;
   image_url?: string;
   sort_order?: number;
+  /** Kolom Tahap 1 (null = kosongkan) */
+  rank_label?: string | null;
+  level?: string | null;
+  participants?: string | null;
+  organizer?: string | null;
+  is_featured?: boolean;
+  image_alt?: string | null;
 }): Promise<{ data: Achievement | null; error?: string }> {
   const { data, error } = await supabase
     .from("achievements")
@@ -2103,6 +2119,13 @@ export async function updateAchievement(
     year?: number;
     image_url?: string;
     sort_order?: number;
+    /** Kolom Tahap 1 (null = kosongkan) */
+    rank_label?: string | null;
+    level?: string | null;
+    participants?: string | null;
+    organizer?: string | null;
+    is_featured?: boolean;
+    image_alt?: string | null;
   }
 ): Promise<{ data: Achievement | null; error?: string }> {
   // Ambil URL gambar lama supaya file lama bisa dibersihkan bila berganti

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import {
   getAchievementList,
   createAchievement,
@@ -8,10 +8,19 @@ import {
   deleteAchievement,
   deleteAchievementBulk,
   uploadAchievementImage,
+  revalidateAchievements,
 } from "@/lib/queries";
-import { StatCard, StatCardRow, SlideOver } from "@/components/ui";
+import { StatCard, StatCardRow, SlideOver, ConfirmModal } from "@/components/ui";
 import type { Achievement } from "@/lib/supabase";
 import { useToast } from "@/components/ui/Toast";
+import { compressImage } from "@/lib/compress-image";
+import {
+  ACHIEVEMENT_CATEGORIES,
+  ACHIEVEMENT_LEVELS,
+  achievementCategoryMeta,
+  achievementLevelLabel,
+  capitalizeCategory,
+} from "@/lib/site-config";
 import {
   Trophy,
   MagnifyingGlass,
@@ -20,6 +29,7 @@ import {
   Medal,
   CaretLeft,
   CaretRight,
+  CaretDown,
   Plus,
   PencilSimple,
   Trash,
@@ -30,34 +40,61 @@ import {
   ArrowDown,
   SortAscending,
   Checks,
+  Star,
+  Files,
+  Users,
+  Megaphone,
 } from "@/components/Icons";
 
 const PAGE_SIZE = 10;
-
-const categoryConfig: Record<string, { label: string; color: string }> = {
-  akademik: { label: "Akademik", color: "bg-blue-50 text-blue-700" },
-  "non-akademik": { label: "Non-Akademik", color: "bg-purple-50 text-purple-700" },
-  olahraga: { label: "Olahraga", color: "bg-emerald-50 text-emerald-700" },
-  seni: { label: "Seni", color: "bg-pink-50 text-pink-700" },
-};
+/** Batas unggulan aktif (Tahap 3.6). */
+const MAX_FEATURED = 6;
 
 type SortField = "created_at" | "title" | "category" | "year";
 type SortDir = "asc" | "desc";
+
+/** Warna/label kategori dari konstanta bersama; tak dikenal → abu-abu + capitalize. */
+function catMeta(key?: string | null) {
+  return achievementCategoryMeta(key) || {
+    key: key || "",
+    label: capitalizeCategory(key || "-"),
+    color: "bg-slate-100 text-slate-600",
+    icon: Trophy,
+  };
+}
+
+/** Label tingkat dari data; di luar daftar → capitalize. */
+function levelLabel(value?: string | null): string {
+  return achievementLevelLabel(value) || capitalizeCategory(value || "");
+}
 
 interface FormData {
   title: string;
   description: string;
   category: string;
-  year: number;
+  /** Disimpan sebagai string supaya bisa dikosongkan saat mengetik. */
+  year: string;
   image_url: string;
+  rank_label: string;
+  level: string;
+  participants: string;
+  organizer: string;
+  image_alt: string;
+  is_featured: boolean;
 }
 
 const emptyForm: FormData = {
   title: "",
   description: "",
   category: "akademik",
-  year: new Date().getFullYear(),
+  year: String(new Date().getFullYear()),
   image_url: "",
+  rank_label: "",
+  level: "",
+  participants: "",
+  organizer: "",
+  image_alt: "",
+  is_featured: false,
 };
 
 export default function AdminAchievementsPage() {
@@ -69,6 +106,7 @@ export default function AdminAchievementsPage() {
   const [page, setPage] = useState(1);
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [yearFilter, setYearFilter] = useState("all");
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -82,10 +120,15 @@ export default function AdminAchievementsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<Achievement | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
+  /** Kondisi awal form — dasar dirty-check konfirmasi Batal. */
+  const [initialForm, setInitialForm] = useState<FormData>(emptyForm);
   const [formSaving, setFormSaving] = useState(false);
   const [formError, setFormError] = useState("");
+  const [yearError, setYearError] = useState("");
+  const [confirmClose, setConfirmClose] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [imageUploading, setImageUploading] = useState(false);
 
   const fetchAchievements = useCallback(async () => {
     const data = await getAchievementList();
@@ -97,11 +140,30 @@ export default function AdminAchievementsPage() {
 
   const categories = useMemo(() => [...new Set(achievements.map((a) => a.category))], [achievements]);
 
+  /** Tahun yang benar-benar ada di data (tanpa hardcode) — untuk filter Tahap 3.5. */
+  const availableYears = useMemo(
+    () => [...new Set(achievements.map((a) => a.year).filter(Boolean))].sort((a, b) => b - a),
+    [achievements]
+  );
+
+  /** Saran peringkat dari nilai yang pernah dipakai — untuk datalist. */
+  const rankSuggestions = useMemo(
+    () => [...new Set(achievements.map((a) => a.rank_label).filter(Boolean))] as string[],
+    [achievements]
+  );
+
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
     let result = achievements.filter((item) => {
-      const matchSearch = item.title.toLowerCase().includes(search.toLowerCase());
+      const matchSearch =
+        !q ||
+        item.title.toLowerCase().includes(q) ||
+        (item.participants || "").toLowerCase().includes(q) ||
+        (item.organizer || "").toLowerCase().includes(q) ||
+        (item.rank_label || "").toLowerCase().includes(q);
       const matchCategory = filter === "all" || item.category === filter;
-      return matchSearch && matchCategory;
+      const matchYear = yearFilter === "all" || String(item.year) === yearFilter;
+      return matchSearch && matchCategory && matchYear;
     });
 
     result.sort((a, b) => {
@@ -114,7 +176,7 @@ export default function AdminAchievementsPage() {
     });
 
     return result;
-  }, [achievements, search, filter, sortField, sortDir]);
+  }, [achievements, search, filter, yearFilter, sortField, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -123,7 +185,7 @@ export default function AdminAchievementsPage() {
     total: achievements.length,
     thisYear: achievements.filter((a) => a.year === new Date().getFullYear()).length,
     categories: categories.length,
-    otherYears: achievements.filter((a) => a.year !== new Date().getFullYear()).length,
+    featured: achievements.filter((a) => a.is_featured).length,
   };
 
   const allVisibleSelected = paginated.length > 0 && paginated.every((item) => selectedIds.has(item.id));
@@ -151,39 +213,175 @@ export default function AdminAchievementsPage() {
     else { setSortField(field); setSortDir("asc"); }
   }
 
-  function openCreate() {
-    setEditItem(null);
-    setForm(emptyForm);
-    setImageFile(null);
-    setImagePreview("");
-    setFormError("");
-    setFormOpen(true);
+  /* ── Pratinjau gambar & revoke object URL ───────────────────── */
+  const isDirty =
+    JSON.stringify(form) !== JSON.stringify(initialForm) || imageFile !== null;
+
+  /** URL blob yang sedang tampil — ref supaya handler lama (paste) tak memakai nilai basi. */
+  const previewRef = useRef("");
+  useEffect(() => { previewRef.current = imagePreview; }, [imagePreview]);
+
+  /** Revoke object URL lama saat gambar diganti atau form ditutup. */
+  function revokePreview() {
+    const url = previewRef.current;
+    if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+    previewRef.current = "";
   }
 
-  function openEdit(item: Achievement) {
-    setEditItem(item);
-    setForm({
-      title: item.title,
-      description: item.description || "",
-      category: item.category || "akademik",
-      year: item.year || new Date().getFullYear(),
-      image_url: item.image_url || "",
-    });
-    setImageFile(null);
-    setImagePreview(item.image_url || "");
-    setFormError("");
-    setFormOpen(true);
+  /** Klik / seret-lepas / Ctrl+V → kompres dulu (pola form berita) lalu tampilkan. */
+  async function applyImageFile(file: File) {
+    if (!file.type.startsWith("image/")) return;
+    setImageUploading(true);
+    try {
+      const compressed = await compressImage(file);
+      revokePreview();
+      setImageFile(compressed);
+      setImagePreview(URL.createObjectURL(compressed));
+    } catch {
+      toast("Gagal memproses gambar", "error");
+    } finally {
+      setImageUploading(false);
+    }
   }
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file) return;
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    e.target.value = "";
+    if (file) applyImageFile(file);
+  }
+
+  // Paste gambar (Ctrl+V) — aktif hanya selama form terbuka, sama seperti form berita
+  useEffect(() => {
+    if (!formOpen) return;
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) { e.preventDefault(); applyImageFile(file); break; }
+        }
+      }
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [formOpen]);
+
+  /** Jumlah unggulan selain item ini — validasi batas maks 6. */
+  function countFeatured(excludeId?: string): number {
+    return achievements.filter((a) => a.id !== excludeId && a.is_featured).length;
+  }
+
+  function toggleFeatured() {
+    if (!form.is_featured && countFeatured(editItem?.id) >= MAX_FEATURED) {
+      toast(`Maksimal ${MAX_FEATURED} prestasi unggulan. Lepas unggulan lain terlebih dahulu.`, "error");
+      return;
+    }
+    setForm((f) => ({ ...f, is_featured: !f.is_featured }));
+  }
+
+  function closeForm() {
+    revokePreview();
+    setConfirmClose(false);
+    setFormOpen(false);
+    setImagePreview("");
+    setImageFile(null);
+    setFormError("");
+    setYearError("");
+  }
+
+  function requestClose() {
+    if (formSaving) return;
+    if (isDirty) { setConfirmClose(true); return; }
+    closeForm();
+  }
+
+  function openCreate() {
+    setEditItem(null);
+    setForm(emptyForm);
+    setInitialForm(emptyForm);
+    revokePreview();
+    setImageFile(null);
+    setImagePreview("");
+    setFormError("");
+    setYearError("");
+    setConfirmClose(false);
+    setFormOpen(true);
+  }
+
+  function openEdit(item: Achievement) {
+    const next: FormData = {
+      title: item.title,
+      description: item.description || "",
+      category: item.category || "akademik",
+      // year disimpan sebagai string supaya bisa dikosongkan saat mengetik
+      year: item.year ? String(item.year) : "",
+      image_url: item.image_url || "",
+      rank_label: item.rank_label || "",
+      level: item.level || "",
+      participants: item.participants || "",
+      organizer: item.organizer || "",
+      image_alt: item.image_alt || "",
+      is_featured: !!item.is_featured,
+    };
+    setEditItem(item);
+    setForm(next);
+    setInitialForm(next);
+    revokePreview();
+    setImageFile(null);
+    setImagePreview(item.image_url || "");
+    setFormError("");
+    setYearError("");
+    setConfirmClose(false);
+    setFormOpen(true);
+  }
+
+  /** Duplikat: buka form baru terisi salinan — belum disimpan sampai ditekan Simpan. */
+  function openDuplicate(item: Achievement) {
+    const copied: FormData = {
+      ...emptyForm,
+      title: `${item.title} (Salinan)`,
+      description: item.description || "",
+      category: item.category || "akademik",
+      year: item.year ? String(item.year) : emptyForm.year,
+      image_url: item.image_url || "",
+      rank_label: item.rank_label || "",
+      level: item.level || "",
+      participants: item.participants || "",
+      organizer: item.organizer || "",
+      image_alt: item.image_alt || "",
+      is_featured: false,
+    };
+    setViewItem(null);
+    setEditItem(null);
+    setForm(copied);
+    setInitialForm(copied);
+    revokePreview();
+    setImageFile(null);
+    setImagePreview(copied.image_url || "");
+    setFormError("");
+    setYearError("");
+    setConfirmClose(false);
+    setFormOpen(true);
   }
 
   async function handleSave() {
     if (!form.title.trim()) { setFormError("Judul wajib diisi."); return; }
+
+    // Tahun: string di state, divalidasi & dikonversi ke number saat simpan
+    const yearRaw = form.year.trim();
+    const yearNum = Number(yearRaw);
+    if (!yearRaw || !Number.isInteger(yearNum) || yearNum < 2000 || yearNum > 2100) {
+      setYearError("Tahun harus bilangan bulat 2000–2100.");
+      return;
+    }
+    setYearError("");
+
+    if (form.is_featured && countFeatured(editItem?.id) >= MAX_FEATURED) {
+      setFormError(`Maksimal ${MAX_FEATURED} prestasi unggulan. Lepas unggulan lain terlebih dahulu.`);
+      return;
+    }
+
     setFormSaving(true);
     setFormError("");
 
@@ -199,16 +397,32 @@ export default function AdminAchievementsPage() {
       imageUrl = uploaded.url;
     }
 
+    const payload = {
+      title: form.title,
+      description: form.description,
+      category: form.category,
+      year: yearNum,
+      image_url: imageUrl,
+      rank_label: form.rank_label.trim() || null,
+      level: form.level.trim() || null,
+      participants: form.participants.trim() || null,
+      organizer: form.organizer.trim() || null,
+      image_alt: form.image_alt.trim() || null,
+      is_featured: form.is_featured,
+    };
+
     if (editItem) {
-      const { error } = await updateAchievement(editItem.id, { ...form, image_url: imageUrl });
+      const { error } = await updateAchievement(editItem.id, payload);
       if (error) { setFormError(error); setFormSaving(false); toast(error, "error"); return; }
     } else {
-      const { error } = await createAchievement({ ...form, image_url: imageUrl });
+      const { error } = await createAchievement(payload);
       if (error) { setFormError(error); setFormSaving(false); toast(error, "error"); return; }
     }
 
+    // Tahap 5 — halaman prestasi + beranda
+    revalidateAchievements().catch(() => {});
     toast(editItem ? "Prestasi berhasil diperbarui" : "Prestasi berhasil ditambahkan", "success");
-    setFormOpen(false);
+    closeForm();
     setFormSaving(false);
     fetchAchievements();
   }
@@ -221,6 +435,7 @@ export default function AdminAchievementsPage() {
       toast("Prestasi berhasil dihapus", "success");
       setDeleteItem(null);
       setSelectedIds((s) => { const n = new Set(s); n.delete(deleteItem.id); return n; });
+      revalidateAchievements().catch(() => {});
       fetchAchievements();
     } catch {
       toast("Gagal menghapus prestasi", "error");
@@ -236,6 +451,7 @@ export default function AdminAchievementsPage() {
       toast(`${ids.length} prestasi berhasil dihapus`, "success");
       setSelectedIds(new Set());
       setBulkDelete(false);
+      revalidateAchievements().catch(() => {});
       fetchAchievements();
     } catch {
       toast("Gagal menghapus prestasi", "error");
@@ -272,7 +488,7 @@ export default function AdminAchievementsPage() {
         <StatCard label="Total" value={stats.total} variant="brand" />
         <StatCard label="Tahun Ini" value={stats.thisYear} variant="success" />
         <StatCard label="Kategori" value={stats.categories} variant="purple" />
-        <StatCard label="Semua Tahun" value={stats.otherYears} variant="warning" />
+        <StatCard label="Unggulan" value={stats.featured} variant="warning" />
       </StatCardRow>
 
       {/* Bulk actions */}
@@ -295,15 +511,30 @@ export default function AdminAchievementsPage() {
           {categories.map((cat) => (
             <button key={cat} onClick={() => { setFilter(cat); setPage(1); setSelectedIds(new Set()); }}
               className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${filter === cat ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-              {categoryConfig[cat]?.label || cat}
+              {catMeta(cat).label}
             </button>
           ))}
         </div>
-        <div className="relative">
-          <MagnifyingGlass className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input type="text" placeholder="Cari prestasi..."
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 sm:w-72"
-            value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative">
+            <MagnifyingGlass className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input type="text" placeholder="Cari judul, peraih, penyelenggara, peringkat..."
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 sm:w-72"
+              value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+          </div>
+          {availableYears.length > 0 && (
+            <div className="relative">
+              <select value={yearFilter}
+                onChange={(e) => { setYearFilter(e.target.value); setPage(1); setSelectedIds(new Set()); }}
+                className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-3 pr-9 text-sm text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 sm:w-40">
+                <option value="all">Semua Tahun</option>
+                {availableYears.map((y) => (
+                  <option key={y} value={String(y)}>{y}</option>
+                ))}
+              </select>
+              <CaretDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            </div>
+          )}
         </div>
       </div>
 
@@ -373,14 +604,33 @@ export default function AdminAchievementsPage() {
                           </div>
                         )}
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-slate-800 line-clamp-1">{item.title}</p>
+                          <p className="flex items-center gap-1.5 text-sm font-medium text-slate-800">
+                            <span className="line-clamp-1">{item.title}</span>
+                            {item.is_featured && (
+                              <Star weight="fill" className="h-3.5 w-3.5 shrink-0 text-[#f4d21f]" aria-label="Unggulan" />
+                            )}
+                          </p>
+                          {(item.rank_label || item.level) && (
+                            <div className="mt-1 flex flex-wrap items-center gap-1">
+                              {item.rank_label && (
+                                <span className="rounded-md bg-[#f4d21f]/20 px-1.5 py-0.5 text-[10px] font-bold text-[#7a6600]">
+                                  {item.rank_label}
+                                </span>
+                              )}
+                              {item.level && (
+                                <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
+                                  {levelLabel(item.level)}
+                                </span>
+                              )}
+                            </div>
+                          )}
                           {item.description && <p className="mt-0.5 text-xs text-slate-400 line-clamp-1">{item.description}</p>}
                         </div>
                       </div>
                     </td>
                     <td className="hidden px-4 py-3.5 sm:table-cell">
-                      <span className={`inline-block rounded-md px-2 py-0.5 text-[11px] font-semibold ${categoryConfig[item.category]?.color || "bg-slate-100 text-slate-600"}`}>
-                        {categoryConfig[item.category]?.label || item.category}
+                      <span className={`inline-block rounded-md px-2 py-0.5 text-[11px] font-semibold ${catMeta(item.category).color}`}>
+                        {catMeta(item.category).label}
                       </span>
                     </td>
                     <td className="hidden px-4 py-3.5 text-sm text-slate-500 sm:table-cell">{item.year}</td>
@@ -391,6 +641,9 @@ export default function AdminAchievementsPage() {
                         </button>
                         <button onClick={() => openEdit(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
                           <PencilSimple className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => openDuplicate(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-purple-50 hover:text-purple-600" title="Duplikat">
+                          <Files className="h-4 w-4" />
                         </button>
                         <button onClick={() => setDeleteItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
                           <Trash className="h-4 w-4" />
@@ -438,10 +691,25 @@ export default function AdminAchievementsPage() {
                   <Medal className="h-5 w-5 text-[#f4d21f]" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-slate-800">{viewItem.title}</h2>
-                  <span className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${categoryConfig[viewItem.category]?.color || "bg-slate-100 text-slate-600"}`}>
-                    {categoryConfig[viewItem.category]?.label || viewItem.category}
-                  </span>
+                  <h2 className="flex items-center gap-2 text-lg font-bold text-slate-800">
+                    {viewItem.title}
+                    {viewItem.is_featured && <Star weight="fill" className="h-4 w-4 text-[#f4d21f]" aria-label="Unggulan" />}
+                  </h2>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <span className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${catMeta(viewItem.category).color}`}>
+                      {catMeta(viewItem.category).label}
+                    </span>
+                    {viewItem.rank_label && (
+                      <span className="inline-block rounded-md bg-[#f4d21f]/20 px-2 py-0.5 text-[10px] font-bold text-[#7a6600]">
+                        {viewItem.rank_label}
+                      </span>
+                    )}
+                    {viewItem.level && (
+                      <span className="inline-block rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                        {levelLabel(viewItem.level)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <button onClick={() => setViewItem(null)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
@@ -450,7 +718,7 @@ export default function AdminAchievementsPage() {
             </div>
             {viewItem.image_url && (
               <div className="mb-4 overflow-hidden rounded-xl">
-                <img src={viewItem.image_url} alt={viewItem.title} loading="lazy" className="h-40 w-full object-cover" />
+                <img src={viewItem.image_url} alt={viewItem.image_alt || viewItem.title} loading="lazy" className="h-40 w-full object-cover" />
               </div>
             )}
             <div className="space-y-3 text-sm">
@@ -458,12 +726,38 @@ export default function AdminAchievementsPage() {
                 <span className="text-slate-500">Tahun</span>
                 <span className="font-medium text-slate-800">{viewItem.year}</span>
               </div>
+              {viewItem.participants && (
+                <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
+                  <span className="shrink-0 text-slate-500">Peraih</span>
+                  <span className="text-right font-medium text-slate-800">{viewItem.participants}</span>
+                </div>
+              )}
+              {viewItem.organizer && (
+                <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
+                  <span className="shrink-0 text-slate-500">Penyelenggara</span>
+                  <span className="text-right font-medium text-slate-800">{viewItem.organizer}</span>
+                </div>
+              )}
+              <div className="flex justify-between border-b border-slate-100 pb-2">
+                <span className="text-slate-500">Unggulan</span>
+                <span className="font-medium text-slate-800">{viewItem.is_featured ? "Ya" : "Tidak"}</span>
+              </div>
+              {viewItem.image_alt && (
+                <div className="border-b border-slate-100 pb-2">
+                  <span className="text-slate-500">Teks alternatif gambar</span>
+                  <p className="mt-1 text-slate-700">{viewItem.image_alt}</p>
+                </div>
+              )}
               <div className="border-b border-slate-100 pb-2">
                 <span className="text-slate-500">Deskripsi</span>
                 <p className="mt-1 text-slate-700">{viewItem.description || "Tidak ada deskripsi"}</p>
               </div>
             </div>
-            <div className="mt-4 flex gap-3">
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button onClick={() => openDuplicate(viewItem)}
+                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                <Files className="h-4 w-4" /> Duplikat
+              </button>
               <button onClick={() => { setViewItem(null); openEdit(viewItem); }}
                 className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                 <PencilSimple className="h-4 w-4" /> Edit
@@ -514,12 +808,12 @@ export default function AdminAchievementsPage() {
       {/* ── CREATE/EDIT FORM PANEL ──────────────────── */}
       <SlideOver
         open={formOpen}
-        onClose={() => { if (!formSaving) setFormOpen(false); }}
+        onClose={requestClose}
         title={editItem ? "Edit Prestasi" : "Tambah Prestasi Baru"}
         description={editItem ? "Perbarui informasi prestasi" : "Isi form untuk menambahkan prestasi"}
         footer={
           <div className="flex w-full items-center justify-between">
-            <button onClick={() => setFormOpen(false)} disabled={formSaving}
+            <button onClick={requestClose} disabled={formSaving}
               className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
               Batal
             </button>
@@ -544,6 +838,7 @@ export default function AdminAchievementsPage() {
         )}
 
         <div className="space-y-5">
+          {/* Judul */}
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Judul <span className="text-red-500">*</span></label>
             <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -551,13 +846,49 @@ export default function AdminAchievementsPage() {
               placeholder="Judul prestasi" />
           </div>
 
+          {/* Peringkat + Tingkat */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Peringkat</label>
+              <input type="text" list="rank-suggestions" maxLength={60}
+                value={form.rank_label}
+                onChange={(e) => setForm({ ...form, rank_label: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                placeholder="mis. Juara 1, Medali Emas" />
+              <datalist id="rank-suggestions">
+                {rankSuggestions.map((r) => <option key={r} value={r} />)}
+              </datalist>
+              <p className="mt-1 text-xs text-slate-400">Opsional — peringkat atau medali.</p>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tingkat</label>
+              <div className="flex flex-wrap gap-2">
+                {ACHIEVEMENT_LEVELS.map((lvl) => (
+                  <button key={lvl} type="button"
+                    onClick={() => setForm({ ...form, level: form.level === lvl ? "" : lvl })}
+                    aria-pressed={form.level === lvl}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
+                      form.level === lvl
+                        ? "border-[#f4d21f] bg-[#f4d21f]/20 text-[#7a6600] shadow-sm"
+                        : "border-slate-200 text-slate-500 hover:border-slate-300"
+                    }`}>
+                    {lvl}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-slate-400">Klik sekali lagi untuk mengosongkan.</p>
+            </div>
+          </div>
+
+          {/* Kategori */}
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Kategori</label>
             <div className="flex flex-wrap gap-2">
-              {Object.entries(categoryConfig).map(([key, cfg]) => (
-                <button key={key} type="button" onClick={() => setForm({ ...form, category: key })}
+              {ACHIEVEMENT_CATEGORIES.map((cfg) => (
+                <button key={cfg.key} type="button" onClick={() => setForm({ ...form, category: cfg.key })}
+                  aria-pressed={form.category === cfg.key}
                   className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
-                    form.category === key
+                    form.category === cfg.key
                       ? `${cfg.color} border-current shadow-sm`
                       : "border-slate-200 text-slate-500 hover:border-slate-300"
                   }`}>
@@ -567,41 +898,131 @@ export default function AdminAchievementsPage() {
             </div>
           </div>
 
+          {/* Tahun */}
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tahun</label>
-            <input type="number" value={form.year} onChange={(e) => setForm({ ...form, year: parseInt(e.target.value) || new Date().getFullYear() })}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
-              min={2000} max={2100} />
+            <input type="number" inputMode="numeric" value={form.year} min={2000} max={2100}
+              onChange={(e) => { setForm({ ...form, year: e.target.value }); if (yearError) setYearError(""); }}
+              className={`w-full rounded-xl border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 ${
+                yearError
+                  ? "border-red-300 text-red-700 focus:border-red-400 focus:ring-red-100"
+                  : "border-slate-200 focus:border-[#1767b1] focus:ring-[#1767b1]/20"
+              }`}
+              placeholder="mis. 2026" />
+            {yearError && <p className="mt-1 text-xs font-medium text-red-600">{yearError}</p>}
           </div>
 
+          {/* Peraih */}
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Peraih</label>
+            <input type="text" value={form.participants}
+              onChange={(e) => setForm({ ...form, participants: e.target.value })}
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+              placeholder="mis. Ahmad Fauzi, Budi Santoso" />
+            <p className="mt-1 text-xs text-slate-400">Pisahkan dengan koma bila lebih dari satu.</p>
+          </div>
+
+          {/* Penyelenggara / Lomba */}
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Penyelenggara / Lomba</label>
+            <input type="text" value={form.organizer}
+              onChange={(e) => setForm({ ...form, organizer: e.target.value })}
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+              placeholder="mis. FLS2N tingkat kabupaten" />
+          </div>
+
+          {/* Gambar — pola dropzone form berita (klik, seret-lepas, Ctrl+V) */}
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Gambar</label>
             {imagePreview ? (
               <div className="relative mb-3 overflow-hidden rounded-xl border border-slate-200">
-                <img src={imagePreview} alt="Preview" className="h-40 w-full object-cover" />
-                <button onClick={() => { setImageFile(null); setImagePreview(""); setForm({ ...form, image_url: "" }); }}
+                <img src={imagePreview} alt={form.image_alt || "Pratinjau gambar"} className="h-40 w-full object-cover" />
+                <button onClick={() => { revokePreview(); setImageFile(null); setImagePreview(""); setForm({ ...form, image_url: "" }); }}
                   className="absolute right-2 top-2 rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
                   <X className="h-4 w-4" />
                 </button>
               </div>
             ) : (
-              <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50">
-                <ImageIcon className="h-8 w-8 text-slate-300" />
-                <span className="text-xs text-slate-400">Klik untuk upload gambar</span>
-                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+              <label
+                htmlFor="achievement-image-input"
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add("border-[#1767b1]", "bg-[#1767b1]/5"); }}
+                onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("border-[#1767b1]", "bg-[#1767b1]/5"); }}
+                onDrop={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.currentTarget.classList.remove("border-[#1767b1]", "bg-[#1767b1]/5");
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) await applyImageFile(file);
+                }}
+                className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50"
+              >
+                {imageUploading ? (
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#1767b1] border-t-transparent" />
+                ) : (
+                  <ImageIcon className="h-8 w-8 text-slate-300" />
+                )}
+                <span className="text-xs text-slate-400">
+                  {imageUploading ? "Mengkompresi gambar..." : "Klik, seret & lepas, atau Ctrl+V untuk paste gambar"}
+                </span>
+                <input id="achievement-image-input" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
               </label>
             )}
+            <p className="mt-2 text-xs text-slate-400">Disarankan rasio 16:9 (mis. 1280x720) agar tidak terpotong.</p>
           </div>
 
+          {/* Teks alternatif gambar */}
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Teks alternatif gambar</label>
+            <input type="text" maxLength={125} value={form.image_alt}
+              onChange={(e) => setForm({ ...form, image_alt: e.target.value })}
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+              placeholder="Deskripsi singkat isi gambar" />
+            <div className="mt-1 flex items-center justify-between gap-3">
+              <p className="text-xs text-slate-400">Untuk poster yang berisi teks, tuliskan isi pentingnya di sini.</p>
+              <span className={`text-[11px] ${form.image_alt.length >= 125 ? "text-amber-600" : "text-slate-400"}`}>
+                {form.image_alt.length}/125
+              </span>
+            </div>
+          </div>
+
+          {/* Deskripsi */}
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Deskripsi</label>
             <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
               rows={4}
               className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-none"
               placeholder="Deskripsi prestasi (opsional)" />
+            <p className="mt-1 text-right text-[11px] text-slate-400">{form.description.length} karakter</p>
+          </div>
+
+          {/* Unggulan */}
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-4">
+            <div>
+              <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+                <Star weight="fill" className="h-4 w-4 text-[#f4d21f]" /> Tampilkan sebagai unggulan
+              </p>
+              <p className="text-xs text-slate-400">
+                Tampil di bagian Unggulan paling atas halaman prestasi (maks {MAX_FEATURED} aktif).
+              </p>
+            </div>
+            <button type="button" onClick={toggleFeatured} aria-pressed={form.is_featured}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${form.is_featured ? "bg-[#1767b1]" : "bg-slate-300"}`}>
+              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_featured ? "left-[22px]" : "left-0.5"}`} />
+            </button>
           </div>
         </div>
       </SlideOver>
+
+      {/* ── KONFIRMASI TUTUP TANPA SIMPAN ───────────── */}
+      <ConfirmModal
+        open={confirmClose}
+        onClose={() => setConfirmClose(false)}
+        onConfirm={() => { setConfirmClose(false); closeForm(); }}
+        title="Perubahan belum disimpan?"
+        description="Tutup tanpa menyimpan?"
+        confirmLabel="Tutup Tanpa Simpan"
+        variant="warning"
+      />
     </div>
   );
 }

@@ -11,6 +11,7 @@ const ALLOWED_PATHS = new Set([
   "/admission/register",
   "/portal",
   "/articles",
+  "/achievements",
 ]);
 function isAllowedPath(p: unknown): boolean {
   if (typeof p !== "string") return false;

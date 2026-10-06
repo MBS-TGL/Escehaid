@@ -175,6 +175,13 @@ export interface Achievement {
   image_url: string;
   sort_order: number;
   created_at: string;
+  /** Kolom Tahap 1 — opsional (semua nullable, data lama tetap aman). */
+  rank_label?: string | null;
+  level?: string | null;
+  participants?: string | null;
+  organizer?: string | null;
+  is_featured?: boolean;
+  image_alt?: string | null;
 }
 
 export interface ContactMessage {
