@@ -19,6 +19,10 @@ export default function WhatsAppButton() {
     <div className="fixed bottom-24 right-4 z-50 flex flex-col items-end gap-3 md:bottom-6 md:right-6">
       {/* Chat Panel */}
       <div
+        id="wa-chat-panel"
+        role="dialog"
+        aria-label="Chat WhatsApp"
+        aria-hidden={!isOpen}
         className="w-[300px] rounded-2xl bg-white p-5 shadow-2xl border border-[#dce3ed]"
         style={{
           opacity: isOpen ? 1 : 0,
@@ -37,7 +41,7 @@ export default function WhatsAppButton() {
               <p className="text-xs text-green-600">Online</p>
             </div>
           </div>
-          <button onClick={() => setIsOpen(false)} className="text-slate-400 hover:text-slate-600">
+          <button onClick={() => setIsOpen(false)} aria-label="Tutup chat" className="text-slate-400 hover:text-slate-600">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -50,6 +54,7 @@ export default function WhatsAppButton() {
           href={`https://wa.me/${phone}?text=${encodeURIComponent(message)}`}
           target="_blank"
           rel="noopener noreferrer"
+          tabIndex={isOpen ? 0 : -1}
           className="block w-full rounded-xl bg-[#25D366] py-2.5 text-center text-sm font-semibold text-white hover:bg-[#20BD5A] transition-colors"
         >
           Buka WhatsApp
@@ -74,6 +79,9 @@ export default function WhatsAppButton() {
         {/* Button */}
         <button
           onClick={() => { setIsOpen(!isOpen); setShowBubble(false); }}
+          aria-label={isOpen ? "Tutup chat WhatsApp" : "Buka chat WhatsApp"}
+          aria-expanded={isOpen}
+          aria-controls="wa-chat-panel"
           className="relative flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg shadow-[#25D366]/30 hover:shadow-xl hover:shadow-[#25D366]/40 transition-all hover:scale-110 active:scale-95"
         >
           <div

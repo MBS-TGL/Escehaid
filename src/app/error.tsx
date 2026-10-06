@@ -22,7 +22,12 @@ export default function Error({
         </div>
         <h2 className="mt-6 text-xl font-bold text-slate-800">Terjadi Kesalahan</h2>
         <p className="mt-2 text-sm text-slate-500">
-          {error.message || "Gagal memuat halaman. Silakan coba lagi."}
+          {/* Pesan error mentah sengaja tidak ditampilkan — bisa memuat detail internal.
+              Detail lengkap tetap dicatat ke console (lihat useEffect di atas). */}
+          Gagal memuat halaman. Silakan coba lagi.
+          {error.digest && (
+            <span className="mt-1 block text-xs text-slate-400">Kode kesalahan: {error.digest}</span>
+          )}
         </p>
         <div className="mt-6 flex items-center justify-center gap-3">
           <button

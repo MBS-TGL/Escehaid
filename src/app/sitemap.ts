@@ -3,6 +3,9 @@ import { getNewsListForSitemap, getArticleListForSitemap, getActivityListAll } f
 
 const BASE_URL = "https://www.smpmuh4tanggul.sch.id";
 
+/** Sitemap diregenerasi tiap jam agar konten baru cepat terindeks. */
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [news, articles, activities] = await Promise.all([
     getNewsListForSitemap(),
@@ -12,70 +15,61 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const now = new Date().toISOString();
 
+  // Halaman statis: tanpa lastModified — tanggal build membuat Google mengira
+  // semua halaman berubah tiap deploy. lastModified hanya untuk konten dinamis.
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: BASE_URL,
-      lastModified: now,
       changeFrequency: "weekly",
       priority: 1,
     },
     {
       url: `${BASE_URL}/profile`,
-      lastModified: now,
       changeFrequency: "monthly",
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/achievements`,
-      lastModified: now,
       changeFrequency: "monthly",
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/gallery`,
-      lastModified: now,
       changeFrequency: "monthly",
       priority: 0.7,
     },
     {
       url: `${BASE_URL}/news`,
-      lastModified: now,
       changeFrequency: "daily",
       priority: 0.9,
     },
     {
       url: `${BASE_URL}/articles`,
-      lastModified: now,
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/activities`,
-      lastModified: now,
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/admission`,
-      lastModified: now,
       changeFrequency: "monthly",
       priority: 0.9,
     },
     {
       url: `${BASE_URL}/admission/register`,
-      lastModified: now,
       changeFrequency: "monthly",
       priority: 0.9,
     },
     {
       url: `${BASE_URL}/portal`,
-      lastModified: now,
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/contact`,
-      lastModified: now,
       changeFrequency: "monthly",
       priority: 0.7,
     },

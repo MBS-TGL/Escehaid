@@ -61,6 +61,7 @@ export default function Footer({ profile }: { profile: SchoolProfile | null }) {
                 ["/admission", "SPMB Online"],
                 ["/news", "Berita"],
                 ["/articles", "Artikel"],
+                ["/activities", "Kegiatan"],
                 ["/achievements", "Prestasi"],
                 ["/gallery", "Galeri"],
                 ["/contact", "Kontak"],

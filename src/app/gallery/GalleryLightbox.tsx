@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Gallery } from "@/lib/supabase";
 import Image from "next/image";
@@ -24,6 +24,20 @@ export default function GalleryLightbox({
   function close() {
     setSelected(null);
   }
+
+  // Esc menutup + kunci scroll body saat lightbox terbuka
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelected(null);
+    };
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [selected]);
 
   return (
     <>
@@ -102,11 +116,15 @@ export default function GalleryLightbox({
 
       {selected && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Pratinjau: ${selected.title}`}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
           onClick={close}
         >
           <button
             onClick={close}
+            aria-label="Tutup pratinjau"
             className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 z-10"
           >
             <X className="h-6 w-6" />

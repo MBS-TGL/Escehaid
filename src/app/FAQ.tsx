@@ -18,7 +18,10 @@ function FAQItem({ q, a, index }: { q: string; a: string; index: number }) {
       }`}
     >
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-controls={`faq-panel-${index}`}
         className="flex w-full items-center gap-4 px-5 py-4 text-left"
       >
         <span
@@ -48,6 +51,8 @@ function FAQItem({ q, a, index }: { q: string; a: string; index: number }) {
       </button>
 
       <div
+        id={`faq-panel-${index}`}
+        aria-hidden={!isOpen}
         className="overflow-hidden"
         style={{
           display: "grid",

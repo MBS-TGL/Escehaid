@@ -16,6 +16,7 @@ import {
   ChatCircle,
   CaretRight,
   SquaresFour,
+  CalendarBlank,
 } from "@/components/Icons";
 
 /**
@@ -33,6 +34,7 @@ const sheetLinks = [
   { href: "/portal", label: "Portal", icon: SquaresFour },
   { href: "/profile", label: "Profil", icon: User },
   { href: "/achievements", label: "Prestasi", icon: Trophy },
+  { href: "/activities", label: "Kegiatan", icon: CalendarBlank },
   { href: "/articles", label: "Artikel", icon: Note },
   { href: "/contact", label: "Kontak", icon: ChatCircle },
 ];

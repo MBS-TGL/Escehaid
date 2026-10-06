@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { CheckCircle, ArrowLeft, ArrowRight, FileText } from "@/components/Icons";
 import { supabase } from "@/lib/supabase";
-import { submitRegistration } from "@/lib/queries";
+import type { SpmbFormField } from "@/lib/supabase";
+import { submitRegistration, spmbAnswerKey } from "@/lib/queries";
 import { Input, InputRupiah, Select, DatePicker, FileUpload } from "@/components/ui";
-
-const steps = ["Program", "Data Siswa", "Data Orang Tua", "Upload Berkas", "Selesai"];
 
 const KOTA_KABUPATEN = [
   "Jember","Surabaya","Malang","Sidoarjo","Gresik","Banyuwangi","Probolinggo","Lumajang",
@@ -116,6 +115,10 @@ const initialDocs: Documents = {
 
 const STORAGE_KEY = "spmb_form_data";
 const STORAGE_STEP_KEY = "spmb_form_step";
+const STORAGE_CUSTOM_KEY = "spmb_form_custom";
+
+/** Pemisah pilihan checkbox — disimpan sebagai teks agar aman di jsonb & ekspor CSV. */
+const CHECK_SEP = " | ";
 
 const DEBUG_DATA: FormData = {
   program: "SMP Boarding",
@@ -153,16 +156,36 @@ const DEBUG_DATA: FormData = {
   mother_income: "0",
 };
 
-export default function SPMBForm() {
+export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) {
   const [step, setStep] = useState(0);
   const [data, setData] = useState<FormData>(initialData);
   const [docs, setDocs] = useState<Documents>(initialDocs);
+  /** Jawaban pertanyaan tambahan — kunci spmbAnswerKey(field.id), nilai teks. */
+  const [custom, setCustom] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const formRef = useRef<HTMLDivElement>(null);
-  const loadedRef = useRef(false);
+  /**
+   * true setelah draft dibaca dari localStorage. Gerbang save effect: tanpa ini,
+   * save effect berjalan duluan dengan nilai awal saat mount (StrictMode di dev
+   * menjalankan effect dua kali) sehingga draft tertimpa & restore gagal tiap reload.
+   */
+  const [draftReady, setDraftReady] = useState(false);
+
+  // Langkah dinamis: "Pertanyaan Tambahan" hanya muncul bila admin membuat
+  // pertanyaan aktif — jumlah langkah bisa berubah antar kunjungan.
+  const customFields = useMemo(() => fields.filter((f) => f.active), [fields]);
+  const hasCustom = customFields.length > 0;
+  const steps = hasCustom
+    ? ["Program", "Data Siswa", "Data Orang Tua", "Pertanyaan Tambahan", "Upload Berkas", "Selesai"]
+    : ["Program", "Data Siswa", "Data Orang Tua", "Upload Berkas", "Selesai"];
+  const customIdx = hasCustom ? 3 : -1;
+  const uploadIdx = hasCustom ? 4 : 3;
+  const doneIdx = steps.length - 1;
+  const stepsRef = useRef(steps);
+  stepsRef.current = steps;
 
   // Enter → next field
   function handleFormKeyDown(e: React.KeyboardEvent) {
@@ -186,27 +209,37 @@ export default function SPMBForm() {
     try {
       const savedData = localStorage.getItem(STORAGE_KEY);
       const savedStep = localStorage.getItem(STORAGE_STEP_KEY);
+      const savedCustom = localStorage.getItem(STORAGE_CUSTOM_KEY);
       if (savedData) {
         setData(JSON.parse(savedData));
-        setStep(savedStep ? parseInt(savedStep, 10) : 0);
+        const parsed = savedStep ? parseInt(savedStep, 10) : 0;
+        // Clamp ke jumlah langkah terkini — skema admin bisa mengubah jumlah langkah.
+        setStep(Number.isNaN(parsed) ? 0 : Math.max(0, Math.min(parsed, stepsRef.current.length - 1)));
+      }
+      if (savedCustom) {
+        const parsedCustom = JSON.parse(savedCustom);
+        if (parsedCustom && typeof parsedCustom === "object") setCustom(parsedCustom);
       }
     } catch {}
-    loadedRef.current = true;
+    setDraftReady(true);
   }, []);
 
-  // Save to localStorage on every change (skip initial mount to avoid overwrite)
+  // Save to localStorage on every change — hanya SETELAH draft selesai dibaca
+  // (draftReady), supaya nilai awal mount tidak pernah menimpa draft tersimpan.
   useEffect(() => {
-    if (!loadedRef.current) return;
+    if (!draftReady) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       localStorage.setItem(STORAGE_STEP_KEY, step.toString());
+      localStorage.setItem(STORAGE_CUSTOM_KEY, JSON.stringify(custom));
     } catch {}
-  }, [data, step]);
+  }, [draftReady, data, step, custom]);
 
   // Clear localStorage on successful submit
   function clearStorage() {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(STORAGE_STEP_KEY);
+    localStorage.removeItem(STORAGE_CUSTOM_KEY);
   }
 
   const update = (field: keyof FormData, value: string) => {
@@ -218,6 +251,36 @@ export default function SPMBForm() {
     setDocs((prev) => ({ ...prev, [field]: file }));
     if (errors[`doc_${field}`]) setErrors((prev) => ({ ...prev, [`doc_${field}`]: "" }));
   };
+
+  const updateCustom = (key: string, value: string) => {
+    setCustom((prev) => ({ ...prev, [key]: value }));
+    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: "" }));
+  };
+
+  /** Validasi pertanyaan tambahan: wajib isi + pola per tipe jawaban. */
+  function validateCustomFields(): Record<string, string> {
+    const e: Record<string, string> = {};
+    for (const f of customFields) {
+      const key = spmbAnswerKey(f.id);
+      const val = (custom[key] || "").trim();
+      if (!val) {
+        if (f.required) e[key] = `${f.label} wajib diisi`;
+        continue;
+      }
+      if (f.type === "number" && !/^-?\d{1,10}(\.\d{1,4})?$/.test(val)) {
+        e[key] = `${f.label} harus berupa angka`;
+      } else if (f.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+        e[key] = `${f.label} tidak valid`;
+      } else if (f.type === "tel" && !/^[\d\s+()-]{6,20}$/.test(val)) {
+        e[key] = `${f.label} tidak valid (6–20 karakter angka)`;
+      } else if (f.type === "date" && Number.isNaN(Date.parse(val))) {
+        e[key] = `${f.label} tidak valid`;
+      } else if ((f.type === "select" || f.type === "radio") && f.options?.length && !f.options.includes(val)) {
+        e[key] = `${f.label} tidak valid`;
+      }
+    }
+    return e;
+  }
 
   // DEBUG: auto-fill semua field
   function validateStep(s: number): boolean {
@@ -266,7 +329,12 @@ export default function SPMBForm() {
       }
     }
 
-    if (s === 3) {
+    // Pertanyaan tambahan buatan admin — hanya bila langkahnya ada.
+    if (customIdx > -1 && s === customIdx) {
+      Object.assign(e, validateCustomFields());
+    }
+
+    if (s === uploadIdx) {
       const requiredDocs: [keyof Documents, string][] = [
         ["kk", "Scan Kartu Keluarga"],
         ["akta", "Scan Akta Kelahiran"],
@@ -329,7 +397,7 @@ export default function SPMBForm() {
       docs.bukti_transfer ? uploadFile(docs.bukti_transfer, `${folder}/transfer.${docs.bukti_transfer.name.split(".").pop()}`) : Promise.resolve(null),
     ]);
 
-    const documents = {
+    const documents: Record<string, string | null> = {
       kk: kkUrl,
       akta: aktaUrl,
       surat_sekolah: suratUrl,
@@ -356,6 +424,11 @@ export default function SPMBForm() {
       mother_job: data.mother_job,
       mother_income: data.mother_income,
     };
+    // Jawaban pertanyaan tambahan (kunci cf_<id>) — hanya nilai non-kosong.
+    for (const f of customFields) {
+      const val = (custom[spmbAnswerKey(f.id)] || "").trim();
+      if (val) documents[spmbAnswerKey(f.id)] = val;
+    }
 
     const registrationPath = data.program.includes("Boarding") ? "reguler" : "prestasi";
 
@@ -381,6 +454,114 @@ export default function SPMBForm() {
     }
     clearStorage();
     setSuccess(true);
+  }
+
+  /** Render satu pertanyaan tambahan sesuai tipenya (gaya konsisten dengan langkah bawaan). */
+  function renderCustomField(f: SpmbFormField) {
+    const key = spmbAnswerKey(f.id);
+    const value = custom[key] || "";
+    const error = errors[key];
+    const help = f.help ? <p className="mt-1 text-xs text-slate-400">{f.help}</p> : null;
+    const err = error ? <p className="mt-1 text-sm text-red-500">{error}</p> : null;
+    const labelReq = (
+      <span className="text-sm font-semibold text-slate-700">
+        {f.label} {f.required && <span className="text-red-500">*</span>}
+      </span>
+    );
+
+    switch (f.type) {
+      case "textarea":
+        return (
+          <div>
+            <label htmlFor={key} className="mb-1.5 block">{labelReq}</label>
+            <textarea
+              id={key}
+              rows={4}
+              value={value}
+              placeholder={f.placeholder || ""}
+              onChange={(e) => updateCustom(key, e.target.value)}
+              aria-invalid={!!error}
+              className={`w-full resize-y rounded-xl border px-4 py-3 text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 ${error ? "border-red-300" : "border-slate-200"}`}
+            />
+            {help}
+            {err}
+          </div>
+        );
+      case "date":
+        return (
+          <div>
+            <DatePicker label={f.label} required={f.required} value={value}
+              onChange={(val) => updateCustom(key, val)} error={error} />
+            {help}
+          </div>
+        );
+      case "select":
+        return (
+          <div>
+            <Select label={f.label} required={f.required} options={f.options || []} value={value}
+              onChange={(val) => updateCustom(key, val)} placeholder={f.placeholder || "Pilih jawaban"} error={error} />
+            {help}
+          </div>
+        );
+      case "radio":
+        return (
+          <div>
+            <p className="mb-1.5">{labelReq}</p>
+            <div className="space-y-2">
+              {(f.options || []).map((opt) => (
+                <label key={opt} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-all ${value === opt ? "border-[#1767b1] bg-[#1767b1]/5" : "border-[#dce3ed] hover:border-[#1767b1]/30"}`}>
+                  <input type="radio" name={key} value={opt} checked={value === opt}
+                    onChange={() => updateCustom(key, opt)} className="accent-[#1767b1]" />
+                  <span className="text-sm font-medium text-[#082b59]">{opt}</span>
+                </label>
+              ))}
+            </div>
+            {help}
+            {err}
+          </div>
+        );
+      case "checkbox": {
+        const selected = value ? value.split(CHECK_SEP) : [];
+        return (
+          <div>
+            <p className="mb-1.5">{labelReq}</p>
+            <div className="space-y-2">
+              {(f.options || []).map((opt) => {
+                const checked = selected.includes(opt);
+                return (
+                  <label key={opt} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-all ${checked ? "border-[#1767b1] bg-[#1767b1]/5" : "border-[#dce3ed] hover:border-[#1767b1]/30"}`}>
+                    <input type="checkbox" checked={checked}
+                      onChange={() => {
+                        const next = checked ? selected.filter((s) => s !== opt) : [...selected, opt];
+                        updateCustom(key, next.join(CHECK_SEP));
+                      }}
+                      className="h-4 w-4 rounded border-slate-300 accent-[#1767b1]" />
+                    <span className="text-sm font-medium text-[#082b59]">{opt}</span>
+                  </label>
+                );
+              })}
+            </div>
+            {help}
+            {err}
+          </div>
+        );
+      }
+      default:
+        return (
+          <div>
+            <Input
+              label={f.label}
+              required={f.required}
+              type={f.type === "number" ? "number" : f.type === "email" ? "email" : f.type === "tel" ? "tel" : "text"}
+              placeholder={f.placeholder || ""}
+              value={value}
+              onChange={(e) => updateCustom(key, e.target.value)}
+              error={error}
+            />
+            {help}
+          </div>
+        );
+    }
   }
 
   return (
@@ -531,8 +712,23 @@ export default function SPMBForm() {
             </div>
           )}
 
-          {/* Step 3: Upload Berkas */}
-          {step === 3 && (
+          {/* Step: Pertanyaan Tambahan (hanya bila ada pertanyaan buatan admin) */}
+          {customIdx > -1 && step === customIdx && (
+            <div className="step-enter space-y-5">
+              <div>
+                <h3 className="text-lg font-bold text-[#082b59]">Pertanyaan Tambahan</h3>
+                <p className="mt-1 text-sm text-slate-500">Silakan isi pertanyaan berikut sesuai kondisi sebenarnya.</p>
+              </div>
+              {customFields.map((f) => (
+                <div key={f.id} data-field={spmbAnswerKey(f.id)} className="rounded-xl border border-[#dce3ed] bg-[#f4f7fb]/60 p-4">
+                  {renderCustomField(f)}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Step: Upload Berkas */}
+          {step === uploadIdx && (
             <div className="step-enter space-y-5">
               <h3 className="text-lg font-bold text-[#082b59]">Upload Berkas Persyaratan</h3>
               <p className="text-sm text-slate-500">Format: PDF, JPG, PNG, WebP. Maksimal 10 MB per file.</p>
@@ -589,8 +785,8 @@ export default function SPMBForm() {
             </div>
           )}
 
-          {/* Step 4: Konfirmasi */}
-          {step === 4 && (
+          {/* Step terakhir: Konfirmasi */}
+          {step === doneIdx && (
             <div className="step-enter space-y-5">
               <div>
                 <h3 className="text-lg font-bold text-[#082b59]">Konfirmasi Data</h3>
@@ -601,7 +797,7 @@ export default function SPMBForm() {
               <div className="flex items-center gap-3 rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-3">
                 <div className="flex items-center gap-1.5 text-xs text-slate-500">
                   <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                  <span>4 Step Selesai</span>
+                  <span>{doneIdx} Step Selesai</span>
                 </div>
                 <div className="h-4 w-px bg-slate-300" />
                 <div className="flex items-center gap-1.5 text-xs text-slate-500">
@@ -715,10 +911,32 @@ export default function SPMBForm() {
                 </div>
               </div>
 
+              {/* Pertanyaan Tambahan (ringkasan) */}
+              {hasCustom && (
+                <div className="overflow-hidden rounded-xl border border-[#dce3ed] bg-white">
+                  <div className="flex items-center gap-2.5 bg-[#082b59] px-4 py-2.5">
+                    <div className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/20 text-[11px] font-bold text-white">4</div>
+                    <h4 className="text-sm font-bold text-white">Pertanyaan Tambahan</h4>
+                  </div>
+                  <div className="p-4">
+                    <table className="w-full text-sm">
+                      <tbody className="divide-y divide-[#f0f3f8]">
+                        {customFields.map((f) => (
+                          <tr key={f.id}>
+                            <td className="w-56 py-1.5 align-top text-slate-400">{f.label}</td>
+                            <td className="py-1.5 font-medium text-[#082b59]">{custom[spmbAnswerKey(f.id)] || "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               {/* Berkas */}
               <div className="overflow-hidden rounded-xl border border-[#dce3ed] bg-white">
                 <div className="flex items-center gap-2.5 bg-[#082b59] px-4 py-2.5">
-                  <div className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/20 text-[11px] font-bold text-white">4</div>
+                  <div className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/20 text-[11px] font-bold text-white">{hasCustom ? 5 : 4}</div>
                   <h4 className="text-sm font-bold text-white">Berkas ({Object.values(docs).filter(Boolean).length}/5)</h4>
                 </div>
                 <div className="p-4">
@@ -768,7 +986,7 @@ export default function SPMBForm() {
             {errors.submit && (
               <p className="w-full text-center text-sm font-medium text-red-600">{errors.submit}</p>
             )}
-            {step < 4 ? (
+            {step < doneIdx ? (
               <button onClick={handleNext} className="flex items-center gap-2 rounded-xl bg-[#082b59] px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-[#1767b1]">
                 Selanjutnya <ArrowRight className="h-4 w-4" />
               </button>

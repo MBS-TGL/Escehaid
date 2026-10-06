@@ -16,11 +16,16 @@ import {
   getSchoolProfile,
   setRegistrationMode,
   setSpmbDocuments,
+  setSpmbFormSchema,
+  normalizeSpmbFormSchema,
+  spmbAnswerKey,
+  spmbFieldNeedsOptions,
+  SPMB_FIELD_TYPES,
   GOOGLE_FORM_URL,
   revalidatePaths,
 } from "@/lib/queries";
 import { StatCard, StatCardRow, SlideOver } from "@/components/ui";
-import type { SpmbRegistration, SpmbWave } from "@/lib/supabase";
+import type { SpmbRegistration, SpmbWave, SpmbFormField, SpmbFieldType } from "@/lib/supabase";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -93,6 +98,25 @@ type WaveFormState = {
   sort_order: number;
 };
 
+/** Draft form tambah/edit pertanyaan custom (builder alа Google Form). */
+type FieldDraft = {
+  label: string;
+  type: SpmbFieldType;
+  required: boolean;
+  active: boolean;
+  placeholder: string;
+  help: string;
+  /** Daftar opsi untuk select/radio/checkbox — satu opsi per baris. */
+  optionsText: string;
+};
+
+/** Label tipe pertanyaan custom untuk badge daftar. */
+const fieldTypeLabel = (t: SpmbFieldType): string =>
+  SPMB_FIELD_TYPES.find((x) => x.value === t)?.label || t;
+
+/** Batas jumlah pertanyaan custom (sinkron dengan normalizeSpmbFormSchema). */
+const FIELD_MAX = 50;
+
 const waveStatusConfig: Record<string, { label: string; cls: string }> = {
   upcoming: { label: "Akan Datang", cls: "border-blue-200 bg-blue-50 text-blue-700" },
   open: { label: "Dibuka", cls: "border-emerald-200 bg-emerald-50 text-emerald-700" },
@@ -121,7 +145,7 @@ export default function AdminSPMBPage() {
 
   // Modals
   const [viewItem, setViewItem] = useState<SpmbRegistration | null>(null);
-  const [viewTab, setViewTab] = useState<"siswa" | "kontak" | "ayah" | "ibu" | "berkas">("siswa");
+  const [viewTab, setViewTab] = useState<"siswa" | "kontak" | "ayah" | "ibu" | "berkas" | "tambahan">("siswa");
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [deleteItem, setDeleteItem] = useState<SpmbRegistration | null>(null);
   const [bulkDelete, setBulkDelete] = useState(false);
@@ -164,6 +188,14 @@ export default function AdminSPMBPage() {
   const [waveSaving, setWaveSaving] = useState(false);
   const [deleteWaveItem, setDeleteWaveItem] = useState<SpmbWave | null>(null);
   const [waveDeleting, setWaveDeleting] = useState(false);
+
+  // Builder pertanyaan tambahan form pendaftaran (ala Google Form)
+  const [formFields, setFormFields] = useState<SpmbFormField[]>([]);
+  const [fieldForm, setFieldForm] = useState<FieldDraft | null>(null);
+  const [fieldEditingId, setFieldEditingId] = useState<string | null>(null);
+  const [fieldFormError, setFieldFormError] = useState<string | null>(null);
+  const [fieldSaving, setFieldSaving] = useState(false);
+  const [deleteFieldItem, setDeleteFieldItem] = useState<SpmbFormField | null>(null);
 
   const fetchData = useCallback(async () => {
     const registrations = await getRegistrationList();
@@ -209,6 +241,7 @@ export default function AdminSPMBPage() {
       setDocPhoneSaved(phoneVal);
       setDocHighlight(highlightVal);
       setDocHighlightSaved(highlightVal);
+      setFormFields(normalizeSpmbFormSchema(p?.spmb_form_schema));
     });
     return () => { alive = false; };
   }, []);
@@ -326,6 +359,175 @@ export default function AdminSPMBPage() {
     revalidatePaths(["/"], "layout").catch(() => { });
   };
 
+  // ── Builder pertanyaan tambahan form pendaftaran ────────
+
+  /** Simpan seluruh daftar pertanyaan ke school_profile, lalu refresh halaman publik. */
+  async function persistFields(next: SpmbFormField[], successMsg: string): Promise<boolean> {
+    if (next.length > FIELD_MAX) {
+      toast(`Maksimal ${FIELD_MAX} pertanyaan`, "error");
+      return false;
+    }
+    const { error } = await setSpmbFormSchema(next);
+    if (error) {
+      toast(error, "error");
+      return false;
+    }
+    setFormFields(next);
+    toast(successMsg, "success");
+    revalidatePaths(["/admission/register"]).catch(() => { });
+    return true;
+  }
+
+  function openFieldForm(field?: SpmbFormField) {
+    setFieldEditingId(field?.id ?? null);
+    setFieldFormError(null);
+    setFieldForm(
+      field
+        ? {
+          label: field.label,
+          type: field.type,
+          required: field.required,
+          active: field.active,
+          placeholder: field.placeholder || "",
+          help: field.help || "",
+          optionsText: (field.options || []).join("\n"),
+        }
+        : { label: "", type: "text", required: false, active: true, placeholder: "", help: "", optionsText: "" }
+    );
+  }
+
+  async function handleSaveField() {
+    if (!fieldForm) return;
+    const label = fieldForm.label.trim();
+    if (!label) {
+      setFieldFormError("Pertanyaan wajib diisi.");
+      return;
+    }
+    const needsOptions = spmbFieldNeedsOptions(fieldForm.type);
+    const options = needsOptions
+      ? fieldForm.optionsText.split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 30)
+      : [];
+    if (needsOptions && options.length === 0) {
+      setFieldFormError("Tipe ini butuh minimal satu opsi — tulis satu opsi per baris.");
+      return;
+    }
+    const draft: SpmbFormField = {
+      id:
+        fieldEditingId ||
+        (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `f_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`),
+      label,
+      type: fieldForm.type,
+      required: fieldForm.required,
+      active: fieldForm.active,
+      placeholder: fieldForm.placeholder.trim(),
+      help: fieldForm.help.trim(),
+      options,
+    };
+    const next = fieldEditingId
+      ? formFields.map((f) => (f.id === fieldEditingId ? draft : f))
+      : [...formFields, draft];
+    setFieldSaving(true);
+    const ok = await persistFields(
+      next,
+      fieldEditingId ? "Pertanyaan berhasil diperbarui" : "Pertanyaan berhasil ditambahkan"
+    );
+    setFieldSaving(false);
+    if (ok) {
+      setFieldForm(null);
+      setFieldEditingId(null);
+    }
+  }
+
+  async function handleMoveField(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    if (target < 0 || target >= formFields.length) return;
+    const next = [...formFields];
+    const tmp = next[index];
+    next[index] = next[target];
+    next[target] = tmp;
+    await persistFields(next, "Urutan pertanyaan diperbarui");
+  }
+
+  async function handleToggleField(field: SpmbFormField) {
+    const next = formFields.map((f) => (f.id === field.id ? { ...f, active: !f.active } : f));
+    await persistFields(
+      next,
+      field.active ? "Pertanyaan disembunyikan dari form pendaftaran" : "Pertanyaan ditampilkan di form pendaftaran"
+    );
+  }
+
+  async function handleDeleteField() {
+    if (!deleteFieldItem) return;
+    const id = deleteFieldItem.id;
+    setDeleteFieldItem(null);
+    await persistFields(formFields.filter((f) => f.id !== id), "Pertanyaan berhasil dihapus");
+  }
+
+  /** Export daftar (mengikuti filter + pencarian aktif) ke CSV — bisa dibuka langsung di Excel. */
+  function handleExportCsv() {
+    const customCols = formFields.map((f) => ({ key: spmbAnswerKey(f.id), label: f.label }));
+    const headers = [
+      "No", "Nama Lengkap", "Email", "Telepon", "Asal Sekolah",
+      "Jalur", "Gelombang", "Status", "Tanggal Daftar",
+      ...customCols.map((c) => c.label),
+    ];
+    const cell = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const lines = [headers.map(cell).join(";")];
+    filtered.forEach((r, i) => {
+      lines.push(
+        [
+          i + 1,
+          r.full_name,
+          r.email,
+          r.phone,
+          r.previous_school,
+          pathLabels[r.registration_path] || r.registration_path,
+          waveLabel(r.wave_id) || "-",
+          statusConfig[r.status]?.label || r.status,
+          new Date(r.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+          ...customCols.map((c) => r.documents?.[c.key] || ""),
+        ].map(cell).join(";")
+      );
+    });
+    // BOM agar Excel membaca UTF-8; pemisah ";" mengikuti lokalitas Excel Indonesia.
+    const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `pendaftar-spmb-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast(`${filtered.length} pendaftar diekspor ke CSV`, "success");
+  }
+
+  /** Buka modal detail dengan tab selalu mulai dari "Siswa". */
+  function openDetail(item: SpmbRegistration) {
+    setViewItem(item);
+    setViewTab("siswa");
+  }
+
+  /** Jawaban pertanyaan tambahan pendaftar — label dari skema, fallback utk field yg dihapus. */
+  const customAnswers = useMemo(() => {
+    if (!viewItem?.documents) return [];
+    const docs = viewItem.documents;
+    const entries: { key: string; label: string; value: string }[] = [];
+    for (const f of formFields) {
+      const k = spmbAnswerKey(f.id);
+      const v = docs[k];
+      if (typeof v === "string" && v.trim()) entries.push({ key: k, label: f.label, value: v });
+    }
+    for (const [k, v] of Object.entries(docs)) {
+      if (k.startsWith("cf_") && typeof v === "string" && v.trim() && !entries.some((e) => e.key === k)) {
+        entries.push({ key: k, label: "Pertanyaan (sudah dihapus dari form)", value: v });
+      }
+    }
+    return entries;
+  }, [viewItem, formFields]);
+
   /** Nama gelombang untuk wave_id; "" bila tidak ada / belum termuat. */
   const waveLabel = (id?: string | null): string => (id ? waves.find((w) => w.id === id)?.name || "" : "");
 
@@ -350,10 +552,20 @@ export default function AdminSPMBPage() {
   // Filtered + Sorted
   const filtered = useMemo(() => {
     let result = data.filter((item) => {
+      const q = search.toLowerCase();
+      // Jawaban pertanyaan tambahan ikut dicari (kunci cf_<id> di documents).
+      const customText = item.documents
+        ? Object.keys(item.documents)
+            .filter((k) => k.startsWith("cf_"))
+            .map((k) => item.documents?.[k] || "")
+            .join(" ")
+            .toLowerCase()
+        : "";
       const matchSearch =
-        item.full_name.toLowerCase().includes(search.toLowerCase()) ||
-        (item.previous_school && item.previous_school.toLowerCase().includes(search.toLowerCase())) ||
-        (item.email && item.email.toLowerCase().includes(search.toLowerCase()));
+        item.full_name.toLowerCase().includes(q) ||
+        (item.previous_school && item.previous_school.toLowerCase().includes(q)) ||
+        (item.email && item.email.toLowerCase().includes(q)) ||
+        customText.includes(q);
       const matchFilter = filter === "all" || item.status === filter;
       return matchSearch && matchFilter;
     });
@@ -583,7 +795,7 @@ export default function AdminSPMBPage() {
     return (
       <div className="p-4 sm:p-6 lg:p-8">
         {/* Header + Tab */}
-        <PageHeader active={mainTab} onSelect={setMainTab} />
+        <PageHeader active={mainTab} onSelect={setMainTab} onExport={handleExportCsv} />
 
         {/* ── MODAL LINK GOOGLE FORM ─────────────────────── */}
         {googleModal && (
@@ -836,6 +1048,96 @@ export default function AdminSPMBPage() {
           </div>
         </div>
 
+        {/* ── BUILDER PERTANYAAN TAMBAHAN (ALA GOOGLE FORM) ── */}
+        <div className="mb-4 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-[#082b59]">Pertanyaan Tambahan Formulir</p>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Susun pertanyaan custom untuk form pendaftaran (seperti Google Form). Pertanyaan aktif tampil
+                sebagai langkah &ldquo;Pertanyaan Tambahan&rdquo; di halaman pendaftaran.
+              </p>
+            </div>
+            <button onClick={() => openFieldForm()} disabled={formFields.length >= FIELD_MAX}
+              className="flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[#082b59] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#1767b1] disabled:opacity-50">
+              <Plus className="h-4 w-4" />
+              Tambah Pertanyaan
+            </button>
+          </div>
+
+          {formFields.length === 0 ? (
+            <div className="mt-4 flex flex-col items-center gap-2 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center">
+              <FileText className="h-7 w-7 text-slate-300" />
+              <p className="text-sm font-medium text-slate-600">Belum ada pertanyaan tambahan</p>
+              <p className="max-w-md text-xs text-slate-400">
+                Formulir pendaftar memakai langkah bawaan (Program, Data Siswa, Data Orang Tua, Upload Berkas).
+                Klik &ldquo;Tambah Pertanyaan&rdquo; untuk membuat pertanyaan pertama.
+              </p>
+            </div>
+          ) : (
+            <ul className="mt-4 divide-y divide-slate-100 rounded-xl border border-slate-200/80">
+              {formFields.map((f, i) => (
+                <li key={f.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#082b59]/10 text-[11px] font-bold text-[#082b59]">
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className={`text-sm font-semibold ${f.active ? "text-slate-800" : "text-slate-400"}`}>
+                        {f.label}
+                      </span>
+                      <span className="rounded-full border border-[#1767b1]/20 bg-[#1767b1]/5 px-2 py-0.5 text-[10px] font-semibold text-[#1767b1]">
+                        {fieldTypeLabel(f.type)}
+                      </span>
+                      {f.required && (
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                          Wajib
+                        </span>
+                      )}
+                      {!f.active && (
+                        <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                          Nonaktif
+                        </span>
+                      )}
+                    </div>
+                    {spmbFieldNeedsOptions(f.type) && !!f.options?.length && (
+                      <p className="mt-0.5 truncate text-xs text-slate-400" title={f.options.join(", ")}>
+                        Opsi: {f.options.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+                    <button onClick={() => handleToggleField(f)}
+                      title={f.active ? "Sembunyikan dari form" : "Tampilkan di form"}
+                      className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${f.active ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100"}`}>
+                      <span className={`relative inline-block h-4 w-7 rounded-full transition-colors ${f.active ? "bg-emerald-500" : "bg-slate-300"}`}>
+                        <span className={`absolute left-0.5 top-1 h-2 w-2 rounded-full bg-white transition-transform ${f.active ? "translate-x-3" : ""}`} />
+                      </span>
+                      {f.active ? "Tampil" : "Sembunyi"}
+                    </button>
+                    <button onClick={() => handleMoveField(i, -1)} disabled={i === 0} title="Naik"
+                      className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 disabled:opacity-30">
+                      <ArrowUp className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => handleMoveField(i, 1)} disabled={i === formFields.length - 1} title="Turun"
+                      className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 disabled:opacity-30">
+                      <ArrowDown className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => openFieldForm(f)} title="Edit"
+                      className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600">
+                      <PencilSimple className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => setDeleteFieldItem(f)} title="Hapus"
+                      className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600">
+                      <Trash className="h-4 w-4" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         {/* ── FORM TAMBAH/EDIT GELOMBANG (SLIDE-OVER) ─────── */}
         {waveForm && (
           <SlideOver
@@ -956,6 +1258,149 @@ export default function AdminSPMBPage() {
             </div>
           </div>
         )}
+
+        {/* ── FORM TAMBAH/EDIT PERTANYAAN (SLIDE-OVER) ────── */}
+        {fieldForm && (
+          <SlideOver
+            open={true}
+            onClose={() => !fieldSaving && (setFieldForm(null), setFieldEditingId(null))}
+            title={fieldEditingId ? "Edit Pertanyaan" : "Tambah Pertanyaan"}
+            description="Pertanyaan tambahan pada form pendaftaran SPMB"
+            footer={
+              <div className="flex w-full items-center justify-between">
+                <button onClick={() => { setFieldForm(null); setFieldEditingId(null); }} disabled={fieldSaving}
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                  Batal
+                </button>
+                <button onClick={handleSaveField} disabled={fieldSaving}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
+                  {fieldSaving ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <>
+                      <FloppyDisk className="h-4 w-4" />
+                      Simpan
+                    </>
+                  )}
+                </button>
+              </div>
+            }
+          >
+            <div className="space-y-5">
+              {fieldFormError && (
+                <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  <Warning className="mt-0.5 h-4 w-4 shrink-0" />
+                  {fieldFormError}
+                </div>
+              )}
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Pertanyaan <span className="text-red-500">*</span>
+                </label>
+                <input type="text" maxLength={200} value={fieldForm.label}
+                  onChange={(e) => { setFieldForm({ ...fieldForm, label: e.target.value }); setFieldFormError(null); }}
+                  placeholder="cth: Apakah anak Anda pernah mengikuti tahfidz?"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Jenis Jawaban</label>
+                <select value={fieldForm.type}
+                  onChange={(e) => { setFieldForm({ ...fieldForm, type: e.target.value as SpmbFieldType }); setFieldFormError(null); }}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20">
+                  {SPMB_FIELD_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {spmbFieldNeedsOptions(fieldForm.type) && (
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Opsi Jawaban <span className="text-red-500">*</span>
+                  </label>
+                  <textarea rows={5} value={fieldForm.optionsText}
+                    onChange={(e) => { setFieldForm({ ...fieldForm, optionsText: e.target.value }); setFieldFormError(null); }}
+                    placeholder={"Ya\nTidak\nKadang-kadang"}
+                    className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                  <p className="mt-1 text-xs text-slate-400">Tulis satu opsi per baris.</p>
+                </div>
+              )}
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Teks kolom (opsional)</label>
+                <input type="text" maxLength={200} value={fieldForm.placeholder}
+                  onChange={(e) => setFieldForm({ ...fieldForm, placeholder: e.target.value })}
+                  placeholder="Teks petunjuk di dalam kolom isian"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Teks bantuan (opsional)</label>
+                <input type="text" maxLength={300} value={fieldForm.help}
+                  onChange={(e) => setFieldForm({ ...fieldForm, help: e.target.value })}
+                  placeholder="Keterangan tambahan di bawah pertanyaan"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Wajib Diisi</label>
+                  <button type="button" onClick={() => setFieldForm({ ...fieldForm, required: !fieldForm.required })}
+                    className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${fieldForm.required ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500"}`}>
+                    <span>{fieldForm.required ? "Ya, wajib" : "Tidak wajib"}</span>
+                    <span className={`relative inline-block h-6 w-11 rounded-full transition-colors ${fieldForm.required ? "bg-emerald-500" : "bg-slate-300"}`}>
+                      <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${fieldForm.required ? "translate-x-5" : ""}`} />
+                    </span>
+                  </button>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tampil di Form</label>
+                  <button type="button" onClick={() => setFieldForm({ ...fieldForm, active: !fieldForm.active })}
+                    className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${fieldForm.active ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500"}`}>
+                    <span>{fieldForm.active ? "Tampil" : "Sembunyi"}</span>
+                    <span className={`relative inline-block h-6 w-11 rounded-full transition-colors ${fieldForm.active ? "bg-emerald-500" : "bg-slate-300"}`}>
+                      <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${fieldForm.active ? "translate-x-5" : ""}`} />
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-400">
+                Pertanyaan tersimpan ke database dan langsung dipakai formulir pendaftaran di
+                /admission/register.
+              </p>
+            </div>
+          </SlideOver>
+        )}
+
+        {/* ── KONFIRMASI HAPUS PERTANYAAN ─────────────────── */}
+        {deleteFieldItem && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+            onClick={() => setDeleteFieldItem(null)}>
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto">
+                <Warning className="h-6 w-6 text-red-600" />
+              </div>
+              <h3 className="text-center text-lg font-bold text-slate-800">Hapus Pertanyaan?</h3>
+              <p className="mt-2 text-center text-sm text-slate-500">
+                &ldquo;{deleteFieldItem.label}&rdquo; akan dihapus dari formulir. Jawaban pendaftar lama tetap
+                tersimpan di data pendaftaran.
+              </p>
+              <div className="mt-6 flex gap-3">
+                <button onClick={() => setDeleteFieldItem(null)}
+                  className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  Batal
+                </button>
+                <button onClick={handleDeleteField}
+                  className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700">
+                  Ya, Hapus
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -963,7 +1408,7 @@ export default function AdminSPMBPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Header + Tab */}
-      <PageHeader active={mainTab} onSelect={setMainTab} />
+      <PageHeader active={mainTab} onSelect={setMainTab} onExport={handleExportCsv} />
 
       {/* Stats */}
       <StatCardRow>
@@ -1068,7 +1513,7 @@ export default function AdminSPMBPage() {
                           className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
                       </td>
                       <td className="px-4 py-3.5 text-sm text-slate-400">{(page - 1) * PAGE_SIZE + index + 1}</td>
-                      <td className="px-4 py-3.5 cursor-pointer" onClick={() => setViewItem(item)}>
+                      <td className="px-4 py-3.5 cursor-pointer" onClick={() => openDetail(item)}>
                         <p className="text-sm font-medium text-slate-800">{item.full_name}</p>
                         {item.email && <p className="mt-0.5 text-xs text-slate-400">{item.email}</p>}
                       </td>
@@ -1090,7 +1535,7 @@ export default function AdminSPMBPage() {
                       </td>
                       <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => setViewItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Detail">
+                          <button onClick={() => openDetail(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Detail">
                             <Eye className="h-4 w-4" />
                           </button>
                           <button onClick={() => { setEditItem(item); setEditNotes(item.admin_notes || ""); }} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit Catatan">
@@ -1177,6 +1622,8 @@ export default function AdminSPMBPage() {
                 { key: "kontak" as const, label: "Kontak" },
                 { key: "ayah" as const, label: "Ayah" },
                 { key: "ibu" as const, label: "Ibu" },
+                // Hanya tampil bila pendaftar mengisi pertanyaan tambahan.
+                ...(customAnswers.length > 0 ? [{ key: "tambahan" as const, label: "Tambahan" }] : []),
                 { key: "berkas" as const, label: "Berkas" },
               ];
               const docCount = viewItem.documents ? [viewItem.documents.kk, viewItem.documents.akta, viewItem.documents.surat_sekolah, viewItem.documents.ktp_ortu, viewItem.documents.bukti_transfer].filter((v) => typeof v === "string" && v.length > 0).length : 0;
@@ -1187,6 +1634,7 @@ export default function AdminSPMBPage() {
                       className={`relative px-4 py-2.5 text-xs font-semibold transition-colors ${viewTab === t.key ? "text-[#082b59]" : "text-slate-400 hover:text-slate-600"}`}>
                       {t.label}
                       {t.key === "berkas" && docCount > 0 && <span className="ml-1 rounded-full bg-[#082b59]/10 px-1.5 text-[10px] text-[#082b59]">{docCount}</span>}
+                      {t.key === "tambahan" && <span className="ml-1 rounded-full bg-[#082b59]/10 px-1.5 text-[10px] text-[#082b59]">{customAnswers.length}</span>}
                       {viewTab === t.key && <div className="absolute inset-x-2 -bottom-px h-0.5 bg-[#082b59]" />}
                     </button>
                   ))}
@@ -1250,6 +1698,14 @@ export default function AdminSPMBPage() {
                   <InfoRow icon={GraduationCap} label="Pendidikan Terakhir" value={viewItem.documents?.mother_education || "-"} />
                   <InfoRow icon={FileText} label="Pekerjaan" value={viewItem.documents?.mother_job || "-"} />
                   <InfoRow icon={FloppyDisk} label="Penghasilan/bulan" value={viewItem.documents?.mother_income ? `Rp ${Number(viewItem.documents.mother_income).toLocaleString("id-ID")}` : "-"} />
+                </div>
+              )}
+
+              {viewTab === "tambahan" && customAnswers.length > 0 && (
+                <div className="space-y-1">
+                  {customAnswers.map((a) => (
+                    <InfoRow key={a.key} icon={FileText} label={a.label} value={a.value} />
+                  ))}
                 </div>
               )}
 
@@ -1430,7 +1886,7 @@ export default function AdminSPMBPage() {
 }
 
 /** Header halaman + tab "Pendaftar" / "Gelombang Pendaftaran". */
-function PageHeader({ active, onSelect }: { active: MainTab; onSelect: (tab: MainTab) => void }) {
+function PageHeader({ active, onSelect, onExport }: { active: MainTab; onSelect: (tab: MainTab) => void; onExport: () => void }) {
   const tabs: { key: MainTab; label: string; icon: React.ElementType }[] = [
     { key: "registrations", label: "Pendaftar", icon: Users },
     { key: "waves", label: "Gelombang & Pengaturan", icon: CalendarBlank },
@@ -1449,9 +1905,9 @@ function PageHeader({ active, onSelect }: { active: MainTab; onSelect: (tab: Mai
           </div>
         </div>
         {active === "registrations" && (
-          <button className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50">
+          <button onClick={onExport} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50">
             <Download className="h-4 w-4" />
-            Export Excel
+            Export CSV
           </button>
         )}
       </div>

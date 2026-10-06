@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { House, Newspaper, BookOpen, ImageSquare, GraduationCap, Phone } from "@/components/Icons";
+import { House, Newspaper, BookOpen, ImageSquare, GraduationCap, Phone, CalendarBlank, Trophy } from "@/components/Icons";
 
 const links = [
   { href: "/", label: "Beranda", icon: House },
   { href: "/news", label: "Berita", icon: Newspaper },
   { href: "/articles", label: "Artikel", icon: BookOpen },
+  { href: "/activities", label: "Kegiatan", icon: CalendarBlank },
+  { href: "/achievements", label: "Prestasi", icon: Trophy },
   { href: "/gallery", label: "Galeri", icon: ImageSquare },
   { href: "/admission", label: "SPMB", icon: GraduationCap },
   { href: "/contact", label: "Kontak", icon: Phone },
@@ -14,13 +16,13 @@ export default function NotFound() {
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-6">
       <div className="text-center">
-        <p className="text-7xl font-bold text-[#082b59]/10">404</p>
-        <h2 className="mt-4 text-xl font-bold text-slate-800">Halaman Tidak Ditemukan</h2>
+        <p className="text-7xl font-bold text-[#082b59]/10" aria-hidden="true">404</p>
+        <h1 className="mt-4 text-xl font-bold text-slate-800">Halaman Tidak Ditemukan</h1>
         <p className="mt-2 text-sm text-slate-500">
           Halaman yang Anda cari tidak tersedia atau telah dipindahkan.
         </p>
 
-        <div className="mt-8 grid grid-cols-3 gap-3 sm:grid-cols-6">
+        <div className="mt-8 grid grid-cols-4 gap-3 sm:grid-cols-8">
           {links.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}

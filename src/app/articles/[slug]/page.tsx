@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { notFound } from "next/navigation";
 import { ArrowLeft, Clock, User, BookOpen } from "@/components/Icons";
 import { getArticleBySlug } from "@/lib/queries";
 import { sanitize } from "@/lib/sanitize";
@@ -10,7 +11,8 @@ export const revalidate = 300;
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const article = await getArticleBySlug(slug);
-  if (!article) return { title: "Artikel Tidak Ditemukan" };
+  // 404 sejati (bukan panel 200) — status & not-found page yang benar untuk SEO.
+  if (!article) notFound();
   const description = article.excerpt || article.title;
   return {
     title: article.title,
@@ -38,17 +40,7 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
   const { slug } = await params;
   const article = await getArticleBySlug(slug);
 
-  if (!article) {
-    return (
-      <div className="mx-auto max-w-3xl px-4 py-20 text-center">
-        <h1 className="text-2xl font-bold text-[#082b59]">Artikel tidak ditemukan</h1>
-        <p className="mt-4 text-slate-500">Artikel yang Anda cari tidak tersedia.</p>
-        <Link href="/articles" className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-[#1767b1] hover:text-[#082b59]">
-          Kembali ke artikel <ArrowLeft className="h-4 w-4" />
-        </Link>
-      </div>
-    );
-  }
+  if (!article) notFound();
 
   const articleUrl = `https://www.smpmuh4tanggul.sch.id/articles/${article.slug}`;
 

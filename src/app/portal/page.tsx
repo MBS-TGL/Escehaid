@@ -135,9 +135,22 @@ function AppTile({ app }: { app: PortalApp }) {
 
 export default async function PortalPage() {
   const [apps, agenda] = await Promise.all([getPortalApps(), getActiveAgendaEvents()]);
+  // Agenda mendatang (bandingkan string ISO aman untuk kolom date) — maks 5.
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const upcomingAgenda = agenda.filter((a) => a.event_date >= todayIso).slice(0, 5);
 
   return (
     <div>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{
+        __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Beranda", item: "https://www.smpmuh4tanggul.sch.id" },
+            { "@type": "ListItem", position: 2, name: "Portal", item: "https://www.smpmuh4tanggul.sch.id/portal" },
+          ],
+        })
+      }} />
       {/* Hero — mengikuti template hero publik */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-12 text-white sm:py-14">
         <div className="absolute inset-0 hidden opacity-[0.04] sm:block">
@@ -198,6 +211,39 @@ export default async function PortalPage() {
             )}
           </div>
         </CSSFadeIn>
+
+        {/* Agenda kegiatan mendatang */}
+        {upcomingAgenda.length > 0 && (
+          <CSSFadeIn>
+            <div className="mt-10">
+              <h2 className="text-base font-bold text-[#082b59]">Agenda Kegiatan</h2>
+              <ul className="mt-3 divide-y divide-[#f0f3f8] overflow-hidden rounded-2xl border border-[#dce3ed] bg-white">
+                {upcomingAgenda.map((ev) => {
+                  const [ey, em, ed] = ev.event_date.split("-").map(Number);
+                  const date = ey && em && ed ? new Date(ey, em - 1, ed) : null;
+                  return (
+                    <li key={ev.id} className="flex items-center gap-3 px-4 py-3">
+                      <span className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-[#082b59]/5 text-[#082b59] leading-none">
+                        <span className="text-sm font-bold">{date ? ed : "-"}</span>
+                        <span className="mt-0.5 text-[10px] font-semibold uppercase">
+                          {date ? date.toLocaleDateString("id-ID", { month: "short" }) : ""}
+                        </span>
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[#082b59]">{ev.title}</p>
+                        <p className="text-xs text-slate-500">
+                          {date
+                            ? date.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+                            : ev.event_date}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </CSSFadeIn>
+        )}
 
         {/* Jalan pintas ke bagian website */}
         <CSSFadeIn>

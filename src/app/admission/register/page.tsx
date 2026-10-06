@@ -1,7 +1,7 @@
 import SPMBForm from "./SPMBForm";
 import { CSSFadeIn } from "@/components/CSSAnimations";
 import { FileText, CheckCircle, Phone } from "@/components/Icons";
-import { getSchoolProfile, GOOGLE_FORM_URL } from "@/lib/queries";
+import { getSchoolProfile, normalizeSpmbFormSchema, GOOGLE_FORM_URL } from "@/lib/queries";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
@@ -20,9 +20,23 @@ export default async function SPMBRegisterPage() {
   if (profile?.registration_mode === "google_form") {
     redirect(profile.google_form_url?.trim() || GOOGLE_FORM_URL);
   }
+  // Pertanyaan tambahan buatan admin (builder di /admin/admission).
+  // Kolom belum ada / skema kosong → [] → form tampil tanpa langkah tambahan.
+  const formFields = normalizeSpmbFormSchema(profile?.spmb_form_schema).filter((f) => f.active);
 
   return (
     <div>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{
+        __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Beranda", item: "https://www.smpmuh4tanggul.sch.id" },
+            { "@type": "ListItem", position: 2, name: "SPMB Online", item: "https://www.smpmuh4tanggul.sch.id/admission" },
+            { "@type": "ListItem", position: 3, name: "Daftar SPMB", item: "https://www.smpmuh4tanggul.sch.id/admission/register" },
+          ],
+        })
+      }} />
       <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-16 text-white">
         <div className="absolute inset-0 hidden opacity-[0.04] sm:block">
           <FileText className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
@@ -40,7 +54,7 @@ export default async function SPMBRegisterPage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-6 py-12" style={{ contentVisibility: "auto" } as React.CSSProperties}>
-        <SPMBForm />
+        <SPMBForm fields={formFields} />
 
         <CSSFadeIn>
           <div className="mx-auto mt-6 max-w-2xl rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-5">

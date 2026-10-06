@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Newspaper, Clock, CaretLeft, CaretRight, Paperclip } from "@/components/Icons";
+import { Newspaper, Clock, CaretLeft, CaretRight, Paperclip, MagnifyingGlass } from "@/components/Icons";
 import { getNewsListPaginated } from "@/lib/queries";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import type { Metadata } from "next";
@@ -21,15 +21,41 @@ const categoryConfig: Record<string, { label: string; color: string; bg: string;
   agenda: { label: "Agenda", color: "text-purple-700", bg: "bg-purple-50", border: "border-purple-200" },
 };
 
-export default async function BeritaPage({ searchParams }: { searchParams: Promise<{ search?: string; page?: string }> }) {
-  const { search, page: pageParam } = await searchParams;
-  const currentPage = Math.max(1, parseInt(pageParam || "1", 10));
-  const { items: berita, total, totalPages } = await getNewsListPaginated(currentPage, PAGE_SIZE, search);
+export default async function BeritaPage({ searchParams }: { searchParams: Promise<{ search?: string; page?: string; category?: string }> }) {
+  const { search, page: pageParam, category: categoryParam } = await searchParams;
+  // ?page=abc / negatif → halaman 1 (parseInt NaN pernah membuat rendering rusak).
+  const parsedPage = parseInt(pageParam || "1", 10);
+  const currentPage = Number.isFinite(parsedPage) && parsedPage > 0 ? Math.min(parsedPage, 500) : 1;
+  const q = (search || "").trim().slice(0, 100);
+  const category = ["berita", "pengumuman", "agenda"].includes(categoryParam || "") ? (categoryParam as string) : "";
+  const { items: berita, total, totalPages } = await getNewsListPaginated(
+    currentPage,
+    PAGE_SIZE,
+    q || undefined,
+    category || undefined
+  );
+
+  /** Link /news dengan search + kategori + halaman yang sedang aktif. */
+  const buildHref = (page: number, cat: string) => {
+    const sp = new URLSearchParams();
+    if (q) sp.set("search", q);
+    if (cat) sp.set("category", cat);
+    if (page > 1) sp.set("page", String(page));
+    const s = sp.toString();
+    return `/news${s ? `?${s}` : ""}`;
+  };
+
+  const categoryChips: { key: string; label: string }[] = [
+    { key: "", label: "Semua" },
+    { key: "berita", label: "Berita" },
+    { key: "pengumuman", label: "Pengumuman" },
+    { key: "agenda", label: "Agenda" },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {currentPage > 1 && <link rel="prev" href={`/news?page=${currentPage - 1}${search ? `&search=${search}` : ""}`} />}
-      {currentPage < totalPages && <link rel="next" href={`/news?page=${currentPage + 1}${search ? `&search=${search}` : ""}`} />}
+      {currentPage > 1 && <link rel="prev" href={buildHref(currentPage - 1, category)} />}
+      {currentPage < totalPages && <link rel="next" href={buildHref(currentPage + 1, category)} />}
       <script type="application/ld+json" dangerouslySetInnerHTML={{
         __html: JSON.stringify({
           "@context": "https://schema.org",
@@ -53,20 +79,71 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
           <CSSFadeIn>
             <h1 className="text-3xl font-bold md:text-4xl text-balance">Berita</h1>
             <p className="mt-3 text-base text-white/70 text-balance">Informasi terkini dari SMP Muhammadiyah 4 Tanggul</p>
-            {search && (
-              <p className="mt-2 text-sm text-white/50">Hasil pencarian: &quot;{search}&quot;</p>
+            {q && (
+              <p className="mt-2 text-sm text-white/50">Hasil pencarian: &quot;{q}&quot;</p>
             )}
           </CSSFadeIn>
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+        {/* Pencarian + filter kategori (GET tanpa JS; ?search sudah didukung metadata SearchAction) */}
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <form action="/news" method="GET" className="relative w-full sm:max-w-xs">
+            <label htmlFor="news-search" className="sr-only">Cari berita</label>
+            <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              id="news-search"
+              type="search"
+              name="search"
+              defaultValue={q}
+              placeholder="Cari berita..."
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+            />
+            {category && <input type="hidden" name="category" value={category} />}
+          </form>
+          <nav aria-label="Filter kategori berita" className="flex flex-wrap items-center gap-2">
+            {categoryChips.map((c) => (
+              <Link
+                key={c.key}
+                href={buildHref(1, c.key)}
+                aria-current={category === c.key ? "page" : undefined}
+                className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  category === c.key
+                    ? "border-[#082b59] bg-[#082b59] text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {c.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+
         {berita.length === 0 ? (
           <CSSFadeIn>
             <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-20 text-center">
               <Newspaper className="h-14 w-14 text-slate-300" />
-              <p className="mt-5 text-base text-slate-500">Berita masih kosong.</p>
-              <p className="mt-1 text-sm text-slate-400">Nantikan informasi terbaru dari sekolah.</p>
+              <p className="mt-5 text-base text-slate-500">
+                {q || category ? "Tidak ada berita yang cocok." : "Berita masih kosong."}
+              </p>
+              <p className="mt-1 text-sm text-slate-400">
+                {q
+                  ? `Hasil pencarian "${q}" tidak ditemukan.`
+                  : category
+                    ? "Belum ada berita pada kategori ini."
+                    : currentPage > 1
+                      ? "Halaman tidak ditemukan — coba buka halaman pertama."
+                      : "Nantikan informasi terbaru dari sekolah."}
+              </p>
+              {(q || category || currentPage > 1) && (
+                <Link
+                  href="/news"
+                  className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[#082b59] transition-colors hover:border-[#1767b1] hover:text-[#1767b1]"
+                >
+                  Lihat semua berita
+                </Link>
+              )}
             </div>
           </CSSFadeIn>
         ) : (
@@ -185,7 +262,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                   </p>
                   <div className="flex items-center gap-1">
                     <Link
-                      href={`/news?page=${Math.max(1, currentPage - 1)}${search ? `&search=${search}` : ""}`}
+                      href={buildHref(Math.max(1, currentPage - 1), category)}
                       className={`flex h-9 w-9 items-center justify-center rounded-lg border text-sm transition-colors ${currentPage === 1 ? "pointer-events-none border-slate-100 text-slate-300" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
                     >
                       <CaretLeft className="h-4 w-4" />
@@ -203,7 +280,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                         ) : (
                           <Link
                             key={p}
-                            href={`/news?page=${p}${search ? `&search=${search}` : ""}`}
+                            href={buildHref(p, category)}
                             className={`flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === currentPage ? "bg-[#082b59] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
                           >
                             {p}
@@ -211,7 +288,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                         )
                       )}
                     <Link
-                      href={`/news?page=${Math.min(totalPages, currentPage + 1)}${search ? `&search=${search}` : ""}`}
+                      href={buildHref(Math.min(totalPages, currentPage + 1), category)}
                       className={`flex h-9 w-9 items-center justify-center rounded-lg border text-sm transition-colors ${currentPage === totalPages ? "pointer-events-none border-slate-100 text-slate-300" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
                     >
                       <CaretRight className="h-4 w-4" />

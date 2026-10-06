@@ -14,7 +14,7 @@ export default function BeritaLoading() {
 
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
         {/* Featured skeleton */}
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="overflow-hidden rounded-2xl border border-[#dce3ed] bg-white">
           <SkeletonBlock className="h-[280px] md:h-[400px] !rounded-none" />
           <div className="p-6 md:p-8">
             <SkeletonBlock className="h-5 w-24" />
@@ -27,7 +27,7 @@ export default function BeritaLoading() {
         {/* Grid skeleton */}
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }, (_, i) => (
-            <div key={i} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            <div key={i} className="overflow-hidden rounded-2xl border border-[#dce3ed] bg-white">
               <SkeletonBlock className="h-44 !rounded-none" />
               <div className="p-4">
                 <div className="flex items-center gap-2">

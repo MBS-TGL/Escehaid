@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { supabase } from "./supabase";
-import type { SchoolProfile, News, Gallery, SpmbRegistration, SpmbWave, Teacher, Facility, Article, Activity, Achievement, ContactMessage } from "./supabase";
+import type { SchoolProfile, News, Gallery, SpmbRegistration, SpmbWave, SpmbFormField, SpmbFieldType, Teacher, Facility, Article, Activity, Achievement, ContactMessage } from "./supabase";
 import type { UserProfile } from "./auth";
 import {
   sendRegistrationEmail,
@@ -109,7 +109,8 @@ async function queryNewsPage(
   page: number,
   pageSize: number,
   search?: string,
-  newCols = false
+  newCols = false,
+  category?: string
 ) {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
@@ -129,6 +130,9 @@ async function queryNewsPage(
   if (search) {
     query = query.ilike("title", `%${search}%`);
   }
+  if (category) {
+    query = query.eq("category", category);
+  }
 
   return query.range(from, to);
 }
@@ -136,7 +140,8 @@ async function queryNewsPage(
 export async function getNewsListPaginated(
   page: number = 1,
   pageSize: number = 9,
-  search?: string
+  search?: string,
+  category?: string
 ): Promise<{ items: NewsWithAuthor[]; total: number; totalPages: number }> {
   const newCols = await newsHasScheduledColumns();
   const base = `${NEWS_LIST_COLUMNS}${newCols ? `, ${NEWS_NEW_COLUMNS}` : ""}`;
@@ -145,13 +150,14 @@ export async function getNewsListPaginated(
     page,
     pageSize,
     search,
-    newCols
+    newCols,
+    category
   );
 
   // Kolom attachment_url belum ada (migration 005 belum dijalankan)
   // → jangan sampai halaman berita jadi kosong, ulangi tanpa kolom itu.
   if (error && /attachment_url/.test(error.message || "")) {
-    ({ data, error, count } = await queryNewsPage(base, page, pageSize, search, newCols));
+    ({ data, error, count } = await queryNewsPage(base, page, pageSize, search, newCols, category));
   }
 
   if (error) {
@@ -826,6 +832,123 @@ export async function setSpmbDocuments(docs: {
   }
 }
 
+// ============ SPMB FORM BUILDER (PERTANYAAN CUSTOM) ============
+/** Jenis pertanyaan yang didukung builder + label tampilan (dipakai admin & form publik). */
+export const SPMB_FIELD_TYPES: { value: SpmbFieldType; label: string }[] = [
+  { value: "text", label: "Jawaban Singkat" },
+  { value: "textarea", label: "Jawaban Panjang" },
+  { value: "number", label: "Angka" },
+  { value: "date", label: "Tanggal" },
+  { value: "email", label: "Email" },
+  { value: "tel", label: "Nomor Telepon" },
+  { value: "select", label: "Dropdown" },
+  { value: "radio", label: "Pilihan Ganda" },
+  { value: "checkbox", label: "Centang (bisa pilih lebih dari satu)" },
+];
+
+/** Tipe yang butuh daftar opsi. */
+export function spmbFieldNeedsOptions(type: SpmbFieldType): boolean {
+  return type === "select" || type === "radio" || type === "checkbox";
+}
+
+/** Kunci jawaban pendaftar di spmb_registrations.documents untuk sebuah field. */
+export function spmbAnswerKey(fieldId: string): string {
+  return `cf_${fieldId}`;
+}
+
+/** Batas jumlah pertanyaan custom (pertahanan terhadap jsonb korup/rakus). */
+const SPMB_FIELDS_MAX = 50;
+
+/**
+ * Validasi + normalisasi skema dari jsonb: buang entri rusak, paksa tipe/panjang
+ * yang aman, dedup id. Return [] bila bukan array (kolom null / belum ada).
+ */
+export function normalizeSpmbFormSchema(raw: unknown): SpmbFormField[] {
+  if (!Array.isArray(raw)) return [];
+  const validTypes = new Set<string>(SPMB_FIELD_TYPES.map((t) => t.value));
+  const seen = new Set<string>();
+  const out: SpmbFormField[] = [];
+  for (const item of raw) {
+    if (out.length >= SPMB_FIELDS_MAX) break;
+    if (!item || typeof item !== "object") continue;
+    const f = item as Record<string, unknown>;
+    const id = typeof f.id === "string" ? f.id.trim().slice(0, 64) : "";
+    const label = typeof f.label === "string" ? f.label.trim().slice(0, 200) : "";
+    const type = typeof f.type === "string" && validTypes.has(f.type) ? (f.type as SpmbFieldType) : "text";
+    if (!id || !label || seen.has(id)) continue;
+    seen.add(id);
+    const options = Array.isArray(f.options)
+      ? f.options
+          .filter((o): o is string => typeof o === "string" && o.trim().length > 0)
+          .map((o) => o.trim().slice(0, 120))
+          .slice(0, 30)
+      : [];
+    out.push({
+      id,
+      label,
+      type,
+      required: f.required === true,
+      active: f.active !== false,
+      placeholder: typeof f.placeholder === "string" ? f.placeholder.trim().slice(0, 200) : "",
+      help: typeof f.help === "string" ? f.help.trim().slice(0, 300) : "",
+      options: spmbFieldNeedsOptions(type) && options.length > 0 ? options : [],
+    });
+  }
+  return out;
+}
+
+/**
+ * Ambil pertanyaan custom SPMB dari school_profile (hanya aktif yang dipakai
+ * form publik — filter active dilakukan pemanggil). Aman sebelum ALTER TABLE:
+ * kolom belum ada → profile.spmb_form_schema undefined → [].
+ */
+export async function getSpmbFormSchema(): Promise<SpmbFormField[]> {
+  const profile = await getSchoolProfile();
+  return normalizeSpmbFormSchema(profile?.spmb_form_schema);
+}
+
+/**
+ * Simpan SELURUH daftar pertanyaan custom (admin — policy update school_profile).
+ * Pola setSpmbDocuments: ambil id dulu, UPDATE ... WHERE id, deteksi 0 baris.
+ * Kolom belum ada → pesan yang menunjuk ke SQL migrasi.
+ */
+export async function setSpmbFormSchema(fields: SpmbFormField[]): Promise<{ error?: string }> {
+  try {
+    const profile = await getSchoolProfile();
+    if (!profile?.id) {
+      return { error: "Profil sekolah tidak ditemukan — skema tidak tersimpan." };
+    }
+    const payload = { spmb_form_schema: normalizeSpmbFormSchema(fields) };
+    const { data, error } = await supabase
+      .from("school_profile")
+      .update(payload)
+      .eq("id", profile.id)
+      .select("spmb_form_schema");
+    if (error) {
+      console.error("Error saving spmb form schema:", error);
+      // Kolom belum ada (sebelum ALTER TABLE): PGRST204 = kolom tak ada di schema cache.
+      if (
+        error.code === "PGRST204" ||
+        /does not exist|42703|schema cache/i.test(error.message || "")
+      ) {
+        return {
+          error:
+            "Kolom spmb_form_schema belum ada di database — jalankan SQL migrasi ALTER TABLE school_profile terlebih dahulu.",
+        };
+      }
+      return { error: error.message };
+    }
+    if (!data || data.length === 0) {
+      return { error: "Skema tidak tersimpan — tidak ada baris yang terupdate (cek policy RLS)." };
+    }
+    return {};
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("Error saving spmb form schema:", e);
+    return { error: message };
+  }
+}
+
 // ============ NEWS ATTACHMENT (lampiran file) ============
 export const ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -1002,6 +1125,8 @@ export async function submitRegistration(registration: {
     parent_occupation: registration.parent_occupation,
     previous_school: registration.previous_school,
     registration_path: registration.registration_path,
+    // Email wajib ikut tersimpan — kolom dipakai pencarian & tab Kontak di admin.
+    email: registration.email,
     documents: registration.documents || {},
     wave_id: waveId,
   });

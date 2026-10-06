@@ -137,16 +137,19 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
             <span>/</span>
             <span className="max-w-[200px] truncate text-slate-600">{berita.title}</span>
           </nav>
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ml-auto flex items-center gap-1.5" role="group" aria-label="Bagikan berita">
             <a href={`https://wa.me/?text=${shareText}%20${shareUrl}`} target="_blank" rel="noopener noreferrer"
+              aria-label="Bagikan ke WhatsApp"
               className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600">
               <WhatsappLogo className="h-3.5 w-3.5" />
             </a>
             <a href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`} target="_blank" rel="noopener noreferrer"
+              aria-label="Bagikan ke Facebook"
               className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600">
               <FacebookLogo className="h-3.5 w-3.5" />
             </a>
             <a href={`https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}`} target="_blank" rel="noopener noreferrer"
+              aria-label="Bagikan ke X (Twitter)"
               className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-sky-50 hover:text-sky-600">
               <TwitterLogo className="h-3.5 w-3.5" />
             </a>
@@ -265,17 +268,20 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
                 <ArrowLeft className="h-4 w-4" /> Semua Berita
               </Link>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Bagikan</span>
-                <div className="flex items-center gap-1.5">
+                <span id="share-label" className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Bagikan</span>
+                <div className="flex items-center gap-1.5" role="group" aria-labelledby="share-label">
                   <a href={`https://wa.me/?text=${shareText}%20${shareUrl}`} target="_blank" rel="noopener noreferrer"
+                    aria-label="Bagikan ke WhatsApp"
                     className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-white transition-colors hover:bg-emerald-600">
                     <WhatsappLogo className="h-3.5 w-3.5" />
                   </a>
                   <a href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`} target="_blank" rel="noopener noreferrer"
+                    aria-label="Bagikan ke Facebook"
                     className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white transition-colors hover:bg-blue-700">
                     <FacebookLogo className="h-3.5 w-3.5" />
                   </a>
                   <a href={`https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}`} target="_blank" rel="noopener noreferrer"
+                    aria-label="Bagikan ke X (Twitter)"
                     className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500 text-white transition-colors hover:bg-sky-600">
                     <TwitterLogo className="h-3.5 w-3.5" />
                   </a>

@@ -91,13 +91,17 @@ export default function HeroCarousel() {
       {/* overlay gradient */}
       <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#082b59]/60 via-transparent to-transparent pointer-events-none" />
 
-      {/* dots (hanya mode segment MP4) */}
+      {/* dots (hanya mode segment MP4) — tombol bisa diklik lompat ke segmen */}
       {!YT_ID && (
         <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 gap-2">
           {SEGMENTS.map((_, i) => (
-            <div
+            <button
               key={i}
-              className={`h-2 rounded-full transition-all duration-300 ${
+              type="button"
+              aria-label={`Bagian video ${i + 1}`}
+              aria-current={i === current ? "true" : undefined}
+              onClick={() => setCurrent(i)}
+              className={`h-2 cursor-pointer rounded-full transition-all duration-300 ${
                 i === current ? "w-6 bg-[#f4d21f]" : "w-2 bg-white/40"
               }`}
             />

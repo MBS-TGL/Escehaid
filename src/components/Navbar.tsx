@@ -11,6 +11,7 @@ const navLinks = [
   { href: "/achievements", label: "Prestasi" },
   { href: "/news", label: "Berita" },
   { href: "/articles", label: "Artikel" },
+  { href: "/activities", label: "Kegiatan", hideOnMd: true },
   { href: "/gallery", label: "Galeri" },
   { href: "/contact", label: "Kontak" },
 ];
@@ -28,6 +29,7 @@ export default function Navbar() {
 
   return (
     <nav
+      aria-label="Navigasi utama"
       className={`sticky top-0 z-50 transition-all duration-300 ${
         scrolled
           ? "border-b border-[#dce3ed]/60 bg-white/80 shadow-sm backdrop-blur-xl"
@@ -65,13 +67,14 @@ export default function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
+                  aria-current={isActive ? "page" : undefined}
                   onMouseEnter={() => setHoveredIndex(i)}
                   onMouseLeave={() => setHoveredIndex(null)}
-                  className={`nav-link rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
+                  className={`nav-link rounded-lg px-3 py-2 text-sm font-medium transition-colors lg:px-3.5 ${
                     isActive
                       ? "nav-link-active text-[#082b59]"
                       : "text-slate-500 hover:text-[#082b59]"
-                  }`}
+                  } ${link.hideOnMd ? "hidden lg:block" : ""}`}
                 >
                   {link.label}
                 </Link>

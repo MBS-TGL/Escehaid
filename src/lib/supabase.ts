@@ -24,6 +24,12 @@ export interface SchoolProfile {
   spmb_contact_phone: string | null;
   /** Sorotan hasil seleksi di halaman SPMB; null/kosong → blok tidak dirender. */
   spmb_highlight_text: string | null;
+  /**
+   * Skema pertanyaan tambahan form SPMB (jsonb array of SpmbFormField, disimpan
+   * oleh admin lewat builder di /admin/admission). null/kosong/kolom belum ada
+   * → form memakai langkah bawaan tanpa "Pertanyaan Tambahan".
+   */
+  spmb_form_schema?: SpmbFormField[] | null;
   vision: string;
   mission: string;
   history: string;
@@ -70,6 +76,39 @@ export interface SpmbWave {
   is_published: boolean;
   sort_order: number;
   created_at: string;
+}
+
+/** Jenis pertanyaan custom SPMB yang didukung builder (ala Google Form). */
+export type SpmbFieldType =
+  | "text"
+  | "textarea"
+  | "number"
+  | "date"
+  | "email"
+  | "tel"
+  | "select"
+  | "radio"
+  | "checkbox";
+
+/**
+ * Satu pertanyaan custom pada form pendaftaran SPMB. Disimpan sebagai elemen
+ * array di school_profile.spmb_form_schema (jsonb). Jawaban pendaftar masuk ke
+ * spmb_registrations.documents dengan kunci `cf_<id>` (lihat spmbAnswerKey).
+ */
+export interface SpmbFormField {
+  /** UUID stabil — kunci jawaban di documents; ganti label bebas tanpa kehilangan data lama. */
+  id: string;
+  label: string;
+  type: SpmbFieldType;
+  /** Wajib diisi sebelum lanjut ke langkah berikutnya. */
+  required: boolean;
+  /** false → pertanyaan disembunyikan dari form publik (tetap tersimpan). */
+  active: boolean;
+  placeholder?: string | null;
+  /** Teks bantuan kecil di bawah label. */
+  help?: string | null;
+  /** Opsi untuk select/radio/checkbox; tipe lain mengabaikannya. */
+  options?: string[] | null;
 }
 
 export interface News {

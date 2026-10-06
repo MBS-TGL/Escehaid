@@ -76,7 +76,11 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       name: "SMP Muhammadiyah 4 Tanggul",
       url: "https://www.smpmuh4tanggul.sch.id",
     },
-    eventStatus: "https://schema.org/EventCompleted",
+    // Status event mengikuti tanggal — bukan selalu "selesai".
+    eventStatus:
+      activity.activity_date && activity.activity_date >= new Date().toISOString().slice(0, 10)
+        ? "https://schema.org/EventScheduled"
+        : "https://schema.org/EventCompleted",
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
   };
 
