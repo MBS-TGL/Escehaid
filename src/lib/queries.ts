@@ -671,9 +671,9 @@ export async function revalidateNews(
 }
 
 /**
- * Invalidasi ISR halaman artikel (/articles + /articles/[slug])
+ * Invalidasi ISR halaman artikel (/ + /articles + /articles/[slug])
  * via API route /api/revalidate. Dipanggil dari client component admin
- * artikel setelah create/update/delete/togglePublish/bulk.
+ * artikel setelah create/update/delete/togglePublish/bulk/duplicate.
  */
 export async function revalidateArticles(
   slug?: string,
@@ -685,6 +685,7 @@ export async function revalidateArticles(
         slug ? `/articles/${slug}` : null,
         oldSlug && oldSlug !== slug ? `/articles/${oldSlug}` : null,
         "/articles",
+        "/",
       ].filter(Boolean) as string[]
     )
   );
@@ -1300,13 +1301,53 @@ export async function uploadFacilityImage(
 const ARTICLE_LIST_COLUMNS =
   "id, title, slug, excerpt, image_url, category, is_published, published_at, created_at, user_profiles(full_name)";
 
+/** Kolom Tahap 1 (image_alt/is_pinned/expires_at) — belum tentu ada di DB. */
+const ARTICLE_NEW_COLUMNS = "image_alt, is_pinned, expires_at";
+
+let articleNewColsPromise: Promise<boolean> | null = null;
+/**
+ * Probe sekali per proses: apakah kolom Tahap 1 sudah ada di tabel articles?
+ * false → query publik/form memakai jalur lama tanpa kolom itu (aman sebelum SQL dijalankan).
+ */
+export function articlesHasScheduledColumns(): Promise<boolean> {
+  if (!articleNewColsPromise) {
+    articleNewColsPromise = Promise.resolve(
+      supabase.from("articles").select(ARTICLE_NEW_COLUMNS).limit(0)
+    ).then(
+      ({ error }) => !error || !/does not exist|42703/.test(error.message || ""),
+      () => false
+    );
+  }
+  return articleNewColsPromise;
+}
+
+/**
+ * Filter publik artikel — sama persis dengan policy SELECT Tahap 1 news:
+ * is_published = true AND (published_at IS NULL OR published_at <= now())
+ * AND (expires_at IS NULL OR expires_at > now()).
+ * `withExpires` false bila kolom expires_at belum ada (SQL tahap 1 belum jalan).
+ */
+function applyPublicArticleFilters(query: any, withExpires: boolean) {
+  const nowIso = newsNowIso();
+  let q = query
+    .eq("is_published", true)
+    .or(`published_at.is.null,published_at.lte.${nowIso}`);
+  if (withExpires) {
+    q = q.or(`expires_at.is.null,expires_at.gt.${nowIso}`);
+  }
+  return q;
+}
+
 export async function getArticleList(limit?: number): Promise<ArticleWithAuthor[]> {
+  const newCols = await articlesHasScheduledColumns();
   const run = async (columns: string) => {
     let query = supabase
       .from("articles")
-      .select(columns)
-      .eq("is_published", true)
-      .order("published_at", { ascending: false });
+      .select(columns);
+    query = applyPublicArticleFilters(query, newCols);
+    // Disematkan dulu, lalu terbaru (kolom is_pinned hanya bila sudah ada)
+    if (newCols) query = query.order("is_pinned", { ascending: false });
+    query = query.order("published_at", { ascending: false, nullsFirst: false });
     if (limit) query = query.limit(limit);
     // select dengan string runtime tidak bisa di-infer Supabase → cast manual
     return (await query) as unknown as {
@@ -1332,11 +1373,16 @@ export async function getArticleList(limit?: number): Promise<ArticleWithAuthor[
 }
 
 export async function getArticleBySlug(slug: string): Promise<ArticleWithAuthor | null> {
-  const { data, error } = await supabase
+  const newCols = await articlesHasScheduledColumns();
+  let query = supabase
     .from("articles")
     .select("*, user_profiles(full_name)")
-    .eq("slug", slug)
-    .single();
+    .eq("slug", slug);
+
+  // Publik: draft/terjadwal/kedaluwarsa tidak boleh tampil (404)
+  query = applyPublicArticleFilters(query, newCols);
+
+  const { data, error } = await query.maybeSingle();
 
   if (error) {
     console.error("Error fetching article by slug:", error);
@@ -1348,6 +1394,25 @@ export async function getArticleBySlug(slug: string): Promise<ArticleWithAuthor 
     ...data,
     author_name: data.author_name ?? data.user_profiles?.full_name ?? null,
   };
+}
+
+/**
+ * Sitemap: hanya artikel yang tampil (filter publik yang sama) — draft &
+ * terjadwal tidak boleh bocor ke sitemap. Ringkas: slug + tanggal saja.
+ */
+export async function getArticleListForSitemap(): Promise<
+  Pick<Article, "id" | "slug" | "published_at" | "updated_at">[]
+> {
+  const newCols = await articlesHasScheduledColumns();
+  let query = supabase.from("articles").select("id, slug, published_at, updated_at");
+  query = applyPublicArticleFilters(query, newCols);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("Error fetching articles for sitemap:", error);
+    return [];
+  }
+  return (data || []) as Pick<Article, "id" | "slug" | "published_at" | "updated_at">[];
 }
 
 // ============ ARTICLES CRUD ============
@@ -1457,9 +1522,13 @@ export async function createArticle(article: {
   is_published?: boolean;
   author_name?: string;
   editor_name?: string;
+  image_alt?: string;
+  is_pinned?: boolean;
+  expires_at?: string | null;
   published_at?: string;
 }): Promise<{ data: Article | null; error?: string }> {
   const { data: { user } } = await supabase.auth.getUser();
+  const newCols = await articlesHasScheduledColumns();
   // Slug unik: dari slug form bila diisi, selain itu dari judul
   const baseSlug = article.slug ? slugify(article.slug) : slugify(article.title);
   const slug = await generateUniqueArticleSlug(baseSlug || "artikel");
@@ -1467,6 +1536,12 @@ export async function createArticle(article: {
   // Isi published_at saat pertama terbit; tanggal eksplisit dari form menang.
   if (payload.is_published && !payload.published_at) {
     payload.published_at = new Date().toISOString();
+  }
+  // Kolom Tahap 1 hanya dikirim bila sudah ada di DB (probe)
+  if (!newCols) {
+    delete payload.image_alt;
+    delete payload.is_pinned;
+    delete payload.expires_at;
   }
   const { data, error } = await supabase
     .from("articles")
@@ -1494,8 +1569,12 @@ export async function updateArticle(
     published_at?: string;
     author_name?: string;
     editor_name?: string;
+    image_alt?: string;
+    is_pinned?: boolean;
+    expires_at?: string | null;
   }
 ): Promise<{ data: Article | null; error?: string }> {
+  const newCols = await articlesHasScheduledColumns();
   // Baris lama: URL gambar (untuk bersihkan file) + published_at (untuk
   // tahu apakah ini pertama kali terbit — jangan menimpa tanggal lama).
   let oldImageUrl: string | null = null;
@@ -1520,12 +1599,27 @@ export async function updateArticle(
   if (article.is_published === true && !currentPublishedAt && !article.published_at) {
     article.published_at = new Date().toISOString();
   }
-  const { data, error } = await supabase
+  // Kolom Tahap 1 hanya dikirim bila sudah ada di DB (probe)
+  if (!newCols) {
+    delete article.image_alt;
+    delete article.is_pinned;
+    delete article.expires_at;
+  }
+  let { data, error } = await supabase
     .from("articles")
     .update(article)
     .eq("id", id)
     .select()
     .single();
+
+  // Kolom opsional belum ada di DB → ulangi tanpa kolom itu
+  if (error && /(image_alt|is_pinned|expires_at)/.test(error.message || "")) {
+    const msg = error.message || "";
+    (["image_alt", "is_pinned", "expires_at"] as const).forEach((k) => {
+      if (msg.includes(k)) delete article[k];
+    });
+    ({ data, error } = await supabase.from("articles").update(article).eq("id", id).select().single());
+  }
 
   if (error) {
     console.error("Error updating article:", error);
@@ -1569,13 +1663,17 @@ export async function togglePublishArticle(
 ): Promise<{ error?: string }> {
   const update: Record<string, any> = { is_published };
   if (is_published) {
-    // Isi published_at HANYA bila belum ada (jangan menimpa nilai lama)
     const { data: current } = await supabase
       .from("articles")
       .select("published_at")
       .eq("id", id)
       .single();
-    if (!current?.published_at) update.published_at = new Date().toISOString();
+    // Terbit tanpa tanggal → stempel sekarang; jadwal masa depan yang masih
+    // menempel (artikel terjadwal diklik jadi draft lalu diterbitkan lagi)
+    // di-reset ke sekarang supaya benar-benar tayang.
+    if (!current?.published_at || new Date(current.published_at).getTime() > Date.now()) {
+      update.published_at = new Date().toISOString();
+    }
   }
   const { error } = await supabase.from("articles").update(update).eq("id", id);
   if (error) {
@@ -1589,13 +1687,18 @@ export async function togglePublishArticleBulk(
   ids: string[],
   is_published: boolean
 ): Promise<{ error?: string }> {
-  // Publish massal: isi published_at hanya untuk baris yang belum punya
+  // Publish massal: isi published_at untuk baris yang belum punya, dan
+  // reset jadwal masa depan supaya benar-benar tayang (sama dengan toggle satuan).
   if (is_published) {
+    const nowIso = new Date().toISOString();
     const { data: rows } = await supabase
       .from("articles")
-      .select("published_at")
+      .select("id, published_at")
       .in("id", ids);
-    const unstamped = (rows || []).filter((r) => !r.published_at).length;
+    const needsStamp = (rows || [])
+      .filter((r) => !r.published_at || new Date(r.published_at).getTime() > Date.now())
+      .map((r) => r.id);
+
     const { error } = await supabase
       .from("articles")
       .update({ is_published })
@@ -1604,12 +1707,11 @@ export async function togglePublishArticleBulk(
       console.error("Error bulk toggling article publish:", error);
       return { error: error.message };
     }
-    if (unstamped > 0) {
+    if (needsStamp.length > 0) {
       const { error: stampError } = await supabase
         .from("articles")
-        .update({ published_at: new Date().toISOString() })
-        .in("id", ids)
-        .is("published_at", null);
+        .update({ published_at: nowIso })
+        .in("id", needsStamp);
       if (stampError) {
         console.error("Error stamping published_at:", stampError);
         return { error: stampError.message };

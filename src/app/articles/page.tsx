@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/articles" },
 };
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
 export default async function ArtikelPage() {
   const articles = await getArticleList();

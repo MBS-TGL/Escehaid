@@ -5,7 +5,7 @@ import { getArticleBySlug } from "@/lib/queries";
 import { sanitize } from "@/lib/sanitize";
 import type { Metadata } from "next";
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -19,7 +19,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       title: article.title,
       description,
       type: "article",
-      images: article.image_url ? [{ url: article.image_url, width: 1200, height: 630 }] : [],
+      publishedTime: article.published_at || undefined,
+      images: article.image_url
+        ? [{ url: article.image_url, alt: article.image_alt || article.title }]
+        : [],
     },
     twitter: {
       card: "summary_large_image",
@@ -134,7 +137,7 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
           <div className="relative mb-8 aspect-video overflow-hidden rounded-2xl">
             <Image
               src={article.image_url}
-              alt={article.title}
+              alt={article.image_alt || article.title}
               fill
               sizes="100vw"
               className="object-cover"

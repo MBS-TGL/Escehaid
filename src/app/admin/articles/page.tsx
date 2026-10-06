@@ -13,11 +13,12 @@ import {
   togglePublishArticleBulk,
   uploadArticleImage,
   slugify,
+  articlesHasScheduledColumns,
   revalidateArticles,
   revalidatePaths,
   type ArticleWithAuthor,
 } from "@/lib/queries";
-import { StatCard, StatCardRow, SlideOver, RichTextEditor } from "@/components/ui";
+import { StatCard, StatCardRow, Modal, SlideOver, RichTextEditor } from "@/components/ui";
 import { sanitize } from "@/lib/sanitize";
 import { compressImage } from "@/lib/compress-image";
 import {
@@ -42,6 +43,10 @@ import {
   ArrowUpRight,
   SortAscending,
   Checks,
+  Files,
+  BookmarkSimple,
+  Desktop,
+  DeviceMobile,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
 
@@ -61,9 +66,12 @@ interface FormData {
   image_url: string;
   author_name: string;
   editor_name: string;
+  image_alt: string;
+  is_pinned: boolean;
   is_published: boolean;
   // datetime-local dalam zona WIB; dikonversi ke UTC sebelum dikirim
   published_at: string;
+  expires_at: string;
 }
 
 const emptyForm: FormData = {
@@ -75,8 +83,40 @@ const emptyForm: FormData = {
   image_url: "",
   author_name: "",
   editor_name: "",
+  image_alt: "",
+  is_pinned: false,
   is_published: false,
   published_at: "",
+  expires_at: "",
+};
+
+/** Domain pratinjau URL/OG — sama dengan BASE_URL di src/app/sitemap.ts. */
+const SITE_URL = "https://www.smpmuh4tanggul.sch.id";
+const MAX_PINNED = 3;
+const AUTOSAVE_DELAY_MS = 5000;
+
+// ── Status tayang (badge daftar) ────────────────────────────────
+type ArticleStatus = "draft" | "scheduled" | "live" | "expired";
+
+function articleStatus(item: ArticleWithAuthor): ArticleStatus {
+  if (!item.is_published) return "draft";
+  if (item.expires_at && new Date(item.expires_at).getTime() <= Date.now()) return "expired";
+  if (item.published_at && new Date(item.published_at).getTime() > Date.now()) return "scheduled";
+  return "live";
+}
+
+const STATUS_TEXT: Record<ArticleStatus, string> = {
+  draft: "Draft",
+  scheduled: "Terjadwal",
+  live: "Terbit",
+  expired: "Kedaluwarsa",
+};
+
+const STATUS_BADGE_CLS: Record<ArticleStatus, string> = {
+  draft: "bg-slate-100 text-slate-600 border border-slate-300 hover:bg-slate-200",
+  scheduled: "bg-[#f4d21f]/20 text-[#7a6600] border border-[#f4d21f] hover:bg-[#f4d21f]/30",
+  live: "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100",
+  expired: "bg-red-50 text-red-500 border border-red-200 hover:bg-red-100",
 };
 
 // ── WIB (UTC+7) ⇄ UTC untuk field Tanggal Publish ──────────────
@@ -93,6 +133,28 @@ function wibInputToUtc(value: string): string | undefined {
   if (!value) return undefined;
   const d = new Date(`${value}:00+07:00`);
   return isNaN(d.getTime()) ? undefined : d.toISOString();
+}
+
+// ── Autosave draft lokal ────────────────────────────────────────
+function autosaveKey(edit: ArticleWithAuthor | null): string {
+  return edit ? `article:edit:${edit.id}` : "article:new";
+}
+
+function formatSavedAt(ts: number): string {
+  return new Date(ts).toLocaleString("id-ID", {
+    day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+  });
+}
+
+/** "2026-10-06T14:30" (nilai input WIB) → "6 Oktober 2026, 14.30". */
+function formatWibInput(value: string): string {
+  if (!value) return "";
+  const [datePart, timePart = ""] = value.split("T");
+  const [y, m, d] = datePart.split("-").map(Number);
+  if (!y || !m || !d) return value;
+  const bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  return `${d} ${bulan[m - 1]} ${y}, ${timePart.replace(":", ".")}`;
 }
 
 // ── Konten lama (teks polos) → HTML untuk editor rich text ─────
@@ -157,6 +219,21 @@ export default function AdminArticlesPage() {
   // Paksa remount RichTextEditor tiap form dibuka (sinkron nilai awal)
   const [formKey, setFormKey] = useState(0);
 
+  // Tahap 2 (paritas berita): autosave, pratinjau, sematan, kolom tahap 1
+  const [schedCols, setSchedCols] = useState(false);
+  const [pendingDraft, setPendingDraft] = useState<{ key: string; savedAt: number; data: FormData } | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
+
+  // Probe kolom tahap 1 (image_alt/is_pinned/expires_at) — sekali per muat halaman
+  useEffect(() => {
+    let alive = true;
+    articlesHasScheduledColumns()
+      .then((ok) => { if (alive) setSchedCols(ok); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
   const fetchArticles = useCallback(async () => {
     const data = await getArticleListAll();
     setArticles(data);
@@ -178,6 +255,17 @@ export default function AdminArticlesPage() {
     () => JSON.stringify(form) !== JSON.stringify(initialForm) || imageFile !== null,
     [form, initialForm, imageFile]
   );
+
+  // Autosave: debounce 5 detik setelah ada perubahan (hanya field teks)
+  useEffect(() => {
+    if (!formOpen || !isDirty) return;
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(autosaveKey(editItem), JSON.stringify({ form, savedAt: Date.now() }));
+      } catch { /* storage penuh/diizinkan — abaikan */ }
+    }, AUTOSAVE_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [formOpen, isDirty, form, editItem]);
 
   // Saran kategori dari DB: nama unik di tabel articles ∪ tabel categories
   const categoryOptions = useMemo(() => {
@@ -251,6 +339,21 @@ export default function AdminArticlesPage() {
     else { setSortField(field); setSortDir("asc"); }
   }
 
+  function checkPendingDraft(edit: ArticleWithAuthor | null) {
+    const key = autosaveKey(edit);
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.form && typeof parsed.form === "object") {
+          setPendingDraft({ key, savedAt: parsed.savedAt || 0, data: parsed.form });
+          return;
+        }
+      }
+    } catch { /* draft rusak → abaikan */ }
+    setPendingDraft(null);
+  }
+
   function openCreate() {
     setEditItem(null);
     setForm(emptyForm);
@@ -263,6 +366,7 @@ export default function AdminArticlesPage() {
     setFormError("");
     setAddingCategory(false);
     setFormKey((k) => k + 1);
+    checkPendingDraft(null);
     setFormOpen(true);
   }
 
@@ -278,8 +382,11 @@ export default function AdminArticlesPage() {
       image_url: item.image_url || "",
       author_name: item.author_name || "",
       editor_name: item.editor_name || "",
+      image_alt: item.image_alt || "",
+      is_pinned: !!item.is_pinned,
       is_published: item.is_published,
       published_at: utcToWibInput(item.published_at),
+      expires_at: utcToWibInput(item.expires_at),
     };
     setEditItem(item);
     setForm(next);
@@ -292,13 +399,35 @@ export default function AdminArticlesPage() {
     setFormError("");
     setAddingCategory(false);
     setFormKey((k) => k + 1);
+    checkPendingDraft(item);
     setFormOpen(true);
+  }
+
+  // ── Autosave: pulihkan / buang draft lokal ──
+  function restoreDraft() {
+    if (!pendingDraft) return;
+    const restored = { ...emptyForm };
+    (Object.keys(emptyForm) as (keyof FormData)[]).forEach((k) => {
+      const v = (pendingDraft.data as unknown as Record<string, unknown>)[k];
+      if (v !== undefined) (restored as unknown as Record<string, unknown>)[k] = v;
+    });
+    setForm(restored);
+    setImagePreview(restored.image_url || "");
+    setPendingDraft(null);
+    setFormKey((k) => k + 1);
+  }
+
+  function discardDraft() {
+    if (!pendingDraft) return;
+    try { localStorage.removeItem(pendingDraft.key); } catch { /* noop */ }
+    setPendingDraft(null);
   }
 
   function closeForm() {
     if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
     setConfirmClose(false);
     setFormOpen(false);
+    setPendingDraft(null);
     setImagePreview("");
     setImageFile(null);
   }
@@ -307,6 +436,73 @@ export default function AdminArticlesPage() {
     if (formSaving) return;
     if (isDirty) { setConfirmClose(true); return; }
     closeForm();
+  }
+
+  // ── Sematan (maksimal 3 aktif) ──
+  function countActivePins(excludeId?: string): number {
+    return articles.filter(
+      (a) =>
+        a.id !== excludeId &&
+        a.is_pinned &&
+        (!a.expires_at || new Date(a.expires_at).getTime() > Date.now())
+    ).length;
+  }
+
+  function togglePin() {
+    if (!form.is_pinned && countActivePins(editItem?.id) >= MAX_PINNED) {
+      toast(`Maksimal ${MAX_PINNED} artikel disematkan aktif. Lepas sematan lain terlebih dahulu.`, "error");
+      return;
+    }
+    setForm((f) => ({ ...f, is_pinned: !f.is_pinned }));
+  }
+
+  // ── Duplikat: buka form baru terisi salinan (belum disimpan) ──
+  async function openDuplicate(item: ArticleWithAuthor) {
+    const copied: FormData = {
+      ...emptyForm,
+      title: `${item.title} (Salinan)`,
+      excerpt: item.excerpt || "",
+      content: toEditorContent(item.content || ""),
+      category: item.category || "",
+      image_url: item.image_url || "",
+      author_name: item.author_name || "",
+      editor_name: item.editor_name || "",
+      image_alt: item.image_alt || "",
+    };
+    copied.slug = slugify(copied.title);
+    setViewItem(null);
+    setEditItem(null);
+    setForm(copied);
+    setInitialForm(copied);
+    setImagePreview(copied.image_url || "");
+    setImageFile(null);
+    setFormError("");
+    setTitleError("");
+    setSlugTouched(false);
+    setSlugOverride(false);
+    setAddingCategory(false);
+    setFormKey((k) => k + 1);
+    checkPendingDraft(null);
+    setFormOpen(true);
+
+    // Salin sampul: unduh ulang jadi File agar ikut terunggah ke folder
+    // artikel baru. Bila gagal, tetap pakai URL asli (lihat laporan).
+    if (copied.image_url) {
+      try {
+        const res = await fetch(copied.image_url);
+        const blob = await res.blob();
+        if (blob.type.startsWith("image/") && blob.size > 0) {
+          setImageFile(new File([blob], "cover-salinan", { type: blob.type }));
+        }
+      } catch { /* fallback: pakai URL asli */ }
+    }
+  }
+
+  function saveLabel(): string {
+    if (editItem) return "Simpan Perubahan";
+    if (!form.is_published) return "Simpan Draft";
+    const utc = wibInputToUtc(form.published_at);
+    return utc && new Date(utc).getTime() > Date.now() ? "Jadwalkan" : "Terbitkan";
   }
 
   function handleTitleChange(value: string) {
@@ -377,9 +573,10 @@ export default function AdminArticlesPage() {
     return hit ?? trimmed;
   }
 
-  // Revalidate /articles + halaman detail (dibatasi 49 path, limit route 50)
+  // Revalidate /, /articles + halaman detail (dibatasi 49 path, limit route 50)
   function revalidateBulk(slugs: (string | null | undefined)[]) {
     const paths = Array.from(new Set([
+      "/",
       "/articles",
       ...slugs.filter((s): s is string => !!s).map((s) => `/articles/${s}`),
     ])).slice(0, 49);
@@ -388,6 +585,16 @@ export default function AdminArticlesPage() {
 
   async function handleSave() {
     if (!form.title.trim()) { setTitleError("Judul wajib diisi."); return; }
+    const publishedUtc = wibInputToUtc(form.published_at);
+    const expiresUtc = wibInputToUtc(form.expires_at);
+    if (publishedUtc && expiresUtc && new Date(expiresUtc).getTime() <= new Date(publishedUtc).getTime()) {
+      setFormError("Tampil sampai harus setelah Tanggal Publish.");
+      return;
+    }
+    if (form.is_pinned && countActivePins(editItem?.id) >= MAX_PINNED) {
+      setFormError(`Maksimal ${MAX_PINNED} artikel disematkan aktif. Lepas sematan lain terlebih dahulu.`);
+      return;
+    }
     setFormSaving(true);
     setFormError("");
 
@@ -421,6 +628,12 @@ export default function AdminArticlesPage() {
     // Tanggal Publish hanya dikirim bila diubah dari nilai awal form —
     // supaya edit biasa tidak menimpa published_at lama.
     if (publishedAtUtc) payload.published_at = publishedAtUtc;
+    // Kolom tahap 1 hanya dikirim bila sudah ada di DB (probe schedCols)
+    if (schedCols) {
+      payload.image_alt = form.image_alt.trim();
+      payload.is_pinned = form.is_pinned;
+      (payload as { expires_at?: string | null }).expires_at = expiresUtc || null;
+    }
 
     if (editItem) {
       const { data, error } = await updateArticle(editItem.id, payload);
@@ -431,9 +644,18 @@ export default function AdminArticlesPage() {
       const { data, error } = await createArticle(payload);
       if (error) { setFormError(error); toast(error, "error"); setFormSaving(false); return; }
       revalidateArticles(data?.slug).catch(() => {});
-      toast(payload.is_published ? "Artikel berhasil diterbitkan" : "Draft tersimpan", "success");
+      if (!form.is_published) {
+        toast("Artikel disimpan sebagai draft", "success");
+      } else if (publishedUtc && new Date(publishedUtc).getTime() > Date.now()) {
+        toast("Artikel berhasil dijadwalkan", "success");
+      } else {
+        toast("Artikel berhasil diterbitkan", "success");
+      }
     }
 
+    // Draft lokal tidak diperlukan lagi setelah tersimpan
+    try { localStorage.removeItem(autosaveKey(editItem)); } catch { /* noop */ }
+    setPendingDraft(null);
     closeForm();
     setFormSaving(false);
     fetchArticles();
@@ -641,7 +863,12 @@ export default function AdminArticlesPage() {
                           </div>
                         )}
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-slate-800 line-clamp-1">{item.title}</p>
+                          <p className="text-sm font-medium text-slate-800 line-clamp-1">
+                            {item.title}
+                            {item.is_pinned && (
+                              <BookmarkSimple weight="fill" className="ml-1.5 inline h-3.5 w-3.5 -translate-y-px text-[#f4d21f]" aria-label="Disematkan" />
+                            )}
+                          </p>
                           {item.excerpt && <p className="mt-0.5 text-xs text-slate-400 line-clamp-1">{item.excerpt}</p>}
                         </div>
                       </div>
@@ -661,13 +888,18 @@ export default function AdminArticlesPage() {
                     </td>
                     <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => handleTogglePublish(item)}
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-                          item.is_published
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                            : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
-                        }`}>
-                        {item.is_published ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-                        {item.is_published ? "Publish" : "Draft"}
+                        title={item.is_published ? "Jadikan draft" : "Terbitkan sekarang"}
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${STATUS_BADGE_CLS[articleStatus(item)]}`}>
+                        {articleStatus(item) === "live" ? (
+                          <CheckCircle className="h-3 w-3" />
+                        ) : articleStatus(item) === "expired" ? (
+                          <Warning className="h-3 w-3" />
+                        ) : (
+                          <Clock className="h-3 w-3" />
+                        )}
+                        {articleStatus(item) === "scheduled" && item.published_at
+                          ? `Terjadwal · ${new Date(item.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}`
+                          : STATUS_TEXT[articleStatus(item)]}
                       </button>
                     </td>
                     <td className="hidden px-4 py-3.5 text-sm text-slate-500 lg:table-cell">
@@ -678,7 +910,7 @@ export default function AdminArticlesPage() {
                         <button onClick={() => setViewItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat">
                           <Eye className="h-4 w-4" />
                         </button>
-                        {item.is_published && (
+                        {articleStatus(item) === "live" && (
                           <a href={`/articles/${item.slug}`} target="_blank" rel="noopener noreferrer"
                             className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat di Website">
                             <ArrowUpRight className="h-4 w-4" />
@@ -686,6 +918,9 @@ export default function AdminArticlesPage() {
                         )}
                         <button onClick={() => openEdit(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
                           <PencilSimple className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => openDuplicate(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-purple-50 hover:text-purple-600" title="Duplikat">
+                          <Files className="h-4 w-4" />
                         </button>
                         <button onClick={() => setDeleteItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
                           <Trash className="h-4 w-4" />
@@ -729,7 +964,7 @@ export default function AdminArticlesPage() {
           <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
             {viewItem.image_url && (
               <div className="h-48 overflow-hidden rounded-t-2xl sm:h-64">
-                <img src={viewItem.image_url} alt={viewItem.title} loading="lazy" className="h-full w-full object-cover" />
+                <img src={viewItem.image_url} alt={viewItem.image_alt || viewItem.title} loading="lazy" className="h-full w-full object-cover" />
               </div>
             )}
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
@@ -743,8 +978,15 @@ export default function AdminArticlesPage() {
                     <span className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
                       {viewItem.category || "-"}
                     </span>
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${viewItem.is_published ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                      {viewItem.is_published ? "Publish" : "Draft"}
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE_CLS[articleStatus(viewItem)]}`}>
+                      {articleStatus(viewItem) === "live" ? (
+                        <CheckCircle className="h-3 w-3" />
+                      ) : articleStatus(viewItem) === "expired" ? (
+                        <Warning className="h-3 w-3" />
+                      ) : (
+                        <Clock className="h-3 w-3" />
+                      )}
+                      {STATUS_TEXT[articleStatus(viewItem)]}
                     </span>
                   </div>
                 </div>
@@ -768,16 +1010,28 @@ export default function AdminArticlesPage() {
                 </div>
               )}
             </div>
-            <div className="flex gap-3 border-t border-slate-100 px-6 py-4">
+            <div className="flex flex-wrap gap-3 border-t border-slate-100 px-6 py-4">
+              <button onClick={() => { const v = viewItem; setViewItem(null); openDuplicate(v); }}
+                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                <Files className="h-4 w-4" /> Duplikat
+              </button>
               <button onClick={() => { setViewItem(null); openEdit(viewItem); }}
                 className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                 <PencilSimple className="h-4 w-4" /> Edit
               </button>
-              {viewItem.is_published && (
+              {articleStatus(viewItem) === "live" ? (
                 <a href={`/articles/${viewItem.slug}`} target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1]">
                   <Eye className="h-4 w-4" /> Lihat di Website
                 </a>
+              ) : (
+                <span className="self-center text-xs font-semibold text-slate-400">
+                  {articleStatus(viewItem) === "scheduled"
+                    ? "Belum tayang — dijadwalkan"
+                    : articleStatus(viewItem) === "expired"
+                      ? "Masa tampil sudah berakhir"
+                      : "Draft — belum tayang di website"}
+                </span>
               )}
             </div>
           </div>
@@ -825,10 +1079,16 @@ export default function AdminArticlesPage() {
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 mx-auto">
               <Warning className="h-6 w-6 text-amber-600" />
             </div>
-            <h3 className="text-center text-lg font-bold text-slate-800">Perubahan belum disimpan. Tutup tanpa menyimpan?</h3>
+            <h3 className="text-center text-lg font-bold text-slate-800">Perubahan belum disimpan?</h3>
+            <p className="mt-2 text-center text-sm text-slate-500">Tutup tanpa menyimpan?</p>
             <div className="mt-6 flex gap-3">
               <button onClick={() => setConfirmClose(false)} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Batal</button>
-              <button onClick={closeForm} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700">Tutup</button>
+              <button onClick={() => {
+                // "Tutup tanpa menyimpan" → buang juga draft autosave lokal
+                try { localStorage.removeItem(autosaveKey(editItem)); } catch { /* noop */ }
+                setConfirmClose(false);
+                closeForm();
+              }} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700">Tutup Tanpa Simpan</button>
             </div>
           </div>
         </div>
@@ -841,25 +1101,45 @@ export default function AdminArticlesPage() {
         title={editItem ? "Edit Artikel" : "Buat Artikel Baru"}
         description={editItem ? "Perbarui informasi artikel" : "Isi form untuk menerbitkan artikel"}
         footer={
-          <div className="flex w-full items-center justify-between">
+          <div className="flex w-full items-center justify-between gap-2">
             <button onClick={requestClose} disabled={formSaving}
               className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
               Batal
             </button>
-            <button onClick={handleSave} disabled={formSaving}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
-              {formSaving ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              ) : (
-                <>
-                  <FloppyDisk className="h-4 w-4" />
-                  {editItem ? "Simpan Perubahan" : form.is_published ? "Terbitkan" : "Simpan Draft"}
-                </>
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setPreviewOpen(true)} disabled={formSaving}
+                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                <Eye className="h-4 w-4" /> Pratinjau
+              </button>
+              <button onClick={handleSave} disabled={formSaving}
+                className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
+                {formSaving ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <>
+                    <FloppyDisk className="h-4 w-4" />
+                    {saveLabel()}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         }
       >
+        {pendingDraft && (
+          <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            <Clock className="h-4 w-4 shrink-0" />
+            <span className="flex-1">Ada draft yang belum disimpan ({formatSavedAt(pendingDraft.savedAt)}). Lanjutkan?</span>
+            <button type="button" onClick={restoreDraft}
+              className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
+              Lanjutkan
+            </button>
+            <button type="button" onClick={discardDraft}
+              className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100">
+              Buang
+            </button>
+          </div>
+        )}
         {formError && (
           <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             <Warning className="h-4 w-4 shrink-0" /> {formError}
@@ -892,15 +1172,16 @@ export default function AdminArticlesPage() {
               placeholder="otomatis dari judul" />
             {slugOverride && editItem?.is_published && (
               <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-amber-600">
-                <Warning className="h-3.5 w-3.5 shrink-0" /> Tautan lama akan mati
+                <Warning className="h-3.5 w-3.5 shrink-0" /> Tautan lama akan mati — tidak ada redirect otomatis.
               </p>
             )}
-            {form.slug && (
-              <p className="mt-1.5 break-all text-xs text-slate-400">
-                smpmuh4tanggul.sch.id/articles/<span className="font-medium text-slate-500">{form.slug}</span>
-              </p>
-            )}
+            <p className="mt-1.5 break-all text-xs text-slate-400">
+              {SITE_URL}/articles/<span className={form.slug ? "text-slate-500" : "text-slate-300"}>{form.slug || "…"}</span>
+            </p>
           </div>
+
+          {/* Pratinjau kartu saat dibagikan */}
+          <SharePreviewCard form={form} imagePreview={imagePreview} />
 
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Kategori</label>
@@ -994,6 +1275,25 @@ export default function AdminArticlesPage() {
                 <input id="cover-image-input" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
               </label>
             )}
+            {schedCols && (
+              <div className="mt-3">
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Teks alternatif gambar</label>
+                <input
+                  type="text"
+                  maxLength={125}
+                  value={form.image_alt}
+                  onChange={(e) => setForm({ ...form, image_alt: e.target.value })}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                  placeholder="Deskripsi singkat isi gambar"
+                />
+                <div className="mt-1 flex items-center justify-between gap-3">
+                  <p className="text-xs text-slate-400">Untuk poster yang berisi teks, tuliskan isi pentingnya di sini.</p>
+                  <span className={`text-[11px] ${form.image_alt.length >= 125 ? "text-amber-600" : "text-slate-400"}`}>
+                    {form.image_alt.length}/125
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
@@ -1050,8 +1350,14 @@ export default function AdminArticlesPage() {
           <div className="space-y-3 rounded-xl border border-slate-200 p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-slate-700">Terbitkan Sekarang</p>
-                <p className="text-xs text-slate-400">{form.is_published ? "Artikel akan langsung tampil di website" : "Artikel disimpan sebagai draft"}</p>
+                <p className="text-sm font-semibold text-slate-700">Terbitkan</p>
+                <p className="text-xs text-slate-400">
+                  {!form.is_published
+                    ? "Artikel disimpan sebagai draft"
+                    : wibInputToUtc(form.published_at) && new Date(wibInputToUtc(form.published_at)!).getTime() > Date.now()
+                      ? "Belum tampil — menunggu jadwal tayang"
+                      : "Artikel akan langsung tampil di website"}
+                </p>
               </div>
               <button type="button" onClick={() => setForm({ ...form, is_published: !form.is_published })}
                 className={`relative h-6 w-11 rounded-full transition-colors ${form.is_published ? "bg-[#1767b1]" : "bg-slate-300"}`}>
@@ -1059,7 +1365,7 @@ export default function AdminArticlesPage() {
               </button>
             </div>
             <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3">
-              <label className="whitespace-nowrap text-xs font-semibold text-slate-500">Tanggal Publish</label>
+              <label className="whitespace-nowrap text-xs font-semibold text-slate-500">Tanggal Publish (WIB)</label>
               <input type="datetime-local" value={form.published_at}
                 onChange={(e) => setForm({ ...form, published_at: e.target.value })}
                 className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
@@ -1072,11 +1378,171 @@ export default function AdminArticlesPage() {
             </div>
             <p className="text-[11px] leading-relaxed text-slate-400">
               Zona waktu WIB. Kosongkan untuk memakai waktu simpan otomatis saat terbit.
-              Tanggal ini menentukan urutan &amp; tanggal tampil saja — <span className="font-semibold text-slate-500">bukan jadwal tayang</span> (sama seperti di form Berita).
+              Tanggal di masa depan akan <span className="font-semibold text-slate-500">menunda tayang</span> — artikel muncul otomatis saat waktunya tiba.
             </p>
+            {form.is_published && wibInputToUtc(form.published_at) && new Date(wibInputToUtc(form.published_at)!).getTime() > Date.now() && (
+              <p className="flex items-center gap-1.5 rounded-lg border border-[#f4d21f]/50 bg-[#f4d21f]/15 px-2.5 py-1.5 text-xs font-medium text-[#7a6600]">
+                <Clock className="h-3.5 w-3.5 shrink-0" />
+                Akan tayang otomatis pada {formatWibInput(form.published_at)} WIB
+              </p>
+            )}
+            {schedCols && (
+              <div className="space-y-3 border-t border-slate-100 pt-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+                      <BookmarkSimple weight="fill" className="h-4 w-4 text-[#f4d21f]" /> Sematkan di atas
+                    </p>
+                    <p className="text-xs text-slate-400">Tampil lebih awal di /articles &amp; beranda (maks {MAX_PINNED} aktif).</p>
+                  </div>
+                  <button type="button" onClick={togglePin}
+                    aria-pressed={form.is_pinned}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${form.is_pinned ? "bg-[#1767b1]" : "bg-slate-300"}`}>
+                    <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_pinned ? "left-[22px]" : "left-0.5"}`} />
+                  </button>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="whitespace-nowrap text-xs font-semibold text-slate-500">Tampil sampai (WIB)</label>
+                  <input type="datetime-local" value={form.expires_at}
+                    onChange={(e) => setForm({ ...form, expires_at: e.target.value })}
+                    className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                  {form.expires_at && (
+                    <button type="button" onClick={() => setForm({ ...form, expires_at: "" })}
+                      className="text-[11px] font-medium text-slate-400 hover:text-slate-600">
+                      Reset
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] leading-relaxed text-slate-400">Opsional — artikel berhenti tampil otomatis setelah waktu ini.</p>
+              </div>
+            )}
           </div>
         </div>
       </SlideOver>
+
+      {/* ── PRATINJAU (draft/terjadwal) — tanpa route baru ── */}
+      <Modal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        size={previewDevice === "mobile" ? "sm" : "xl"}
+        title="Pratinjau Artikel"
+        description="Tampilan seperti halaman publik — berlaku untuk draft & terjadwal"
+        footer={
+          <>
+            <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
+              <button type="button" onClick={() => setPreviewDevice("desktop")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "desktop" ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                <Desktop className="h-3.5 w-3.5" /> Desktop
+              </button>
+              <button type="button" onClick={() => setPreviewDevice("mobile")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "mobile" ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                <DeviceMobile className="h-3.5 w-3.5" /> Mobile
+              </button>
+            </div>
+            <button onClick={() => setPreviewOpen(false)}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              Tutup
+            </button>
+          </>
+        }
+      >
+        <div className={previewDevice === "mobile" ? "mx-auto max-w-sm" : "mx-auto max-w-3xl"}>
+          {/* Meta — kategori, tanggal, penulis (seperti halaman detail publik) */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-blue-700">
+              {form.category || "-"}
+            </span>
+            <span className="flex items-center gap-1 text-xs text-slate-400">
+              <Clock className="h-3 w-3" />
+              {form.published_at ? formatWibInput(form.published_at) : "-"}
+            </span>
+            {form.author_name && (
+              <span className="flex items-center gap-1 text-xs text-slate-400">
+                <User className="h-3 w-3" /> {form.author_name}
+                <span className="text-[11px] text-slate-300">Penulis</span>
+              </span>
+            )}
+            {form.editor_name && (
+              <span className="flex items-center gap-1 text-xs text-slate-400">
+                <User className="h-3 w-3" /> {form.editor_name}
+                <span className="text-[11px] text-slate-300">Editor</span>
+              </span>
+            )}
+          </div>
+          <h1 className="mt-2 text-2xl font-black leading-snug text-[#082b59]">
+            {form.title || "Tanpa judul"}
+          </h1>
+          {imagePreview && (
+            <div className="mt-4 w-full overflow-hidden rounded-2xl shadow-md aspect-video">
+              <img src={imagePreview} alt={form.image_alt || form.title || "Sampul"}
+                className="h-full w-full object-cover" />
+            </div>
+          )}
+          {form.excerpt && (
+            <div className="mt-4 border-l-4 border-[#f4d21f] bg-amber-50/50 px-5 py-4">
+              <p className="text-base font-medium italic leading-relaxed text-slate-700">{form.excerpt}</p>
+            </div>
+          )}
+          {/* Konten — kelas prose DISALIN VERBATIM dari /articles/[slug] + sanitize() */}
+          <div
+            className="prose prose-lg prose-slate max-w-none
+              prose-headings:text-[#082b59] prose-headings:font-extrabold prose-headings:scroll-mt-24
+              prose-p:text-gray-700 prose-p:leading-[1.9] prose-p:text-justify prose-p:mb-5
+              prose-a:text-[#1767b1] prose-a:no-underline prose-a:font-medium hover:prose-a:underline
+              prose-strong:text-[#082b59] prose-strong:font-bold
+              prose-em:text-slate-600
+              prose-img:rounded-2xl prose-img:shadow-md prose-img:my-8
+              prose-blockquote:border-l-4 prose-blockquote:border-[#f4d21f] prose-blockquote:bg-gradient-to-r prose-blockquote:from-amber-50 prose-blockquote:to-transparent prose-blockquote:py-4 prose-blockquote:pr-6 prose-blockquote:pl-6 prose-blockquote:rounded-r-xl prose-blockquote:italic prose-blockquote:text-slate-600
+              prose-li:text-gray-700 prose-li:leading-relaxed prose-li:mb-1
+              prose-ol:my-5 prose-ol:pl-6
+              prose-ul:my-5 prose-ul:pl-6
+              prose-code:text-[#1767b1] prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:font-normal prose-code:before:content-none prose-code:after:content-none
+              prose-pre:bg-[#082b59] prose-pre:text-white prose-pre:rounded-xl prose-pre:border prose-pre:border-slate-700
+              prose-hr:border-slate-200 prose-hr:my-12
+              prose-table:text-sm prose-table:border-collapse
+              prose-th:bg-slate-50 prose-th:text-left prose-th:font-semibold prose-th:px-4 prose-th:py-3 prose-th:border prose-th:border-slate-200
+              prose-td:px-4 prose-td:py-3 prose-td:border prose-td:border-slate-200"
+            dangerouslySetInnerHTML={{ __html: sanitize(form.content || "<p>Konten belum tersedia.</p>") }}
+          />
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+/** Kartu "Pratinjau saat dibagikan" — ikuti isi form secara langsung. */
+function SharePreviewCard({ form, imagePreview }: { form: FormData; imagePreview: string }) {
+  const domain = SITE_URL.replace(/^https?:\/\//, "");
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+        Pratinjau saat dibagikan
+      </label>
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        {imagePreview ? (
+          <div className="relative w-full bg-slate-100 aspect-[1.91/1]">
+            <img
+              src={imagePreview}
+              alt={form.image_alt || form.title || "Pratinjau sampul"}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        ) : (
+          <div className="flex w-full items-center justify-center bg-gradient-to-br from-[#082b59] to-[#1767b1] aspect-[1.91/1]">
+            <ImageIcon className="h-10 w-10 text-white/25" />
+          </div>
+        )}
+        <div className="border-t border-slate-200 px-4 py-3">
+          <p className="text-[11px] uppercase tracking-wide text-slate-400">{domain}</p>
+          <p className="mt-1 line-clamp-2 text-sm font-bold text-slate-800">
+            {form.title || "Judul artikel tampil di sini"}
+          </p>
+          <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">
+            {form.excerpt || "Ringkasan artikel tampil di sini…"}
+          </p>
+        </div>
+      </div>
+      <p className="mt-1.5 text-[11px] text-slate-400">Kartu tautan di WhatsApp / Facebook.</p>
     </div>
   );
 }

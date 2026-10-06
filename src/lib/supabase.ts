@@ -143,6 +143,10 @@ export interface Article {
   // Kolom opsional: hanya ada setelah SQL ALTER TABLE dijalankan
   author_name?: string | null;
   editor_name?: string | null;
+  /** Kolom Tahap 1 (dicek via articlesHasScheduledColumns). */
+  image_alt?: string | null;
+  is_pinned?: boolean;
+  expires_at?: string | null;
 }
 
 export interface Activity {

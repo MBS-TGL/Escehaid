@@ -1,12 +1,12 @@
 import type { MetadataRoute } from "next";
-import { getNewsListForSitemap, getArticleListAll, getActivityListAll } from "@/lib/queries";
+import { getNewsListForSitemap, getArticleListForSitemap, getActivityListAll } from "@/lib/queries";
 
 const BASE_URL = "https://www.smpmuh4tanggul.sch.id";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [news, articles, activities] = await Promise.all([
     getNewsListForSitemap(),
-    getArticleListAll(),
+    getArticleListForSitemap(),
     getActivityListAll(),
   ]);
 
