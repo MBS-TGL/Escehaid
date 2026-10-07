@@ -4,11 +4,13 @@ import { MagnifyingGlass, X } from "@/components/Icons";
 
 export type PortalFilter = "all" | "active" | "soon" | "inactive";
 
+// Label mengikuti tiga status di StatusControl; jumlah tiga chip terakhir
+// (Tayang + Segera Hadir + Disembunyikan) selalu berjumlah sama dengan Total.
 const CHIPS: { key: PortalFilter; label: string }[] = [
   { key: "all", label: "Semua" },
-  { key: "active", label: "Aktif" },
+  { key: "active", label: "Tayang" },
   { key: "soon", label: "Segera Hadir" },
-  { key: "inactive", label: "Nonaktif" },
+  { key: "inactive", label: "Disembunyikan" },
 ];
 
 /** Input pencarian + chip filter (Semua / Aktif / Segera Hadir / Nonaktif). */

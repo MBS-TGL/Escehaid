@@ -16,11 +16,15 @@ import {
   PORTAL_ICON_LABELS,
   resolvePortalColor,
 } from "@/lib/portal-theme";
-import { StatusSwitch } from "./StatusSwitch";
+import { StatusControl, statusOf, type PortalStatus } from "./StatusControl";
 
-/** Kolom grid desktop (dipakai header di page.tsx supaya sejajar). */
+/**
+ * Kolom grid desktop (dipakai header di page.tsx supaya sejajar):
+ * [checkbox | urutan | aplikasi | link | ikon/warna | status | aksi]
+ * — kolom "No" dihapus karena duplikat dengan "Urutan".
+ */
 export const PORTAL_GRID =
-  "md:grid-cols-[52px_56px_minmax(150px,1.6fr)_minmax(110px,1fr)_132px_168px_108px]";
+  "md:grid-cols-[34px_60px_minmax(140px,1.5fr)_minmax(100px,1fr)_112px_236px_96px]";
 
 function ThemeChip({ icon, color }: { icon: string; color: string }) {
   const Icon = PORTAL_ICONS[icon] ?? SquaresFour;
@@ -38,37 +42,83 @@ function ThemeChip({ icon, color }: { icon: string; color: string }) {
   );
 }
 
-/** Badge peringatan: aplikasi aktif (bukan segera hadir) tanpa link valid. */
-function MissingLinkBadge() {
+/** Tampilkan alamat singkat: path utuh untuk internal, domain untuk link luar. */
+function shortHref(href: string): string {
+  const h = href.trim();
+  if (!h) return "—";
+  if (h === "#") return "#";
+  if (h.startsWith("/")) return h;
+  try {
+    return new URL(h).hostname.replace(/^www\./, "");
+  } catch {
+    return h;
+  }
+}
+
+/** Chip peringatan link: "Link kosong" (saat Tayang) atau "Link tidak valid". */
+function LinkWarnings({ item }: { item: PortalAppAdmin }) {
+  const href = item.href.trim();
+  const kosong = href === "" || href === "#";
+  const tidakValid = href !== "" && !/^(\/|#|https?:\/\/)/i.test(href);
+
+  if (statusOf(item) === "live" && kosong) {
+    return (
+      <span className="mt-1 inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+        Link kosong
+      </span>
+    );
+  }
+  if (tidakValid) {
+    return (
+      <span className="mt-1 inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+        Link tidak valid
+      </span>
+    );
+  }
+  return null;
+}
+
+function RowCheckbox({
+  item,
+  selected,
+  onSelect,
+}: {
+  item: PortalAppAdmin;
+  selected: boolean;
+  onSelect: (id: string, checked: boolean) => void;
+}) {
   return (
-    <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-      Link belum diisi
-    </span>
+    <input
+      type="checkbox"
+      checked={selected}
+      onChange={(e) => onSelect(item.id, e.target.checked)}
+      aria-label={`Pilih ${item.label}`}
+      className="h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 accent-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+    />
   );
 }
 
 type RowProps = {
   item: PortalAppAdmin;
-  /** Nomor urut tampil (posisi dalam daftar yang sedang ditampilkan). */
-  index: number;
   /** Drag nonaktif saat pencarian/filter aktif — urutan hanya bermakna pada daftar penuh. */
   dragDisabled: boolean;
+  selected: boolean;
+  onSelect: (id: string, checked: boolean) => void;
   onEdit: (item: PortalAppAdmin) => void;
   onDelete: (item: PortalAppAdmin) => void;
   onDuplicate: (item: PortalAppAdmin) => void;
-  onToggleActive: (item: PortalAppAdmin, value: boolean) => void;
-  onToggleSoon: (item: PortalAppAdmin, value: boolean) => void;
+  onSetStatus: (item: PortalAppAdmin, status: PortalStatus) => void;
 };
 
 export function SortableRow({
   item,
-  index,
   dragDisabled,
+  selected,
+  onSelect,
   onEdit,
   onDelete,
   onDuplicate,
-  onToggleActive,
-  onToggleSoon,
+  onSetStatus,
 }: RowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id, disabled: dragDisabled });
@@ -79,8 +129,14 @@ export function SortableRow({
     zIndex: isDragging ? 10 : undefined,
   };
 
-  const href = item.href.trim();
-  const missingLink = item.is_active && !item.is_coming_soon && (href === "" || href === "#");
+  const statusControl = (
+    <StatusControl
+      size="sm"
+      value={statusOf(item)}
+      onChange={(status) => onSetStatus(item, status)}
+      label={`Status ${item.label}`}
+    />
+  );
 
   const handle = (
     <button
@@ -94,7 +150,7 @@ export function SortableRow({
           ? "Urutan hanya bisa diubah saat menampilkan Semua tanpa pencarian"
           : "Tarik untuk mengubah urutan (atau tekan Space, lalu panah)"
       }
-      className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] ${
+      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] ${
         dragDisabled
           ? "cursor-not-allowed text-slate-300"
           : "cursor-grab text-slate-400 hover:bg-[#1767b1]/10 hover:text-[#082b59] active:cursor-grabbing"
@@ -102,39 +158,6 @@ export function SortableRow({
     >
       <DotsSixVertical className="h-4 w-4" />
     </button>
-  );
-
-  const statusControls = (align: string) => (
-    <div className={`flex flex-wrap items-center gap-1.5 ${align}`}>
-      <span className="flex items-center gap-1.5">
-        <StatusSwitch
-          size="sm"
-          checked={item.is_active}
-          onChange={(v) => onToggleActive(item, v)}
-          label={`${item.is_active ? "Nonaktifkan" : "Aktifkan"} ${item.label}`}
-        />
-        <span
-          className={`text-[11px] font-semibold ${item.is_active ? "text-emerald-600" : "text-slate-400"}`}
-        >
-          {item.is_active ? "Aktif" : "Nonaktif"}
-        </span>
-      </span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={item.is_coming_soon}
-        aria-label={`Tandai ${item.label} segera hadir`}
-        onClick={() => onToggleSoon(item, !item.is_coming_soon)}
-        className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] ${
-          item.is_coming_soon
-            ? "border-amber-300 bg-amber-100 text-amber-700"
-            : "border-slate-200 bg-white text-slate-400 hover:border-amber-200 hover:text-amber-600"
-        }`}
-        title={item.is_coming_soon ? "Klik untuk melepas tanda" : "Tandai segera hadir"}
-      >
-        Segera Hadir
-      </button>
-    </div>
   );
 
   const actions = (
@@ -180,12 +203,14 @@ export function SortableRow({
     >
       {/* ── Desktop: baris tabel ─────────────────────────────── */}
       <div className={`hidden px-4 py-3.5 md:grid ${PORTAL_GRID} md:items-center md:gap-3`}>
+        <div role="cell" className="flex justify-center">
+          <RowCheckbox item={item} selected={selected} onSelect={onSelect} />
+        </div>
         <div role="cell" className="flex items-center gap-0.5">
           {handle}
-          <span className="text-xs tabular-nums text-slate-400">{index + 1}</span>
-        </div>
-        <div role="cell" className="text-center text-xs font-semibold tabular-nums text-slate-500">
-          {item.sort_order}
+          <span className="text-xs font-semibold tabular-nums text-slate-500">
+            {item.sort_order}
+          </span>
         </div>
         <div role="cell" className="min-w-0">
           <span className="block truncate text-sm font-medium text-slate-700">{item.label}</span>
@@ -194,8 +219,8 @@ export function SortableRow({
           )}
         </div>
         <div role="cell" className="min-w-0">
-          <span className="flex max-w-[180px] items-center gap-1 truncate text-xs text-slate-500">
-            <span className="truncate">{item.href || "—"}</span>
+          <span className="flex items-center gap-1 truncate text-xs text-slate-500">
+            <span className="truncate">{shortHref(item.href)}</span>
             {item.is_external && (
               <span
                 title="Link luar — dibuka di tab baru"
@@ -206,14 +231,12 @@ export function SortableRow({
               </span>
             )}
           </span>
-          {missingLink && <MissingLinkBadge />}
+          <LinkWarnings item={item} />
         </div>
         <div role="cell" className="text-xs text-slate-500">
           <ThemeChip icon={item.icon} color={item.color} />
         </div>
-        <div role="cell" className="flex justify-center">
-          {statusControls("")}
-        </div>
+        <div role="cell">{statusControl}</div>
         <div role="cell" className="flex justify-end">
           {actions}
         </div>
@@ -222,31 +245,32 @@ export function SortableRow({
       {/* ── Mobile: kartu ringkas ────────────────────────────── */}
       <div className="flex flex-col gap-2 px-4 py-3 md:hidden">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex min-w-0 items-start gap-1">
+          <div className="flex min-w-0 items-start gap-1.5">
+            <span className="mt-1.5 shrink-0">
+              <RowCheckbox item={item} selected={selected} onSelect={onSelect} />
+            </span>
             {handle}
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-slate-700">{item.label}</p>
-              {item.href && (
-                <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-400">
-                  <span className="truncate">{item.href}</span>
-                  {item.is_external && (
-                    <span
-                      title="Link luar — dibuka di tab baru"
-                      className="inline-flex shrink-0 items-center"
-                    >
-                      <ArrowSquareOut className="h-3 w-3" />
-                      <span className="sr-only">link luar, buka di tab baru</span>
-                    </span>
-                  )}
-                </p>
-              )}
-              {missingLink && <MissingLinkBadge />}
+              <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-400">
+                <span className="truncate">{shortHref(item.href)}</span>
+                {item.is_external && (
+                  <span
+                    title="Link luar — dibuka di tab baru"
+                    className="inline-flex shrink-0 items-center"
+                  >
+                    <ArrowSquareOut className="h-3 w-3" />
+                    <span className="sr-only">link luar, buka di tab baru</span>
+                  </span>
+                )}
+              </p>
+              <LinkWarnings item={item} />
             </div>
           </div>
           {actions}
         </div>
         <div className="flex items-center justify-between gap-2">
-          {statusControls("")}
+          <div className="min-w-0 flex-1">{statusControl}</div>
           <span className="shrink-0 text-[11px] tabular-nums text-slate-400">
             Urutan {item.sort_order}
           </span>

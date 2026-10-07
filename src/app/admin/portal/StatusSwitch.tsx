@@ -1,8 +1,11 @@
 "use client";
 
 /**
- * Switch status konsisten untuk halaman portal — dipakai di kolom Status
- * tabel dan di form SlideOver (menggantikan checkbox).
+ * Switch dua keadaan generik untuk halaman portal.
+ *
+ * Dipakai untuk boolean tunggal di bagian "Lanjutan" form (mis. "Buka di tab
+ * baru"). Status tiga keadaan (Tayang / Segera hadir / Disembunyikan) memakai
+ * `StatusControl` di StatusControl.tsx.
  */
 export function StatusSwitch({
   checked,

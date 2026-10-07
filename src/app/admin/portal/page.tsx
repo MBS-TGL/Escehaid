@@ -27,7 +27,7 @@ import {
 import type { PortalAppAdmin, PortalAppInput } from "@/lib/queries";
 import { StatCard, StatCardRow, ConfirmModal, SlideOver } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
-import { SquaresFour, Plus, FloppyDisk, Info, MagnifyingGlass } from "@/components/Icons";
+import { SquaresFour, Plus, FloppyDisk, Info, MagnifyingGlass, ArrowSquareOut, Checks } from "@/components/Icons";
 import {
   PORTAL_ICONS,
   PORTAL_ICON_LABELS,
@@ -37,6 +37,7 @@ import {
   normalizeHex,
 } from "@/lib/portal-theme";
 import { StatusSwitch } from "./StatusSwitch";
+import { StatusControl, statusOf, flagsOf, STATUS_META, type PortalStatus } from "./StatusControl";
 import { FilterBar, type PortalFilter } from "./FilterBar";
 import { SortableRow, PORTAL_GRID } from "./SortableRow";
 
@@ -49,11 +50,17 @@ const EMPTY_FORM: PortalAppInput = {
   href: "",
   icon: "SquaresFour",
   color: "navy",
-  is_external: true,
+  // Link kosong → otomatis bukan link luar (lihat autoExternal).
+  is_external: false,
   is_coming_soon: false,
   is_active: true,
   sort_order: 0,
 };
+
+/** Is_external dihitung otomatis dari awalan URL: http(s):// → tab baru. */
+function autoExternal(href: string): boolean {
+  return /^https?:\/\//i.test(href.trim());
+}
 
 const inputClass =
   "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20";
@@ -373,6 +380,15 @@ export default function AdminPortalPage() {
   const [form, setForm] = useState<PortalAppInput>(EMPTY_FORM);
   const [formSaving, setFormSaving] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
+  // Pengguna menimpa nilai is_external otomatis di bagian "Lanjutan".
+  const [extManual, setExtManual] = useState(false);
+  // Bagian "Lanjutan" form (urutan tampil + buka di tab baru).
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  // Pilihan baris untuk aksi massal
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const selectAllRef = useRef<HTMLInputElement>(null);
 
   // Filter & pencarian
   const [query, setQuery] = useState("");
@@ -400,9 +416,13 @@ export default function AdminPortalPage() {
   }, [fetchItems]);
 
   function openCreate() {
+    const maxSort = items.reduce((max, i) => Math.max(max, i.sort_order), 0);
+    const next: PortalAppInput = { ...EMPTY_FORM, sort_order: maxSort + 10 };
     setEditItem(null);
-    setForm(EMPTY_FORM);
-    setInitialForm(EMPTY_FORM);
+    setForm(next);
+    setInitialForm(next);
+    setExtManual(false);
+    setAdvancedOpen(false);
     setFormOpen(true);
   }
 
@@ -421,7 +441,19 @@ export default function AdminPortalPage() {
     setEditItem(item);
     setForm(next);
     setInitialForm(next);
+    // Nilai tersimpan dianggap "manual" hanya bila berbeda dari hitungan otomatis.
+    setExtManual(next.is_external !== autoExternal(next.href));
+    setAdvancedOpen(false);
     setFormOpen(true);
+  }
+
+  /** Is_external dihitung otomatis dari awalan URL, kecuali sudah ditimpa manual. */
+  function onHrefChange(value: string) {
+    setForm((f) => ({
+      ...f,
+      href: value,
+      is_external: extManual ? f.is_external : autoExternal(value),
+    }));
   }
 
   const dirty =
@@ -437,16 +469,22 @@ export default function AdminPortalPage() {
   async function handleSave() {
     if (formSaving) return;
     if (!form.label.trim()) { toast("Nama aplikasi wajib diisi", "error"); return; }
-    const href = form.href.trim();
+
+    const status = statusOf(form);
+    let href = form.href.trim();
+    // Status "Segera hadir" boleh tanpa URL — disimpan sebagai "#".
+    if (!href && status === "soon") href = "#";
     if (!href) { toast("URL/link wajib diisi", "error"); return; }
     if (!/^(\/|#|https?:\/\/)/i.test(href)) {
       toast("URL tidak valid — harus diawali “/”, “#”, atau http(s)://", "error");
       return;
     }
+
     setFormSaving(true);
     const input: PortalAppInput = {
       ...form,
       href,
+      is_external: extManual ? form.is_external : autoExternal(href),
       sort_order: Number(form.sort_order) || 0,
     };
     const { error } = editItem
@@ -487,7 +525,7 @@ export default function AdminPortalPage() {
     fetchItems();
   }
 
-  /** Duplikat: salinan nonaktif, diletakkan paling akhir. */
+  /** Duplikat: salinan disembunyikan, diletakkan paling akhir. */
   async function handleDuplicate(item: PortalAppAdmin) {
     const maxSort = items.reduce((max, i) => Math.max(max, i.sort_order), 0);
     const input: PortalAppInput = {
@@ -497,8 +535,9 @@ export default function AdminPortalPage() {
       icon: item.icon,
       color: item.color,
       is_external: item.is_external,
-      is_coming_soon: item.is_coming_soon,
-      is_active: false,
+      // Salinan selalu "Disembunyikan" (flagsOf("hidden")) — jangan menyalin
+      // is_coming_soon sumber, agar tidak lahir kombinasi tidak valid.
+      ...flagsOf("hidden"),
       sort_order: maxSort + 10,
     };
     const { error } = await createPortalApp(input);
@@ -508,31 +547,41 @@ export default function AdminPortalPage() {
     fetchItems();
   }
 
-  /** Toggle optimistik (rollback + toast error bila gagal ke server). */
-  async function toggleFlag(
-    item: PortalAppAdmin,
-    key: "is_active" | "is_coming_soon",
-    value: boolean
-  ) {
+  /**
+   * Ubah status (tiga keadaan) dengan optimisme lokal — rollback + toast error
+   * bila ada yang gagal ke server. `targets` boleh lebih dari satu (aksi massal).
+   */
+  async function applyStatus(targets: PortalAppAdmin[], status: PortalStatus) {
+    if (targets.length === 0) return;
     const previous = items;
-    setItems((cur) =>
-      cur.map((i) => (i.id === item.id ? { ...i, [key]: value } : i))
-    );
-    const patch: Partial<PortalAppInput> =
-      key === "is_active" ? { is_active: value } : { is_coming_soon: value };
-    const { error } = await updatePortalApp(item.id, patch);
-    if (error) {
+    const flags = flagsOf(status);
+    const ids = new Set(targets.map((t) => t.id));
+    setItems((cur) => cur.map((i) => (ids.has(i.id) ? { ...i, ...flags } : i)));
+
+    const results = await Promise.all(targets.map((t) => updatePortalApp(t.id, flags)));
+    const failed = results.find((r) => r.error);
+    if (failed?.error) {
       setItems(previous);
-      toast(`Gagal memperbarui status: ${error}`, "error");
+      toast(`Gagal memperbarui status: ${failed.error}`, "error");
       return;
     }
+    const many = targets.length > 1;
     toast(
-      key === "is_active"
-        ? value ? "Aplikasi diaktifkan" : "Aplikasi dinonaktifkan"
-        : value ? "Ditandai segera hadir" : "Tanda segera hadir dilepas",
+      many
+        ? `${targets.length} aplikasi → ${STATUS_META[status].label}`
+        : `Status diubah menjadi ${STATUS_META[status].label}`,
       "success"
     );
     revalidatePortal().catch(() => { });
+  }
+
+  function toggleOne(id: string, checked: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
   }
 
   /** Drag & drop selesai — urutan dihitung ulang (10, 20, 30, ...) lalu disimpan. */
@@ -562,6 +611,8 @@ export default function AdminPortalPage() {
       });
   }
 
+  // Tiga keadaan yang saling menutup: Tayang + Segera Hadir + Disembunyikan
+  // selalu berjumlah sama dengan Total (kombinasi tidak valid ikut "hidden").
   const counts = useMemo(() => {
     const active = items.filter((i) => i.is_active && !i.is_coming_soon).length;
     const soon = items.filter((i) => i.is_active && i.is_coming_soon).length;
@@ -588,12 +639,52 @@ export default function AdminPortalPage() {
   // Urutan hanya bermakna pada daftar penuh tanpa pencarian.
   const dragDisabled = query.trim() !== "" || filter !== "all";
 
+  // ── Seleksi baris untuk aksi massal ──────────────────────────────
+  const selectedItems = useMemo(
+    () => visible.filter((it) => selected.has(it.id)),
+    [visible, selected]
+  );
+  const allVisibleSelected = visible.length > 0 && visible.every((it) => selected.has(it.id));
+  const someVisibleSelected = !allVisibleSelected && visible.some((it) => selected.has(it.id));
+
+  // Indeterminate tidak bisa lewat JSX — set langsung ke DOM (bukan setState).
+  useEffect(() => {
+    if (selectAllRef.current) selectAllRef.current.indeterminate = someVisibleSelected;
+  }, [someVisibleSelected]);
+
+  function toggleAllVisible(checked: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const it of visible) {
+        if (checked) next.add(it.id);
+        else next.delete(it.id);
+      }
+      return next;
+    });
+  }
+
+  /** Hapus massal baris yang terpilih. */
+  async function handleBulkDelete() {
+    const targets = selectedItems;
+    setConfirmBulkDelete(false);
+    if (targets.length === 0) return;
+    const results = await Promise.all(targets.map((t) => deletePortalApp(t.id)));
+    const failed = results.find((r) => r.error);
+    if (failed?.error) { toast(`Gagal menghapus: ${failed.error}`, "error"); return; }
+    toast(`${targets.length} aplikasi dihapus`, "success");
+    setSelected(new Set());
+    revalidatePortal().catch(() => { });
+    fetchItems();
+  }
+
   const statFilters: { key: PortalFilter; label: string; value: number; variant: "brand" | "success" | "warning" | "info" }[] = [
     { key: "all", label: "Total", value: counts.all, variant: "brand" },
-    { key: "active", label: "Aktif", value: counts.active, variant: "success" },
+    { key: "active", label: "Tayang", value: counts.active, variant: "success" },
     { key: "soon", label: "Segera Hadir", value: counts.soon, variant: "warning" },
-    { key: "inactive", label: "Nonaktif", value: counts.inactive, variant: "info" },
+    { key: "inactive", label: "Disembunyikan", value: counts.inactive, variant: "info" },
   ];
+
+  const formStatus = statusOf(form);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -608,10 +699,21 @@ export default function AdminPortalPage() {
             <p className="text-sm text-slate-500">Kelola aplikasi yang tampil di halaman /portal</p>
           </div>
         </div>
-        <button onClick={openCreate}
-          className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1]">
-          <Plus className="h-4 w-4" /> Tambah Aplikasi
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href="/portal"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Buka /portal di tab baru"
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59]"
+          >
+            <ArrowSquareOut className="h-4 w-4" /> Lihat di portal
+          </a>
+          <button onClick={openCreate}
+            className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1]">
+            <Plus className="h-4 w-4" /> Tambah Aplikasi
+          </button>
+        </div>
       </div>
 
       {/* Stats — kartu bisa diklik sebagai filter */}
@@ -651,6 +753,46 @@ export default function AdminPortalPage() {
         </p>
       )}
 
+      {/* Bar aksi massal — muncul saat ada baris terpilih */}
+      {selectedItems.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-[#1767b1]/30 bg-[#1767b1]/5 px-3.5 py-3">
+          <span className="flex items-center gap-2 text-sm font-semibold text-[#082b59]">
+            <Checks className="h-4 w-4" />
+            {selectedItems.length} aplikasi dipilih
+          </span>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            {([
+              { status: "live" as PortalStatus, label: "Tayangkan" },
+              { status: "soon" as PortalStatus, label: "Segera hadir" },
+              { status: "hidden" as PortalStatus, label: "Sembunyikan" },
+            ]).map((act) => (
+              <button
+                key={act.status}
+                type="button"
+                onClick={() => applyStatus(selectedItems, act.status)}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+              >
+                {act.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setConfirmBulkDelete(true)}
+              className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+            >
+              Hapus
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="px-1 text-xs font-semibold text-slate-400 underline-offset-2 transition-colors hover:text-slate-600 hover:underline"
+            >
+              Bersihkan
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
         <div role="table" aria-label="Daftar aplikasi portal">
@@ -659,7 +801,17 @@ export default function AdminPortalPage() {
             role="rowgroup"
             className={`hidden border-b border-slate-200/80 bg-slate-50/80 px-4 py-3 md:grid ${PORTAL_GRID} md:items-center md:gap-3`}
           >
-            <div role="columnheader" className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">No</div>
+            <div role="columnheader" className="flex justify-center">
+              <input
+                type="checkbox"
+                ref={selectAllRef}
+                checked={allVisibleSelected}
+                onChange={(e) => toggleAllVisible(e.target.checked)}
+                disabled={visible.length === 0}
+                aria-label="Pilih semua aplikasi yang tampil"
+                className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed"
+              />
+            </div>
             <div role="columnheader" className="text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Urutan</div>
             <div role="columnheader" className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aplikasi</div>
             <div role="columnheader" className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Link</div>
@@ -717,17 +869,17 @@ export default function AdminPortalPage() {
                     </div>
                   </div>
                 ) : (
-                  visible.map((item, index) => (
+                  visible.map((item) => (
                     <SortableRow
                       key={item.id}
                       item={item}
-                      index={index}
                       dragDisabled={dragDisabled}
+                      selected={selected.has(item.id)}
+                      onSelect={toggleOne}
                       onEdit={openEdit}
                       onDelete={setDeleteItem}
                       onDuplicate={handleDuplicate}
-                      onToggleActive={(it, v) => toggleFlag(it, "is_active", v)}
-                      onToggleSoon={(it, v) => toggleFlag(it, "is_coming_soon", v)}
+                      onSetStatus={(it, status) => applyStatus([it], status)}
                     />
                   ))
                 )}
@@ -760,76 +912,120 @@ export default function AdminPortalPage() {
             </button>
           </div>
         }>
-        <div className="space-y-5">
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Nama Aplikasi <span className="text-red-500">*</span></label>
-            <input type="text" value={form.label}
-              onChange={(e) => setForm({ ...form, label: e.target.value })}
-              placeholder="Contoh: E-Learning"
-              className={inputClass} />
+        <div className="md:grid md:grid-cols-2 md:items-start md:gap-5">
+          {/* Pratinjau — di atas badan form (mobile) / kolom kanan (md), sticky
+              agar tetap terlihat saat memilih ikon dan warna. */}
+          <div className="sticky top-0 z-10 -mx-1 mb-4 bg-white px-1 pb-3 pt-1 shadow-[0_8px_16px_-12px_rgba(15,23,42,0.5)] md:order-2 md:mb-0">
+            <TilePreview
+              label={form.label}
+              description={form.description}
+              icon={form.icon}
+              color={form.color}
+              soon={formStatus === "soon"}
+            />
           </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Deskripsi</label>
-            <textarea rows={2} value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="Keterangan singkat yang tampil di bawah nama aplikasi"
-              className={inputClass} />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">URL / Link <span className="text-red-500">*</span></label>
-            <input type="text" value={form.href}
-              onChange={(e) => setForm({ ...form, href: e.target.value })}
-              placeholder="/news atau https://..."
-              className={inputClass} />
-            <p className="mt-1.5 text-xs text-slate-400">Harus diawali &quot;/&quot;, &quot;#&quot;, atau http(s)://. Walaupun &quot;Segera Hadir&quot; aktif, kolom ini tetap wajib diisi (boleh &quot;#&quot;).</p>
-          </div>
-          <TilePreview
-            label={form.label}
-            description={form.description}
-            icon={form.icon}
-            color={form.color}
-            soon={form.is_coming_soon}
-          />
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Ikon</label>
-            <IconPicker value={form.icon} color={form.color}
-              onChange={(name) => setForm({ ...form, icon: name })} />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Warna</label>
-            <ColorPicker value={form.color}
-              onChange={(key) => setForm({ ...form, color: key })} />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Urutan Tampil</label>
-            <input type="number" value={form.sort_order}
-              onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })}
-              className={inputClass} />
-            <p className="mt-1.5 text-xs text-slate-400">Angka kecil tampil lebih dulu. Bisa juga diubah dengan drag &amp; drop di tabel.</p>
-          </div>
-          <div className="space-y-2.5">
-            {([
-              { key: "is_active" as const, label: "Aktif (tampil di halaman portal)" },
-              { key: "is_coming_soon" as const, label: "Segera hadir (tile ditandai akan datang)" },
-              { key: "is_external" as const, label: "Buka di tab baru (link luar)" },
-            ]).map((opt) => (
-              <div
-                key={opt.key}
-                className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-2.5"
+
+          <div className="space-y-5 md:order-1">
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Nama Aplikasi <span className="text-red-500">*</span></label>
+              <input type="text" value={form.label}
+                onChange={(e) => setForm({ ...form, label: e.target.value })}
+                placeholder="Contoh: E-Learning"
+                className={inputClass} />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Deskripsi</label>
+              <textarea rows={2} value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="Keterangan singkat yang tampil di bawah nama aplikasi"
+                className={inputClass} />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Status</label>
+              <StatusControl
+                value={formStatus}
+                onChange={(status) => setForm((f) => ({ ...f, ...flagsOf(status) }))}
+                label="Status tampilan aplikasi"
+              />
+              <p className="mt-1.5 text-xs text-slate-400">
+                <span className="font-semibold text-slate-500">Tayang</span> tampil biasa ·{" "}
+                <span className="font-semibold text-slate-500">Segera hadir</span> tile ditandai akan datang ·{" "}
+                <span className="font-semibold text-slate-500">Disembunyikan</span> tidak tampil.
+              </p>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                URL / Link {formStatus !== "soon" && <span className="text-red-500">*</span>}
+              </label>
+              <input type="text" value={form.href}
+                onChange={(e) => onHrefChange(e.target.value)}
+                placeholder="/news atau https://..."
+                className={inputClass} />
+              <p className="mt-1.5 text-xs text-slate-400">
+                Harus diawali &quot;/&quot;, &quot;#&quot;, atau http(s)://.
+                {formStatus === "soon"
+                  ? " Boleh dikosongkan — akan disimpan sebagai “#”."
+                  : " Kolom ini wajib diisi untuk status ini."}
+              </p>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Ikon</label>
+              <IconPicker value={form.icon} color={form.color}
+                onChange={(name) => setForm({ ...form, icon: name })} />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Warna</label>
+              <ColorPicker value={form.color}
+                onChange={(key) => setForm({ ...form, color: key })} />
+            </div>
+
+            {/* Lanjutan — urutan tampil & perilaku link */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50/60">
+              <button
+                type="button"
+                onClick={() => setAdvancedOpen((v) => !v)}
+                aria-expanded={advancedOpen}
+                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
               >
-                <span className="text-sm text-slate-700">{opt.label}</span>
-                <StatusSwitch
-                  checked={form[opt.key]}
-                  onChange={(value) => setForm({ ...form, [opt.key]: value })}
-                  label={opt.label}
-                />
-              </div>
-            ))}
+                <span>
+                  Lanjutan{" "}
+                  <span className="font-normal text-slate-400">— urutan tampil &amp; perilaku link</span>
+                </span>
+                <ChevronDown open={advancedOpen} />
+              </button>
+              {advancedOpen && (
+                <div className="space-y-4 border-t border-slate-200 px-4 py-4">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-700">Urutan Tampil</label>
+                    <input type="number" value={form.sort_order}
+                      onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })}
+                      className={inputClass} />
+                    <p className="mt-1.5 text-xs text-slate-400">
+                      Angka kecil tampil lebih dulu. Aplikasi baru otomatis memakai urutan terbesar
+                      saat ini + 10. Bisa juga diubah dengan drag &amp; drop di tabel.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5">
+                    <span className="text-sm text-slate-700">Buka di tab baru (link luar)</span>
+                    <StatusSwitch
+                      checked={form.is_external}
+                      onChange={(value) => { setExtManual(true); setForm({ ...form, is_external: value }); }}
+                      label="Buka di tab baru"
+                    />
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    Otomatis: diawali http(s):// → tab baru; diawali &quot;/&quot; atau &quot;#&quot; →
+                    tab yang sama. Ubah sakelar di atas untuk menimpa nilai otomatis.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <p className="text-xs text-slate-400">
+              Tips: tekan <kbd className="rounded border border-slate-200 bg-slate-50 px-1 py-0.5 font-mono text-[10px]">Ctrl</kbd> +{" "}
+              <kbd className="rounded border border-slate-200 bg-slate-50 px-1 py-0.5 font-mono text-[10px]">S</kbd> untuk menyimpan.
+            </p>
           </div>
-          <p className="text-xs text-slate-400">
-            Tips: tekan <kbd className="rounded border border-slate-200 bg-slate-50 px-1 py-0.5 font-mono text-[10px]">Ctrl</kbd> +{" "}
-            <kbd className="rounded border border-slate-200 bg-slate-50 px-1 py-0.5 font-mono text-[10px]">S</kbd> untuk menyimpan.
-          </p>
         </div>
       </SlideOver>
 
@@ -851,6 +1047,16 @@ export default function AdminPortalPage() {
         onConfirm={handleDelete}
         title="Hapus Aplikasi?"
         description={`"${deleteItem?.label}" akan dihapus permanen dari portal.`}
+      />
+
+      {/* Konfirmasi hapus massal */}
+      <ConfirmModal
+        open={confirmBulkDelete}
+        onClose={() => setConfirmBulkDelete(false)}
+        onConfirm={handleBulkDelete}
+        title={`Hapus ${selectedItems.length} Aplikasi?`}
+        description={`${selectedItems.length} aplikasi yang dipilih akan dihapus permanen dari portal.`}
+        confirmLabel={`Hapus ${selectedItems.length} Aplikasi`}
       />
     </div>
   );
