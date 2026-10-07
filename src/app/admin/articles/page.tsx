@@ -4,7 +4,6 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   getArticleListAll,
   getArticleColumnSupport,
-  getCategoryList,
   createArticle,
   updateArticle,
   deleteArticle,
@@ -213,7 +212,6 @@ export default function AdminArticlesPage() {
   const [imagePreview, setImagePreview] = useState<string>("");
   const [imageUploading, setImageUploading] = useState(false);
   const [addingCategory, setAddingCategory] = useState(false);
-  const [dbCategories, setDbCategories] = useState<string[]>([]);
   // Hasil probe kolom author_name/editor_name — field hanya tampil bila ada
   const [colSupport, setColSupport] = useState({ author_name: false, editor_name: false });
   // Paksa remount RichTextEditor tiap form dibuka (sinkron nilai awal)
@@ -242,12 +240,9 @@ export default function AdminArticlesPage() {
 
   useEffect(() => { fetchArticles(); }, [fetchArticles]);
 
-  // Probe kolom author_name/editor_name + kategori dari tabel categories
+  // Probe kolom author_name/editor_name
   useEffect(() => {
     getArticleColumnSupport().then(setColSupport);
-    getCategoryList("artikel")
-      .then((rows) => setDbCategories(rows.map((r) => r.name).filter(Boolean)))
-      .catch(() => {});
   }, []);
 
   // True bila form/sampul berubah dibanding kondisi awal dibuka
@@ -267,15 +262,15 @@ export default function AdminArticlesPage() {
     return () => clearTimeout(t);
   }, [formOpen, isDirty, form, editItem]);
 
-  // Saran kategori dari DB: nama unik di tabel articles ∪ tabel categories
+  // Saran kategori: nama unik dari kategori yang sudah dipakai artikel
   const categoryOptions = useMemo(() => {
     const map = new Map<string, string>();
-    for (const c of [...dbCategories, ...articles.map((i) => i.category || "")]) {
+    for (const c of articles.map((i) => i.category || "")) {
       const v = (c || "").trim();
       if (v && !map.has(v.toLowerCase())) map.set(v.toLowerCase(), v);
     }
     return Array.from(map.values()).sort((a, b) => a.localeCompare(b, "id"));
-  }, [articles, dbCategories]);
+  }, [articles]);
 
   const filtered = useMemo(() => {
     let result = articles.filter((item) => {

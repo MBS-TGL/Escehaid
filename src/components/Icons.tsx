@@ -165,4 +165,8 @@ export {
   Wrench,
   Compass,
   Question,
+  UserPlus,
+  ArrowSquareOut,
+  DotsSixVertical,
+  Copy
 } from "@phosphor-icons/react/dist/ssr";

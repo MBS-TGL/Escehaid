@@ -2741,42 +2741,6 @@ export async function deleteTeacherBulk(ids: string[]): Promise<{ error?: string
   return {};
 }
 
-// ============ CATEGORIES ============
-export interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  type: string;
-  color: string;
-  sort_order: number;
-  created_at: string;
-}
-
-export async function getCategoryList(type?: string): Promise<Category[]> {
-  let query = supabase.from("categories").select("*").order("sort_order", { ascending: true });
-  if (type) query = query.eq("type", type);
-  const { data } = await query;
-  return data || [];
-}
-
-export async function createCategory(data: { name: string; slug: string; type: string; color?: string; sort_order?: number }): Promise<{ error?: string }> {
-  const { error } = await supabase.from("categories").insert(data);
-  if (error) return { error: error.message };
-  return {};
-}
-
-export async function updateCategory(id: string, data: Partial<{ name: string; slug: string; type: string; color: string; sort_order: number }>): Promise<{ error?: string }> {
-  const { error } = await supabase.from("categories").update(data).eq("id", id);
-  if (error) return { error: error.message };
-  return {};
-}
-
-export async function deleteCategory(id: string): Promise<{ error?: string }> {
-  const { error } = await supabase.from("categories").delete().eq("id", id);
-  if (error) return { error: error.message };
-  return {};
-}
-
 // ============ NOTIFICATIONS ============
 export interface Notification {
   id: string;
@@ -2942,6 +2906,24 @@ export async function updatePortalApp(
 export async function deletePortalApp(id: string): Promise<{ error?: string }> {
   const { error } = await supabase.from("portal_apps").delete().eq("id", id);
   if (error) return { error: error.message };
+  return {};
+}
+
+/**
+ * Simpan urutan baru (drag & drop di /admin/portal) — update batch.
+ * PostgREST tidak punya update multi-baris dengan nilai berbeda dalam satu
+ * request (tanpa RPC), jadi baris dikirim paralel; jumlah baris kecil (≤ 50).
+ */
+export async function reorderPortalApps(
+  items: { id: string; sort_order: number }[]
+): Promise<{ error?: string }> {
+  const results = await Promise.all(
+    items.map((item) =>
+      supabase.from("portal_apps").update({ sort_order: item.sort_order }).eq("id", item.id)
+    )
+  );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) return { error: failed.error.message };
   return {};
 }
 

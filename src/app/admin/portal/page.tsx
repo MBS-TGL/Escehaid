@@ -1,23 +1,33 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import {
   getPortalAppsAdmin,
   createPortalApp,
   updatePortalApp,
   deletePortalApp,
+  reorderPortalApps,
   revalidatePortal,
 } from "@/lib/queries";
 import type { PortalAppAdmin, PortalAppInput } from "@/lib/queries";
 import { StatCard, StatCardRow, ConfirmModal, SlideOver } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
-import {
-  SquaresFour,
-  Plus,
-  PencilSimple,
-  Trash,
-  FloppyDisk,
-} from "@/components/Icons";
+import { SquaresFour, Plus, FloppyDisk, Info, MagnifyingGlass } from "@/components/Icons";
 import {
   PORTAL_ICONS,
   PORTAL_ICON_LABELS,
@@ -26,6 +36,9 @@ import {
   resolvePortalColor,
   normalizeHex,
 } from "@/lib/portal-theme";
+import { StatusSwitch } from "./StatusSwitch";
+import { FilterBar, type PortalFilter } from "./FilterBar";
+import { SortableRow, PORTAL_GRID } from "./SortableRow";
 
 const ICON_NAMES = Object.keys(PORTAL_ICONS);
 const COLOR_KEYS = Object.keys(PORTAL_COLORS);
@@ -44,10 +57,6 @@ const EMPTY_FORM: PortalAppInput = {
 
 const inputClass =
   "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20";
-
-function resolveIcon(name: string) {
-  return PORTAL_ICONS[name] ?? SquaresFour;
-}
 
 const focusRing =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]";
@@ -99,22 +108,6 @@ function usePopover() {
   return { open, setOpen, ref };
 }
 
-function ThemeChip({ icon, color }: { icon: string; color: string }) {
-  const Icon = resolveIcon(icon);
-  const rc = resolvePortalColor(color);
-  return (
-    <span className="inline-flex items-center gap-2 text-xs text-slate-500">
-      <span
-        className={`flex h-7 w-7 items-center justify-center rounded-lg ${rc.tileClass}`}
-        style={rc.tileStyle}
-      >
-        <Icon className="h-4 w-4" weight="fill" />
-      </span>
-      {PORTAL_ICON_LABELS[icon] ?? icon} · {rc.label}
-    </span>
-  );
-}
-
 function TilePreview({
   label,
   description,
@@ -128,7 +121,7 @@ function TilePreview({
   color: string;
   soon: boolean;
 }) {
-  const Icon = resolveIcon(icon);
+  const Icon = PORTAL_ICONS[icon] ?? SquaresFour;
   const rc = resolvePortalColor(color);
   return (
     <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-4">
@@ -167,11 +160,10 @@ function IconPicker({
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const rc = resolvePortalColor(color);
-  const Current = resolveIcon(value);
+  const Current = PORTAL_ICONS[value] ?? SquaresFour;
 
   useEffect(() => {
     if (open) searchRef.current?.focus();
-    else setQuery("");
   }, [open]);
 
   const q = query.trim().toLowerCase();
@@ -188,7 +180,10 @@ function IconPicker({
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (!open) setQuery("");
+          setOpen(!open);
+        }}
         className={triggerClass}
       >
         <span className="flex min-w-0 items-center gap-3">
@@ -267,10 +262,13 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (key: strin
   const rc = resolvePortalColor(value);
   const [draft, setDraft] = useState("");
 
-  // Sinkronkan kotak hex dengan nilai saat ini (kosong bila memakai preset).
-  useEffect(() => {
+  // Sinkronkan kotak hex dengan nilai saat ini (kosong bila memakai preset) —
+  // pola "adjust state during render" supaya tidak perlu effect.
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
     setDraft(PORTAL_COLORS[value] ? "" : normalizeHex(value) ?? "");
-  }, [value]);
+  }
 
   function commitDraft() {
     const hex = normalizeHex(draft);
@@ -365,28 +363,6 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (key: strin
   );
 }
 
-function StatusBadge({ app }: { app: PortalAppAdmin }) {
-  if (!app.is_active) {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">
-        Nonaktif
-      </span>
-    );
-  }
-  if (app.is_coming_soon) {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
-        Segera Hadir
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-      Aktif
-    </span>
-  );
-}
-
 export default function AdminPortalPage() {
   const { toast } = useToast();
   const [items, setItems] = useState<PortalAppAdmin[]>([]);
@@ -396,6 +372,19 @@ export default function AdminPortalPage() {
   const [editItem, setEditItem] = useState<PortalAppAdmin | null>(null);
   const [form, setForm] = useState<PortalAppInput>(EMPTY_FORM);
   const [formSaving, setFormSaving] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
+
+  // Filter & pencarian
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<PortalFilter>("all");
+
+  // Nilai awal form saat dibuka — untuk deteksi "perubahan belum disimpan"
+  const [initialForm, setInitialForm] = useState<PortalAppInput>(EMPTY_FORM);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -409,12 +398,12 @@ export default function AdminPortalPage() {
   function openCreate() {
     setEditItem(null);
     setForm(EMPTY_FORM);
+    setInitialForm(EMPTY_FORM);
     setFormOpen(true);
   }
 
   function openEdit(item: PortalAppAdmin) {
-    setEditItem(item);
-    setForm({
+    const next: PortalAppInput = {
       label: item.label,
       description: item.description,
       href: item.href,
@@ -424,15 +413,38 @@ export default function AdminPortalPage() {
       is_coming_soon: item.is_coming_soon,
       is_active: item.is_active,
       sort_order: item.sort_order,
-    });
+    };
+    setEditItem(item);
+    setForm(next);
+    setInitialForm(next);
     setFormOpen(true);
   }
 
+  const dirty =
+    formOpen && JSON.stringify(form) !== JSON.stringify(initialForm);
+
+  /** Tutup form; bila ada perubahan belum disimpan, minta konfirmasi dulu. */
+  function requestCloseForm() {
+    if (formSaving) return;
+    if (dirty) setConfirmClose(true);
+    else setFormOpen(false);
+  }
+
   async function handleSave() {
+    if (formSaving) return;
     if (!form.label.trim()) { toast("Nama aplikasi wajib diisi", "error"); return; }
-    if (!form.href.trim()) { toast("URL/link wajib diisi", "error"); return; }
+    const href = form.href.trim();
+    if (!href) { toast("URL/link wajib diisi", "error"); return; }
+    if (!/^(\/|#|https?:\/\/)/i.test(href)) {
+      toast("URL tidak valid — harus diawali “/”, “#”, atau http(s)://", "error");
+      return;
+    }
     setFormSaving(true);
-    const input: PortalAppInput = { ...form, sort_order: Number(form.sort_order) || 0 };
+    const input: PortalAppInput = {
+      ...form,
+      href,
+      sort_order: Number(form.sort_order) || 0,
+    };
     const { error } = editItem
       ? await updatePortalApp(editItem.id, input)
       : await createPortalApp(input);
@@ -444,6 +456,23 @@ export default function AdminPortalPage() {
     fetchItems();
   }
 
+  // Pintasan Ctrl/Cmd+S untuk simpan selama form terbuka
+  const saveRef = useRef<() => void>(() => { });
+  useEffect(() => {
+    saveRef.current = handleSave;
+  });
+  useEffect(() => {
+    if (!formOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        saveRef.current();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [formOpen]);
+
   async function handleDelete() {
     if (!deleteItem) return;
     const { error } = await deletePortalApp(deleteItem.id);
@@ -454,8 +483,113 @@ export default function AdminPortalPage() {
     fetchItems();
   }
 
-  const activeCount = items.filter((i) => i.is_active).length;
-  const soonCount = items.filter((i) => i.is_active && i.is_coming_soon).length;
+  /** Duplikat: salinan nonaktif, diletakkan paling akhir. */
+  async function handleDuplicate(item: PortalAppAdmin) {
+    const maxSort = items.reduce((max, i) => Math.max(max, i.sort_order), 0);
+    const input: PortalAppInput = {
+      label: `${item.label} (salinan)`,
+      description: item.description,
+      href: item.href,
+      icon: item.icon,
+      color: item.color,
+      is_external: item.is_external,
+      is_coming_soon: item.is_coming_soon,
+      is_active: false,
+      sort_order: maxSort + 10,
+    };
+    const { error } = await createPortalApp(input);
+    if (error) { toast(error, "error"); return; }
+    toast("Aplikasi diduplikat", "success");
+    revalidatePortal().catch(() => { });
+    fetchItems();
+  }
+
+  /** Toggle optimistik (rollback + toast error bila gagal ke server). */
+  async function toggleFlag(
+    item: PortalAppAdmin,
+    key: "is_active" | "is_coming_soon",
+    value: boolean
+  ) {
+    const previous = items;
+    setItems((cur) =>
+      cur.map((i) => (i.id === item.id ? { ...i, [key]: value } : i))
+    );
+    const patch: Partial<PortalAppInput> =
+      key === "is_active" ? { is_active: value } : { is_coming_soon: value };
+    const { error } = await updatePortalApp(item.id, patch);
+    if (error) {
+      setItems(previous);
+      toast(`Gagal memperbarui status: ${error}`, "error");
+      return;
+    }
+    toast(
+      key === "is_active"
+        ? value ? "Aplikasi diaktifkan" : "Aplikasi dinonaktifkan"
+        : value ? "Ditandai segera hadir" : "Tanda segera hadir dilepas",
+      "success"
+    );
+    revalidatePortal().catch(() => { });
+  }
+
+  /** Drag & drop selesai — urutan dihitung ulang (10, 20, 30, ...) lalu disimpan. */
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const previous = items;
+    const oldIndex = items.findIndex((i) => i.id === active.id);
+    const newIndex = items.findIndex((i) => i.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const reordered = arrayMove(items, oldIndex, newIndex).map((it, idx) => ({
+      ...it,
+      sort_order: (idx + 1) * 10,
+    }));
+    setItems(reordered);
+
+    reorderPortalApps(reordered.map((it) => ({ id: it.id, sort_order: it.sort_order })))
+      .then(({ error }) => {
+        if (error) {
+          setItems(previous);
+          toast(`Gagal menyimpan urutan: ${error}`, "error");
+          return;
+        }
+        toast("Urutan diperbarui", "success");
+        revalidatePortal().catch(() => { });
+      });
+  }
+
+  const counts = useMemo(() => {
+    const active = items.filter((i) => i.is_active && !i.is_coming_soon).length;
+    const soon = items.filter((i) => i.is_active && i.is_coming_soon).length;
+    const inactive = items.filter((i) => !i.is_active).length;
+    return { all: items.length, active, soon, inactive };
+  }, [items]);
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return items.filter((item) => {
+      const matchQuery =
+        !q ||
+        item.label.toLowerCase().includes(q) ||
+        (item.description || "").toLowerCase().includes(q);
+      const matchFilter =
+        filter === "all" ? true
+          : filter === "active" ? item.is_active && !item.is_coming_soon
+            : filter === "soon" ? item.is_active && item.is_coming_soon
+              : !item.is_active;
+      return matchQuery && matchFilter;
+    });
+  }, [items, query, filter]);
+
+  // Urutan hanya bermakna pada daftar penuh tanpa pencarian.
+  const dragDisabled = query.trim() !== "" || filter !== "all";
+
+  const statFilters: { key: PortalFilter; label: string; value: number; variant: "brand" | "success" | "warning" | "info" }[] = [
+    { key: "all", label: "Total", value: counts.all, variant: "brand" },
+    { key: "active", label: "Aktif", value: counts.active, variant: "success" },
+    { key: "soon", label: "Segera Hadir", value: counts.soon, variant: "warning" },
+    { key: "inactive", label: "Nonaktif", value: counts.inactive, variant: "info" },
+  ];
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -476,101 +610,136 @@ export default function AdminPortalPage() {
         </button>
       </div>
 
-      {/* Stats */}
+      {/* Stats — kartu bisa diklik sebagai filter */}
       <StatCardRow>
-        <StatCard label="Total" value={items.length} variant="brand" />
-        <StatCard label="Aktif" value={activeCount} variant="success" />
-        <StatCard label="Segera Hadir" value={soonCount} variant="warning" />
+        {statFilters.map((stat) => (
+          <button
+            key={stat.key}
+            type="button"
+            onClick={() => setFilter(stat.key)}
+            aria-pressed={filter === stat.key}
+            title={`Tampilkan: ${stat.label}`}
+            className="w-full rounded-2xl text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+          >
+            <StatCard
+              label={stat.label}
+              value={stat.value}
+              variant={stat.variant}
+              className={filter === stat.key ? "border-[#082b59] ring-2 ring-[#082b59]/30" : ""}
+            />
+          </button>
+        ))}
       </StatCardRow>
+
+      {/* Pencarian + filter */}
+      <FilterBar
+        query={query}
+        onQueryChange={setQuery}
+        filter={filter}
+        onFilterChange={setFilter}
+        counts={counts}
+      />
+      {dragDisabled && (
+        <p className="-mt-2 mb-3 flex items-start gap-1.5 text-[11px] text-slate-400">
+          <Info className="mt-px h-3.5 w-3.5 shrink-0" />
+          Drag dinonaktifkan saat pencarian/filter aktif — tampilkan &quot;Semua&quot; tanpa
+          pencarian untuk mengubah urutan.
+        </p>
+      )}
 
       {/* Table */}
       <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b border-slate-200/80 bg-slate-50/80">
-              <tr>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">No</th>
-                <th className="w-20 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Urutan</th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aplikasi</th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Link</th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Ikon / Warna</th>
-                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</th>
-                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading ? (
-                <tr><td colSpan={7} className="px-4 py-16 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
-                    <p className="text-sm text-slate-500">Memuat data aplikasi portal...</p>
-                  </div>
-                </td></tr>
-              ) : items.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-16 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-                      <SquaresFour className="h-8 w-8 text-slate-300" />
+        <div role="table" aria-label="Daftar aplikasi portal">
+          {/* Header (desktop) */}
+          <div
+            role="rowgroup"
+            className={`hidden border-b border-slate-200/80 bg-slate-50/80 px-4 py-3 md:grid ${PORTAL_GRID} md:items-center md:gap-3`}
+          >
+            <div role="columnheader" className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">No</div>
+            <div role="columnheader" className="text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Urutan</div>
+            <div role="columnheader" className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aplikasi</div>
+            <div role="columnheader" className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Link</div>
+            <div role="columnheader" className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Ikon / Warna</div>
+            <div role="columnheader" className="text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</div>
+            <div role="columnheader" className="text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</div>
+          </div>
+
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext
+              items={visible.map((i) => i.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div role="rowgroup" className="divide-y divide-slate-100">
+                {loading ? (
+                  <div className="px-4 py-16 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
+                      <p className="text-sm text-slate-500">Memuat data aplikasi portal...</p>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
-                      <p className="mt-1 text-xs text-slate-400">Belum ada aplikasi di portal</p>
-                    </div>
-                    <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[#082b59] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1767b1]">
-                      <Plus className="h-3.5 w-3.5" /> Tambah Aplikasi Pertama
-                    </button>
                   </div>
-                </td></tr>
-              ) : (
-                items.map((item, index) => (
-                  <tr key={item.id} className="group transition-colors hover:bg-slate-50/80">
-                    <td className="px-4 py-3.5 text-sm text-slate-400">{index + 1}</td>
-                    <td className="px-4 py-3.5 text-center text-xs font-semibold text-slate-500">{item.sort_order}</td>
-                    <td className="px-4 py-3.5">
-                      <span className="text-sm font-medium text-slate-700">{item.label}</span>
-                      {item.description && (
-                        <p className="mt-0.5 max-w-xs truncate text-xs text-slate-400">{item.description}</p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span className="block max-w-[180px] truncate text-xs text-slate-500">
-                        {item.href}
-                        {item.is_external && <span className="ml-1 text-slate-400">(luar)</span>}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 text-xs text-slate-500">
-                      <ThemeChip icon={item.icon} color={item.color} />
-                    </td>
-                    <td className="px-4 py-3.5 text-center">
-                      <StatusBadge app={item} />
-                    </td>
-                    <td className="px-4 py-3.5 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => openEdit(item)}
-                          className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
-                          <PencilSimple className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => setDeleteItem(item)}
-                          className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
-                          <Trash className="h-4 w-4" />
-                        </button>
+                ) : items.length === 0 ? (
+                  <div className="px-4 py-16 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+                        <SquaresFour className="h-8 w-8 text-slate-300" />
                       </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Belum ada aplikasi portal</p>
+                        <p className="mt-1 text-xs text-slate-400">Tambahkan aplikasi pertama agar tampil di halaman /portal</p>
+                      </div>
+                      <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[#082b59] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1767b1]">
+                        <Plus className="h-3.5 w-3.5" /> Tambah Aplikasi Pertama
+                      </button>
+                    </div>
+                  </div>
+                ) : visible.length === 0 ? (
+                  <div className="px-4 py-16 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+                        <MagnifyingGlass className="h-8 w-8 text-slate-300" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Hasil tidak ditemukan</p>
+                        <p className="mt-1 text-xs text-slate-400">
+                          Tidak ada aplikasi yang cocok dengan pencarian/filter saat ini
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => { setQuery(""); setFilter("all"); }}
+                        className="mt-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:border-[#1767b1]/40 hover:text-[#082b59]"
+                      >
+                        Reset filter & pencarian
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  visible.map((item, index) => (
+                    <SortableRow
+                      key={item.id}
+                      item={item}
+                      index={index}
+                      dragDisabled={dragDisabled}
+                      onEdit={openEdit}
+                      onDelete={setDeleteItem}
+                      onDuplicate={handleDuplicate}
+                      onToggleActive={(it, v) => toggleFlag(it, "is_active", v)}
+                      onToggleSoon={(it, v) => toggleFlag(it, "is_coming_soon", v)}
+                    />
+                  ))
+                )}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
       </div>
 
       {/* Create/Edit SlideOver */}
-      <SlideOver open={formOpen} onClose={() => !formSaving && setFormOpen(false)}
+      <SlideOver open={formOpen} onClose={requestCloseForm}
         title={editItem ? "Edit Aplikasi" : "Tambah Aplikasi"}
         description={editItem ? "Perbarui data aplikasi portal" : "Isi form untuk menambahkan aplikasi"}
         footer={
           <div className="flex w-full items-center justify-between">
-            <button onClick={() => setFormOpen(false)} disabled={formSaving}
+            <button onClick={requestCloseForm} disabled={formSaving}
               className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
               Batal
             </button>
@@ -608,7 +777,7 @@ export default function AdminPortalPage() {
               onChange={(e) => setForm({ ...form, href: e.target.value })}
               placeholder="/news atau https://..."
               className={inputClass} />
-            <p className="mt-1.5 text-xs text-slate-400">Halaman tujuan; walaupun &quot;Segera Hadir&quot; aktif, kolom ini tetap wajib diisi (boleh &quot;#&quot;).</p>
+            <p className="mt-1.5 text-xs text-slate-400">Harus diawali &quot;/&quot;, &quot;#&quot;, atau http(s)://. Walaupun &quot;Segera Hadir&quot; aktif, kolom ini tetap wajib diisi (boleh &quot;#&quot;).</p>
           </div>
           <TilePreview
             label={form.label}
@@ -632,7 +801,7 @@ export default function AdminPortalPage() {
             <input type="number" value={form.sort_order}
               onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })}
               className={inputClass} />
-            <p className="mt-1.5 text-xs text-slate-400">Angka kecil tampil lebih dulu.</p>
+            <p className="mt-1.5 text-xs text-slate-400">Angka kecil tampil lebih dulu. Bisa juga diubah dengan drag &amp; drop di tabel.</p>
           </div>
           <div className="space-y-2.5">
             {([
@@ -640,16 +809,36 @@ export default function AdminPortalPage() {
               { key: "is_coming_soon" as const, label: "Segera hadir (tile ditandai akan datang)" },
               { key: "is_external" as const, label: "Buka di tab baru (link luar)" },
             ]).map((opt) => (
-              <label key={opt.key} className="flex items-center gap-2.5 text-sm text-slate-700">
-                <input type="checkbox" checked={form[opt.key]}
-                  onChange={(e) => setForm({ ...form, [opt.key]: e.target.checked })}
-                  className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
-                {opt.label}
-              </label>
+              <div
+                key={opt.key}
+                className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-2.5"
+              >
+                <span className="text-sm text-slate-700">{opt.label}</span>
+                <StatusSwitch
+                  checked={form[opt.key]}
+                  onChange={(value) => setForm({ ...form, [opt.key]: value })}
+                  label={opt.label}
+                />
+              </div>
             ))}
           </div>
+          <p className="text-xs text-slate-400">
+            Tips: tekan <kbd className="rounded border border-slate-200 bg-slate-50 px-1 py-0.5 font-mono text-[10px]">Ctrl</kbd> +{" "}
+            <kbd className="rounded border border-slate-200 bg-slate-50 px-1 py-0.5 font-mono text-[10px]">S</kbd> untuk menyimpan.
+          </p>
         </div>
       </SlideOver>
+
+      {/* Konfirmasi tutup form tanpa simpan */}
+      <ConfirmModal
+        open={confirmClose}
+        onClose={() => setConfirmClose(false)}
+        onConfirm={() => { setConfirmClose(false); setFormOpen(false); }}
+        title="Perubahan belum disimpan?"
+        description="Tutup form tanpa menyimpan perubahan?"
+        confirmLabel="Tutup Tanpa Simpan"
+        variant="warning"
+      />
 
       {/* Delete Confirm */}
       <ConfirmModal
