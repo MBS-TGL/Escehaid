@@ -235,7 +235,18 @@ P1.1 (verifikasi bloker)
 
 ## Checklist rilis berikutnya (yang sudah siap sekarang)
 
-- [ ] Commit & push batch **Kelola Portal** (11 file: `portal/page.tsx` +3 file baru, `queries.ts`, `Icons.tsx`, `package.json`, dan batch hapus Kategori)
-- [ ] **Tanpa SQL** untuk batch ini
+- [x] Commit & push batch **Kelola Portal** — sudah masuk sebagai `829f9db` (portal/page.tsx + SortableRow/StatusSwitch/FilterBar, queries.ts, Icons.tsx, package.json) dan sudah di-push bersama `93d386a` (batch P1.2–P1.4)
+- [x] **Tanpa SQL** untuk batch ini — terkonfirmasi (`portal_apps` sudah terisi6 baris, urutan 10…60)
 - [ ] Deploy
 - [ ] Setelah live: login ulang ke `/admin/portal`, uji geser baris + toggle Aktif + filter
+
+## ➡ Fokus berikutnya: **Kelola Portal** (live-verify)
+
+SPMB end-to-end (P2.1) ditunda atas permintaan user. Yang tersisa utk Portal murni **verifikasi langsung**, bukan penulisan kode:
+
+1. Deploy batch yang sudah ter-push
+2. Login `/admin/portal`
+3. Uji tiga hal: **geser baris** (persist setelah refresh) · **toggle Aktif** (optimistic + rollback bila gagal) · **filter/pencarian**
+4. Pastikan drag **nonaktif** saat filter aktif (memang didesain begitu)
+
+Rincian: `planning.md` baris238–241.
