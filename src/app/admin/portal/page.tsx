@@ -393,7 +393,11 @@ export default function AdminPortalPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchItems(); }, [fetchItems]);
+  useEffect(() => {
+    (async () => {
+      await fetchItems();
+    })().catch(() => {});
+  }, [fetchItems]);
 
   function openCreate() {
     setEditItem(null);

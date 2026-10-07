@@ -185,7 +185,13 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
   const uploadIdx = hasCustom ? 4 : 3;
   const doneIdx = steps.length - 1;
   const stepsRef = useRef(steps);
-  stepsRef.current = steps;
+
+  // Sinkronkan ref di effect (bukan saat render) — steps berubah identitas
+  // tiap render, jadi ref dipakai agar efek load localStorage tidak perlu
+  // memasukkan steps ke dependensi (yang akan membuatnya jalan tiap render).
+  useEffect(() => {
+    stepsRef.current = steps;
+  }, [steps]);
 
   // Enter → next field
   function handleFormKeyDown(e: React.KeyboardEvent) {
@@ -211,6 +217,7 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
       const savedStep = localStorage.getItem(STORAGE_STEP_KEY);
       const savedCustom = localStorage.getItem(STORAGE_CUSTOM_KEY);
       if (savedData) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrasi localStorage harus terjadi setelah mount: SSR tidak punya localStorage, jadi inisialisasi saat render akan membuat hydration mismatch. Menunda ke rAF/mikrotask justru membuat draft tampak kosong 1 frame.
         setData(JSON.parse(savedData));
         const parsed = savedStep ? parseInt(savedStep, 10) : 0;
         // Clamp ke jumlah langkah terkini — skema admin bisa mengubah jumlah langkah.

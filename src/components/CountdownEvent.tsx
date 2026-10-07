@@ -5,8 +5,8 @@ import { CalendarBlank } from "@/components/Icons";
 import { getActiveAgendaEvents } from "@/lib/queries";
 import type { AgendaEvent } from "@/lib/queries";
 
-function calcTimeLeft(target: string) {
-  const diff = new Date(target).getTime() - Date.now();
+function calcTimeLeft(target: string, now: number) {
+  const diff = new Date(target).getTime() - now;
   if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
   return {
     days: Math.floor(diff / 86400000),
@@ -31,25 +31,29 @@ export default function CountdownEvent() {
   const [events, setEvents] = useState<AgendaEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState(0);
-  const [time, setTime] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  // "Sekarang" disimpan sebagai state, sehingga countdown dapat diturunkan (derived)
+  // selama render. Saat acara/target berganti, nilai langsung benar tanpa perlu
+  // setState sinkron di dalam effect (react-hooks/set-state-in-effect).
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     getActiveAgendaEvents().then((items) => {
       setEvents(items);
       setLoading(false);
+      setNow(Date.now());
     });
   }, []);
 
   useEffect(() => {
     if (events.length === 0) return;
-    const target = events[active]?.event_date;
-    if (!target) return;
-    setTime(calcTimeLeft(target));
-    const timer = setInterval(() => {
-      setTime(calcTimeLeft(target));
-    }, 1000);
+    const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
-  }, [active, events]);
+  }, [events.length]);
+
+  const target = events[active]?.event_date;
+  const time = target
+    ? calcTimeLeft(target, now)
+    : { days: 0, hours: 0, minutes: 0, seconds: 0 };
 
   useEffect(() => {
     if (events.length <= 1) return;

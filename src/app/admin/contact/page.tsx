@@ -65,10 +65,14 @@ export default function AdminContactPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchMessages(); }, [fetchMessages]);
+  useEffect(() => {
+    (async () => {
+      await fetchMessages();
+    })().catch(() => {});
+  }, [fetchMessages]);
 
   const filtered = useMemo(() => {
-    let result = messages.filter((item) => {
+    const result = messages.filter((item) => {
       const matchSearch =
         item.name.toLowerCase().includes(search.toLowerCase()) ||
         item.email.toLowerCase().includes(search.toLowerCase()) ||
@@ -188,7 +192,7 @@ export default function AdminContactPage() {
     }
   }
 
-  const SortIcon = ({ field }: { field: SortField }) => {
+  const sortIcon = (field: SortField) => {
     if (sortField !== field) return <SortAscending className="h-3 w-3 text-slate-300" />;
     return sortDir === "asc"
       ? <ArrowUp className="h-3 w-3 text-[#1767b1]" />
@@ -266,15 +270,15 @@ export default function AdminContactPage() {
                 </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">No</th>
                 <th className="cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("name")}>
-                  <span className="flex items-center gap-1">Nama <SortIcon field="name" /></span>
+                  <span className="flex items-center gap-1">Nama {sortIcon("name")}</span>
                 </th>
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 md:table-cell">Email</th>
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">Subjek</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 cursor-pointer select-none" onClick={() => toggleSort("is_read")}>
-                  <span className="flex items-center gap-1">Status <SortIcon field="is_read" /></span>
+                  <span className="flex items-center gap-1">Status {sortIcon("is_read")}</span>
                 </th>
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:table-cell cursor-pointer select-none" onClick={() => toggleSort("created_at")}>
-                  <span className="flex items-center gap-1">Tanggal <SortIcon field="created_at" /></span>
+                  <span className="flex items-center gap-1">Tanggal {sortIcon("created_at")}</span>
                 </th>
                 <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
               </tr>

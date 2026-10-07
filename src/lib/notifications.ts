@@ -1,4 +1,6 @@
-let resend: any;
+import type { Resend } from "resend";
+
+let resend: Resend | null = null;
 
 async function getResend() {
   if (!resend) {

@@ -9,8 +9,10 @@ import { setDefaultResultOrder } from "node:dns";
 setDefaultResultOrder("ipv4first");
 
 const nextConfig: NextConfig = {
+  // Error TypeScript tidak boleh lolos ke production. `npx tsc --noEmit`
+  // (dan CI) jadi gerbang wajib sebelum build/deploy.
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   allowedDevOrigins: ["192.168.2.106"],
   devIndicators: {

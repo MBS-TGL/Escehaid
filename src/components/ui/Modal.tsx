@@ -54,18 +54,27 @@ export const Modal = memo(function Modal({
   useEffect(() => {
     clearTimeout(closeTimer.current);
     if (open) {
-      setMounted(true);
+      // Mount & animasi masuk dijalankan di dalam callback requestAnimationFrame,
+      // bukan sinkron di body effect. Dua manfaat:
+      //  1) hydrasi aman — server & render pertama client sama-sama `mounted = false`,
+      //  2) tidak ada setState sinkron di effect (react-hooks/set-state-in-effect).
       const frame = requestAnimationFrame(() => {
+        setMounted(true);
         const second = requestAnimationFrame(() => {
           setVisible(true);
         });
         return () => cancelAnimationFrame(second);
       });
       return () => cancelAnimationFrame(frame);
-    } else {
+    }
+    // Animasi keluar: turunkan `visible` lalu lepas portal setelah transisi selesai.
+    // Timer dimulai bersamaan dengan turunnya `visible` agar durasi animasi tetap
+    // penuh 200ms dan portal tidak dilepas lebih awal.
+    const frame = requestAnimationFrame(() => {
       setVisible(false);
       closeTimer.current = setTimeout(() => setMounted(false), 200);
-    }
+    });
+    return () => cancelAnimationFrame(frame);
   }, [open]);
 
   useEffect(() => {

@@ -50,17 +50,6 @@ export function DatePicker({ label, required, error, value, onChange, placeholde
   const [selecting, setSelecting] = useState<"day" | "month" | "year">("day");
 
   useEffect(() => {
-    if (open && parsed) {
-      setViewMonth(parsed.month);
-      setViewYear(parsed.year);
-    } else if (open) {
-      setViewMonth(now.getMonth());
-      setViewYear(now.getFullYear());
-    }
-    setSelecting("day");
-  }, [open]);
-
-  useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
@@ -96,7 +85,16 @@ export function DatePicker({ label, required, error, value, onChange, placeholde
       </label>
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (!open) {
+            // Reset tampilan ke nilai yang sudah dipilih (atau hari ini) dan kembali
+            // ke mode "hari" — dilakukan di event handler, bukan di useEffect.
+            setViewMonth(parsed ? parsed.month : now.getMonth());
+            setViewYear(parsed ? parsed.year : now.getFullYear());
+            setSelecting("day");
+          }
+          setOpen(!open);
+        }}
         data-field-type="datepicker"
         className={`flex w-full cursor-pointer items-center justify-between rounded-xl border bg-white px-4 py-2.5 text-left text-sm transition-colors focus:ring-2 ${
           error

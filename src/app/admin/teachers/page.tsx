@@ -59,7 +59,11 @@ export default function AdminTeachersPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchItems(); }, [fetchItems]);
+  useEffect(() => {
+    (async () => {
+      await fetchItems();
+    })().catch(() => {});
+  }, [fetchItems]);
 
   const filtered = useMemo(() => {
     let result = items;

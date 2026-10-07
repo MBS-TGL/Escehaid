@@ -1,0 +1,78 @@
+name: CI
+
+# Gerbang mutu sebelum deploy. Dua job:
+#   1. quality — selalu jalan, tanpa env. TSC & ESLint jadi hard-fail.
+#   2. build   — butuh env Supabase (prerender query DB saat build).
+#                Bila secrets belum diatur di GitHub, dilewati dengan pemberitahuan
+#                alih-alih gagal merah yang membingungkan.
+#
+# Setup satu kali (Repo → Settings → Secrets and variables → Actions):
+#   Secrets : NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+#             RESEND_API_KEY, RESEND_FROM_EMAIL, ADMIN_EMAIL
+#   Variables: NEXT_PUBLIC_APP_NAME
+# Catatan: NEXT_PUBLIC_* tetap perlu diset di CI agar build bisa query DB saat
+# prerender; nilai ini memang publik (dikirim ke browser juga).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality:
+    name: TypeScript & ESLint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Versi sama persis dengan lingkungan dev lokal (parity build).
+          node-version: 24
+          cache: npm
+
+      - name: Install dependensi
+        run: npm ci
+
+      # Gerbang keras: error TypeScript menggagalkan CI.
+      # (next.config.ts juga sudah `ignoreBuildErrors: false`.)
+      - name: TypeScript
+        run: npx tsc --noEmit
+
+      # Gerbang keras: error ESLint menggagalkan CI (P1.4 — baseline 94 error → 0).
+      # Pelanggaran yang memang disengaja didokumentasikan lewat eslint-disable
+      # di lokasinya masing-masing, bukan dengan menurunkan aturan secara global.
+      - name: ESLint
+        run: npm run lint
+
+  build:
+    name: Next.js build
+    runs-on: ubuntu-latest
+    needs: quality
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_APP_NAME: ${{ vars.NEXT_PUBLIC_APP_NAME }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+      ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependensi
+        run: npm ci
+
+      - name: Build
+        if: env.NEXT_PUBLIC_SUPABASE_URL != ''
+        run: npm run build
+
+      - name: Env belum diatur — build dilewati
+        if: env.NEXT_PUBLIC_SUPABASE_URL == ''
+        run: |
+          echo "::notice::NEXT_PUBLIC_SUPABASE_URL belum di-set di GitHub Secrets — langkah build dilewati."
+          echo "Tambahkan secrets agar build penuh (termasuk prerender) ikut diperiksa."

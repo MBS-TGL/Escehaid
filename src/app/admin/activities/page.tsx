@@ -112,7 +112,11 @@ export default function AdminActivitiesPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchActivities(); }, [fetchActivities]);
+  useEffect(() => {
+    (async () => {
+      await fetchActivities();
+    })().catch(() => {});
+  }, [fetchActivities]);
 
   // Paste image handler
   useEffect(() => {
@@ -138,7 +142,7 @@ export default function AdminActivitiesPage() {
 
   // Filtered + Sorted
   const filtered = useMemo(() => {
-    let result = activities.filter((item) => {
+    const result = activities.filter((item) => {
       const matchSearch =
         !search ||
         item.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -312,7 +316,7 @@ export default function AdminActivitiesPage() {
     fetchActivities();
   }
 
-  const SortIcon = ({ field }: { field: SortField }) => {
+  const sortIcon = (field: SortField) => {
     if (sortField !== field) return <SortAscending className="h-3 w-3 text-slate-300" />;
     return sortDir === "asc"
       ? <ArrowUp className="h-3 w-3 text-[#1767b1]" />
@@ -393,13 +397,13 @@ export default function AdminActivitiesPage() {
                 </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">No</th>
                 <th className="w-[35%] cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("title")}>
-                  <span className="flex items-center gap-1">Judul <SortIcon field="title" /></span>
+                  <span className="flex items-center gap-1">Judul {sortIcon("title")}</span>
                 </th>
                 <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none" onClick={() => toggleSort("activity_type")}>
-                  <span className="flex items-center justify-center gap-1">Tipe <SortIcon field="activity_type" /></span>
+                  <span className="flex items-center justify-center gap-1">Tipe {sortIcon("activity_type")}</span>
                 </th>
                 <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 md:table-cell cursor-pointer select-none" onClick={() => toggleSort("activity_date")}>
-                  <span className="flex items-center justify-center gap-1">Tanggal <SortIcon field="activity_date" /></span>
+                  <span className="flex items-center justify-center gap-1">Tanggal {sortIcon("activity_date")}</span>
                 </th>
                 <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:table-cell">Lokasi</th>
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</th>

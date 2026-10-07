@@ -79,11 +79,19 @@ export default function AdminTopbar({
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notifLoading, setNotifLoading] = useState(false);
-  const [hasPermission, setHasPermission] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+
+  // "Sekarang" disimpan di state agar render tetap murni — react-hooks/purity
+  // melarang Date.now() dipanggil langsung saat render. Diperbarui tiap menit
+  // supaya waktu relatif (timeAgo) tetap hidup seperti sebelumnya.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -103,26 +111,30 @@ export default function AdminTopbar({
 
   // Polling: fetch unread count every 30 seconds
   useEffect(() => {
-    fetchNotifications();
+    (async () => {
+      await fetchNotifications();
+    })().catch(() => {});
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
-  // Request browser notification permission
+  // Request browser notification permission.
+  // Status izin dibaca langsung saat dibutuhkan (lihat efek di bawah), sehingga
+  // tidak perlu disimpan sebagai state — menghindari setState sinkron di effect.
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission().then((perm) => {
-        setHasPermission(perm === "granted");
-      });
-    } else if ("Notification" in window && Notification.permission === "granted") {
-      setHasPermission(true);
+      Notification.requestPermission().catch(() => {});
     }
   }, []);
 
   // Show browser notification when new unread arrives
   const prevCountRef = useRef(0);
   useEffect(() => {
-    if (unreadCount > prevCountRef.current && hasPermission) {
+    if (
+      unreadCount > prevCountRef.current &&
+      "Notification" in window &&
+      Notification.permission === "granted"
+    ) {
       getRecentNotifications(1).then((msgs) => {
         if (msgs.length > 0) {
           const n = msgs[0];
@@ -131,11 +143,10 @@ export default function AdminTopbar({
       });
     }
     prevCountRef.current = unreadCount;
-  }, [unreadCount, hasPermission]);
+  }, [unreadCount]);
 
   useEffect(() => {
     if (!notifOpen) return;
-    setNotifLoading(true);
     getRecentNotifications(8).then((msgs) => {
       setNotifications(msgs);
       setNotifLoading(false);
@@ -203,7 +214,7 @@ export default function AdminTopbar({
   }
 
   function timeAgo(dateStr: string) {
-    const diff = Date.now() - new Date(dateStr).getTime();
+    const diff = now - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return "Baru saja";
     if (mins < 60) return `${mins}m lalu`;
@@ -302,7 +313,12 @@ export default function AdminTopbar({
         {/* Notification bell */}
         <div className="relative" ref={notifRef}>
           <button
-            onClick={() => setNotifOpen(!notifOpen)}
+            onClick={() => {
+              // Loading ditandai di event handler (bukan di effect) agar tidak
+              // memicu render berantai saat dropdown dibuka.
+              if (!notifOpen) setNotifLoading(true);
+              setNotifOpen(!notifOpen);
+            }}
             className="relative flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
           >
             <Bell className="h-[18px] w-[18px]" />

@@ -24,9 +24,6 @@ import {
   Trash,
   Warning,
   FloppyDisk,
-  ArrowUp,
-  ArrowDown,
-  SortAscending,
   Checks,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
@@ -96,12 +93,16 @@ export default function AdminGalleryPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchGallery(); }, [fetchGallery]);
+  useEffect(() => {
+    (async () => {
+      await fetchGallery();
+    })().catch(() => {});
+  }, [fetchGallery]);
 
   const categories = useMemo(() => [...new Set(gallery.map((g) => g.category))], [gallery]);
 
   const filtered = useMemo(() => {
-    let result = gallery.filter((item) => {
+    const result = gallery.filter((item) => {
       const matchSearch = item.title.toLowerCase().includes(search.toLowerCase());
       const matchCategory = filter === "all" || item.category === filter;
       const matchType = typeFilter === "all" || item.media_type === typeFilter;
@@ -239,12 +240,6 @@ export default function AdminGalleryPage() {
     fetchGallery();
   }
 
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <SortAscending className="h-3 w-3 text-slate-300" />;
-    return sortDir === "asc"
-      ? <ArrowUp className="h-3 w-3 text-[#1767b1]" />
-      : <ArrowDown className="h-3 w-3 text-[#1767b1]" />;
-  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">

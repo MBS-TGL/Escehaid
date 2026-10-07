@@ -100,7 +100,7 @@ export function RichTextEditor({
       ...(maxLength ? [CharacterCount.configure({ limit: maxLength })] : []),
     ],
     content: value,
-    onUpdate: ({ editor }: { editor: any }) => {
+    onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
     editorProps: {

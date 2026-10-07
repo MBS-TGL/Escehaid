@@ -201,6 +201,13 @@ export default function AdminArticlesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<ArticleWithAuthor | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
+  // "Sekarang" via state agar render tetap murni (react-hooks/purity melarang
+  // Date.now() saat render). Diperbarui tiap menit agar label jadwal akurat.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
   const [initialForm, setInitialForm] = useState<FormData>(emptyForm);
   const [formSaving, setFormSaving] = useState(false);
   const [formError, setFormError] = useState("");
@@ -238,7 +245,11 @@ export default function AdminArticlesPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchArticles(); }, [fetchArticles]);
+  useEffect(() => {
+    (async () => {
+      await fetchArticles();
+    })().catch(() => {});
+  }, [fetchArticles]);
 
   // Probe kolom author_name/editor_name
   useEffect(() => {
@@ -273,7 +284,7 @@ export default function AdminArticlesPage() {
   }, [articles]);
 
   const filtered = useMemo(() => {
-    let result = articles.filter((item) => {
+    const result = articles.filter((item) => {
       const matchSearch =
         item.title.toLowerCase().includes(search.toLowerCase()) ||
         (item.excerpt || "").toLowerCase().includes(search.toLowerCase());
@@ -497,7 +508,7 @@ export default function AdminArticlesPage() {
     if (editItem) return "Simpan Perubahan";
     if (!form.is_published) return "Simpan Draft";
     const utc = wibInputToUtc(form.published_at);
-    return utc && new Date(utc).getTime() > Date.now() ? "Jadwalkan" : "Terbitkan";
+    return utc && new Date(utc).getTime() > now ? "Jadwalkan" : "Terbitkan";
   }
 
   function handleTitleChange(value: string) {
@@ -662,8 +673,8 @@ export default function AdminArticlesPage() {
       await deleteArticle(deleteItem.id);
       revalidateArticles(undefined, deleteItem.slug).catch(() => {});
       toast("Artikel berhasil dihapus", "success");
-    } catch (e: any) {
-      toast(e?.message || "Gagal menghapus artikel", "error");
+    } catch (e) {
+      toast(e instanceof Error && e.message ? e.message : "Gagal menghapus artikel", "error");
     }
     setDeleteItem(null);
     setSelectedIds((s) => { const n = new Set(s); n.delete(deleteItem.id); return n; });
@@ -678,8 +689,8 @@ export default function AdminArticlesPage() {
       await deleteArticleBulk(ids);
       revalidateBulk(slugs);
       toast(`${ids.length} artikel berhasil dihapus`, "success");
-    } catch (e: any) {
-      toast(e?.message || "Gagal menghapus artikel", "error");
+    } catch (e) {
+      toast(e instanceof Error && e.message ? e.message : "Gagal menghapus artikel", "error");
     }
     setSelectedIds(new Set());
     setBulkDelete(false);
@@ -694,8 +705,8 @@ export default function AdminArticlesPage() {
       await togglePublishArticleBulk(ids, publish);
       revalidateBulk(slugs);
       toast(`${ids.length} artikel berhasil ${publish ? "diterbitkan" : "draft"}`, "success");
-    } catch (e: any) {
-      toast(e?.message || "Gagal memperbarui status artikel", "error");
+    } catch (e) {
+      toast(e instanceof Error && e.message ? e.message : "Gagal memperbarui status artikel", "error");
     }
     setSelectedIds(new Set());
     fetchArticles();
@@ -706,13 +717,13 @@ export default function AdminArticlesPage() {
       await togglePublishArticle(item.id, !item.is_published);
       revalidateArticles(item.slug).catch(() => {});
       toast(`Artikel berhasil ${!item.is_published ? "diterbitkan" : "draft"}`, "success");
-    } catch (e: any) {
-      toast(e?.message || "Gagal memperbarui status artikel", "error");
+    } catch (e) {
+      toast(e instanceof Error && e.message ? e.message : "Gagal memperbarui status artikel", "error");
     }
     fetchArticles();
   }
 
-  const SortIcon = ({ field }: { field: SortField }) => {
+  const sortIcon = (field: SortField) => {
     if (sortField !== field) return <SortAscending className="h-3 w-3 text-slate-300" />;
     return sortDir === "asc"
       ? <ArrowUp className="h-3 w-3 text-[#1767b1]" />
@@ -802,15 +813,15 @@ export default function AdminArticlesPage() {
                 </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">No</th>
                 <th className="cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("title")}>
-                  <span className="flex items-center gap-1">Judul <SortIcon field="title" /></span>
+                  <span className="flex items-center gap-1">Judul {sortIcon("title")}</span>
                 </th>
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none" onClick={() => toggleSort("category")}>
-                  <span className="flex items-center gap-1">Kategori <SortIcon field="category" /></span>
+                  <span className="flex items-center gap-1">Kategori {sortIcon("category")}</span>
                 </th>
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 md:table-cell">Penulis</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</th>
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:table-cell cursor-pointer select-none" onClick={() => toggleSort("created_at")}>
-                  <span className="flex items-center gap-1">Tanggal <SortIcon field="created_at" /></span>
+                  <span className="flex items-center gap-1">Tanggal {sortIcon("created_at")}</span>
                 </th>
                 <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
               </tr>
@@ -1349,7 +1360,7 @@ export default function AdminArticlesPage() {
                 <p className="text-xs text-slate-400">
                   {!form.is_published
                     ? "Artikel disimpan sebagai draft"
-                    : wibInputToUtc(form.published_at) && new Date(wibInputToUtc(form.published_at)!).getTime() > Date.now()
+                    : wibInputToUtc(form.published_at) && new Date(wibInputToUtc(form.published_at)!).getTime() > now
                       ? "Belum tampil — menunggu jadwal tayang"
                       : "Artikel akan langsung tampil di website"}
                 </p>
@@ -1375,7 +1386,7 @@ export default function AdminArticlesPage() {
               Zona waktu WIB. Kosongkan untuk memakai waktu simpan otomatis saat terbit.
               Tanggal di masa depan akan <span className="font-semibold text-slate-500">menunda tayang</span> — artikel muncul otomatis saat waktunya tiba.
             </p>
-            {form.is_published && wibInputToUtc(form.published_at) && new Date(wibInputToUtc(form.published_at)!).getTime() > Date.now() && (
+            {form.is_published && wibInputToUtc(form.published_at) && new Date(wibInputToUtc(form.published_at)!).getTime() > now && (
               <p className="flex items-center gap-1.5 rounded-lg border border-[#f4d21f]/50 bg-[#f4d21f]/15 px-2.5 py-1.5 text-xs font-medium text-[#7a6600]">
                 <Clock className="h-3.5 w-3.5 shrink-0" />
                 Akan tayang otomatis pada {formatWibInput(form.published_at)} WIB

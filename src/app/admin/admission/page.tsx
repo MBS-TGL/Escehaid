@@ -203,7 +203,11 @@ export default function AdminSPMBPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    (async () => {
+      await fetchData();
+    })().catch(() => {});
+  }, [fetchData]);
 
   const fetchWaves = useCallback(async () => {
     setWavesLoading(true);
@@ -211,14 +215,18 @@ export default function AdminSPMBPage() {
       const list = await getWavesAll();
       setWaves(list);
       setWavesError(null);
-    } catch (e: any) {
-      setWavesError(e?.message || "Gagal memuat data gelombang");
+    } catch (e) {
+      setWavesError(e instanceof Error && e.message ? e.message : "Gagal memuat data gelombang");
     }
     setWavesLoading(false);
   }, []);
 
   // Selalu muat gelombang (dipakai tab Gelombang + label nama gelombang di detail pendaftar)
-  useEffect(() => { fetchWaves(); }, [fetchWaves]);
+  useEffect(() => {
+    (async () => {
+      await fetchWaves();
+    })().catch(() => {});
+  }, [fetchWaves]);
 
   // Muat mode sumber pendaftaran + link Google Form tersimpan (kartu di tab Gelombang)
   useEffect(() => {
@@ -465,45 +473,6 @@ export default function AdminSPMBPage() {
     await persistFields(formFields.filter((f) => f.id !== id), "Pertanyaan berhasil dihapus");
   }
 
-  /** Export daftar (mengikuti filter + pencarian aktif) ke CSV — bisa dibuka langsung di Excel. */
-  function handleExportCsv() {
-    const customCols = formFields.map((f) => ({ key: spmbAnswerKey(f.id), label: f.label }));
-    const headers = [
-      "No", "Nama Lengkap", "Email", "Telepon", "Asal Sekolah",
-      "Jalur", "Gelombang", "Status", "Tanggal Daftar",
-      ...customCols.map((c) => c.label),
-    ];
-    const cell = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const lines = [headers.map(cell).join(";")];
-    filtered.forEach((r, i) => {
-      lines.push(
-        [
-          i + 1,
-          r.full_name,
-          r.email,
-          r.phone,
-          r.previous_school,
-          pathLabels[r.registration_path] || r.registration_path,
-          waveLabel(r.wave_id) || "-",
-          statusConfig[r.status]?.label || r.status,
-          new Date(r.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
-          ...customCols.map((c) => r.documents?.[c.key] || ""),
-        ].map(cell).join(";")
-      );
-    });
-    // BOM agar Excel membaca UTF-8; pemisah ";" mengikuti lokalitas Excel Indonesia.
-    const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `pendaftar-spmb-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    toast(`${filtered.length} pendaftar diekspor ke CSV`, "success");
-  }
-
   /** Buka modal detail dengan tab selalu mulai dari "Siswa". */
   function openDetail(item: SpmbRegistration) {
     setViewItem(item);
@@ -533,12 +502,18 @@ export default function AdminSPMBPage() {
 
   // Generate signed URLs when viewItem changes
   useEffect(() => {
-    if (!viewItem?.documents) { setSignedUrls({}); return; }
     const docKeys = ["kk", "akta", "surat_sekolah", "ktp_ortu", "bukti_transfer"];
-    const paths = docKeys
-      .map((key) => ({ key, path: viewItem.documents?.[key] }))
-      .filter((item): item is { key: string; path: string } => typeof item.path === "string" && item.path.length > 0);
-    if (paths.length === 0) { setSignedUrls({}); return; }
+    const docs = viewItem?.documents;
+    const paths = docs
+      ? docKeys
+          .map((key) => ({ key, path: docs[key] }))
+          .filter(
+            (item): item is { key: string; path: string } =>
+              typeof item.path === "string" && item.path.length > 0
+          )
+      : [];
+    // Selalu tulis hasilnya — termasuk objek kosong saat tidak ada dokumen —
+    // di dalam callback async, sehingga tidak ada setState sinkron dalam effect.
     (async () => {
       const urls: Record<string, string> = {};
       await Promise.all(paths.map(async ({ key, path }) => {
@@ -551,7 +526,7 @@ export default function AdminSPMBPage() {
 
   // Filtered + Sorted
   const filtered = useMemo(() => {
-    let result = data.filter((item) => {
+    const result = data.filter((item) => {
       const q = search.toLowerCase();
       // Jawaban pertanyaan tambahan ikut dicari (kunci cf_<id> di documents).
       const customText = item.documents
@@ -617,12 +592,51 @@ export default function AdminSPMBPage() {
     else { setSortField(field); setSortDir("asc"); }
   }
 
+  /** Export daftar (mengikuti filter + pencarian aktif) ke CSV — bisa dibuka langsung di Excel. */
+  function handleExportCsv() {
+    const customCols = formFields.map((f) => ({ key: spmbAnswerKey(f.id), label: f.label }));
+    const headers = [
+      "No", "Nama Lengkap", "Email", "Telepon", "Asal Sekolah",
+      "Jalur", "Gelombang", "Status", "Tanggal Daftar",
+      ...customCols.map((c) => c.label),
+    ];
+    const cell = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const lines = [headers.map(cell).join(";")];
+    filtered.forEach((r, i) => {
+      lines.push(
+        [
+          i + 1,
+          r.full_name,
+          r.email,
+          r.phone,
+          r.previous_school,
+          pathLabels[r.registration_path] || r.registration_path,
+          waveLabel(r.wave_id) || "-",
+          statusConfig[r.status]?.label || r.status,
+          new Date(r.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+          ...customCols.map((c) => r.documents?.[c.key] || ""),
+        ].map(cell).join(";")
+      );
+    });
+    // BOM agar Excel membaca UTF-8; pemisah ";" mengikuti lokalitas Excel Indonesia.
+    const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `pendaftar-spmb-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast(`${filtered.length} pendaftar diekspor ke CSV`, "success");
+  }
+
   async function handleUpdateStatus(id: string, status: "accepted" | "rejected") {
     try {
       await updateRegistrationStatus(id, status);
       toast("Status berhasil diubah", "success");
-    } catch (e: any) {
-      toast(e?.message || "Gagal mengubah status", "error");
+    } catch (e) {
+      toast(e instanceof Error && e.message ? e.message : "Gagal mengubah status", "error");
     }
     setConfirmAction(null);
     setViewItem(null);
@@ -636,8 +650,8 @@ export default function AdminSPMBPage() {
     try {
       await updateRegistrationBulkStatus(ids, status);
       toast(`${ids.length} pendaftaran berhasil diubah statusnya`, "success");
-    } catch (e: any) {
-      toast(e?.message || "Gagal mengubah status", "error");
+    } catch (e) {
+      toast(e instanceof Error && e.message ? e.message : "Gagal mengubah status", "error");
     }
     setSelectedIds(new Set());
     setConfirmAction(null);
@@ -649,8 +663,8 @@ export default function AdminSPMBPage() {
     try {
       await deleteRegistration(deleteItem.id);
       toast("Pendaftaran berhasil dihapus", "success");
-    } catch (e: any) {
-      toast(e?.message || "Gagal menghapus pendaftaran", "error");
+    } catch (e) {
+      toast(e instanceof Error && e.message ? e.message : "Gagal menghapus pendaftaran", "error");
     }
     setDeleteItem(null);
     setSelectedIds((s) => { const n = new Set(s); n.delete(deleteItem.id); return n; });
@@ -663,8 +677,8 @@ export default function AdminSPMBPage() {
     try {
       await deleteRegistrationBulk(ids);
       toast(`${ids.length} pendaftaran berhasil dihapus`, "success");
-    } catch (e: any) {
-      toast(e?.message || "Gagal menghapus pendaftaran", "error");
+    } catch (e) {
+      toast(e instanceof Error && e.message ? e.message : "Gagal menghapus pendaftaran", "error");
     }
     setSelectedIds(new Set());
     setBulkDelete(false);
@@ -677,8 +691,8 @@ export default function AdminSPMBPage() {
     try {
       await updateRegistrationNotes(editItem.id, editNotes);
       toast("Catatan berhasil disimpan", "success");
-    } catch (e: any) {
-      toast(e?.message || "Gagal menyimpan catatan", "error");
+    } catch (e) {
+      toast(e instanceof Error && e.message ? e.message : "Gagal menyimpan catatan", "error");
     }
     setEditSaving(false);
     setEditItem(null);
@@ -690,8 +704,8 @@ export default function AdminSPMBPage() {
     try {
       await updateRegistrationStatus(item.id, nextStatus as "accepted" | "rejected");
       toast("Status berhasil diubah", "success");
-    } catch (e: any) {
-      toast(e?.message || "Gagal mengubah status", "error");
+    } catch (e) {
+      toast(e instanceof Error && e.message ? e.message : "Gagal mengubah status", "error");
     }
     fetchData();
   }
@@ -783,7 +797,7 @@ export default function AdminSPMBPage() {
     revalidatePaths(["/admission"]).catch(() => { });
   }
 
-  const SortIcon = ({ field }: { field: SortField }) => {
+  const sortIcon = (field: SortField) => {
     if (sortField !== field) return <SortAscending className="h-3 w-3 text-slate-300" />;
     return sortDir === "asc"
       ? <ArrowUp className="h-3 w-3 text-[#1767b1]" />
@@ -1467,17 +1481,17 @@ export default function AdminSPMBPage() {
                 </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">No</th>
                 <th className="cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("full_name")}>
-                  <span className="flex items-center gap-1">Nama <SortIcon field="full_name" /></span>
+                  <span className="flex items-center gap-1">Nama {sortIcon("full_name")}</span>
                 </th>
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 md:table-cell">Asal Sekolah</th>
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none" onClick={() => toggleSort("registration_path")}>
-                  <span className="flex items-center gap-1">Jalur <SortIcon field="registration_path" /></span>
+                  <span className="flex items-center gap-1">Jalur {sortIcon("registration_path")}</span>
                 </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 cursor-pointer select-none" onClick={() => toggleSort("status")}>
-                  <span className="flex items-center gap-1">Status <SortIcon field="status" /></span>
+                  <span className="flex items-center gap-1">Status {sortIcon("status")}</span>
                 </th>
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:table-cell cursor-pointer select-none" onClick={() => toggleSort("created_at")}>
-                  <span className="flex items-center gap-1">Tanggal <SortIcon field="created_at" /></span>
+                  <span className="flex items-center gap-1">Tanggal {sortIcon("created_at")}</span>
                 </th>
                 <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
               </tr>

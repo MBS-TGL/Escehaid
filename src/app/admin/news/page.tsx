@@ -18,6 +18,7 @@ import {
   newsHasScheduledColumns,
   slugify,
 } from "@/lib/queries";
+import type { NewsWithAuthor } from "@/lib/queries";
 import { compressImage } from "@/lib/compress-image";
 import { sanitize } from "@/lib/sanitize";
 import { StatCard, StatCardRow, Modal, ConfirmModal, SlideOver, RichTextEditor } from "@/components/ui";
@@ -174,7 +175,7 @@ function formatWibInput(value: string): string {
 
 export default function AdminBeritaPage() {
   const { toast } = useToast();
-  const [news, setNews] = useState<News[]>([]);
+  const [news, setNews] = useState<NewsWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
@@ -186,7 +187,7 @@ export default function AdminBeritaPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Modals
-  const [viewItem, setViewItem] = useState<News | null>(null);
+  const [viewItem, setViewItem] = useState<NewsWithAuthor | null>(null);
   const [deleteItem, setDeleteItem] = useState<News | null>(null);
   const [bulkDelete, setBulkDelete] = useState(false);
 
@@ -194,6 +195,13 @@ export default function AdminBeritaPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<News | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
+  // "Sekarang" via state agar render tetap murni (react-hooks/purity melarang
+  // Date.now() saat render). Diperbarui tiap menit agar label jadwal akurat.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
   const [formSaving, setFormSaving] = useState(false);
   const [formError, setFormError] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -239,11 +247,15 @@ export default function AdminBeritaPage() {
   const fetchNews = useCallback(async () => {
     setLoading(true);
     const data = await getNewsListAll();
-    setNews(data as News[]);
+    setNews(data);
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchNews(); }, [fetchNews]);
+  useEffect(() => {
+    (async () => {
+      await fetchNews();
+    })().catch(() => {});
+  }, [fetchNews]);
 
   // Paste image handler — kompres seperti handleImageChange
   useEffect(() => {
@@ -275,7 +287,7 @@ export default function AdminBeritaPage() {
 
   // Filtered + Sorted
   const filtered = useMemo(() => {
-    let result = news.filter((item) => {
+    const result = news.filter((item) => {
       const matchSearch =
         item.title.toLowerCase().includes(search.toLowerCase()) ||
         (item.summary && item.summary.toLowerCase().includes(search.toLowerCase()));
@@ -493,7 +505,7 @@ export default function AdminBeritaPage() {
     if (editItem) return "Simpan Perubahan";
     if (!form.is_published) return "Simpan Draft";
     const utc = wibInputToUtc(form.published_at);
-    return utc && new Date(utc).getTime() > Date.now() ? "Jadwalkan" : "Terbitkan";
+    return utc && new Date(utc).getTime() > now ? "Jadwalkan" : "Terbitkan";
   }
 
   async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -668,7 +680,7 @@ export default function AdminBeritaPage() {
     revalidateNews(item.slug).catch(() => {});
   }
 
-  const SortIcon = ({ field }: { field: SortField }) => {
+  const sortIcon = (field: SortField) => {
     if (sortField !== field) return <SortAscending className="h-3 w-3 text-slate-300" />;
     return sortDir === "asc"
       ? <ArrowUp className="h-3 w-3 text-[#1767b1]" />
@@ -749,15 +761,15 @@ export default function AdminBeritaPage() {
                 </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">No</th>
                 <th className="w-[40%] cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("title")}>
-                  <span className="flex items-center gap-1">Judul <SortIcon field="title" /></span>
+                  <span className="flex items-center gap-1">Judul {sortIcon("title")}</span>
                 </th>
                 <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none" onClick={() => toggleSort("category")}>
-                  <span className="flex items-center justify-center gap-1">Kategori <SortIcon field="category" /></span>
+                  <span className="flex items-center justify-center gap-1">Kategori {sortIcon("category")}</span>
                 </th>
                 <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 md:table-cell">Penulis</th>
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</th>
                 <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:table-cell cursor-pointer select-none" onClick={() => toggleSort("created_at")}>
-                  <span className="flex items-center justify-center gap-1">Tanggal <SortIcon field="created_at" /></span>
+                  <span className="flex items-center justify-center gap-1">Tanggal {sortIcon("created_at")}</span>
                 </th>
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
               </tr>
@@ -828,7 +840,7 @@ export default function AdminBeritaPage() {
                         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100">
                           <User className="h-3 w-3 text-slate-400" />
                         </div>
-                        <span className="text-xs text-slate-500">{(item as any).author_name || "-"}</span>
+                        <span className="text-xs text-slate-500">{item.author_name || "-"}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
@@ -940,7 +952,7 @@ export default function AdminBeritaPage() {
         {viewItem && (
           <>
             <div className="mb-4 flex items-center gap-4 text-xs text-slate-500">
-              <span>Oleh: {(viewItem as any).author_name || "Tidak diketahui"}</span>
+              <span>Oleh: {viewItem?.author_name || "Tidak diketahui"}</span>
               <span>{viewItem.published_at ? new Date(viewItem.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"}</span>
             </div>
             {viewItem.summary && <p className="mb-4 text-sm text-slate-600 italic border-l-2 border-[#f4d21f] pl-3">{viewItem.summary}</p>}
@@ -1291,7 +1303,7 @@ export default function AdminBeritaPage() {
                 <p className="text-xs text-slate-400">
                   {!form.is_published
                     ? "Berita disimpan sebagai draft"
-                    : wibInputToUtc(form.published_at) && new Date(wibInputToUtc(form.published_at)!).getTime() > Date.now()
+                    : wibInputToUtc(form.published_at) && new Date(wibInputToUtc(form.published_at)!).getTime() > now
                       ? "Belum tampil — menunggu jadwal tayang"
                       : "Berita akan langsung tampil di website"}
                 </p>
@@ -1310,7 +1322,7 @@ export default function AdminBeritaPage() {
                   className="text-[11px] text-slate-400 hover:text-slate-600">Reset</button>
               )}
             </div>
-            {form.is_published && wibInputToUtc(form.published_at) && new Date(wibInputToUtc(form.published_at)!).getTime() > Date.now() && (
+            {form.is_published && wibInputToUtc(form.published_at) && new Date(wibInputToUtc(form.published_at)!).getTime() > now && (
               <p className="flex items-center gap-1.5 rounded-lg border border-[#f4d21f]/50 bg-[#f4d21f]/15 px-2.5 py-1.5 text-xs font-medium text-[#7a6600]">
                 <Clock className="h-3.5 w-3.5 shrink-0" />
                 Akan tayang otomatis pada {formatWibInput(form.published_at)} WIB

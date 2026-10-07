@@ -20,7 +20,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { toast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  // Menu mobile disimpan sebagai "pathname tempat dibuka", bukan boolean yang
+  // di-reset oleh useEffect. Dengan begitu menu otomatis tertutup saat pathname
+  // berubah — tanpa setState sinkron di dalam effect (react-hooks/set-state-in-effect).
+  const [mobileOpenFor, setMobileOpenFor] = useState<string | null>(null);
+  const mobileOpen = mobileOpenFor === pathname;
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,8 +32,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   );
 
   useEffect(() => {
+    // Halaman login tidak perlu fetch profil. Tidak perlu setLoading(false) di sini:
+    // render sudah early-return utk /admin/login sebelum memeriksa `loading`.
     if (pathname === "/admin/login") {
-      setLoading(false);
       return;
     }
 
@@ -57,10 +62,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     };
 
     fetchProfile();
-  }, [pathname]);
-
-  useEffect(() => {
-    setMobileOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -106,14 +107,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-slate-50">
       <AdminSidebar
         isMobileOpen={mobileOpen}
-        onCloseMobile={() => setMobileOpen(false)}
+        onCloseMobile={() => setMobileOpenFor(null)}
       />
 
       {/* Main content area */}
       <div className="min-h-screen transition-all duration-300 lg:ml-[270px]">
         <AdminTopbar
           profile={profile}
-          onOpenMobile={() => setMobileOpen(true)}
+          onOpenMobile={() => setMobileOpenFor(pathname)}
         />
         <main>{children}</main>
       </div>

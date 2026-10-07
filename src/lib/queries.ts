@@ -10,9 +10,15 @@ import {
 } from "./notifications";
 import { tryCompressImage, TEACHER_PHOTO } from "./compress-image";
 
-interface NewsWithAuthor extends News {
-  author_name?: string;
+export interface NewsWithAuthor extends News {
+  author_name?: string | null;
 }
+
+/** Baris `news` hasil select: join profil penulis (bila kolom author_name tak ada). */
+type NewsRow = News & {
+  author_name?: string | null;
+  user_profiles?: { full_name: string | null } | null;
+};
 
 export interface ArticleWithAuthor extends Article {
   author_name?: string | null;
@@ -88,14 +94,24 @@ function newsNowIso(): string {
 }
 
 /**
+ * Metode builder Supabase yang benar-benar dipakai helper filter publik.
+ * Ditulis sebagai deklarasi method (bukan properti panah) agar parameter
+ * bersifat bivariant — builder asli lolos batasan ini.
+ */
+type FilterMethods<T> = {
+  eq(column: string, value: unknown): T;
+  or(filters: string): T;
+};
+
+/**
  * Filter publik berita — sama persis dengan policy SELECT Tahap 1:
  * is_published = true AND (published_at IS NULL OR published_at <= now())
  * AND (expires_at IS NULL OR expires_at > now()).
  * `withExpires` false bila kolom expires_at belum ada (SQL tahap 1 belum jalan).
  */
-function applyPublicNewsFilters(query: any, withExpires: boolean) {
+function applyPublicNewsFilters<T extends FilterMethods<T>>(query: T, withExpires: boolean): T {
   const nowIso = newsNowIso();
-  let q = query
+  let q: T = query
     .eq("is_published", true)
     .or(`published_at.is.null,published_at.lte.${nowIso}`);
   if (withExpires) {
@@ -134,7 +150,13 @@ async function queryNewsPage(
     query = query.eq("category", category);
   }
 
-  return query.range(from, to);
+  // select dengan string runtime + join tidak bisa di-infer Supabase
+  // (hasilnya ParserError, bukan baris) → cast manual seperti ArticleRow.
+  return (await query.range(from, to)) as unknown as {
+    data: NewsRow[] | null;
+    error: { message?: string } | null;
+    count: number | null;
+  };
 }
 
 export async function getNewsListPaginated(
@@ -169,7 +191,7 @@ export async function getNewsListPaginated(
   const totalPages = Math.ceil(total / pageSize);
 
   return {
-    items: (data || []).map((item: any) => ({
+    items: (data || []).map((item: NewsRow) => ({
       ...item,
       author_name: item.user_profiles?.full_name ?? null,
     })),
@@ -202,13 +224,17 @@ export async function getNewsList(limit?: number, search?: string): Promise<News
     query = query.limit(limit);
   }
 
-  const { data, error } = await query;
+  // select dengan string runtime + join tidak bisa di-infer Supabase → cast manual.
+  const { data, error } = (await query) as unknown as {
+    data: NewsRow[] | null;
+    error: { message?: string } | null;
+  };
 
   if (error) {
     console.error("Error fetching news:", error);
     return [];
   }
-  return (data || []).map((item: any) => ({
+  return (data || []).map((item: NewsRow) => ({
     ...item,
     author_name: item.user_profiles?.full_name ?? null,
   }));
@@ -224,7 +250,7 @@ export async function getNewsListAll(): Promise<NewsWithAuthor[]> {
     console.error("Error fetching all news:", error);
     return [];
   }
-  return (data || []).map((item: any) => ({
+  return (data || []).map((item: NewsRow) => ({
     ...item,
     author_name: item.user_profiles?.full_name ?? null,
   }));
@@ -273,7 +299,7 @@ export async function getRelatedNews(category: string, currentId: string, limit 
     console.error("Error fetching related news:", error);
     return [];
   }
-  return (data || []).map((item: any) => ({
+  return (data || []).map((item: NewsRow) => ({
     ...item,
     author_name: item.user_profiles?.full_name ?? null,
   }));
@@ -321,7 +347,7 @@ export async function createNews(news: {
   // Slug unik: dari slug form bila diisi, selain itu dari judul
   const baseSlug = news.slug ? slugify(news.slug) : slugify(news.title);
   const slug = await generateUniqueNewsSlug(baseSlug || "berita");
-  const payload: Record<string, any> = {
+  const payload: Record<string, unknown> = {
     title: news.title,
     slug,
     summary: news.summary,
@@ -390,7 +416,7 @@ export async function updateNews(
   }
 ): Promise<{ data: News | null; error?: string }> {
   const newCols = await newsHasScheduledColumns();
-  const payload: Record<string, any> = {};
+  const payload: Record<string, unknown> = {};
   if (news.title !== undefined) payload.title = news.title;
   // Slug hanya disentuh bila dikirim; lewat generator agar tetap unik (kecuali milik sendiri)
   if (news.slug !== undefined && news.slug) {
@@ -472,7 +498,7 @@ export async function deleteNewsBulk(ids: string[]): Promise<{ error?: string }>
   }
   // Hapus folder gambar tiap berita + lampiran
   ids.forEach((id) => cleanupNewsImageFolder(id).catch(() => {}));
-  (rows || []).forEach((row: any) => {
+  (rows || []).forEach((row: { id: string; attachment_url: string | null }) => {
     if (row.attachment_url) deleteStorageFileByUrl(row.attachment_url).catch(() => {});
   });
   ids.forEach((id) => cleanupNewsAttachments(id).catch(() => {}));
@@ -483,7 +509,7 @@ export async function togglePublishNews(
   id: string,
   is_published: boolean
 ): Promise<{ error?: string }> {
-  const update: Record<string, any> = { is_published };
+  const update: Record<string, unknown> = { is_published };
   if (is_published) update.published_at = new Date().toISOString();
 
   const { error } = await supabase.from("news").update(update).eq("id", id);
@@ -498,7 +524,7 @@ export async function togglePublishNewsBulk(
   ids: string[],
   is_published: boolean
 ): Promise<{ error?: string }> {
-  const update: Record<string, any> = { is_published };
+  const update: Record<string, unknown> = { is_published };
   if (is_published) update.published_at = new Date().toISOString();
 
   const { error } = await supabase.from("news").update(update).in("id", ids);
@@ -1461,9 +1487,9 @@ export function articlesHasScheduledColumns(): Promise<boolean> {
  * AND (expires_at IS NULL OR expires_at > now()).
  * `withExpires` false bila kolom expires_at belum ada (SQL tahap 1 belum jalan).
  */
-function applyPublicArticleFilters(query: any, withExpires: boolean) {
+function applyPublicArticleFilters<T extends FilterMethods<T>>(query: T, withExpires: boolean): T {
   const nowIso = newsNowIso();
-  let q = query
+  let q: T = query
     .eq("is_published", true)
     .or(`published_at.is.null,published_at.lte.${nowIso}`);
   if (withExpires) {
@@ -1795,7 +1821,7 @@ export async function togglePublishArticle(
   id: string,
   is_published: boolean
 ): Promise<{ error?: string }> {
-  const update: Record<string, any> = { is_published };
+  const update: Record<string, unknown> = { is_published };
   if (is_published) {
     const { data: current } = await supabase
       .from("articles")

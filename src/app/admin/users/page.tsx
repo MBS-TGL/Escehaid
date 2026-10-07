@@ -71,12 +71,16 @@ export default function AdminUsersPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  useEffect(() => {
+    (async () => {
+      await fetchUsers();
+    })().catch(() => {});
+  }, [fetchUsers]);
 
   const roles = useMemo(() => [...new Set(users.map((u) => u.role))], [users]);
 
   const filtered = useMemo(() => {
-    let result = users.filter((item) => {
+    const result = users.filter((item) => {
       const matchSearch = item.full_name.toLowerCase().includes(search.toLowerCase());
       const matchRole = filter === "all" || item.role === filter;
       return matchSearch && matchRole;
@@ -186,7 +190,7 @@ export default function AdminUsersPage() {
     fetchUsers();
   }
 
-  const SortIcon = ({ field }: { field: SortField }) => {
+  const sortIcon = (field: SortField) => {
     if (sortField !== field) return <SortAscending className="h-3 w-3 text-slate-300" />;
     return sortDir === "asc"
       ? <ArrowUp className="h-3 w-3 text-[#1767b1]" />
@@ -260,16 +264,16 @@ export default function AdminUsersPage() {
                 </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">No</th>
                 <th className="cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("full_name")}>
-                  <span className="flex items-center gap-1">Pengguna <SortIcon field="full_name" /></span>
+                  <span className="flex items-center gap-1">Pengguna {sortIcon("full_name")}</span>
                 </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 cursor-pointer select-none" onClick={() => toggleSort("role")}>
-                  <span className="flex items-center gap-1">Role <SortIcon field="role" /></span>
+                  <span className="flex items-center gap-1">Role {sortIcon("role")}</span>
                 </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 cursor-pointer select-none" onClick={() => toggleSort("is_active")}>
-                  <span className="flex items-center gap-1">Status <SortIcon field="is_active" /></span>
+                  <span className="flex items-center gap-1">Status {sortIcon("is_active")}</span>
                 </th>
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none" onClick={() => toggleSort("created_at")}>
-                  <span className="flex items-center gap-1">Dibuat <SortIcon field="created_at" /></span>
+                  <span className="flex items-center gap-1">Dibuat {sortIcon("created_at")}</span>
                 </th>
                 <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
               </tr>

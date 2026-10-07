@@ -93,7 +93,11 @@ export default function AdminFacilitiesPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchFacilities(); }, [fetchFacilities]);
+  useEffect(() => {
+    (async () => {
+      await fetchFacilities();
+    })().catch(() => {});
+  }, [fetchFacilities]);
 
   // Paste image handler
   useEffect(() => {
@@ -119,7 +123,7 @@ export default function AdminFacilitiesPage() {
 
   // Filtered + Sorted
   const filtered = useMemo(() => {
-    let result = facilities.filter((item) => {
+    const result = facilities.filter((item) => {
       const matchSearch =
         !search ||
         item.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -280,7 +284,7 @@ export default function AdminFacilitiesPage() {
     fetchFacilities();
   }
 
-  const SortIcon = ({ field }: { field: SortField }) => {
+  const sortIcon = (field: SortField) => {
     if (sortField !== field) return <SortAscending className="h-3 w-3 text-slate-300" />;
     return sortDir === "asc"
       ? <ArrowUp className="h-3 w-3 text-[#1767b1]" />
@@ -359,11 +363,11 @@ export default function AdminFacilitiesPage() {
                 </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">No</th>
                 <th className="w-[30%] cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("name")}>
-                  <span className="flex items-center gap-1">Nama <SortIcon field="name" /></span>
+                  <span className="flex items-center gap-1">Nama {sortIcon("name")}</span>
                 </th>
                 <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 md:table-cell">Deskripsi</th>
                 <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:table-cell cursor-pointer select-none" onClick={() => toggleSort("sort_order")}>
-                  <span className="flex items-center justify-center gap-1">Urutan <SortIcon field="sort_order" /></span>
+                  <span className="flex items-center justify-center gap-1">Urutan {sortIcon("sort_order")}</span>
                 </th>
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</th>
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
