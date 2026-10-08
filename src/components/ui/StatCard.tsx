@@ -35,9 +35,13 @@ export function StatCard({
 }: StatCardProps) {
   const v = variantStyles[variant];
 
+  /* border-[#dce3ed] = token warna border kartu di seluruh proyek (news, galeri,
+     profile, portal, dll). Jangan dikembalikan ke warna slate generik yang
+     semi-transparan: dia menyerap warna di belakangnya sehingga kelihatan pudar
+     dan tidak merata di setiap sisi. */
   return (
     <div
-      className={`group rounded-2xl border border-slate-200/60 bg-white p-4 sm:p-5 transition-all duration-200 hover:border-slate-300/60 hover:shadow-[0_2px_12px_-2px_rgba(0,0,0,0.08)] snap-start ${className}`}
+      className={`group rounded-2xl border border-[#dce3ed] bg-white p-4 sm:p-5 transition-all duration-200 hover:border-[#1767b1]/30 hover:shadow-[0_2px_12px_-2px_rgba(0,0,0,0.08)] snap-start ${className}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">

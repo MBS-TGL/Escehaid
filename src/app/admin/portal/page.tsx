@@ -748,7 +748,12 @@ export default function AdminPortalPage() {
         </div>
       </div>
 
-      {/* Stats — kartu bisa diklik sebagai filter */}
+      {/* Stats — kartu bisa diklik sebagai filter.
+          Tanda important di border-[#082b59]! bukan gaya: keduanya sama-sama
+          arbitrary value berjenis border-color, sehingga pemenangnya ditentukan
+          urutan stylesheet. Tanpa important, border bawaan StatCard
+          (border-[#dce3ed]) menang dan border navy kartu aktif tidak pernah
+          terpasang — yang tersisa hanya ring-nya. */}
       <StatCardRow>
         {statFilters.map((stat) => (
           <button
@@ -763,7 +768,9 @@ export default function AdminPortalPage() {
               label={stat.label}
               value={stat.value}
               variant={stat.variant}
-              className={filter === stat.key ? "border-[#082b59] ring-2 ring-[#082b59]/30" : ""}
+              className={
+                filter === stat.key ? "border-[#082b59]! ring-2 ring-[#082b59]/30" : ""
+              }
             />
           </button>
         ))}
