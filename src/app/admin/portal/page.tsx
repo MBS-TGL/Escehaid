@@ -417,7 +417,7 @@ export default function AdminPortalPage() {
 
   function openCreate() {
     const maxSort = items.reduce((max, i) => Math.max(max, i.sort_order), 0);
-    const next: PortalAppInput = { ...EMPTY_FORM, sort_order: maxSort + 10 };
+    const next: PortalAppInput = { ...EMPTY_FORM, sort_order: maxSort + 1 };
     setEditItem(null);
     setForm(next);
     setInitialForm(next);
@@ -538,7 +538,7 @@ export default function AdminPortalPage() {
       // Salinan selalu "Disembunyikan" (flagsOf("hidden")) — jangan menyalin
       // is_coming_soon sumber, agar tidak lahir kombinasi tidak valid.
       ...flagsOf("hidden"),
-      sort_order: maxSort + 10,
+      sort_order: maxSort + 1,
     };
     const { error } = await createPortalApp(input);
     if (error) { toast(error, "error"); return; }
@@ -584,7 +584,7 @@ export default function AdminPortalPage() {
     });
   }
 
-  /** Drag & drop selesai — urutan dihitung ulang (10, 20, 30, ...) lalu disimpan. */
+  /** Drag & drop selesai — urutan dihitung ulang (1, 2, 3, ...) lalu disimpan. */
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -595,7 +595,7 @@ export default function AdminPortalPage() {
 
     const reordered = arrayMove(items, oldIndex, newIndex).map((it, idx) => ({
       ...it,
-      sort_order: (idx + 1) * 10,
+      sort_order: idx + 1,
     }));
     setItems(reordered);
 
@@ -793,8 +793,9 @@ export default function AdminPortalPage() {
         </div>
       )}
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
+      {/* Table — overflow-x-auto karena jumlah minimum kolom (±982px) melebihi
+          breakpoint md (768px); tanpa ini kolom Aksi terpotong, bukan bisa digeser. */}
+      <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white shadow-sm">
         <div role="table" aria-label="Daftar aplikasi portal">
           {/* Header (desktop) */}
           <div
@@ -1002,7 +1003,7 @@ export default function AdminPortalPage() {
                       className={inputClass} />
                     <p className="mt-1.5 text-xs text-slate-400">
                       Angka kecil tampil lebih dulu. Aplikasi baru otomatis memakai urutan terbesar
-                      saat ini + 10. Bisa juga diubah dengan drag &amp; drop di tabel.
+                      saat ini + 1. Bisa juga diubah dengan drag &amp; drop di tabel.
                     </p>
                   </div>
                   <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5">

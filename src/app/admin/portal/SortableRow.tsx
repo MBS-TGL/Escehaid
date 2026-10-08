@@ -22,9 +22,19 @@ import { StatusControl, statusOf, type PortalStatus } from "./StatusControl";
  * Kolom grid desktop (dipakai header di page.tsx supaya sejajar):
  * [checkbox | urutan | aplikasi | link | ikon/warna | status | aksi]
  * — kolom "No" dihapus karena duplikat dengan "Urutan".
+ *
+ * Pembagian ruang (bar = batas bawah, fr = bagian ruang sisa):
+ *   Aplikasi  150px / 4fr    — kolom utama, menyerap sisa terbesar
+ *   Link      120px / 1.1fr  — isinya pendek ("#", "/news", domain), jangan dibiarkan
+ *                              ikut 1fr seperti sebelumnya (bisa menyerap ±350px)
+ *   Ikon/Warna168px / 1.2fr  — tile 28px + gap 8px + teks "Grafik batang · Ungu"
+ *   Status    250px / 1.7fr  — segmented control butuh ±185px agar tak terpotong
+ *
+ * `minmax` dipakai agar di layar sempit kolom tidak menyusut di bawah kebutuhan
+ * isinya; kelebihan ruang baru dibagi rata menurut fr.
  */
 export const PORTAL_GRID =
-  "md:grid-cols-[34px_60px_minmax(140px,1.5fr)_minmax(100px,1fr)_112px_236px_96px]";
+  "md:grid-cols-[34px_60px_minmax(150px,4fr)_minmax(120px,1.1fr)_minmax(168px,1.2fr)_minmax(250px,1.7fr)_96px]";
 
 function ThemeChip({ icon, color }: { icon: string; color: string }) {
   const Icon = PORTAL_ICONS[icon] ?? SquaresFour;
