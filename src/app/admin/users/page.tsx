@@ -258,11 +258,14 @@ export default function AdminUsersPage() {
           <table className="w-full">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
               <tr>
-                <th className="w-10 px-4 py-3">
+                {/* hidden sm:table-cell — checkbox & No adalah afordansi desktop
+                    (seleksi massal & penomoran baris). Sisanya Pengguna · Role ·
+                    Status · Aksi; "Dibuat" memang sudah hidden sm:table-cell. */}
+                <th className="hidden w-10 px-4 py-3 sm:table-cell">
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
                     className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
                 </th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">No</th>
+                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">No</th>
                 <th className="cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("full_name")}>
                   <span className="flex items-center gap-1">Pengguna {sortIcon("full_name")}</span>
                 </th>
@@ -301,11 +304,12 @@ export default function AdminUsersPage() {
               ) : (
                 paginated.map((item, index) => (
                   <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[#082b59]/[0.03]" : ""}`}>
-                    <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                    {/* hidden sm:table-cell — pasangan dari <th> di atas */}
+                    <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
                         className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
                     </td>
-                    <td className="px-4 py-3.5 text-sm text-slate-400">{(page - 1) * PAGE_SIZE + index + 1}</td>
+                    <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#082b59]/10">
@@ -313,7 +317,10 @@ export default function AdminUsersPage() {
                         </div>
                         <div>
                           <p className="text-sm font-medium text-slate-800">{item.full_name}</p>
-                          <p className="text-xs text-slate-400">{item.id.slice(0, 8)}...</p>
+                          {/* hidden sm:table-cell — prefiks UUID hanya berguna
+                              untuk debug; di layar kecil ia membuang satu baris
+                              tinggi setiap row tanpa memberi informasi apa pun. */}
+                          <p className="hidden text-xs text-slate-400 sm:block">{item.id.slice(0, 8)}...</p>
                         </div>
                       </div>
                     </td>

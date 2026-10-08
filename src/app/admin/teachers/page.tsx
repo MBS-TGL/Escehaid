@@ -292,13 +292,18 @@ export default function AdminTeachersPage() {
           <table className="w-full">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
               <tr>
-                <th className="w-10 px-4 py-3">
+                {/* hidden sm:table-cell — 8 kolom pada konten ±328px = kolom ±41px,
+                    semua terpotong. Checkbox, No, Urutan dan Foto disembunyikan di
+                    bawah 640px: seleksi massal & geser urutan aksi desktop, foto
+                    menghabiskan 72px (22% lebar layar) untuk informasi paling
+                    mahal. Sisa Nama · Jabatan · Status · Aksi tetap terbaca. */}
+                <th className="hidden w-10 px-4 py-3 sm:table-cell">
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
                     className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
                 </th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">No</th>
-                <th className="w-20 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Urutan</th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Foto</th>
+                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">No</th>
+                <th className="hidden w-20 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">Urutan</th>
+                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">Foto</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Nama</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Jabatan</th>
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</th>
@@ -333,12 +338,13 @@ export default function AdminTeachersPage() {
               ) : (
                 paginated.map((item, index) => (
                   <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[#082b59]/[0.03]" : ""}`}>
-                    <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                    {/* hidden sm:table-cell — pasangan dari <th> di atas */}
+                    <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
                         className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
                     </td>
-                    <td className="px-4 py-3.5 text-sm text-slate-400">{(page - 1) * PAGE_SIZE + index + 1}</td>
-                    <td className="px-4 py-3.5">
+                    <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
+                    <td className="hidden px-4 py-3.5 sm:table-cell">
                       <div className="flex items-center justify-center gap-1">
                         <button onClick={() => handleReorder(item.id, "up")} disabled={index === 0}
                           className="rounded p-0.5 text-slate-400 hover:text-slate-600 disabled:opacity-30">
@@ -351,7 +357,7 @@ export default function AdminTeachersPage() {
                         </button>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="hidden px-4 py-3.5 sm:table-cell">
                       <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-slate-100">
                         {item.photo_url ? (
                           <img src={`${item.photo_url}?v=${photoBust[item.id] || 0}`} alt={item.name} loading="lazy"
