@@ -237,20 +237,20 @@ export default function AdminTopbar({
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200/80 bg-white/80 backdrop-blur-xl px-4 sm:px-6">
-      {/* Left: search bar.
-          Tidak ada lagi tombol hamburger — navigasi mobile pindah ke bottom nav
-          + master sheet (MobileNav.tsx). Di bawah sm tombol pencarian menyusut
-          jadi ikon 36px supaya muat di layar 320px: (36 + 8 + lonceng 36 +
-          8 + profil 44) + padding 32 = 164px, masih jauh di bawah 320. */}
-      <div className="flex items-center gap-3">
-        <div className="relative" ref={searchContainerRef}>
+      {/* Left: search bar — SELALU tampil sebagai bar penuh, di semua lebar.
+          max-w 256px menahannya tetap seperti bar pencarian (bukan membentang
+          setengah layar di tablet), sementara flex-1 pada grupnya yang mendorong
+          lonceng & profil ke kanan. Di 360px: 328 − (lonceng 36 + gap 8 +
+          profil 50) = 234px ruang, "Cari halaman..." cuma butuh ±148px. */}
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="relative w-full max-w-64" ref={searchContainerRef}>
           <button
             onClick={() => setSearchOpen(true)}
-            aria-label="Cari halaman"
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-400 transition-colors hover:border-slate-300 hover:bg-white sm:w-64 sm:justify-start sm:gap-2 sm:px-3 sm:text-sm"
+            className="flex h-9 w-full items-center justify-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-400 transition-colors hover:border-slate-300 hover:bg-white"
           >
             <MagnifyingGlass className="h-4 w-4 flex-shrink-0" />
-            <span className="hidden sm:inline">Cari halaman...</span>
+            <span>Cari halaman...</span>
+            {/* kbd tetap di atas sm saja — ponsel tidak punya Ctrl/⌘ */}
             <kbd className="ml-auto hidden rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 sm:inline">
               {typeof navigator !== "undefined" && navigator.userAgent.includes("Mac") ? "⌘K" : "Ctrl+K"}
             </kbd>
