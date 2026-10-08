@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { Children, useRef, useState, type ReactNode } from "react";
 
 type StatVariant = "brand" | "success" | "warning" | "danger" | "info" | "purple";
 
@@ -74,6 +74,19 @@ export function StatCardGroup({
   );
 }
 
+/* Jumlah kolom di layar ≥ sm mengikuti jumlah kartu, supaya baris selalu terisi
+   penuh. Tanpa ini, 3 kartu yang dipaksa ke `sm:grid-cols-4` menyisakan kolom
+   keempat kosong (±188px ruang mati) dan kartunya sendiri jadi kekecilan.
+   String-nya harus literal agar Tailwind bisa mendeteksinya saat build. */
+const GRID_COLS_BY_COUNT: Record<number, string> = {
+  1: "sm:grid-cols-1",
+  2: "sm:grid-cols-2",
+  3: "sm:grid-cols-3",
+  4: "sm:grid-cols-4",
+  5: "sm:grid-cols-5",
+  6: "sm:grid-cols-6",
+};
+
 /* ─── StatCardRow — Carousel on mobile, grid on desktop ─── */
 export function StatCardRow({
   children,
@@ -85,13 +98,22 @@ export function StatCardRow({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeIdx, setActiveIdx] = useState(0);
 
+  /* Di mobile, kartu dibuat selebar 45% kontainer (min+max) supaya ukurannya
+     seragam dan masih terlihat sedikit kartu berikutnya sebagai petunjuk scroll.
+     `min-w`+`max-w` dipakai alih-alih `w-…` karena keduanya mengalahkan atribut
+     `width` apa pun (mis. `w-full` pada pembungkus button) tanpa bergantung
+     pada urutan kelas. Di ≥ sm dilepas lagi supaya kartu mengisi sel grid. */
+  const count = Children.count(children);
+  const cardWidth = "max-sm:[&>*]:min-w-[45%] max-sm:[&>*]:max-w-[45%]";
+  const gridCols = GRID_COLS_BY_COUNT[count] ?? "sm:grid-cols-4";
+
   const handleScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
     const cards = el.children.length;
     if (cards === 0) return;
-    const cardWidth = el.scrollWidth / cards;
-    const idx = Math.round(Math.abs(el.scrollLeft) / cardWidth);
+    const step = el.scrollWidth / cards;
+    const idx = Math.round(Math.abs(el.scrollLeft) / step);
     setActiveIdx(Math.min(idx, cards - 1));
   };
 
@@ -100,23 +122,25 @@ export function StatCardRow({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex overflow-x-auto scrollbar-hide gap-3 pb-3 snap-x snap-mandatory px-1 sm:px-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:pb-0 sm:snap-none"
+        className={`flex overflow-x-auto scrollbar-hide gap-3 pb-3 snap-x snap-mandatory px-1 sm:px-0 sm:grid sm:overflow-visible sm:pb-0 sm:snap-none ${gridCols} ${cardWidth}`}
       >
         {children}
       </div>
 
-      {/* Dot indicators — mobile only */}
+      {/* Dot indicators — mobile only, jumlahnya mengikuti jumlah kartu */}
       <div className="flex justify-center gap-1.5 mt-1 sm:hidden">
-        {Array.from({ length: 4 }).map((_, i) => (
+        {Array.from({ length: count }).map((_, i) => (
           <button
             key={i}
+            type="button"
+            aria-label={`Geser ke kartu ${i + 1}`}
             onClick={() => {
               const el = scrollRef.current;
               if (!el) return;
               const cards = el.children.length;
               if (cards === 0) return;
-              const cardWidth = el.scrollWidth / cards;
-              el.scrollTo({ left: cardWidth * i, behavior: "smooth" });
+              const step = el.scrollWidth / cards;
+              el.scrollTo({ left: step * i, behavior: "smooth" });
             }}
             className={`rounded-full transition-all duration-300 ${
               activeIdx === i
