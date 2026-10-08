@@ -20,7 +20,6 @@ import {
   SquaresFour,
   CaretRight,
   ArrowSquareOut,
-  X,
 } from "@/components/Icons";
 
 type NavItem = {
@@ -36,7 +35,10 @@ type NavGroup = {
 
 // Dikelompokkan supaya mudah di-scan. Awalan "Kelola" dihapus karena
 // konteksnya sudah jelas di panel admin.
-const navGroups: NavGroup[] = [
+//
+// Diekspor karena bottom nav mobile (MobileNav.tsx) menampilkan daftar yang
+// sama persis — satu sumber kebenaran untuk seluruh struktur menu admin.
+export const navGroups: NavGroup[] = [
   {
     items: [{ label: "Dashboard", href: "/admin", icon: House }],
   },
@@ -69,13 +71,25 @@ const navGroups: NavGroup[] = [
   },
 ];
 
+/**
+ * Menu "Dashboard" ber-`href` "/admin" — tanpa kecocokan persis, seluruh
+ * halaman anak (/admin/news, dst.) ikut dianggap aktif.
+ */
+export function isNavActive(href: string, pathname: string): boolean {
+  return href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
+}
+
+/**
+ * Sidebar khusus tampilan desktop.
+ *
+ * Di bawah breakpoint `lg` sidebar TIDAK dirender sama sekali: navigasi mobile
+ * memakai bottom nav + master sheet (lihat MobileNav.tsx). Karena itu tidak ada
+ * lagi overlay, state buka/tutup, atau tombol X — ketiganya dulu dipakai untuk
+ * sidebar geser yang kini hanya milik layar lebar.
+ */
 export default function AdminSidebar({
-  isMobileOpen,
-  onCloseMobile,
   badges = {},
 }: {
-  isMobileOpen: boolean;
-  onCloseMobile: () => void;
   /** Jumlah notifikasi per menu, key = href. Contoh: { "/admin/contact": 3 } */
   badges?: Record<string, number>;
 }) {
@@ -96,20 +110,7 @@ export default function AdminSidebar({
 
   return (
     <>
-      {/* Mobile overlay */}
-      {isMobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity lg:hidden"
-          onClick={onCloseMobile}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[270px] flex-col border-r border-slate-200/80 bg-white transition-transform duration-300 ease-in-out lg:translate-x-0 ${isMobileOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
-      >
+      <aside className="fixed inset-y-0 left-0 z-50 hidden w-[270px] flex-col border-r border-slate-200/80 bg-white lg:flex">
         {/* Brand */}
         <div className="flex h-16 flex-shrink-0 items-center gap-3 border-b border-slate-200/80 px-5">
           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg">
@@ -126,13 +127,6 @@ export default function AdminSidebar({
             <p className="truncate text-sm font-bold text-[#082b59]">SMP Muhammadiyah 4</p>
             <p className="truncate text-[11px] text-slate-500">Tanggul</p>
           </div>
-          <button
-            onClick={onCloseMobile}
-            aria-label="Tutup menu"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#082b59] lg:hidden"
-          >
-            <X className="h-4 w-4" />
-          </button>
         </div>
 
         {/* Navigation */}
@@ -153,17 +147,13 @@ export default function AdminSidebar({
               )}
               <ul className="space-y-0.5">
                 {group.items.map((item) => {
-                  const isActive =
-                    item.href === "/admin"
-                      ? pathname === "/admin"
-                      : pathname.startsWith(item.href);
+                  const isActive = isNavActive(item.href, pathname);
                   const count = badges[item.href] ?? 0;
 
                   return (
                     <li key={item.href}>
                       <Link
                         href={item.href}
-                        onClick={onCloseMobile}
                         aria-current={isActive ? "page" : undefined}
                         className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#082b59] focus-visible:ring-offset-1 ${isActive
                             ? "bg-[#082b59] text-white shadow-md shadow-[#082b59]/20"

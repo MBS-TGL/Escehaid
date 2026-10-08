@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import AdminSidebar from "./Sidebar";
 import AdminTopbar from "./Topbar";
+import AdminMobileNav from "./MobileNav";
 import { useToast } from "@/components/ui/Toast";
 
 interface UserProfile {
@@ -20,12 +21,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { toast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  // Menu mobile disimpan sebagai "pathname tempat dibuka", bukan boolean yang
-  // di-reset oleh useEffect. Dengan begitu menu otomatis tertutup saat pathname
-  // berubah — tanpa setState sinkron di dalam effect (react-hooks/set-state-in-effect).
-  const [mobileOpenFor, setMobileOpenFor] = useState<string | null>(null);
-  const mobileOpen = mobileOpenFor === pathname;
-
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -105,19 +100,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <AdminSidebar
-        isMobileOpen={mobileOpen}
-        onCloseMobile={() => setMobileOpenFor(null)}
-      />
+      <AdminSidebar />
 
       {/* Main content area */}
       <div className="min-h-screen transition-all duration-300 lg:ml-[270px]">
-        <AdminTopbar
-          profile={profile}
-          onOpenMobile={() => setMobileOpenFor(pathname)}
-        />
-        <main>{children}</main>
+        <AdminTopbar profile={profile} />
+        {/* pb-24 lg:pb-0 — bottom nav setinggi ±54px + safe-area; tanpa padding
+            ini baris terakhir tabel/pagination tertutup bar navigasi. */}
+        <main className="pb-24 lg:pb-0">{children}</main>
       </div>
+
+      <AdminMobileNav />
     </div>
   );
 }

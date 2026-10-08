@@ -5,7 +5,6 @@ import { createBrowserClient } from "@supabase/ssr";
 import Link from "next/link";
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
-  List,
   User,
   SignOut,
   Bell,
@@ -65,10 +64,8 @@ const roleLabel: Record<string, string> = {
 
 export default function AdminTopbar({
   profile,
-  onOpenMobile,
 }: {
   profile: UserProfile;
-  onOpenMobile: () => void;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -240,24 +237,20 @@ export default function AdminTopbar({
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center border-b border-slate-200/80 bg-white/80 backdrop-blur-xl px-4 sm:px-6">
-      {/* Left: hamburger (mobile) + search bar */}
+      {/* Left: search bar.
+          Tidak ada lagi tombol hamburger — navigasi mobile pindah ke bottom nav
+          + master sheet (MobileNav.tsx). Di bawah sm tombol pencarian menyusut
+          jadi ikon 36px supaya muat di layar 320px: (36 + 8 + lonceng 36 +
+          8 + profil 44) + padding 32 = 164px, masih jauh di bawah 320. */}
       <div className="flex items-center gap-3">
-        <button
-          onClick={onOpenMobile}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-[#082b59] transition-colors lg:hidden"
-        >
-          <List className="h-5 w-5" />
-        </button>
-
-        {/* Search bar */}
         <div className="relative" ref={searchContainerRef}>
           <button
             onClick={() => setSearchOpen(true)}
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-400 transition-colors hover:border-slate-300 hover:bg-white w-48 sm:w-64"
+            aria-label="Cari halaman"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-400 transition-colors hover:border-slate-300 hover:bg-white sm:w-64 sm:justify-start sm:gap-2 sm:px-3 sm:text-sm"
           >
             <MagnifyingGlass className="h-4 w-4 flex-shrink-0" />
             <span className="hidden sm:inline">Cari halaman...</span>
-            <span className="sm:hidden">Cari...</span>
             <kbd className="ml-auto hidden rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 sm:inline">
               {typeof navigator !== "undefined" && navigator.userAgent.includes("Mac") ? "⌘K" : "Ctrl+K"}
             </kbd>
@@ -265,7 +258,7 @@ export default function AdminTopbar({
 
           {/* Search dropdown */}
           {searchOpen && (
-            <div className="absolute left-0 top-full mt-2 w-72 rounded-xl border border-slate-200 bg-white py-2 shadow-xl">
+            <div className="absolute left-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white py-2 shadow-xl">
               <div className="flex items-center gap-2 border-b border-slate-100 px-3 pb-2">
                 <MagnifyingGlass className="h-4 w-4 text-slate-400" />
                 <input
@@ -329,8 +322,12 @@ export default function AdminTopbar({
             )}
           </button>
 
+          {/* w-64 + max-w: dropdown di-anchor `right-0` ke tombol lonceng
+              (±36px), sehingga di layar 320–360px w-80 akan meluber ke kiri
+              dan memicu scroll horizontal. 6rem = 16 margin + 50 tombol profil
+              + 8 gap + 16 margin + 6 cadangan. */}
           {notifOpen && (
-            <div className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-slate-200 bg-white shadow-xl">
+            <div className="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-6rem)] rounded-xl border border-slate-200 bg-white shadow-xl sm:w-80">
               <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                 <h3 className="text-sm font-semibold text-slate-800">Notifikasi</h3>
                 {unreadCount > 0 && (
@@ -405,8 +402,8 @@ export default function AdminTopbar({
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#082b59]">
               <User className="h-4 w-4 text-white" />
             </div>
-            <div className="hidden text-left sm:block">
-              <p className="text-xs font-semibold text-slate-800 leading-tight">{profile.full_name}</p>
+            <div className="hidden max-w-[9rem] text-left sm:block">
+              <p className="truncate text-xs font-semibold text-slate-800 leading-tight">{profile.full_name}</p>
               <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase leading-none ${roleBadge[profile.role] || "bg-slate-100 text-slate-500"}`}>
                 {roleLabel[profile.role] || profile.role}
               </span>
