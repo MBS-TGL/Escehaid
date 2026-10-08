@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -79,6 +80,19 @@ export default function AdminSidebar({
   badges?: Record<string, number>;
 }) {
   const pathname = usePathname() ?? "";
+  const navRef = useRef<HTMLElement | null>(null);
+
+  // Pada layar pendek (mis. 800×382) tinggi area menu hanya ±254px sementara
+  // daftarnya ±1250px — dan bar scrollbar sengaja disembunyikan oleh
+  // `.scrollbar-hide`. Akibatnya menu aktif bisa berhenti tepat di batas bawah,
+  // setengah terpotong oleh footer. Gulirkan menu aktif ke tampilan terdekat
+  // setiap pindah halaman supaya selalu terlihat utuh.
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const active = nav.querySelector<HTMLAnchorElement>('a[aria-current="page"]');
+    active?.scrollIntoView({ block: "nearest" });
+  }, [pathname]);
 
   return (
     <>
@@ -122,10 +136,13 @@ export default function AdminSidebar({
         </div>
 
         {/* Navigation */}
-        {/* Scroll tetap jalan, bar scrollbar disembunyikan (pola .scrollbar-hide). */}
+        {/* `min-h-0` menjamin nav boleh menyusut sampai 0 tinggi sehingga
+            selalu meng-clip & scroll, bukan meluber melewati footer.
+            `pb-6` memberi jarak agar item terakhir tidak menempel di border footer. */}
         <nav
+          ref={navRef}
           aria-label="Menu admin"
-          className="flex-1 space-y-5 overflow-y-auto scrollbar-hide px-3 py-4"
+          className="min-h-0 flex-1 space-y-5 overflow-y-auto scrollbar-hide px-3 pb-6 pt-4"
         >
           {navGroups.map((group, i) => (
             <div key={group.title ?? i}>
@@ -186,7 +203,9 @@ export default function AdminSidebar({
         </nav>
 
         {/* Footer */}
-        <div className="flex-shrink-0 border-t border-slate-200/80 p-3">
+        {/* `bg-white` + `relative z-10`: footer selalu punya permukaan sendiri,
+            jadi teks menu tidak pernah bisa menembus/menutupi "Lihat website". */}
+        <div className="relative z-10 shrink-0 border-t border-slate-200/80 bg-white p-3">
           <a
             href="/"
             target="_blank"

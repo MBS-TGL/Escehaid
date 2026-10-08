@@ -2,12 +2,30 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   getFacilityListAll,
   createFacility,
   updateFacility,
   deleteFacility,
   deleteFacilityBulk,
   uploadFacilityImage,
+  reorderFacilities,
   revalidateFacilities,
 } from "@/lib/queries";
 import { compressImage } from "@/lib/compress-image";
@@ -33,6 +51,9 @@ import {
   ArrowDown,
   SortAscending,
   Checks,
+  DotsSixVertical,
+  Copy,
+  ArrowSquareOut,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
 
@@ -84,6 +105,14 @@ export default function AdminFacilitiesPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [imageUploading, setImageUploading] = useState(false);
+  // Bagian "Lanjutan" (input Urutan) — bisa dilipat
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  // Sensor drag: pointer untuk seret, keyboard untuk aksesibilitas
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   // Fetch
   const fetchFacilities = useCallback(async () => {
@@ -149,6 +178,14 @@ export default function AdminFacilitiesPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  // Urutan hanya bermakna pada daftar penuh tanpa pencarian/filter dan saat
+  // diurutkan menurut sort_order (pola sama dengan Kelola Portal).
+  const dragDisabled =
+    search.trim() !== "" ||
+    filter !== "all" ||
+    sortField !== "sort_order" ||
+    sortDir !== "asc";
+
   const stats = {
     total: facilities.length,
     active: facilities.filter((f) => f.is_active).length,
@@ -184,10 +221,13 @@ export default function AdminFacilitiesPage() {
   // Form handlers
   function openCreate() {
     setEditItem(null);
-    setForm(emptyForm);
+    // Urutan default = sort_order terbesar + 10, supaya selalu masuk terakhir
+    const maxOrder = facilities.reduce((m, f) => Math.max(m, f.sort_order || 0), 0);
+    setForm({ ...emptyForm, sort_order: maxOrder + 10 });
     setImageFile(null);
     setImagePreview("");
     setFormError("");
+    setAdvancedOpen(false);
     setFormOpen(true);
   }
 
@@ -203,7 +243,67 @@ export default function AdminFacilitiesPage() {
     setImageFile(null);
     setImagePreview(item.image_url || "");
     setFormError("");
+    setAdvancedOpen(false);
     setFormOpen(true);
+  }
+
+  // ── Duplikat: buka form baru terisi salinan (belum disimpan), pola admin berita ──
+  async function openDuplicate(item: Facility) {
+    const maxOrder = facilities.reduce((m, f) => Math.max(m, f.sort_order || 0), 0);
+    setViewItem(null);
+    setEditItem(null);
+    setForm({
+      name: `${item.name} (Salinan)`,
+      description: item.description || "",
+      image_url: item.image_url || "",
+      sort_order: maxOrder + 10,
+      is_active: item.is_active,
+    });
+    setImagePreview(item.image_url || "");
+    setImageFile(null);
+    setFormError("");
+    setAdvancedOpen(false);
+    setFormOpen(true);
+
+    // Salin gambar: unduh ulang jadi File agar ikut terunggah ke folder
+    // fasilitas BARU (bukan menumpuk di folder lama). Bila gagal, tetap
+    // pakai URL asli — salinan tetap bisa disimpan tanpa gambar baru.
+    if (item.image_url) {
+      try {
+        const res = await fetch(item.image_url);
+        const blob = await res.blob();
+        if (blob.type.startsWith("image/") && blob.size > 0) {
+          setImageFile(new File([blob], "gambar-salinan", { type: blob.type }));
+        }
+      } catch { /* fallback: pakai URL asli */ }
+    }
+  }
+
+  // ── Drag & drop: simpan urutan baru ke kolom sort_order ──
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const previous = facilities;
+    const oldIndex = filtered.findIndex((i) => i.id === active.id);
+    const newIndex = filtered.findIndex((i) => i.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const reordered = arrayMove(filtered, oldIndex, newIndex).map((it, idx) => ({
+      ...it,
+      sort_order: idx + 1,
+    }));
+    setFacilities(reordered);
+
+    reorderFacilities(reordered.map((it) => ({ id: it.id, sort_order: it.sort_order })))
+      .then(({ error }) => {
+        if (error) {
+          setFacilities(previous);
+          toast(`Gagal menyimpan urutan: ${error}`, "error");
+          return;
+        }
+        toast("Urutan diperbarui", "success");
+        revalidateFacilities().catch(() => {});
+      });
   }
 
   async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -239,11 +339,11 @@ export default function AdminFacilitiesPage() {
     }
 
     if (editItem) {
-      const { error } = await updateFacility(editItem.id, { ...form, image_url: imageUrl });
+      const { error } = await updateFacility(editItem.id, { ...form, image_url: imageUrl || null });
       if (error) { setFormError(error); setFormSaving(false); return; }
       toast("Fasilitas berhasil diperbarui", "success");
     } else {
-      const { error } = await createFacility({ ...form, image_url: imageUrl });
+      const { error } = await createFacility({ ...form, image_url: imageUrl || null });
       if (error) { setFormError(error); setFormSaving(false); return; }
       toast("Fasilitas berhasil dibuat", "success");
     }
@@ -258,7 +358,12 @@ export default function AdminFacilitiesPage() {
 
   async function handleDelete() {
     if (!deleteItem) return;
-    await deleteFacility(deleteItem.id);
+    const { error } = await deleteFacility(deleteItem.id);
+    if (error) {
+      // Jangan tutup modal & jangan tampilkan sukses — biarkan bisa dicoba ulang
+      toast(`Gagal menghapus: ${error}`, "error");
+      return;
+    }
     revalidateFacilities().catch(() => {});
     toast("Fasilitas berhasil dihapus", "success");
     setDeleteItem(null);
@@ -269,7 +374,11 @@ export default function AdminFacilitiesPage() {
   async function handleBulkDelete() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    await deleteFacilityBulk(ids);
+    const { error } = await deleteFacilityBulk(ids);
+    if (error) {
+      toast(`Gagal menghapus: ${error}`, "error");
+      return;
+    }
     revalidateFacilities().catch(() => {});
     toast(`${ids.length} fasilitas berhasil dihapus`, "success");
     setSelectedIds(new Set());
@@ -278,9 +387,14 @@ export default function AdminFacilitiesPage() {
   }
 
   async function handleToggleActive(item: Facility) {
-    await updateFacility(item.id, { is_active: !item.is_active });
+    const next = !item.is_active;
+    const { error } = await updateFacility(item.id, { is_active: next });
+    if (error) {
+      toast(`Gagal mengubah status: ${error}`, "error");
+      return;
+    }
     revalidateFacilities().catch(() => {});
-    toast(`Fasilitas ${!item.is_active ? "diaktifkan" : "dinonaktifkan"}`, "success");
+    toast(`Fasilitas ${next ? "diaktifkan" : "dinonaktifkan"}`, "success");
     fetchFacilities();
   }
 
@@ -304,9 +418,19 @@ export default function AdminFacilitiesPage() {
             <p className="text-sm text-slate-500">Fasilitas sekolah (ruang kelas, lab, masjid, dll)</p>
           </div>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1]">
-          <Plus className="h-4 w-4" /> Buat Baru
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href="/profile#fasilitas"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59]"
+          >
+            <ArrowSquareOut className="h-4 w-4" /> Lihat di website
+          </a>
+          <button onClick={openCreate} className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1]">
+            <Plus className="h-4 w-4" /> Buat Baru
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -353,20 +477,21 @@ export default function AdminFacilitiesPage() {
 
       {/* Table */}
       <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={paginated.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+            <div className="overflow-x-auto">
+              <table className="w-full">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
               <tr>
                 <th className="w-10 px-4 py-3">
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
                     className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
                 </th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">No</th>
                 <th className="w-[30%] cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("name")}>
                   <span className="flex items-center gap-1">Nama {sortIcon("name")}</span>
                 </th>
-                <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 md:table-cell">Deskripsi</th>
-                <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:table-cell cursor-pointer select-none" onClick={() => toggleSort("sort_order")}>
+                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 md:table-cell">Deskripsi</th>
+                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 cursor-pointer select-none" onClick={() => toggleSort("sort_order")}>
                   <span className="flex items-center justify-center gap-1">Urutan {sortIcon("sort_order")}</span>
                 </th>
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</th>
@@ -375,14 +500,14 @@ export default function AdminFacilitiesPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={7} className="px-4 py-16 text-center">
+                <tr><td colSpan={6} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
                     <p className="text-sm text-slate-500">Memuat data fasilitas...</p>
                   </div>
                 </td></tr>
               ) : paginated.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-16 text-center">
+                <tr><td colSpan={6} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
                       <ImageSquare className="h-8 w-8 text-slate-300" />
@@ -399,59 +524,26 @@ export default function AdminFacilitiesPage() {
                   </div>
                 </td></tr>
               ) : (
-                paginated.map((item, index) => (
-                  <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[#082b59]/[0.03]" : ""}`}>
-                    <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                      <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
-                        className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
-                    </td>
-                    <td className="px-4 py-3.5 text-sm text-slate-400">{(page - 1) * PAGE_SIZE + index + 1}</td>
-                    <td className="px-4 py-3.5 cursor-pointer" onClick={() => setViewItem(item)}>
-                      <div className="flex items-center gap-3">
-                        {item.image_url ? (
-                          <img src={item.image_url} alt="" loading="lazy" className="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
-                        ) : (
-                          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">
-                            <ImageSquare className="h-5 w-5 text-slate-300" />
-                          </div>
-                        )}
-                        <span className="font-medium text-[#082b59]">{item.name}</span>
-                      </div>
-                    </td>
-                    <td className="hidden px-4 py-3.5 text-center text-sm text-slate-500 md:table-cell">
-                      <span className="line-clamp-1">{item.description || "-"}</span>
-                    </td>
-                    <td className="hidden px-4 py-3.5 text-center text-sm text-slate-500 lg:table-cell">{item.sort_order || 0}</td>
-                    <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => handleToggleActive(item)}
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-                          item.is_active
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                            : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
-                        }`}>
-                        {item.is_active ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-                        {item.is_active ? "Aktif" : "Nonaktif"}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => setViewItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat">
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => openEdit(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
-                          <PencilSimple className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => setDeleteItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
-                          <Trash className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                paginated.map((item) => (
+                  <SortableFacilityRow
+                    key={item.id}
+                    item={item}
+                    selected={selectedIds.has(item.id)}
+                    dragDisabled={dragDisabled}
+                    onToggleSelect={toggleSelect}
+                    onView={setViewItem}
+                    onEdit={openEdit}
+                    onDelete={setDeleteItem}
+                    onDuplicate={openDuplicate}
+                    onToggleActive={handleToggleActive}
+                  />
                 ))
               )}
             </tbody>
-          </table>
-        </div>
+              </table>
+            </div>
+          </SortableContext>
+        </DndContext>
         {!loading && filtered.length > 0 && (
           <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-slate-400">
@@ -567,23 +659,16 @@ export default function AdminFacilitiesPage() {
               placeholder="Nama fasilitas" />
           </div>
 
-          {/* Sort order + Status */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Urutan</label>
-              <input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })}
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
-                placeholder="0" />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Status</label>
-              <div className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-2.5">
-                <button type="button" onClick={() => setForm({ ...form, is_active: !form.is_active })}
-                  className={`relative h-6 w-11 rounded-full transition-colors ${form.is_active ? "bg-[#1767b1]" : "bg-slate-300"}`}>
-                  <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_active ? "left-[22px]" : "left-0.5"}`} />
-                </button>
-                <span className="text-sm text-slate-700">{form.is_active ? "Aktif" : "Nonaktif"}</span>
-              </div>
+          {/* Status */}
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Status</label>
+            <div className="flex w-full items-center gap-3 rounded-xl border border-slate-200 px-4 py-2.5">
+              <button type="button" onClick={() => setForm({ ...form, is_active: !form.is_active })}
+                aria-pressed={form.is_active}
+                className={`relative h-6 w-11 rounded-full transition-colors ${form.is_active ? "bg-[#1767b1]" : "bg-slate-300"}`}>
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_active ? "left-[22px]" : "left-0.5"}`} />
+              </button>
+              <span className="text-sm text-slate-700">{form.is_active ? "Aktif" : "Nonaktif"}</span>
             </div>
           </div>
 
@@ -642,9 +727,166 @@ export default function AdminFacilitiesPage() {
                 <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
               </div>
             )}
+            <p className="mt-2 text-xs text-slate-500">
+              Disarankan rasio 4:3 (mis. 1200×900), foto asli, minimal 1200 piksel lebar
+            </p>
+          </div>
+
+          {/* Lanjutan — bisa dilipat */}
+          <div className="rounded-xl border border-slate-200">
+            <button type="button" onClick={() => setAdvancedOpen((o) => !o)}
+              aria-expanded={advancedOpen}
+              className="flex w-full items-center justify-between gap-2 rounded-xl px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              <span className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-slate-400" />
+                Lanjutan
+              </span>
+              <CaretRight className={`h-4 w-4 text-slate-400 transition-transform ${advancedOpen ? "rotate-90" : ""}`} />
+            </button>
+            {advancedOpen && (
+              <div className="border-t border-slate-100 px-4 py-4">
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Urutan</label>
+                <input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                  placeholder="0" />
+                <p className="mt-1.5 text-xs text-slate-400">Angka kecil tampil lebih dulu. Fasilitas baru otomatis memakai urutan terbesar + 10.</p>
+              </div>
+            )}
           </div>
         </div>
       </SlideOver>
     </div>
+  );
+}
+
+/**
+ * Satu baris tabel fasilitas. Sengaja dipisah dari komponen utama:
+ * `useSortable` harus dipanggil per baris, dan komponen yang didefinisikan
+ * di dalam render akan dibuat ulang tiap update → drag terputus.
+ *
+ * Handle ditempatkan di sel "Urutan" — persis pola Kelola Portal.
+ */
+function SortableFacilityRow({
+  item,
+  selected,
+  dragDisabled,
+  onToggleSelect,
+  onView,
+  onEdit,
+  onDelete,
+  onDuplicate,
+  onToggleActive,
+}: {
+  item: Facility;
+  selected: boolean;
+  dragDisabled: boolean;
+  onToggleSelect: (id: string) => void;
+  onView: (f: Facility) => void;
+  onEdit: (f: Facility) => void;
+  onDelete: (f: Facility) => void;
+  onDuplicate: (f: Facility) => void;
+  onToggleActive: (f: Facility) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: item.id, disabled: dragDisabled });
+
+  const handle = (
+    <button
+      type="button"
+      {...attributes}
+      {...(dragDisabled ? {} : listeners)}
+      disabled={dragDisabled}
+      aria-label={`Ubah urutan ${item.name}`}
+      title={
+        dragDisabled
+          ? "Urutan hanya bisa diubah saat menampilkan Semua, tanpa pencarian, dan diurutkan menurut Urutan"
+          : "Seret untuk mengubah urutan"
+      }
+      className={`inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] ${
+        dragDisabled
+          ? "cursor-not-allowed text-slate-200"
+          : "cursor-grab text-slate-300 hover:bg-slate-100 hover:text-slate-500 active:cursor-grabbing"
+      }`}
+    >
+      <DotsSixVertical className="h-4 w-4" />
+    </button>
+  );
+
+  // Chip peringatan: fasilitas tampil di website tapi tidak punya gambar
+  const missingImage = item.is_active && !item.image_url;
+
+  return (
+    <tr
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 10 : undefined }}
+      className={`group transition-colors hover:bg-slate-50/80 ${selected ? "bg-[#082b59]/[0.03]" : ""} ${isDragging ? "opacity-70" : ""}`}
+    >
+      <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+        <input type="checkbox" checked={selected} onChange={() => onToggleSelect(item.id)}
+          aria-label={`Pilih ${item.name}`}
+          className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
+      </td>
+
+      <td className="px-4 py-3.5 cursor-pointer" onClick={() => onView(item)}>
+        <div className="flex items-center gap-3">
+          {item.image_url ? (
+            <img src={item.image_url} alt="" loading="lazy" className="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
+          ) : (
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">
+              <ImageSquare className="h-5 w-5 text-slate-300" />
+            </div>
+          )}
+          <span className="min-w-0">
+            <span className="block truncate font-medium text-[#082b59]">{item.name}</span>
+            {missingImage && (
+              <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                <Warning className="h-3 w-3" /> Tanpa gambar
+              </span>
+            )}
+          </span>
+        </div>
+      </td>
+
+      <td className="hidden px-4 py-3.5 text-left text-sm text-slate-500 md:table-cell">
+        <span className="line-clamp-1">{item.description || "-"}</span>
+      </td>
+
+      <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-center gap-1">
+          {handle}
+          <span className="text-sm tabular-nums text-slate-500">{item.sort_order || 0}</span>
+        </div>
+      </td>
+
+      <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+        <button onClick={() => onToggleActive(item)}
+          title={item.is_active ? "Klik untuk menonaktifkan" : "Klik untuk mengaktifkan"}
+          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+            item.is_active
+              ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+              : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
+          }`}>
+          {item.is_active ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+          {item.is_active ? "Aktif" : "Nonaktif"}
+        </button>
+      </td>
+
+      <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-center gap-1">
+          <button onClick={() => onView(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat">
+            <Eye className="h-4 w-4" />
+          </button>
+          <button onClick={() => onEdit(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
+            <PencilSimple className="h-4 w-4" />
+          </button>
+          <button onClick={() => onDuplicate(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-[#082b59]" title="Duplikat">
+            <Copy className="h-4 w-4" />
+          </button>
+          <button onClick={() => onDelete(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
+            <Trash className="h-4 w-4" />
+          </button>
+        </div>
+      </td>
+    </tr>
   );
 }
