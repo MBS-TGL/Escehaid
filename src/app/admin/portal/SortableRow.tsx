@@ -24,17 +24,24 @@ import { StatusControl, statusOf, type PortalStatus } from "./StatusControl";
  * — kolom "No" dihapus karena duplikat dengan "Urutan".
  *
  * Pembagian ruang (bar = batas bawah, fr = bagian ruang sisa):
- *   Aplikasi  150px / 4fr    — kolom utama, menyerap sisa terbesar
- *   Link      120px / 1.1fr  — isinya pendek ("#", "/news", domain), jangan dibiarkan
- *                              ikut 1fr seperti sebelumnya (bisa menyerap ±350px)
- *   Ikon/Warna168px / 1.2fr  — tile 28px + gap 8px + teks "Grafik batang · Ungu"
- *   Status    250px / 1.7fr  — segmented control butuh ±185px agar tak terpotong
+ *   Aplikasi  150px / 2.4fr  — kolom utama, tapi TIDAK boleh menyerap seluruh sisa.
+ *                              Dulu 4fr (setengah dari seluruh fr) sehingga melebar
+ *                              ±540px padahal isinya cuma ±200px → terasa tak proporsional.
+ *   Link      120px / 1.3fr  — isinya pendek ("#", "/news", domain)
+ *   Ikon/Warna168px / 1.5fr  — tile 28px + gap 8px + teks "Grafik batang · Ungu"
+ *   Status    250px / 3.6fr  — sisa ruang paling banyak justru DI SINI: kontrol
+ *                              memakai w-full, jadi ikut melebar dan segmennya
+ *                              lega. Di Aplikasi teks berhenti sendiri, ruang ekstra
+ *                              hanya jadi kosong.
  *
  * `minmax` dipakai agar di layar sempit kolom tidak menyusut di bawah kebutuhan
- * isinya; kelebihan ruang baru dibagi rata menurut fr.
+ * isinya; kelebihan ruang baru dibagi menurut fr.
+ *
+ * Nilai `min` sengaja TIDAK diubah — total minimum (±982px) menentukan titik
+ * munculnya scroll horizontal; sudah diukur pada viewport 800px.
  */
 export const PORTAL_GRID =
-  "md:grid-cols-[34px_60px_minmax(150px,4fr)_minmax(120px,1.1fr)_minmax(168px,1.2fr)_minmax(250px,1.7fr)_96px]";
+  "md:grid-cols-[34px_60px_minmax(150px,2.4fr)_minmax(120px,1.3fr)_minmax(168px,1.5fr)_minmax(250px,3.6fr)_96px]";
 
 function ThemeChip({ icon, color }: { icon: string; color: string }) {
   const Icon = PORTAL_ICONS[icon] ?? SquaresFour;

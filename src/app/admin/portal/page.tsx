@@ -115,6 +115,16 @@ function usePopover() {
   return { open, setOpen, ref };
 }
 
+/**
+ * Pratinjau tile pada form — sengaja ditiru dari `AppTile` di `src/app/portal/page.tsx`
+ * (border #dce3ed, radius 2xl, ikon 48px, teks 14px/11px) supaya yang dilihat di form
+ * sama persis dengan yang muncul di halaman publik.
+ *
+ * Dulu berupa kotak `border-dashed` berisi satu tile w-36 yang mengambang — terlihat
+ * seperti wireframe/placeholder, bukan pratinjau. Sekarang memakai kartu putih + judul
+ * bagian "Aplikasi Sekolah" + latar gray-50 (persis body portal) + petak tetangga,
+ * agar ruangnya terisi dan konteks grid-nya jelas.
+ */
 function TilePreview({
   label,
   description,
@@ -130,25 +140,47 @@ function TilePreview({
 }) {
   const Icon = PORTAL_ICONS[icon] ?? SquaresFour;
   const rc = resolvePortalColor(color);
+
   return (
-    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-4">
-      <p className="mb-3 text-xs font-semibold text-slate-500">Pratinjau di halaman portal</p>
-      <div
-        className={`mx-auto flex w-36 flex-col items-center gap-1.5 rounded-2xl border border-[#dce3ed] bg-white px-2 py-4 text-center ${soon ? "opacity-60" : ""
-          }`}
-      >
-        <span
-          className={`flex h-12 w-12 items-center justify-center rounded-xl ${rc.tileClass}`}
-          style={rc.tileStyle}
+    <div className="overflow-hidden rounded-2xl border border-[#dce3ed] bg-white shadow-sm">
+      {/* Kepala — meniru judul bagian di /portal */}
+      <div className="flex items-center justify-between gap-2 border-b border-[#e7ecf3] px-3.5 py-2.5">
+        <span className="truncate text-[13px] font-bold text-[#082b59]">Aplikasi Sekolah</span>
+        <span className="shrink-0 rounded-full bg-[#f4d21f]/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#082b59]">
+          Pratinjau
+        </span>
+      </div>
+
+      {/* Latar sama dengan halaman portal (body bg-gray-50) supaya kontras tile terbaca */}
+      <div className="grid grid-cols-2 gap-2.5 bg-gray-50 p-3">
+        <div
+          className={`flex h-full flex-col items-center gap-1.5 rounded-2xl border border-[#dce3ed] bg-white px-2 py-4 text-center ${soon ? "opacity-60" : ""
+            }`}
         >
-          <Icon className="h-6 w-6" weight="fill" />
-        </span>
-        <span className="break-words text-sm font-semibold text-slate-800">
-          {label.trim() || "Nama aplikasi"}
-        </span>
-        <span className="line-clamp-2 text-[11px] leading-tight text-slate-500">
-          {soon ? "Segera hadir" : description.trim() || "Deskripsi singkat"}
-        </span>
+          <span
+            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${rc.tileClass}`}
+            style={rc.tileStyle}
+          >
+            <Icon className="h-6 w-6" weight="fill" />
+          </span>
+          <span className="w-full break-words text-sm font-semibold leading-snug text-slate-800">
+            {label.trim() || "Nama aplikasi"}
+          </span>
+          <span className="line-clamp-2 w-full text-[11px] leading-tight text-slate-500">
+            {soon ? "Segera hadir" : description.trim() || "Deskripsi singkat"}
+          </span>
+        </div>
+
+        {/* Petak tetangga — agar terbaca sebagai bagian dari grid, bukan tile mengambang.
+            Rangka saja tanpa teks, supaya tidak dianggap konten sungguhan. */}
+        <div
+          aria-hidden="true"
+          className="flex h-full flex-col items-center gap-2 rounded-2xl border border-[#dce3ed] bg-white/70 px-2 py-4 text-center"
+        >
+          <span className="h-12 w-12 shrink-0 rounded-xl bg-slate-100" />
+          <span className="h-3 w-16 rounded-full bg-slate-100" />
+          <span className="h-2.5 w-20 rounded-full bg-slate-100" />
+        </div>
       </div>
     </div>
   );
