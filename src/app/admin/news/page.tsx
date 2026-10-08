@@ -1274,7 +1274,7 @@ export default function AdminBeritaPage() {
           </div>
 
           {/* Writer & Editor */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Penulis</label>
               <input type="text" value={form.writer_name} onChange={(e) => setForm({ ...form, writer_name: e.target.value })}
@@ -1313,10 +1313,15 @@ export default function AdminBeritaPage() {
                 <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_published ? "left-[22px]" : "left-0.5"}`} />
               </button>
             </div>
-            <div className="flex items-center gap-3 border-t border-slate-100 pt-3">
+            {/* flex-wrap + min-w-[180px] pada input: datetime-local punya
+                lebar intrinsik ±180px. Tanpa keduanya baris ini tidak bisa
+                menyusut dan SlideOver-nya (overflow-hidden) memotong input.
+                min-width dipakai saat menghitung wrap, jadi input pindah ke
+                baris penuh alih-alih diperas sampai tanggalnya tak terbaca. */}
+            <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3">
               <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Tanggal Publish (WIB)</label>
               <input type="datetime-local" value={form.published_at} onChange={(e) => setForm({ ...form, published_at: e.target.value })}
-                className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                className="min-w-[180px] flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
               {form.published_at && (
                 <button type="button" onClick={() => setForm({ ...form, published_at: "" })}
                   className="text-[11px] text-slate-400 hover:text-slate-600">Reset</button>
@@ -1343,10 +1348,10 @@ export default function AdminBeritaPage() {
                     <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_pinned ? "left-[22px]" : "left-0.5"}`} />
                   </button>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Tampil sampai (WIB)</label>
                   <input type="datetime-local" value={form.expires_at} onChange={(e) => setForm({ ...form, expires_at: e.target.value })}
-                    className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                    className="min-w-[180px] flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
                   {form.expires_at && (
                     <button type="button" onClick={() => setForm({ ...form, expires_at: "" })}
                       className="text-[11px] text-slate-400 hover:text-slate-600">Reset</button>

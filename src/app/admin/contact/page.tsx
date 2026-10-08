@@ -409,7 +409,7 @@ export default function AdminContactPage() {
       >
         {detailItem && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <p className="text-[11px] font-semibold text-slate-400">Nama</p>
                 <p className="text-sm font-medium text-slate-800">{detailItem.name}</p>

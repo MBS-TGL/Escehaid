@@ -1319,7 +1319,7 @@ export default function AdminArticlesPage() {
           </div>
 
           {(colSupport.author_name || colSupport.editor_name) && (
-            <div className={`grid gap-4 ${colSupport.author_name && colSupport.editor_name ? "grid-cols-2" : "grid-cols-1"}`}>
+            <div className={`grid gap-4 ${colSupport.author_name && colSupport.editor_name ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
               {colSupport.author_name && (
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-slate-700">Penulis</label>

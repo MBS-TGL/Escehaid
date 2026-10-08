@@ -1447,7 +1447,11 @@ export default function AdminSPMBPage() {
       {/* Filter + Search */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
+          {/* overflow-x-auto bukan flex-wrap: ini segmented control — menggulung
+            satu baris lebih wajar daripada memecah jadi dua baris di dalam
+            container rounded. Sebagai scroll container, automatic min-size-nya
+            jadi 0 sehingga container boleh menyusut dan menampung sisanya. */}
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide rounded-xl border border-slate-200 bg-white p-1">
             {[
               { key: "all", label: "Semua" },
               { key: "pending", label: "Menunggu" },
@@ -1641,11 +1645,16 @@ export default function AdminSPMBPage() {
                 { key: "berkas" as const, label: "Berkas" },
               ];
               const docCount = viewItem.documents ? [viewItem.documents.kk, viewItem.documents.akta, viewItem.documents.surat_sekolah, viewItem.documents.ktp_ortu, viewItem.documents.bukti_transfer].filter((v) => typeof v === "string" && v.length > 0).length : 0;
+              // flex-wrap, BUKAN overflow-x-auto: tab aktif ditandai garis
+              // absolute -bottom-px yang menimpa border. overflow menciptakan
+              // clip edge di padding box sehingga separuh garis itu terpotong
+              // (sama seperti bug ring stats card). Dengan wrap, ke-7 tab tetap
+              // terjangkau di 360px tanpa mengorbankan indikatornya.
               return (
-                <div className="flex border-b border-slate-100 px-6">
+                <div className="flex flex-wrap border-b border-slate-100 px-6">
                   {tabs.map((t) => (
                     <button key={t.key} onClick={() => setViewTab(t.key)}
-                      className={`relative px-4 py-2.5 text-xs font-semibold transition-colors ${viewTab === t.key ? "text-[#082b59]" : "text-slate-400 hover:text-slate-600"}`}>
+                      className={`relative whitespace-nowrap px-4 py-2.5 text-xs font-semibold transition-colors ${viewTab === t.key ? "text-[#082b59]" : "text-slate-400 hover:text-slate-600"}`}>
                       {t.label}
                       {t.key === "berkas" && docCount > 0 && <span className="ml-1 rounded-full bg-[#082b59]/10 px-1.5 text-[10px] text-[#082b59]">{docCount}</span>}
                       {t.key === "tambahan" && <span className="ml-1 rounded-full bg-[#082b59]/10 px-1.5 text-[10px] text-[#082b59]">{customAnswers.length}</span>}
@@ -1660,14 +1669,14 @@ export default function AdminSPMBPage() {
             <div className="max-h-[60vh] overflow-y-auto px-6 py-5">
               {viewTab === "siswa" && (
                 <div className="space-y-1">
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                  <div className="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
                     <InfoRow icon={MapPin} label="Tempat Lahir" value={viewItem.birth_place || "-"} />
                     <InfoRow icon={CalendarIcon} label="Tanggal Lahir" value={viewItem.birth_date ? new Date(viewItem.birth_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"} />
                     <InfoRow icon={Users} label="Jenis Kelamin" value={viewItem.gender === "L" ? "Laki-laki" : "Perempuan"} />
                     <InfoRow icon={GraduationCap} label="Jalur" value={pathLabels[viewItem.registration_path] || viewItem.registration_path} />
                   </div>
                   <div className="my-3 h-px bg-slate-100" />
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                  <div className="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
                     <InfoRow icon={Users} label="Nama Panggilan" value={viewItem.documents?.nickname || "-"} />
                     <InfoRow icon={CheckCircle} label="Golongan Darah" value={viewItem.documents?.blood_type || "-"} />
                     <InfoRow icon={FileText} label="NISN" value={viewItem.documents?.nisn || "-"} />
@@ -1812,7 +1821,7 @@ export default function AdminSPMBPage() {
             </div>
             <div className="rounded-xl border border-slate-200 p-4 space-y-3">
               <p className="text-xs font-semibold text-slate-400">Info Pendaftar</p>
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                 <div><span className="text-slate-500">Jalur:</span> <span className="font-medium text-slate-800">{pathLabels[editItem.registration_path] || editItem.registration_path}</span></div>
                 <div><span className="text-slate-500">Status:</span> <span className={`font-medium ${statusConfig[editItem.status]?.color}`}>{statusConfig[editItem.status]?.label}</span></div>
                 <div><span className="text-slate-500">Sekolah:</span> <span className="font-medium text-slate-800">{editItem.previous_school || "-"}</span></div>

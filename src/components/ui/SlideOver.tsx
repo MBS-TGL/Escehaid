@@ -141,8 +141,11 @@ export const SlideOver = memo(function SlideOver({
             {children}
           </div>
 
+          {/* flex-wrap + gap: sama seperti Modal, footer SlideOver dipakai
+              beberapa halaman dengan >2 tombol (mis. contact: Balas Email +
+              WhatsApp + Hapus ≈ 309px dari 320px ruang di 360px). */}
           {footer && (
-            <div className="shrink-0 flex items-center justify-between px-5 md:px-6 py-4 border-t border-slate-200/50 bg-slate-50/50">
+            <div className="shrink-0 flex flex-wrap items-center justify-between gap-2 px-5 md:px-6 py-4 border-t border-slate-200/50 bg-slate-50/50">
               {footer}
             </div>
           )}

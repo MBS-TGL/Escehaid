@@ -433,7 +433,7 @@ export default function AdminUsersPage() {
 
             <div className="rounded-xl border border-slate-200 p-4 space-y-3">
               <p className="text-xs font-semibold text-slate-400">Info Pengguna</p>
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                 <div><span className="text-slate-500">Nama:</span> <span className="font-medium text-slate-800">{editItem.full_name}</span></div>
                 <div><span className="text-slate-500">Status:</span> <span className={`font-medium ${editItem.is_active ? "text-emerald-600" : "text-red-600"}`}>{editItem.is_active ? "Aktif" : "Tidak Aktif"}</span></div>
                 <div className="col-span-2"><span className="text-slate-500">ID:</span> <span className="font-medium text-slate-800 font-mono text-xs">{editItem.id}</span></div>

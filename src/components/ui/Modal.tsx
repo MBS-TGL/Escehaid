@@ -150,7 +150,10 @@ export const Modal = memo(function Modal({
           </div>
 
           {footer && (
-            <div className="shrink-0 flex items-center justify-between px-5 md:px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+            /* flex-wrap WAJIB: panel memakai overflow-hidden, jadi footer yang
+               tidak muat akan TERPOTONG (bukan meluber) — mis. footer berita
+               (Duplikat + Edit | Lihat di Website ≈ 448px vs 328px di 360px). */
+            <div className="shrink-0 flex flex-wrap items-center justify-between gap-2 px-5 md:px-6 py-4 border-t border-slate-100 bg-slate-50/50">
               {footer}
             </div>
           )}
