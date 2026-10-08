@@ -1,0 +1,3 @@
+# Hook git harus LF — sh gagal dengan "command not found" bila berakhir CRLF.
+# core.autocrlf=true akan mengonversi ke CRLF saat checkout tanpa aturan ini.
+.githooks/** text eol=lf

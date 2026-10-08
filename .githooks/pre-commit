@@ -1,0 +1,124 @@
+#!/bin/sh
+# ============================================================================
+#  GUARD PRE-COMMIT — menolak commit yang membawa rahasia.
+#
+#  Aktifkan (sekali per clone):
+#      git config core.hooksPath .githooks
+#
+#  Lewati satu commit bila yakin ini false positive:
+#      SKIP_SECRET_SCAN=1 git commit -m "..."
+#
+#  Catatan kegagalan: guard ini ditulis agar GAGAL MENUTUP (fail-closed).
+#  Bila pola regex tak bisa diproses atau grep error, commit tetap ditolak —
+#  lebih baik memblokir commit sah daripada meloloskan rahasia diam-diam.
+# ============================================================================
+
+set -u
+
+# Lewati seluruh pemeriksaan bila diminta eksplisit.
+[ "${SKIP_SECRET_SCAN:-0}" = "1" ] && exit 0
+
+# --- Nama berkas yang dilarang masuk index -----------------------------------
+NAMA_RE='(^|/)(secrets\.json|credentials\.json|service-account[^/]*\.json|\.env(\.[^/]*)?|id_rsa|id_ed25519|\.netrc)$|(^|/)[^/]+\.(pem|p12|pfx|key)$'
+
+# Kecualikan berkas contoh/tmpl yang memang dibuat untuk dibagikan.
+KECUALI_RE='(\.example|\.sample|\.tmpl|\.template|template|contoh|sample)'
+
+# --- Isi yang menandai rahasia ------------------------------------------------
+# ERE portabel: tanpa \b (tidak didukung BSD grep); batas kata ditulis ulang
+# sebagai (^|[^A-Za-z0-9]). SELALU didahului "--" karena pola pertama diawali
+# tanda hubung dan kalau tidak, grep membacanya sebagai opsi.
+RAHASIA_RE='-----BEGIN [A-Z ]*PRIVATE KEY-----'
+RAHASIA_RE="$RAHASIA_RE|(^|[^0-9])[0-9]{8,}:[A-Za-z0-9_-]{30,}"
+RAHASIA_RE="$RAHASIA_RE|(^|[^A-Za-z0-9])ghp_[A-Za-z0-9]{36}"
+RAHASIA_RE="$RAHASIA_RE|(^|[^A-Za-z0-9])github_pat_[A-Za-z0-9_]{22}"
+RAHASIA_RE="$RAHASIA_RE|(^|[^A-Za-z0-9])sk-[A-Za-z0-9_-]{20,}"
+RAHASIA_RE="$RAHASIA_RE|(^|[^A-Za-z0-9])xox[baprs]-[A-Za-z0-9-]{10,}"
+RAHASIA_RE="$RAHASIA_RE|(^|[^A-Za-z0-9])AKIA[0-9A-Z]{16}"
+RAHASIA_RE="$RAHASIA_RE|(^|[^A-Za-z0-9])AIza[0-9A-Za-z_-]{35}"
+RAHASIA_RE="$RAHASIA_RE|(^|[^A-Za-z0-9])eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"
+
+# Validasi pola di awal: grep exit >= 2 berarti pola tak bisa diproses.
+# Kalau lolos di sini, kegagalan di bawah benar-benar kegagalan sistem.
+printf 'x' | grep -E -- "$RAHASIA_RE" >/dev/null 2>&1
+if [ $? -ge 2 ]; then
+  echo "GUARD PRE-COMMIT RUSAK: pola regex tak bisa diproses." >&2
+  echo "Commit dihentikan agar tak lolos tanpa pemeriksaan. Perbaiki .githooks/pre-commit." >&2
+  exit 1
+fi
+
+# --- Berkas yang ditambahkan/diubah (delete tidak perlu dicek) ----------------
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$staged" ] && exit 0
+
+laporan=""
+jumlah=0
+BATAS=25
+BATAS_PER_BERKAS=4
+
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  [ "$jumlah" -ge "$BATAS" ] && break
+
+  # (a) nama berkas
+  if printf '%s' "$f" | grep -Eq -- "$NAMA_RE" &&
+     ! printf '%s' "$f" | grep -Eq -- "$KECUALI_RE"; then
+    laporan="$laporan
+  * $f
+      -> nama berkas termasuk kategori rahasia"
+    jumlah=$((jumlah + 1))
+    continue
+  fi
+
+  [ -f "$f" ] || continue
+
+  # (b) isi versi yang benar-benar akan di-commit (blob index, bukan worktree).
+  #     Tanpa pipe di ujung supaya $? adalah exit code grep, bukan perintah lain.
+  #     -m membatasi hasil tanpa mengorbankan exit code.
+  temuan=$(git show ":$f" 2>/dev/null | grep -I -n -E -m 4 -- "$RAHASIA_RE")
+  grep_rc=$?
+
+  if [ "$grep_rc" -ge 2 ]; then
+    echo "GUARD PRE-COMMIT RUSAK: grep gagal membaca $f (exit $grep_rc)." >&2
+    echo "Commit dihentikan agar tak lolos tanpa pemeriksaan." >&2
+    exit 1
+  fi
+  [ "$grep_rc" -eq 1 ] && continue   # exit 1 = tidak ada yang cocok
+
+  n=0
+  while IFS= read -r baris; do
+    [ -z "$baris" ] && continue
+    nomor=${baris%%:*}
+    isi=$(printf '%s' "$baris" | cut -c1-90)
+    laporan="$laporan
+  * $f:$nomor
+      -> $isi"
+    jumlah=$((jumlah + 1))
+    n=$((n + 1))
+    [ "$n" -ge "$BATAS_PER_BERKAS" ] && break
+    [ "$jumlah" -ge "$BATAS" ] && break
+  done <<EOF
+$temuan
+EOF
+done <<EOF
+$staged
+EOF
+
+[ "$jumlah" -eq 0 ] && exit 0
+
+cat >&2 <<MSG
+============================================================================
+  GUARD PRE-COMMIT - commit DITOLAK
+
+  Ditemukan $jumlah potensi rahasia:
+$laporan
+
+  Repo ini PUBLIK. Token yang ter-commit akan terlihat siapa saja, dan
+  menghapusnya dari commit sekarang TIDAK menghapusnya dari riwayat.
+
+  Lewati satu kali bila ini false positive dan kamu yakin aman:
+      SKIP_SECRET_SCAN=1 git commit -m "..."
+============================================================================
+MSG
+
+exit 1
