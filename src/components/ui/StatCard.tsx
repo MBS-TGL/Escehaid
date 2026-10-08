@@ -119,10 +119,14 @@ export function StatCardRow({
 
   return (
     <div className={`relative mb-6 ${className}`}>
+      {/* pt-3 + pb-3 bukan sekadar jarak: overflow-x:auto membuat overflow-y ikut
+          terhitung auto sehingga kontainer memotong di kedua sumbu. Tanpa pt-3,
+          ring-2 pada kartu aktif (box-shadow 2px di luar border) terpotong di atas
+          dan garisnya berhenti mendadak di dua sudut atas. */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className={`flex overflow-x-auto scrollbar-hide gap-3 pb-3 snap-x snap-mandatory px-1 sm:px-0 sm:grid sm:overflow-visible sm:pb-0 sm:snap-none ${gridCols} ${cardWidth}`}
+        className={`flex overflow-x-auto scrollbar-hide gap-3 pt-3 pb-3 snap-x snap-mandatory px-1 sm:px-0 sm:pt-0 sm:pb-0 sm:grid sm:overflow-visible sm:snap-none ${gridCols} ${cardWidth}`}
       >
         {children}
       </div>
