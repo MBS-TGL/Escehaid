@@ -4,13 +4,7 @@ import { Users, BookOpen, GraduationCap, Eye, Checks, ArrowUpRight, Trophy, MapP
 import { getSchoolProfile, getTeacherList, getFacilityList, getAchievementList, getGalleryList, registrationHref } from "@/lib/queries";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import TeacherGrid from "./TeacherGrid";
-
-const FACILITY_FALLBACKS: Record<string, string> = {
-  "Ruang Kelas": "/images/Ruang-Kelas.jpg",
-  "Lab Komputer": "/images/Lab-Komputer.jpeg",
-  Masjid: "/images/Masjid.jpg",
-  "Lapangan Olahraga": "/images/Lapangan-Olahraga.jpg",
-};
+import FacilityGrid from "./FacilityGrid";
 
 export const metadata = {
   title: "Profil",
@@ -28,6 +22,8 @@ export default async function ProfilPage() {
     getAchievementList(),
     getGalleryList(8),
   ]);
+
+  const daftarHref = registrationHref(profil).trim();
 
   return (
     <div>
@@ -234,25 +230,32 @@ export default async function ProfilPage() {
               </div>
             </CSSFadeIn>
 
-            <CSSStagger className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {facilities.map((f) => (
-                <div key={f.id} className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:shadow-xl hover:shadow-[#082b59]/5">
-                  <div className="relative h-48 overflow-hidden bg-[#f4f7fb]">
-                    <Image
-                      src={f.image_url || FACILITY_FALLBACKS[f.name] || "/images/Ruang-Kelas.jpg"}
-                      alt={f.name}
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </div>
-                  <div className="flex flex-1 flex-col p-6">
-                    <h3 className="text-lg font-semibold text-[#082b59]">{f.name}</h3>
-                    <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">{f.description}</p>
-                  </div>
+            <FacilityGrid facilities={facilities} />
+
+            {/* Ajakan lanjut — teks statis, tombol daftar hanya bila href valid */}
+            <CSSFadeIn delay={0.1}>
+              <div className="mt-12 flex flex-col items-center justify-between gap-5 rounded-2xl border border-[#dce3ed] bg-white p-6 sm:flex-row">
+                <p className="text-center text-sm font-medium text-[#082b59] sm:text-left sm:text-base">
+                  Ingin melihat langsung suasana sekolah?
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <Link
+                    href="/contact"
+                    className="rounded-xl border border-[#dce3ed] px-5 py-3 text-sm font-semibold text-[#082b59] transition hover:border-[#082b59] hover:bg-[#f4f7fb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1767b1] focus-visible:ring-offset-2"
+                  >
+                    Hubungi Panitia
+                  </Link>
+                  {daftarHref && (
+                    <Link
+                      href={daftarHref}
+                      className="rounded-xl bg-[#f4d21f] px-5 py-3 text-sm font-bold text-[#082b59] transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#082b59] focus-visible:ring-offset-2"
+                    >
+                      Daftar SPMB
+                    </Link>
+                  )}
                 </div>
-              ))}
-            </CSSStagger>
+              </div>
+            </CSSFadeIn>
           </div>
         </section>
       )}
