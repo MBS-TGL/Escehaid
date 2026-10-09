@@ -21,6 +21,7 @@ import {
   CaretRight,
   ArrowSquareOut,
   FolderOpen,
+  Scroll,
 } from "@/components/Icons";
 
 type NavItem = {
@@ -70,6 +71,10 @@ export const navGroups: NavGroup[] = [
       { label: "Fasilitas", href: "/admin/facilities", icon: Buildings },
       { label: "Portal", href: "/admin/portal", icon: SquaresFour },
     ],
+  },
+  {
+    title: "Sistem",
+    items: [{ label: "Log Aktivitas", href: "/admin/logs", icon: Scroll }],
   },
 ];
 

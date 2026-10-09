@@ -21,6 +21,7 @@ import {
   Warning,
   Info,
   FolderOpen,
+  Scroll,
 } from "@/components/Icons";
 import {
   getUnreadNotificationCount,
@@ -44,6 +45,7 @@ const navSearchItems = [
   { label: "Kelola Artikel", href: "/admin/articles", icon: Note },
   { label: "Kelola Galeri", href: "/admin/gallery", icon: ImageSquare },
   { label: "Media Library", href: "/admin/media", icon: FolderOpen },
+  { label: "Log Aktivitas", href: "/admin/logs", icon: Scroll },
   { label: "Kelola Prestasi", href: "/admin/achievements", icon: Trophy },
   { label: "Pesan Masuk", href: "/admin/contact", icon: Envelope },
 ];

@@ -4,6 +4,7 @@ export * from "./queries/activities";
 export * from "./queries/agenda";
 export * from "./queries/announcements";
 export * from "./queries/articles";
+export * from "./queries/audit";
 export * from "./queries/contact";
 export * from "./queries/facilities";
 export * from "./queries/gallery";

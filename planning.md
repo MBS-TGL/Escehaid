@@ -210,10 +210,15 @@
 
 ### P2.8 — Log aktivitas admin
 
-- [ ] Catat: siapa, apa, kapan (create/update/delete pada konten & SPMB)
-- [ ] Halaman admin untuk melihat log
-- **Butuh SQL (user jalankan):** tabel `audit_logs` + policy RLS
+- [x] Catat: siapa, apa, kapan (create/update/delete pada konten & SPMB)
+- [x] Halaman admin untuk melihat log
+- **Butuh SQL (user jalankan):** tabel `audit_logs` + policy RLS → **`supabase/audit_logs.sql`** (idempoten; belum dijalankan user)
 - **Nilai:** menyelesaikan sengketa "siapa yang mengubah ini?"
+- **Hasil:**
+  - **SQL:** tabel + index + RLS SELECT (hanya `developer/admin/publisher` aktif = identik `canAccessAdminPanel`) + GRANT SELECT. **Penulisan lewat trigger SECURITY DEFINER `log_audit()`** di **15 tabel** konten & SPMB (news, articles, activities, achievements, gallery, announcements, agenda_events, facilities, teachers, portal_apps, spmb_registrations, spmb_waves, contact_messages, user_profiles, school_profile) — aktor = `auth.uid()` + snapshot `full_name`, UPDATE hanya mencatat field yang berubah, nilai >600 karakter dipotong menjadi `(nilai terlalu panjang: N karakter)`. Tanpa policy & GRANT tulis → klien tidak bisa memanipulasi jejak audit. **Kenapa trigger, bukan ~50 titik panggil di kode:** lengkap (tak bisa terlewat oleh aksi mendatang), atomik 1 transaksi, aktor otoritatif.
+  - **Aplikasi:** `src/lib/queries/audit.ts` — probe `select id limit(1)` via GET; **jangan `head:true`** (respons HEAD tanpa body menyembunyikan error "Could not find the table" → tabel hilang dikira ada; ditemukan saat verifikasi lalu diperbaiki + backstop error `Could not find the table` → `available:false`). Halaman **`/admin/logs`** (Sidebar grup **Sistem** + pencarian Topbar, MobileNav ikut otomatis): filter aksi/objek, pencarian debounce 300ms, paginasi, detail JSON per baris (`<details>`), kartu Total/Hari ini, `role="status" aria-live`, empty state per kasus.
+  - **Verifikasi:** gates tsc 0 / lint **68-0** / build 0; browser: panel "Tabel audit_logs belum ada → jalankan supabase/audit_logs.sql" tampil **tanpa error** sebelum SQL (degradasi anggun ✓), guard auth 307, sidebar aktif; regresi `/`, `/news`, `/portal`, `/search` 200.
+  - ⚠️ **E2E terisi = setelah user menjalankan SQL:** aksi admin apa pun (mis. edit berita) langsung muncul di `/admin/logs`.
 
 ---
 
