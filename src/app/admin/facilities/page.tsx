@@ -483,7 +483,11 @@ export default function AdminFacilitiesPage() {
               <table className="w-full">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
               <tr>
-                <th className="w-10 px-4 py-3">
+                {/* hidden sm:table-cell — di bawah 640px sisa kolom cuma punya
+                    ±328px. Checkbox & Urutan (handle drag ada di dalamnya) adalah
+                    afordansi desktop, sama seperti agenda/teachers/users/announcements.
+                    Di ponsel tersisa Nama · Status · Aksi. */}
+                <th className="hidden w-10 px-4 py-3 sm:table-cell">
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
                     className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
                 </th>
@@ -491,7 +495,7 @@ export default function AdminFacilitiesPage() {
                   <span className="flex items-center gap-1">Nama {sortIcon("name")}</span>
                 </th>
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 md:table-cell">Deskripsi</th>
-                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 cursor-pointer select-none" onClick={() => toggleSort("sort_order")}>
+                <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 cursor-pointer select-none sm:table-cell" onClick={() => toggleSort("sort_order")}>
                   <span className="flex items-center justify-center gap-1">Urutan {sortIcon("sort_order")}</span>
                 </th>
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</th>
@@ -821,7 +825,8 @@ function SortableFacilityRow({
       style={{ transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 10 : undefined }}
       className={`group transition-colors hover:bg-slate-50/80 ${selected ? "bg-[#082b59]/[0.03]" : ""} ${isDragging ? "opacity-70" : ""}`}
     >
-      <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+      {/* hidden sm:table-cell — pasangan dari <th> di atas */}
+      <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
         <input type="checkbox" checked={selected} onChange={() => onToggleSelect(item.id)}
           aria-label={`Pilih ${item.name}`}
           className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
@@ -851,7 +856,9 @@ function SortableFacilityRow({
         <span className="line-clamp-1">{item.description || "-"}</span>
       </td>
 
-      <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+      {/* hidden sm:table-cell — pasangan <th> Urutan; handle drag ikut
+          tersembunyi (geser urutan tetap bisa lewat tablet/desktop). */}
+      <td className="hidden px-4 py-3.5 text-center sm:table-cell" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-center gap-1">
           {handle}
           <span className="text-sm tabular-nums text-slate-500">{item.sort_order || 0}</span>
@@ -873,13 +880,16 @@ function SortableFacilityRow({
 
       <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-center gap-1">
-          <button onClick={() => onView(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat">
+          {/* Lihat & Duplikat hidden di bawah sm — 4 tombol (±124px) + Status
+              (±78px) membuat kolom Nama tinggal ±62px dan terpotong. Lihat
+              tetap bisa dengan mengetuk nama baris (onClick onView). */}
+          <button onClick={() => onView(item)} className="hidden rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 sm:flex" title="Lihat">
             <Eye className="h-4 w-4" />
           </button>
           <button onClick={() => onEdit(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
             <PencilSimple className="h-4 w-4" />
           </button>
-          <button onClick={() => onDuplicate(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-[#082b59]" title="Duplikat">
+          <button onClick={() => onDuplicate(item)} className="hidden rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-[#082b59] sm:flex" title="Duplikat">
             <Copy className="h-4 w-4" />
           </button>
           <button onClick={() => onDelete(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
