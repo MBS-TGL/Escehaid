@@ -1,15 +1,21 @@
 import { supabase } from "../supabase";
 import type { Activity } from "../supabase";
 import { tryCompressImage } from "../compress-image";
-import { cleanupOldFiles, deleteStorageFileByUrl } from "./shared";
+import { cleanupOldFiles, deleteStorageFileByUrl, sanitizeSearchTerm } from "./shared";
 
-export async function getActivityList(limit?: number): Promise<Activity[]> {
+/**
+ * Daftar kegiatan yang tayang (is_published = true). `search` (opsional)
+ * menyaring judul ATAU deskripsi — dipakai pencarian menyeluruh di /search.
+ */
+export async function getActivityList(limit?: number, search?: string): Promise<Activity[]> {
+  const term = sanitizeSearchTerm(search ?? "");
   let query = supabase
     .from("activities")
     .select("id, title, slug, description, activity_type, activity_date, image_url, is_published, created_at")
     .eq("is_published", true)
     .order("activity_date", { ascending: false });
 
+  if (term) query = query.or(`title.ilike.%${term}%,description.ilike.%${term}%`);
   if (limit) {
     query = query.limit(limit);
   }

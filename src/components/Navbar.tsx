@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { MagnifyingGlass } from "@/components/Icons";
 
 const navLinks = [
   { href: "/", label: "Beranda" },
@@ -59,32 +60,46 @@ export default function Navbar() {
             </div>
           </Link>
 
-          {/* Desktop nav */}
-          <div className={`hidden items-center gap-1 md:flex ${hoveredIndex !== null ? "nav-hovering" : ""}`}>
-            {navLinks.map((link, i) => {
-              const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  aria-current={isActive ? "page" : undefined}
-                  onMouseEnter={() => setHoveredIndex(i)}
-                  onMouseLeave={() => setHoveredIndex(null)}
-                  className={`nav-link rounded-lg px-3 py-2 text-sm font-medium transition-colors lg:px-3.5 ${
-                    isActive
-                      ? "nav-link-active text-[#082b59]"
-                      : "text-slate-500 hover:text-[#082b59]"
-                  } ${link.hideOnMd ? "hidden lg:block" : ""}`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
+          {/* Kanan: nav desktop + pintu pencarian (ikon tetap tampil di mobile) */}
+          <div className="flex items-center gap-1 md:gap-2">
+            <div className={`hidden items-center gap-1 md:flex ${hoveredIndex !== null ? "nav-hovering" : ""}`}>
+              {navLinks.map((link, i) => {
+                const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    aria-current={isActive ? "page" : undefined}
+                    onMouseEnter={() => setHoveredIndex(i)}
+                    onMouseLeave={() => setHoveredIndex(null)}
+                    className={`nav-link rounded-lg px-3 py-2 text-sm font-medium transition-colors lg:px-3.5 ${
+                      isActive
+                        ? "nav-link-active text-[#082b59]"
+                        : "text-slate-500 hover:text-[#082b59]"
+                    } ${link.hideOnMd ? "hidden lg:block" : ""}`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+              <Link
+                href="/admission"
+                className="ml-3 rounded-xl bg-[#f4d21f] px-5 py-2 text-sm font-bold text-[#082b59] transition-all hover:bg-[#e6c41c] hover:shadow-lg hover:shadow-[#f4d21f]/20"
+              >
+                SPMB
+              </Link>
+            </div>
             <Link
-              href="/admission"
-              className="ml-3 rounded-xl bg-[#f4d21f] px-5 py-2 text-sm font-bold text-[#082b59] transition-all hover:bg-[#e6c41c] hover:shadow-lg hover:shadow-[#f4d21f]/20"
+              href="/search"
+              aria-label="Cari di situs"
+              aria-current={pathname === "/search" ? "page" : undefined}
+              className={`rounded-lg p-2 transition-colors ${
+                pathname === "/search"
+                  ? "text-[#082b59]"
+                  : "text-slate-500 hover:text-[#082b59]"
+              }`}
             >
-              SPMB
+              <MagnifyingGlass className="h-5 w-5" />
             </Link>
           </div>
 

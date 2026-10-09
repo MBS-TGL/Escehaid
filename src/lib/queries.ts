@@ -13,6 +13,7 @@ export * from "./queries/portal";
 export * from "./queries/profile";
 export * from "./queries/registrations";
 export * from "./queries/revalidate";
+export * from "./queries/search";
 export * from "./queries/shared";
 export * from "./queries/spmb";
 export * from "./queries/teachers";

@@ -171,10 +171,13 @@
 
 ### P2.5 — Pencarian menyeluruh
 
-- [ ] Satu kotak cari menjangkau berita + artikel + kegiatan + prestasi
-- [ ] Hasil dikelompokkan per jenis, dengan tipe & tanggal
-- [ ] Debounce, empty state, dan tetap aksesibel (label + `aria-live`)
+- [x] Satu kotak cari menjangkau berita + artikel + kegiatan + prestasi
+- [x] Hasil dikelompokkan per jenis, dengan tipe & tanggal
+- [x] Debounce, empty state, dan tetap aksesibel (label + `aria-live`)
 - **DoD:** satu istilah menampilkan hasil dari semua jenis konten
+  - ✅ Terpenuhi untuk berita + artikel + prestasi (istilah "muhammadiyah" → 3 jenis sekaligus).
+  - ⚠️ Kegiatan: tabel `activities` masih **kosong 0 baris** (diverifikasi via admin) — query kegiatan ikut dijalankan (4 query paralel), tapi grupnya selalu 0 hasil sampai ada data. DoD 4-jenis penuh menunggu konten kegiatan pertama (butuh persetujuan user untuk input data).
+  - Rute `/search` (server, baca `?q=`) + `SearchView` (client, debounce 300ms, `history.replaceState` untuk sinkron URL dangkal, form GET tanpa-JS fallback); `searchAllContent()` di `src/lib/queries/search.ts`; param `search` opsional (sanitasi PostgREST) ditambahkan ke `getNewsList` (judul+ringkasan), `getArticleList`, `getActivityList`, `getAchievementList`; pintu ikon di `Navbar.tsx`; `SearchAction` JSON-LD di `layout.tsx` menunjuk ke `/search?q=`.
 
 ### P2.6 — Penjadwalan konten
 

@@ -2,13 +2,23 @@ import { cache } from "react";
 import { supabase } from "../supabase";
 import type { Achievement } from "../supabase";
 import { tryCompressImage } from "../compress-image";
-import { deleteStorageFileByUrl, storagePathFromUrl } from "./shared";
+import { deleteStorageFileByUrl, sanitizeSearchTerm, storagePathFromUrl } from "./shared";
 
-export async function getAchievementList(): Promise<Achievement[]> {
-  const { data, error } = await supabase
+/**
+ * Daftar prestasi (semua baris tayang — tidak ada kolom is_published).
+ * `search` (opsional) menyaring judul ATAU deskripsi — dipakai pencarian
+ * menyeluruh di /search.
+ */
+export async function getAchievementList(search?: string): Promise<Achievement[]> {
+  const term = sanitizeSearchTerm(search ?? "");
+  let query = supabase
     .from("achievements")
     .select("*")
     .order("sort_order", { ascending: true });
+
+  if (term) query = query.or(`title.ilike.%${term}%,description.ilike.%${term}%`);
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching achievements:", error);

@@ -2,7 +2,7 @@ import { supabase } from "../supabase";
 import type { Article } from "../supabase";
 import { tryCompressImage } from "../compress-image";
 import { FilterMethods, newsNowIso } from "./news";
-import { cleanupOldFiles, deleteStorageFileByUrl, generateUniqueArticleSlug, slugify } from "./shared";
+import { cleanupOldFiles, deleteStorageFileByUrl, generateUniqueArticleSlug, sanitizeSearchTerm, slugify } from "./shared";
 
 export interface ArticleWithAuthor extends Article {
   author_name?: string | null;
@@ -54,13 +54,20 @@ function applyPublicArticleFilters<T extends FilterMethods<T>>(query: T, withExp
   return q;
 }
 
-export async function getArticleList(limit?: number): Promise<ArticleWithAuthor[]> {
+/**
+ * Daftar artikel publik. `search` (opsional) menyaring judul ATAU cuplikan —
+ * dipakai pencarian menyeluruh di /search; istilah dinormalisasi agar aman
+ * untuk sintaks `.or()`.
+ */
+export async function getArticleList(limit?: number, search?: string): Promise<ArticleWithAuthor[]> {
   const newCols = await articlesHasScheduledColumns();
+  const term = sanitizeSearchTerm(search ?? "");
   const run = async (columns: string) => {
     let query = supabase
       .from("articles")
       .select(columns);
     query = applyPublicArticleFilters(query, newCols);
+    if (term) query = query.or(`title.ilike.%${term}%,excerpt.ilike.%${term}%`);
     // Disematkan dulu, lalu terbaru (kolom is_pinned hanya bila sudah ada)
     if (newCols) query = query.order("is_pinned", { ascending: false });
     query = query.order("published_at", { ascending: false, nullsFirst: false });

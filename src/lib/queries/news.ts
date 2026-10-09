@@ -1,7 +1,7 @@
 import { supabase } from "../supabase";
 import type { News } from "../supabase";
 import { cleanupNewsAttachments, cleanupNewsImageFolder } from "./news-media";
-import { deleteStorageFileByUrl, generateUniqueNewsSlug, slugify } from "./shared";
+import { deleteStorageFileByUrl, generateUniqueNewsSlug, sanitizeSearchTerm, slugify } from "./shared";
 
 export interface NewsWithAuthor extends News {
   author_name?: string | null;
@@ -164,8 +164,10 @@ export async function getNewsList(limit?: number, search?: string): Promise<News
   }
   query = query.order("published_at", { ascending: false, nullsFirst: false });
 
-  if (search) {
-    query = query.ilike("title", `%${search}%`);
+  // Pencarian menyeluruh (?q= / pencarian gabungan): judul ATAU ringkasan.
+  const term = sanitizeSearchTerm(search ?? "");
+  if (term) {
+    query = query.or(`title.ilike.%${term}%,summary.ilike.%${term}%`);
   }
 
   if (limit) {

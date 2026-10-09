@@ -123,7 +123,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: "https://www.smpmuh4tanggul.sch.id/news?search={search_term_string}",
+        urlTemplate: "https://www.smpmuh4tanggul.sch.id/search?q={search_term_string}",
       },
       "query-input": "required name=search_term_string",
     },

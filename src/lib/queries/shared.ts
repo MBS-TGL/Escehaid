@@ -102,3 +102,17 @@ export async function generateUniqueNewsSlug(base: string, excludeId?: string): 
   while (used.has(`${root}-${suffix}`)) suffix++;
   return `${root}-${suffix}`;
 }
+
+/**
+ * Normalisasi istilah pencarian supaya aman disisipkan ke sintaks filter
+ * PostgREST (`.or()` + ilike): koma/kurung menggagalkan parser logic-tree
+ * (400 PGRST100), `%` dan `_` adalah wildcard bawaan LIKE. Karakter berbahaya
+ * diganti spasi, hasil dirapikan dan dibatasi 80 karakter. Idempoten.
+ */
+export function sanitizeSearchTerm(raw: string): string {
+  return raw
+    .replace(/[%,_()"'\[\]\\]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+}
