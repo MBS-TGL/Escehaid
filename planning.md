@@ -112,9 +112,9 @@
 
 **File:** `src/lib/queries.ts` → beberapa modul
 
-- [ ] Pindahkan per domain: `news.ts`, `articles.ts`, `achievements.ts`, `spmb.ts`, `portal.ts`, `gallery.ts`, `profile.ts`, `revalidate.ts`, `users.ts`
-- [ ] **Pertahankan `src/lib/queries.ts` sebagai barrel** (`export * from "./queries/news"` dsb.) → **nol perubahan import** di89 file yang ada
-- [ ] Jalankan `tsc` + `build` + buka rute utama untuk verifikasi
+- [x] Pindahkan per domain: `news.ts`, `articles.ts`, `achievements.ts`, `spmb.ts`, `portal.ts`, `gallery.ts`, `profile.ts`, `revalidate.ts`, `users.ts` — direalisasi jadi 19 modul (tambahan: `activities`, `announcements`, `agenda`, `contact`, `facilities`, `teachers`, `registrations`, `waves`, `news-media`, `shared`) agar semuanya <500 baris
+- [x] **Pertahankan `src/lib/queries.ts` sebagai barrel** (`export * from "./queries/news"` dsb.) → **nol perubahan import** di89 file yang ada
+- [x] Jalankan `tsc` + `build` + buka rute utama untuk verifikasi — tsc 0, build 0, lint 68/0 (turun 3 dari 71; 3 unused-var di file monolitik lama ikut hilang), 9 rute publik 200, dashboard + `/admin/news` terverifikasi, tanpa siklus impor
 - **DoD:** file baru <500 baris, semua import lama tetap jalan
 - **Risiko:** sedang (diff besar, tapi mitigasi barrel membuatnya aman)
 - **Estimasi:**1–2 jam
