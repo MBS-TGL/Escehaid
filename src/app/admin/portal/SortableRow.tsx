@@ -24,25 +24,25 @@ import { StatusPill, statusOf, type PortalStatus } from "./StatusControl";
  * — kolom "No" dihapus karena duplikat dengan "Urutan".
  *
  * Pembagian ruang (bar = batas bawah, fr = bagian ruang sisa):
- *   Aplikasi  150px / 2.4fr  — kolom utama, tapi TIDAK boleh menyerap seluruh sisa.
- *                              Dulu 4fr (setengah dari seluruh fr) sehingga melebar
- *                              ±540px padahal isinya cuma ±200px → terasa tak proporsional.
- *   Link      120px / 1.3fr  — isinya pendek ("#", "/news", domain)
- *   Ikon/Warna168px / 1.5fr  — chip tile 28px saja; nama ikon & warna tampil
- *                              sebagai tooltip title, bukan teks di baris.
- *   Status    250px / 3.6fr  — sisa ruang paling banyak justru DI SINI: kontrol
- *                              memakai w-full, jadi ikut melebar dan segmennya
- *                              lega. Di Aplikasi teks berhenti sendiri, ruang ekstra
- *                              hanya jadi kosong.
+ *   Aplikasi   200px / 1.6fr — kolom paling lebar; label + deskripsi, keduanya
+ *                              truncate + title (full text saat hover).
+ *   Link       140px / 1fr   — path utuh / domain; cukup lega supaya tidak
+ *                              mudah terpotong.
+ *   Ikon/Warna 80px (fix)    — cukup untuk tile chip ±28px dengan ruang
+ *                              bernapas; nama ikon & warna tetap di tooltip title.
+ *   Status     160px (fix)   — muat badge terpanjang ("Segera hadir") + chevron.
+ *   Aksi       112px (fix)   — 3 tombol ikon: edit, duplikat, hapus.
  *
  * `minmax` dipakai agar di layar sempit kolom tidak menyusut di bawah kebutuhan
- * isinya; kelebihan ruang baru dibagi menurut fr.
+ * isinya; kelebihan ruang baru dibagi menurut fr. Kolom berisi teks wajib punya
+ * wrapper `min-w-0` agar `truncate` bekerja di dalam grid.
  *
- * Nilai `min` sengaja TIDAK diubah — total minimum (±982px) menentukan titik
- * munculnya scroll horizontal; sudah diukur pada viewport 800px.
+ * Total minimum = 796px (kolom) + 72px (6 × gap-3) + 32px (px-4) = ±900px —
+ * titik munculnya scroll horizontal (overflow-x-auto di page.tsx); sudah
+ * diukur pada viewport 800px.
  */
 export const PORTAL_GRID =
-  "md:grid-cols-[34px_60px_minmax(150px,2.4fr)_minmax(120px,1.3fr)_minmax(168px,1.5fr)_minmax(250px,3.6fr)_96px]";
+  "md:grid-cols-[40px_64px_minmax(200px,1.6fr)_minmax(140px,1fr)_80px_160px_112px]";
 
 function ThemeChip({ icon, color }: { icon: string; color: string }) {
   const Icon = PORTAL_ICONS[icon] ?? SquaresFour;
@@ -238,14 +238,26 @@ export function SortableRow({
           </span>
         </div>
         <div role="cell" className="min-w-0">
-          <span className="block truncate text-sm font-medium text-slate-700">{item.label}</span>
+          <span
+            className="block truncate text-sm font-medium text-slate-700"
+            title={item.label}
+          >
+            {item.label}
+          </span>
           {item.description && (
-            <p className="mt-0.5 truncate text-xs text-slate-400">{item.description}</p>
+            <p className="mt-0.5 truncate text-xs text-slate-400" title={item.description}>
+              {item.description}
+            </p>
           )}
         </div>
         <div role="cell" className="min-w-0">
           <span className="flex items-center gap-1 truncate text-xs text-slate-500">
-            <span className={`truncate ${noLink ? "text-slate-400" : ""}`}>{shortHref(item.href)}</span>
+            <span
+              className={`truncate ${noLink ? "text-slate-400" : ""}`}
+              title={item.href.trim() || undefined}
+            >
+              {shortHref(item.href)}
+            </span>
             {item.is_external && (
               <span
                 title="Link luar — dibuka di tab baru"

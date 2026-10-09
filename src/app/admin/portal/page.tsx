@@ -832,7 +832,7 @@ export default function AdminPortalPage() {
         </div>
       )}
 
-      {/* Table — overflow-x-auto karena jumlah minimum kolom (±982px) melebihi
+      {/* Table — overflow-x-auto karena jumlah minimum kolom (±900px) melebihi
           breakpoint md (768px); tanpa ini kolom Aksi terpotong, bukan bisa digeser. */}
       <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white shadow-sm">
         <div role="table" aria-label="Daftar aplikasi portal">
@@ -856,7 +856,9 @@ export default function AdminPortalPage() {
             <div role="columnheader" className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aplikasi</div>
             <div role="columnheader" className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Link</div>
             <div role="columnheader" className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Ikon / Warna</div>
-            <div role="columnheader" className="text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</div>
+            {/* Rata kiri — selaras dengan sel Status di baris (default kiri)
+                dan header "Ikon / Warna" di sebelahnya. */}
+            <div role="columnheader" className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</div>
             <div role="columnheader" className="text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</div>
           </div>
 
