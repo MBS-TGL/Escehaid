@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   DndContext,
   KeyboardSensor,
@@ -26,6 +27,7 @@ import {
 } from "@/lib/queries";
 import type { PortalAppAdmin, PortalAppInput } from "@/lib/queries";
 import { StatCard, StatCardRow, ConfirmModal, SlideOver } from "@/components/ui";
+import { useFloatingPanel } from "@/components/ui/useFloatingPanel";
 import { useToast } from "@/components/ui/Toast";
 import { SquaresFour, Plus, FloppyDisk, Info, MagnifyingGlass, ArrowSquareOut, Checks } from "@/components/Icons";
 import {
@@ -186,6 +188,16 @@ function TilePreview({
   );
 }
 
+/**
+ * Pemilih ikon form — panelnya kini di-portal ke document.body dengan
+ * position:fixed memakai hook bersama `useFloatingPanel` (flip atas/bawah,
+ * re-posisi saat scroll modal & resize, maxHeight 360/minFit 260 karena
+ * berisi grid). Dulu panel inline → tinggi modal bertambah + scrollbar saat
+ * dibuka; kini trigger tetap di alur layout sehingga tinggi modal tidak
+ * berubah. Pencarian selalu terlihat di kepala panel, grid ikon men-scroll
+ * internal; tutup dengan klik di luar/Esc (Esc capture — modal di belakang
+ * tidak ikut tertutup), fokus kembali ke trigger, query di-reset.
+ */
 function IconPicker({
   value,
   color,
@@ -195,18 +207,78 @@ function IconPicker({
   color: string;
   onChange: (name: string) => void;
 }) {
-  const { open, setOpen, ref } = usePopover();
+  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const rc = resolvePortalColor(color);
   const Current = PORTAL_ICONS[value] ?? SquaresFour;
 
+  const { pos, reposition } = useFloatingPanel({
+    triggerRef,
+    open,
+    onTriggerLost: () => setOpen(false),
+    maxHeight: 360,
+    minFit: 260,
+  });
+
+  // Buka → fokus ke pencarian; tutup → reset query + kembalikan fokus ke
+  // trigger. wasOpen supaya fokus tidak "mencuri" saat komponen baru mount.
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (open) searchRef.current?.focus();
+    if (open) {
+      wasOpen.current = true;
+      searchRef.current?.focus();
+    } else if (wasOpen.current) {
+      wasOpen.current = false;
+      setQuery("");
+      triggerRef.current?.focus();
+    }
+  }, [open]);
+
+  // Tutup saat klik di luar trigger DAN di luar panel (portal-nya).
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (wrapRef.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  // Esc → tutup panel saja; capture + stopPropagation mencegah Modal di
+  // belakangnya ikut tertutup (sama seperti usePopover lama).
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
   }, [open]);
 
   const q = query.trim().toLowerCase();
   const names = q ? ICON_NAMES.filter((n) => PORTAL_ICON_SEARCH[n].includes(q)) : ICON_NAMES;
+
+  function toggle() {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    if (!triggerRef.current) return;
+    // Hitung posisi dalam batch yang sama dengan setOpen — panel sudah pada
+    // posisi benar sejak render pertama (tanpa frame kosong).
+    reposition();
+    setOpen(true);
+  }
 
   function pick(name: string) {
     onChange(name);
@@ -214,15 +286,13 @@ function IconPicker({
   }
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={wrapRef} className="relative">
       <button
+        ref={triggerRef}
         type="button"
-        aria-haspopup="listbox"
+        aria-haspopup="dialog"
         aria-expanded={open}
-        onClick={() => {
-          if (!open) setQuery("");
-          setOpen(!open);
-        }}
+        onClick={toggle}
         className={triggerClass}
       >
         <span className="flex min-w-0 items-center gap-3">
@@ -238,60 +308,74 @@ function IconPicker({
         <ChevronDown open={open} />
       </button>
 
-      {open && (
-        <div className={popoverClass}>
-          <div className="border-b border-slate-100 p-2">
-            <input
-              ref={searchRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  if (names[0]) pick(names[0]);
-                }
-              }}
-              placeholder={`Cari ${ICON_NAMES.length} ikon, mis. uang, buku, masjid`}
-              aria-label="Cari ikon"
-              className={inputClass}
-            />
-          </div>
-          {names.length === 0 ? (
-            <p className="px-4 py-6 text-center text-sm text-slate-400">Ikon tidak ditemukan</p>
-          ) : (
-            <div
-              role="listbox"
-              aria-label="Ikon"
-              className="grid max-h-52 grid-cols-6 gap-1 overflow-y-auto p-2"
-            >
-              {names.map((name) => {
-                const Icon = PORTAL_ICONS[name];
-                const selected = name === value;
-                const label = PORTAL_ICON_LABELS[name] ?? name;
-                return (
-                  <button
-                    key={name}
-                    type="button"
-                    role="option"
-                    aria-selected={selected}
-                    aria-label={label}
-                    title={label}
-                    onClick={() => pick(name)}
-                    style={selected ? rc.tileStyle : undefined}
-                    className={`flex h-11 items-center justify-center rounded-lg transition-colors ${focusRing} ${selected
-                        ? `${rc.tileClass} ring-2 ring-[#082b59]`
-                        : "text-slate-500 hover:bg-slate-100"
-                      }`}
-                  >
-                    <Icon className="h-6 w-6" weight={selected ? "fill" : "regular"} />
-                  </button>
-                );
-              })}
+      {open && pos &&
+        createPortal(
+          <div
+            ref={panelRef}
+            style={{
+              position: "fixed",
+              top: pos.top,
+              bottom: pos.bottom,
+              left: pos.left,
+              width: pos.width,
+              maxHeight: pos.maxHeight,
+              // Di atas overlay Modal (z-[9999]) karena panel di-portal keluar.
+              zIndex: 10000,
+            }}
+            className="flex flex-col overflow-hidden rounded-xl border border-[#dce3ed] bg-white shadow-lg"
+          >
+            <div className="shrink-0 border-b border-slate-100 p-2">
+              <input
+                ref={searchRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (names[0]) pick(names[0]);
+                  }
+                }}
+                placeholder={`Cari ${ICON_NAMES.length} ikon, mis. uang, buku, masjid`}
+                aria-label="Cari ikon"
+                className={inputClass}
+              />
             </div>
-          )}
-        </div>
-      )}
+            {names.length === 0 ? (
+              <p className="px-4 py-6 text-center text-sm text-slate-400">Ikon tidak ditemukan</p>
+            ) : (
+              <div
+                role="group"
+                aria-label="Ikon"
+                className="grid min-h-0 flex-1 grid-cols-6 gap-1 overflow-y-auto p-2"
+              >
+                {names.map((name) => {
+                  const Icon = PORTAL_ICONS[name];
+                  const selected = name === value;
+                  const label = PORTAL_ICON_LABELS[name] ?? name;
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      aria-pressed={selected}
+                      aria-label={label}
+                      title={label}
+                      onClick={() => pick(name)}
+                      style={selected ? rc.tileStyle : undefined}
+                      className={`flex h-11 items-center justify-center rounded-lg transition-colors ${focusRing} ${selected
+                          ? `${rc.tileClass} ring-2 ring-[#082b59]`
+                          : "text-slate-500 hover:bg-slate-100"
+                        }`}
+                    >
+                      <Icon className="h-6 w-6" weight={selected ? "fill" : "regular"} />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

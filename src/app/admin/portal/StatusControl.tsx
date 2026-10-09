@@ -182,10 +182,15 @@ export function StatusPill({
     if (!trigger) return;
     const r = trigger.getBoundingClientRect();
     const height = menuRef.current?.offsetHeight ?? MENU_EST_H;
-    const spaceBelow = window.innerHeight - r.bottom - 8;
+    // clientHeight/clientWidth = ICB tempat position:fixed diukur (viewport
+    // MINUS scrollbar); innerHeight/innerWidth menyertakan scrollbar sehingga
+    // keputusan arah buka & clamp kiri-kanan bisa meleset ~15px.
+    const vh = document.documentElement.clientHeight;
+    const vw = document.documentElement.clientWidth;
+    const spaceBelow = vh - r.bottom - 8;
     const up = spaceBelow < height && r.top - 8 > spaceBelow;
     const width = Math.max(r.width, MENU_MIN_W);
-    const left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8));
+    const left = Math.max(8, Math.min(r.left, vw - width - 8));
     setPos({ left, top: up ? r.top - height - 6 : r.bottom + 6, width, up });
   }, []);
 

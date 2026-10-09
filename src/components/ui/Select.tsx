@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useFloatingPanel } from "@/components/ui/useFloatingPanel";
 
 interface SelectOption {
   label: string;
@@ -44,38 +45,22 @@ function normalizeOption(opt: string | SelectOption): SelectOption {
   return typeof opt === "string" ? { label: opt, value: opt } : opt;
 }
 
-/* ── Geometri dropdown floating ───────────────────────────────────────────
- * Daftar opsi di-portal ke document.body dengan position:fixed sehingga:
- *  1) tidak ter-clipping oleh wadah overflow (Modal/SlideOver punya
- *     overflow-y-auto — dropdown inline dulu ikut ter-scroll/terpotong);
- *  2) posisinya dinamis: turun bila ruang bawah cukup, naik ke atas trigger
- *     bila ruang bawah sempit (mis. dekat bawah modal/viewport);
- *  3) mengikuti trigger saat scroll (capture — menangkap scroll container
- *     mana pun, termasuk di dalam modal) dan resize.
- * Penempatan "ke atas" memakai properti `bottom` (bukan top) sehingga tidak
- * perlu mengukur tinggi konten lebih dulu — posisi benar sejak render pertama.
- */
-const GAP = 6;
-const VIEWPORT_PAD = 12;
-const MAX_H = 240;
-/** Ruang bawah minimal agar dropdown bebas turun tanpa perlu dipertimbangkan. */
-const MIN_FIT = 160;
-
-interface ListPos {
-  top?: number;
-  bottom?: number;
-  left: number;
-  width: number;
-  maxHeight: number;
-}
+/* Geometri dropdown floating (portal ke body, flip atas/bawah, re-posisi
+ * saat scroll/resize, kunci maxHeight ke ruang tersedia) kini dihook bersama
+ * useFloatingPanel — lihat komentar lengkap di sana. */
 
 function CustomSelect({ label, required, error, options, value, onChange, placeholder, searchable }: CustomSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [pos, setPos] = useState<ListPos | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  const { pos, reposition } = useFloatingPanel({
+    triggerRef,
+    open,
+    onTriggerLost: () => setOpen(false),
+  });
 
   const normalized = options.map(normalizeOption);
   const filtered = searchable
@@ -83,48 +68,6 @@ function CustomSelect({ label, required, error, options, value, onChange, placeh
     : normalized;
 
   const selectedLabel = normalized.find((o) => o.value === value)?.label || "";
-
-  /** Hitung posisi fixed dari rect trigger — dipanggil saat buka & re-posisi. */
-  const computePos = useCallback((): ListPos | null => {
-    const el = triggerRef.current;
-    if (!el) return null;
-    const rect = el.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_PAD;
-    const spaceAbove = rect.top - VIEWPORT_PAD;
-    // Turun bila ruang bawah lega; kalau sempit, naik — kecuali ruang atas
-    // justru lebih sempit (maka sisi paling lapang yang dipakai).
-    const useBottom = spaceBelow >= MIN_FIT || spaceBelow >= spaceAbove;
-    const space = useBottom ? spaceBelow : spaceAbove;
-    const maxHeight = Math.min(MAX_H, Math.max(80, space));
-    return useBottom
-      ? { top: rect.bottom + GAP, left: rect.left, width: rect.width, maxHeight }
-      : { bottom: window.innerHeight - rect.top + GAP, left: rect.left, width: rect.width, maxHeight };
-  }, []);
-
-  const openList = useCallback(() => {
-    const next = computePos();
-    if (!next) return;
-    setPos(next);
-    setOpen(true);
-  }, [computePos]);
-
-  // Re-posisi saat scroll (capture: menangkap scroll di container mana pun,
-  // termasuk overflow-y modal) & resize viewport. Listener = callback async,
-  // bukan setState sinkron di body effect.
-  useEffect(() => {
-    if (!open) return;
-    const reposition = () => {
-      const next = computePos();
-      if (next) setPos(next);
-      else setOpen(false); // trigger hilang (mis. step berpindah) → tutup
-    };
-    window.addEventListener("scroll", reposition, true);
-    window.addEventListener("resize", reposition);
-    return () => {
-      window.removeEventListener("scroll", reposition, true);
-      window.removeEventListener("resize", reposition);
-    };
-  }, [open, computePos]);
 
   // Klik di luar trigger DAN di luar dropdown (portal) → tutup. Tanpa ref
   // listRef, klik opsi di portal dianggap "di luar" dan menutup sebelum
@@ -151,8 +94,16 @@ function CustomSelect({ label, required, error, options, value, onChange, placeh
   }, [open]);
 
   function toggle() {
-    if (open) setOpen(false);
-    else openList();
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    // Trigger hilang → jangan buka (padanan "computePos null → return" lama).
+    if (!triggerRef.current) return;
+    // Hitung posisi dalam batch yang sama dengan setOpen — daftar tampil sudah
+    // pada posisi benar sejak render pertama (tanpa frame kosong).
+    reposition();
+    setOpen(true);
   }
 
   const list = open && pos
