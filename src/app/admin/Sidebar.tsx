@@ -20,6 +20,7 @@ import {
   SquaresFour,
   CaretRight,
   ArrowSquareOut,
+  FolderOpen,
 } from "@/components/Icons";
 
 type NavItem = {
@@ -58,6 +59,7 @@ export const navGroups: NavGroup[] = [
       { label: "Kegiatan", href: "/admin/activities", icon: CalendarBlank },
       { label: "Agenda", href: "/admin/agenda", icon: CalendarCheck },
       { label: "Galeri", href: "/admin/gallery", icon: ImageSquare },
+      { label: "Media", href: "/admin/media", icon: FolderOpen },
       { label: "Prestasi", href: "/admin/achievements", icon: Trophy },
     ],
   },

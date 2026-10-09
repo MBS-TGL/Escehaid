@@ -7,6 +7,7 @@ export * from "./queries/articles";
 export * from "./queries/contact";
 export * from "./queries/facilities";
 export * from "./queries/gallery";
+export * from "./queries/media";
 export * from "./queries/news";
 export * from "./queries/news-media";
 export * from "./queries/portal";

@@ -194,12 +194,19 @@
 
 ### P2.7 — Media library
 
-**Fakta:**3 bucket (`images`, `documents`, `spmb-documents`), fungsi upload tersebar (`uploadNewsImage`, `uploadNewsAttachment`, …)
+**Fakta:**3 bucket (`images`, `documents`, `spmb-documents`), fungsi upload tersebar (`uploadNewsImage`, `uploadAttachment`, …)
 
-- [ ] Inventarisir semua jalur upload yang ada
-- [ ] Halaman admin untuk melihat/mencari/menghapus file yang sudah terunggah
-- [ ] Tandai file yatim (tidak direferensikan mana pun) sebelum mengizinkan hapus
+- [x] Inventarisir semua jalur upload yang ada
+- [x] Halaman admin untuk melihat/mencari/menghapus file yang sudah terunggah
+- [x] Tandai file yatim (tidak direferensikan mana pun) sebelum mengizinkan hapus
 - **Peringatan:** jangan hapus file yang masih dipakai → cek referensi dulu
+- **Hasil:** rute **`/admin/media`** (`src/lib/queries/media.ts` + `src/app/admin/media/page.tsx`), pintu di Sidebar grup Konten ("Media", `FolderOpen`) + pencarian Topbar.
+  - **Inventaris upload:** `images` ← uploadNewsImage, uploadActivityImage, uploadArticleImage, uploadAchievementImage, uploadGalleryImage, uploadFacilityImage, uploadTeacherPhoto; `documents` ← uploadNewsAttachment (lampiran berita); `spmb-documents` ← SPMBForm.tsx (bucket **privat**, buka pakai `createSignedUrl`).
+  - Listing rekursif per folder (max depth 4); statistik per bucket (jumlah/ukuran/terpakai/yatim); pencarian nama+folder.
+  - **Deteksi yatim:** pindai `select *` **16 tabel** aplikasi → set string referensi (URL storage ternormalisasi lintas-origin + path mentah). File = "Yatim" bila tidak ada padanannya. Hapus **hanya** diizinkan bila yatim DAN pemindaian lengkap — ada tabel gagal → banner peringatan + hapus dinonaktifkan total (aman-arah).
+  - Verifikasi browser: 27 file `images` (3 Terpakai/24 Yatim — cocok silang dengan DB), tab `documents` (1 PDF "Terpakai"), tab `spmb-documents` (privat: tampil utk admin, `[]` utk anon), search 0→1 + empty state, gerbang hapus (tooltip "File masih dipakai konten — tidak boleh dihapus"), gerbang auth (307 tanpa sesi), build artefak `page.js` ada.
+  - ⚠️ **Eksekusi hapus file asli belum diuji** (mutasi data butuh approval) — tombol + alur konfirmasi sudah jadi; bila RLS storage menolak DELETE, error muncul sebagai toast (bukan senyap).
+  - ⚠️ **Temuan data:** `news.image_url` berita SPMB menunjuk `1791031982204-6lllqc.jpg` yang **tidak ada di storage** (folder `images/news` cuma placeholder) → cover bisa rusak di publik. Perbaikan: user upload ulang cover lewat admin berita.
 
 ### P2.8 — Log aktivitas admin
 

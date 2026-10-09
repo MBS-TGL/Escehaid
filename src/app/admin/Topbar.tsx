@@ -20,6 +20,7 @@ import {
   CheckCircle,
   Warning,
   Info,
+  FolderOpen,
 } from "@/components/Icons";
 import {
   getUnreadNotificationCount,
@@ -42,6 +43,7 @@ const navSearchItems = [
   { label: "Kelola Fasilitas", href: "/admin/facilities", icon: ImageSquare },
   { label: "Kelola Artikel", href: "/admin/articles", icon: Note },
   { label: "Kelola Galeri", href: "/admin/gallery", icon: ImageSquare },
+  { label: "Media Library", href: "/admin/media", icon: FolderOpen },
   { label: "Kelola Prestasi", href: "/admin/achievements", icon: Trophy },
   { label: "Pesan Masuk", href: "/admin/contact", icon: Envelope },
 ];
