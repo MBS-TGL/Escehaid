@@ -121,9 +121,9 @@
 
 ### P1.6 — Dukungan operasional
 
-- [ ] Dokumentasikan prosedur rollback deploy
-- [ ] Pastikan backup Supabase aktif + periode retention diketahui
-- [ ] Catat versi dependensi & langkah `npm ci` di README
+- [x] Dokumentasikan prosedur rollback deploy — `operasional.md` bag. 1 (Vercel *Promote to Production*, `git revert`, aturan schema backward-compatible)
+- [x] Pastikan backup Supabase aktif + periode retention diketahui — status per paket dicatat di `operasional.md` bag. 2 (Free: **tanpa backup otomatis** → prosedur `db dump` manual jadi wajib; Pro: harian, retensi 7 hari; PITR menggantikan backup harian; Storage tak ikut). Konfirmasi paket & halaman Backups di dashboard Supabase = langkah user
+- [x] Catat versi dependensi & langkah `npm ci` di README — `README.md` ditulis (tabel versi terpin, `npm ci`, tabel variabel `.env.local`, perintah dev/build/lint, keamanan repo publik)
 
 ---
 
