@@ -195,12 +195,24 @@ export interface Activity {
   description: string;
   content: string;
   activity_date: string;
-  activity_type: "kajian" | "peringatan" | "lomba" | "upacara" | "ekskul" | "umum";
+  activity_type: "kajian" | "peringatan" | "lomba" | "upacara" | "ekskul" | "umum" | "penampilan";
   location: string;
   image_url: string;
   is_published: boolean;
   author_id: string | null;
   published_at?: string | null;
+  /** Fase 5 (opsional, butuh migrasi): jam acara bebas, mis. "19.30 WIB - Selesai". */
+  activity_time?: string | null;
+  /** Fase 5 (opsional, butuh migrasi): tautan siaran langsung (mis. Instagram Live). */
+  live_url?: string | null;
+  /** Fase 6 (opsional, butuh migrasi): tanggal selesai kegiatan multi-hari. */
+  end_date?: string | null;
+  /** Fase 6 (opsional, butuh migrasi): tautan pendaftaran (mis. Google Form). */
+  registration_url?: string | null;
+  /** Fase 6 (opsional, butuh migrasi): kontak panitia yang tampil di detail. */
+  contact_person?: string | null;
+  /** Fase 6 (opsional, butuh migrasi): dipin sebagai kartu unggulan di /activities. */
+  is_featured?: boolean | null;
   created_at: string;
   updated_at: string;
 }

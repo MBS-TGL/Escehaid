@@ -4,7 +4,7 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import { Clock, User, ArrowLeft, Newspaper, MagnifyingGlass, BookmarkSimple, ShareNetwork, WhatsappLogo, FacebookLogo, TwitterLogo } from "@/components/Icons";
 import { getNewsBySlug, getNewsList, getRelatedNews } from "@/lib/queries";
-import { sanitize } from "@/lib/sanitize";
+import { RichContent } from "@/components/RichContent";
 import ImageZoom from "./ImageZoom";
 import AttachmentPanel from "./AttachmentPanel";
 
@@ -232,30 +232,8 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
               </div>
             )}
 
-            {/* Content */}
-            {berita.content ? (
-              <div
-                className="prose prose-lg prose-slate max-w-none
-                  prose-headings:text-[#082b59] prose-headings:font-extrabold prose-headings:scroll-mt-24
-                  prose-p:text-gray-700 prose-p:leading-[1.75] prose-p:my-4
-                  prose-a:text-[#1767b1] prose-a:no-underline prose-a:font-medium hover:prose-a:underline
-                  prose-strong:text-[#082b59] prose-strong:font-bold
-                  prose-em:text-slate-600
-                  prose-img:rounded-2xl prose-img:shadow-md prose-img:my-8
-                  prose-blockquote:border-l-4 prose-blockquote:border-[#f4d21f] prose-blockquote:bg-gradient-to-r prose-blockquote:from-amber-50 prose-blockquote:to-transparent prose-blockquote:py-4 prose-blockquote:pr-6 prose-blockquote:pl-6 prose-blockquote:rounded-r-xl prose-blockquote:italic prose-blockquote:text-slate-600
-                  prose-li:text-gray-700 prose-li:leading-[1.7] prose-li:my-1 [&_li>p]:my-0
-                  prose-ol:my-4 prose-ol:pl-6 prose-ul:my-4 prose-ul:pl-6
-                  prose-code:text-[#1767b1] prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:font-normal prose-code:before:content-none prose-code:after:content-none
-                  prose-pre:bg-[#082b59] prose-pre:text-white prose-pre:rounded-xl prose-pre:border prose-pre:border-slate-700
-                  prose-hr:border-slate-200 prose-hr:my-12
-                  prose-table:text-sm prose-table:border-collapse
-                  prose-th:bg-slate-50 prose-th:text-left prose-th:font-semibold prose-th:px-4 prose-th:py-3 prose-th:border prose-th:border-slate-200
-                  prose-td:px-4 prose-td:py-3 prose-td:border prose-td:border-slate-200"
-                dangerouslySetInnerHTML={{ __html: sanitize(berita.content) }}
-              />
-            ) : (
-              <p className="text-gray-500">Konten belum tersedia.</p>
-            )}
+            {/* Content — RichContent: kelas identik semua tampilan */}
+            <RichContent content={berita.content} />
 
             {/* Lampiran file (PDF dsb.) — pratinjau tertanam */}
             {berita.attachment_url && (

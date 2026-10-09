@@ -82,6 +82,30 @@ export async function revalidateArticles(
 }
 
 /**
+ * Invalidasi ISR halaman kegiatan (/ + /activities + /activities/[slug] + /search)
+ * via API route /api/revalidate. Dipanggil dari client component admin kegiatan
+ * setelah create/update/delete/togglePublish/bulk — hanya bila operasi sukses.
+ * /search ikut di-invalidate karena searchAllContent() memakai getActivityList.
+ */
+export async function revalidateActivities(
+  slug?: string,
+  oldSlug?: string
+): Promise<void> {
+  const paths = Array.from(
+    new Set(
+      [
+        slug ? `/activities/${slug}` : null,
+        oldSlug && oldSlug !== slug ? `/activities/${oldSlug}` : null,
+        "/activities",
+        "/search",
+        "/",
+      ].filter(Boolean) as string[]
+    )
+  );
+  await postRevalidate(paths, "revalidateActivities");
+}
+
+/**
  * Invalidasi ISR untuk halaman yang menampilkan fasilitas (beranda + profil)
  * via API route /api/revalidate. Dipanggil dari client component admin
  * setelah create/update/delete/toggle fasilitas.

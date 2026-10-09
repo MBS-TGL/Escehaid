@@ -12,6 +12,8 @@ const ALLOWED_PATHS = new Set([
   "/portal",
   "/articles",
   "/achievements",
+  "/activities",
+  "/search",
 ]);
 function isAllowedPath(p: unknown): boolean {
   if (typeof p !== "string") return false;
@@ -19,6 +21,7 @@ function isAllowedPath(p: unknown): boolean {
   if (ALLOWED_PATHS.has(p)) return true;
   if (p.startsWith("/news/") && p.length > 6) return true;
   if (p.startsWith("/articles/") && p.length > 10) return true;
+  if (p.startsWith("/activities/") && p.length > 12) return true;
   return false;
 }
 

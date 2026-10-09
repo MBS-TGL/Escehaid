@@ -10,9 +10,18 @@ import {
   togglePublishActivity,
   togglePublishActivityBulk,
   uploadActivityImage,
+  revalidateActivities,
 } from "@/lib/queries";
+import {
+  ACTIVITY_TYPES,
+  activityTypeBadge,
+  activityTypeLabel,
+  formatActivityDateRange,
+  toJakartaDateKey,
+  todayInJakarta,
+} from "@/lib/activity-types";
 import { compressImage } from "@/lib/compress-image";
-import { sanitize } from "@/lib/sanitize";
+import { RichContent } from "@/components/RichContent";
 import { StatCard, StatCardRow, Modal, ConfirmModal, SlideOver, RichTextEditor } from "@/components/ui";
 import type { Activity } from "@/lib/supabase";
 import {
@@ -37,19 +46,13 @@ import {
   ArrowDown,
   SortAscending,
   Checks,
+  Star,
+  Copy,
+  Phone,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
 
 const PAGE_SIZE = 10;
-
-const activityTypeConfig: Record<string, { label: string; color: string }> = {
-  kajian: { label: "Kajian", color: "bg-blue-50 text-blue-700 border-blue-200" },
-  peringatan: { label: "Peringatan", color: "bg-amber-50 text-amber-700 border-amber-200" },
-  lomba: { label: "Lomba", color: "bg-purple-50 text-purple-700 border-purple-200" },
-  upacara: { label: "Upacara", color: "bg-red-50 text-red-700 border-red-200" },
-  ekskul: { label: "Ekstrakurikuler", color: "bg-green-50 text-green-700 border-green-200" },
-  umum: { label: "Umum", color: "bg-slate-50 text-slate-700 border-slate-200" },
-};
 
 type SortField = "created_at" | "title" | "activity_date" | "activity_type";
 type SortDir = "asc" | "desc";
@@ -59,21 +62,33 @@ interface FormData {
   description: string;
   content: string;
   activity_date: string;
+  end_date: string;
   activity_type: string;
+  activity_time: string;
+  live_url: string;
+  registration_url: string;
+  contact_person: string;
   location: string;
   image_url: string;
   is_published: boolean;
+  is_featured: boolean;
 }
 
 const emptyForm: FormData = {
   title: "",
   description: "",
   content: "",
-  activity_date: new Date().toISOString().split("T")[0],
+  activity_date: todayInJakarta(),
+  end_date: "",
   activity_type: "umum",
+  activity_time: "",
+  live_url: "",
+  registration_url: "",
+  contact_person: "",
   location: "",
   image_url: "",
   is_published: false,
+  is_featured: false,
 };
 
 export default function AdminActivitiesPage() {
@@ -82,6 +97,7 @@ export default function AdminActivitiesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -151,9 +167,9 @@ export default function AdminActivitiesPage() {
       const matchFilter =
         filter === "all" ||
         (filter === "published" && item.is_published) ||
-        (filter === "draft" && !item.is_published) ||
-        filter === item.activity_type;
-      return matchSearch && matchFilter;
+        (filter === "draft" && !item.is_published);
+      const matchType = typeFilter === "all" || item.activity_type === typeFilter;
+      return matchSearch && matchFilter && matchType;
     });
 
     result.sort((a, b) => {
@@ -166,7 +182,7 @@ export default function AdminActivitiesPage() {
     });
 
     return result;
-  }, [activities, search, filter, sortField, sortDir]);
+  }, [activities, search, filter, typeFilter, sortField, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -175,6 +191,11 @@ export default function AdminActivitiesPage() {
     total: activities.length,
     published: activities.filter((a) => a.is_published).length,
     draft: activities.filter((a) => !a.is_published).length,
+    // Akan datang = tayang & belum selesai (end_date bila ada, else mulai) hari ini WIB.
+    upcoming: activities.filter((a) => {
+      const k = toJakartaDateKey(a.end_date || a.activity_date);
+      return a.is_published && k !== null && k >= todayInJakarta();
+    }).length,
     thisMonth: activities.filter((a) => {
       const d = new Date(a.created_at);
       const now = new Date();
@@ -223,11 +244,17 @@ export default function AdminActivitiesPage() {
       title: item.title,
       description: item.description || "",
       content: item.content || "",
-      activity_date: item.activity_date ? new Date(item.activity_date).toISOString().split("T")[0] : "",
+      activity_date: toJakartaDateKey(item.activity_date) ?? "",
+      end_date: toJakartaDateKey(item.end_date) ?? "",
       activity_type: item.activity_type,
+      activity_time: item.activity_time || "",
+      live_url: item.live_url || "",
+      registration_url: item.registration_url || "",
+      contact_person: item.contact_person || "",
       location: item.location || "",
       image_url: item.image_url || "",
       is_published: item.is_published,
+      is_featured: item.is_featured || false,
     });
     setImageFile(null);
     setImagePreview(item.image_url || "");
@@ -252,6 +279,12 @@ export default function AdminActivitiesPage() {
 
   async function handleSave() {
     if (!form.title.trim()) { setFormError("Judul wajib diisi."); return; }
+    if (form.end_date && form.activity_date && form.end_date < form.activity_date) {
+      setFormError("Tanggal selesai tidak boleh sebelum tanggal mulai."); return;
+    }
+    const invalidUrl = (v: string) => !!v.trim() && !/^https?:\/\/\S+/i.test(v.trim());
+    if (invalidUrl(form.registration_url)) { setFormError("Tautan pendaftaran harus diawali http:// atau https://"); return; }
+    if (invalidUrl(form.live_url)) { setFormError("Tautan siaran harus diawali http:// atau https://"); return; }
     setFormSaving(true);
     setFormError("");
 
@@ -268,13 +301,17 @@ export default function AdminActivitiesPage() {
     }
 
     if (editItem) {
-      const { error } = await updateActivity(editItem.id, { ...form, image_url: imageUrl });
+      const { data, error } = await updateActivity(editItem.id, { ...form, image_url: imageUrl });
       if (error) { setFormError(error); setFormSaving(false); return; }
       toast("Kegiatan berhasil diperbarui", "success");
+      // Revalidasi slug baru + slug lama bila slug berubah (URL lama ikut segar)
+      const oldSlug = editItem.slug && data?.slug && editItem.slug !== data.slug ? editItem.slug : undefined;
+      revalidateActivities(data?.slug, oldSlug).catch(() => {});
     } else {
-      const { error } = await createActivity({ ...form, image_url: imageUrl });
+      const { data, error } = await createActivity({ ...form, image_url: imageUrl });
       if (error) { setFormError(error); setFormSaving(false); return; }
       toast("Kegiatan berhasil dibuat", "success");
+      revalidateActivities(data?.slug).catch(() => {});
     }
 
     setFormOpen(false);
@@ -284,36 +321,72 @@ export default function AdminActivitiesPage() {
 
   async function handleDelete() {
     if (!deleteItem) return;
-    await deleteActivity(deleteItem.id);
+    const slug = deleteItem.slug;
+    const { error } = await deleteActivity(deleteItem.id);
+    if (error) { toast(`Gagal menghapus kegiatan: ${error}`, "error"); return; }
     toast("Kegiatan berhasil dihapus", "success");
     setDeleteItem(null);
     setSelectedIds((s) => { const n = new Set(s); n.delete(deleteItem.id); return n; });
     fetchActivities();
+    revalidateActivities(slug).catch(() => {});
   }
 
   async function handleBulkDelete() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    await deleteActivityBulk(ids);
+    // Kumpulkan slug SEBELUM dihapus (untuk revalidasi)
+    const slugs = ids.map(id => activities.find(a => a.id === id)?.slug).filter(Boolean) as string[];
+    const { error } = await deleteActivityBulk(ids);
+    if (error) { toast(`Gagal menghapus: ${error}`, "error"); return; }
     toast(`${ids.length} kegiatan berhasil dihapus`, "success");
     setSelectedIds(new Set());
     setBulkDelete(false);
     fetchActivities();
+    slugs.forEach(slug => revalidateActivities(slug).catch(() => {}));
   }
 
   async function handleBulkPublish(publish: boolean) {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    await togglePublishActivityBulk(ids, publish);
+    const slugs = ids.map(id => activities.find(a => a.id === id)?.slug).filter(Boolean) as string[];
+    const { error } = await togglePublishActivityBulk(ids, publish);
+    if (error) { toast(`Gagal mengubah status: ${error}`, "error"); return; }
     toast(`${ids.length} kegiatan ${publish ? "diterbitkan" : "draft"}`, "success");
     setSelectedIds(new Set());
     fetchActivities();
+    slugs.forEach(slug => revalidateActivities(slug).catch(() => {}));
   }
 
   async function handleTogglePublish(item: Activity) {
-    await togglePublishActivity(item.id, !item.is_published);
+    const { error } = await togglePublishActivity(item.id, !item.is_published);
+    if (error) { toast(`Gagal mengubah status: ${error}`, "error"); return; }
     toast(`Kegiatan ${!item.is_published ? "diterbitkan" : "draft"}`, "success");
     fetchActivities();
+    revalidateActivities(item.slug).catch(() => {});
+  }
+
+  // Duplikat → salinan DRAFT (tanpa gambar; unggah ulang bila perlu), lalu buka editor.
+  async function handleDuplicate(item: Activity) {
+    const { data, error } = await createActivity({
+      title: `${item.title} (Salinan)`,
+      description: item.description || "",
+      content: item.content || "",
+      activity_date: toJakartaDateKey(item.activity_date) || todayInJakarta(),
+      end_date: toJakartaDateKey(item.end_date),
+      activity_type: item.activity_type,
+      location: item.location || "",
+      image_url: "",
+      is_published: false,
+      activity_time: item.activity_time || "",
+      live_url: item.live_url || "",
+      registration_url: item.registration_url || "",
+      contact_person: item.contact_person || "",
+      is_featured: false,
+    });
+    if (error) { toast(`Gagal menduplikat: ${error}`, "error"); return; }
+    toast("Salinan dibuat sebagai draft — unggah gambar baru bila perlu", "success");
+    fetchActivities();
+    if (data) openEdit(data);
   }
 
   const sortIcon = (field: SortField) => {
@@ -346,6 +419,7 @@ export default function AdminActivitiesPage() {
         <StatCard label="Total" value={stats.total} variant="brand" />
         <StatCard label="Diterbitkan" value={stats.published} variant="success" />
         <StatCard label="Draft" value={stats.draft} variant="warning" />
+        <StatCard label="Akan Datang" value={stats.upcoming} variant="purple" />
         <StatCard label="Bulan Ini" value={stats.thisMonth} variant="info" />
       </StatCardRow>
 
@@ -376,6 +450,14 @@ export default function AdminActivitiesPage() {
               </button>
             ))}
           </div>
+          <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); setSelectedIds(new Set()); }}
+            aria-label="Filter tipe kegiatan"
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 focus:border-[#1767b1] focus:outline-none">
+            <option value="all">Semua Tipe</option>
+            {Object.values(ACTIVITY_TYPES).map((cfg) => (
+              <option key={cfg.key} value={cfg.key}>{cfg.label}</option>
+            ))}
+          </select>
         </div>
         <div className="relative">
           <MagnifyingGlass className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -429,9 +511,11 @@ export default function AdminActivitiesPage() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
-                      <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada kegiatan"}</p>
+                      <p className="mt-1 text-xs text-slate-400">
+                        {search || typeFilter !== "all" || filter !== "all" ? "Coba ubah kata kunci atau filter" : "Belum ada kegiatan"}
+                      </p>
                     </div>
-                    {!search && filter === "all" && (
+                    {!search && filter === "all" && typeFilter === "all" && (
                       <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[#082b59] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1767b1]">
                         <Plus className="h-3.5 w-3.5" /> Buat Kegiatan Pertama
                       </button>
@@ -456,18 +540,28 @@ export default function AdminActivitiesPage() {
                           </div>
                         )}
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-slate-800 line-clamp-1">{item.title}</p>
+                          <p className="flex items-center gap-1.5 text-sm font-medium text-slate-800">
+                            {item.is_featured && (
+                              <span className="shrink-0 text-[#f4d21f]" title="Kegiatan unggulan">
+                                <Star className="h-3.5 w-3.5" weight="fill" />
+                              </span>
+                            )}
+                            <span className="truncate">{item.title}</span>
+                          </p>
                           {item.description && <p className="mt-0.5 text-xs text-slate-400 line-clamp-1">{item.description}</p>}
                         </div>
                       </div>
                     </td>
                     <td className="hidden px-4 py-3.5 text-center sm:table-cell">
-                      <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold ${activityTypeConfig[item.activity_type]?.color || "bg-slate-100 text-slate-600 border-slate-200"}`}>
-                        {activityTypeConfig[item.activity_type]?.label || item.activity_type}
+                      <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold ${activityTypeBadge(item.activity_type)}`}>
+                        {activityTypeLabel(item.activity_type)}
                       </span>
                     </td>
                     <td className="hidden px-4 py-3.5 text-center text-sm text-slate-500 md:table-cell">
-                      {item.activity_date ? new Date(item.activity_date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-"}
+                      {formatActivityDateRange(item.activity_date, item.end_date) || "-"}
+                      {item.activity_time && (
+                        <p className="mt-0.5 text-[11px] text-slate-400">{item.activity_time}</p>
+                      )}
                     </td>
                     <td className="hidden px-4 py-3.5 text-center text-sm text-slate-500 lg:table-cell">
                       {item.location || "-"}
@@ -490,6 +584,9 @@ export default function AdminActivitiesPage() {
                         </button>
                         <button onClick={() => openEdit(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
                           <PencilSimple className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => handleDuplicate(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-600" title="Duplikat (salinan draft)">
+                          <Copy className="h-4 w-4" />
                         </button>
                         <button onClick={() => setDeleteItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
                           <Trash className="h-4 w-4" />
@@ -532,23 +629,32 @@ export default function AdminActivitiesPage() {
         open={!!viewItem}
         onClose={() => setViewItem(null)}
         title={viewItem?.title}
-        description={viewItem ? `${activityTypeConfig[viewItem.activity_type]?.label || viewItem.activity_type} · ${viewItem.is_published ? "Published" : "Draft"}` : undefined}
+        description={viewItem ? `${activityTypeLabel(viewItem.activity_type)} · ${viewItem.is_published ? "Published" : "Draft"}` : undefined}
         footer={
           <>
             <button onClick={() => { setViewItem(null); openEdit(viewItem!); }}
               className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
               <PencilSimple className="h-4 w-4" /> Edit
             </button>
-            <a href={`/activities/${viewItem?.slug}`} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1]">
-              <Eye className="h-4 w-4" /> Lihat di Website
-            </a>
+            {viewItem && viewItem.is_published ? (
+              <a href={`/activities/${viewItem.slug}`} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1]">
+                <Eye className="h-4 w-4" /> Lihat di Website
+              </a>
+            ) : (
+              /* Draft tidak bisa diakses publik (filter is_published) → tombol nonaktif */
+              <span aria-disabled="true" title="Terbitkan kegiatan dulu untuk melihatnya di website"
+                className="flex cursor-not-allowed items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-400">
+                <Eye className="h-4 w-4" /> Pratinjau tidak tersedia untuk draft
+              </span>
+            )}
           </>
         }
       >
         {viewItem?.image_url && (
-          <div className="mb-4 -mx-6 -mt-5 overflow-hidden">
-            <img src={viewItem.image_url} alt={viewItem.title} loading="lazy" className="h-48 w-full object-cover sm:h-64" />
+          <div className="mb-4 -mx-6 -mt-5 overflow-hidden bg-slate-100">
+            {/* Rasio asli — poster portrait tampil utuh, tak dipotong */}
+            <img src={viewItem.image_url} alt={viewItem.title} loading="lazy" className="h-auto w-full" />
           </div>
         )}
         {viewItem && (
@@ -558,13 +664,26 @@ export default function AdminActivitiesPage() {
                 <MapPin className="h-3.5 w-3.5" />
                 {viewItem.location || "Lokasi tidak ditentukan"}
               </span>
-              <span>{viewItem.activity_date ? new Date(viewItem.activity_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"}</span>
+              <span className="flex items-center gap-1">
+                <CalendarBlank className="h-3.5 w-3.5" />
+                {formatActivityDateRange(viewItem.activity_date, viewItem.end_date, { long: true }) || "-"}
+              </span>
+              {viewItem.activity_time && (
+                <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{viewItem.activity_time}</span>
+              )}
+              {viewItem.is_featured && (
+                <span className="flex items-center gap-1 font-semibold text-slate-600">
+                  <Star className="h-3.5 w-3.5 text-[#f4d21f]" weight="fill" /> Unggulan
+                </span>
+              )}
             </div>
+            {viewItem.contact_person && (
+              <p className="mb-4 flex items-center gap-1.5 text-xs text-slate-500">
+                <Phone className="h-3.5 w-3.5" /> {viewItem.contact_person}
+              </p>
+            )}
             {viewItem.description && <p className="mb-4 text-sm text-slate-600 italic border-l-2 border-[#f4d21f] pl-3">{viewItem.description}</p>}
-            <div
-              className="prose prose-sm max-w-none text-slate-700 leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: sanitize(viewItem.content || "Tidak ada konten") }}
-            />
+            <RichContent content={viewItem.content} emptyHint="Tidak ada konten" />
           </>
         )}
       </Modal>
@@ -628,27 +747,38 @@ export default function AdminActivitiesPage() {
               placeholder="Judul kegiatan" />
           </div>
 
-          {/* Type + Date */}
+          {/* Type */}
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tipe</label>
+            <div className="flex flex-wrap gap-2">
+              {Object.values(ACTIVITY_TYPES).map((cfg) => (
+                <button key={cfg.key} type="button" onClick={() => setForm({ ...form, activity_type: cfg.key })}
+                  className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
+                    form.activity_type === cfg.key
+                      ? `${activityTypeBadge(cfg.key)} border-current shadow-sm`
+                      : "border-slate-200 text-slate-500 hover:border-slate-300"
+                  }`}>
+                  {cfg.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tanggal mulai + selesai (selesai opsional — kegiatan multi-hari) */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tipe</label>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(activityTypeConfig).map(([key, cfg]) => (
-                  <button key={key} type="button" onClick={() => setForm({ ...form, activity_type: key })}
-                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
-                      form.activity_type === key
-                        ? `${cfg.color} border-current shadow-sm`
-                        : "border-slate-200 text-slate-500 hover:border-slate-300"
-                    }`}>
-                    {cfg.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tanggal</label>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tanggal Mulai</label>
               <input type="date" value={form.activity_date} onChange={(e) => setForm({ ...form, activity_date: e.target.value })}
                 className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                Tanggal Selesai <span className="font-normal text-slate-400">(opsional)</span>
+              </label>
+              <input type="date" value={form.end_date} min={form.activity_date || undefined}
+                onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+              <p className="mt-1 text-xs text-slate-400">Untuk kegiatan multi-hari; kosongkan bila sehari.</p>
             </div>
           </div>
 
@@ -658,6 +788,48 @@ export default function AdminActivitiesPage() {
             <input type="text" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}
               className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
               placeholder="Contoh: Masjid Sekolah" />
+          </div>
+
+          {/* Waktu + Tautan Siaran (Fase 5 — kolom opsional) */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                Waktu <span className="font-normal text-slate-400">(opsional)</span>
+              </label>
+              <input type="text" value={form.activity_time} onChange={(e) => setForm({ ...form, activity_time: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                placeholder="Contoh: 19.30 WIB - Selesai" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                Tautan Siaran Langsung <span className="font-normal text-slate-400">(opsional)</span>
+              </label>
+              <input type="url" value={form.live_url} onChange={(e) => setForm({ ...form, live_url: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                placeholder="https://www.instagram.com/..." />
+            </div>
+          </div>
+
+          {/* Pendaftaran + Kontak Panitia (Fase 6 — kolom opsional) */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                Tautan Pendaftaran <span className="font-normal text-slate-400">(opsional)</span>
+              </label>
+              <input type="url" value={form.registration_url} onChange={(e) => setForm({ ...form, registration_url: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                placeholder="https://forms.gle/..." />
+              <p className="mt-1 text-xs text-slate-400">Menampilkan tombol kuning &quot;Daftar Sekarang&quot; di detail.</p>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                Kontak Panitia <span className="font-normal text-slate-400">(opsional)</span>
+              </label>
+              <input type="text" value={form.contact_person} onChange={(e) => setForm({ ...form, contact_person: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                placeholder="Contoh: Bu Siti — 0812-3456-7890" />
+              <p className="mt-1 text-xs text-slate-400">Tampil di sidebar &quot;Info Kegiatan&quot;.</p>
+            </div>
           </div>
 
           {/* Image */}
@@ -733,6 +905,23 @@ export default function AdminActivitiesPage() {
               <button type="button" onClick={() => setForm({ ...form, is_published: !form.is_published })}
                 className={`relative h-6 w-11 rounded-full transition-colors ${form.is_published ? "bg-[#1767b1]" : "bg-slate-300"}`}>
                 <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_published ? "left-[22px]" : "left-0.5"}`} />
+              </button>
+            </div>
+          </div>
+
+          {/* Featured / Unggulan toggle (Fase 6) */}
+          <div className="rounded-xl border border-slate-200 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+                  <Star className="h-4 w-4 text-[#f4d21f]" weight="fill" /> Jadikan Unggulan
+                </p>
+                <p className="text-xs text-slate-400">Kartu besar di atas /activities. Tanpa pin → otomatis kegiatan terdekat.</p>
+              </div>
+              <button type="button" onClick={() => setForm({ ...form, is_featured: !form.is_featured })}
+                aria-label="Jadikan kegiatan unggulan"
+                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${form.is_featured ? "bg-[#f4d21f]" : "bg-slate-300"}`}>
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_featured ? "left-[22px]" : "left-0.5"}`} />
               </button>
             </div>
           </div>
