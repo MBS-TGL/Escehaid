@@ -181,11 +181,16 @@
 
 ### P2.6 — Penjadwalan konten
 
-- [ ] Kolom `published_at` di tabel berita/artikel (belum ada → SQL terpisah)
-- [ ] Admin: atur jadwal tayang; konten tampil di publik hanya setelah waktunya
-- [ ] Query publik ditambah filter `published_at <= now()`
+- [x] Kolom `published_at` di tabel berita/artikel — **sudah ada di DB** (diverifikasi probe REST; tidak perlu SQL tambahan)
+- [x] Admin: atur jadwal tayang; konten tampil di publik hanya setelah waktunya
+- [x] Query publik ditambah filter `published_at <= now()`
 - **Risiko:** jangan rusakkan query berita/artikel yang ada — pakai pendekatan degradasi anggun bila kolom belum dibuat
-- **Butuh SQL (user jalankan)** — tulis terpisah di akhir task
+- **Hasil verifikasi (unit ini ternyata sudah terbangun sebelumnya — tinggal dibuktikan):**
+  - Filter `is_published = true AND (published_at IS NULL OR published_at <= now()) AND (expires_at …)` diterapkan di **semua** jalur publik: `getNewsList(Paginated)`, `getNewsBySlug` (404), `getRelatedNews`, sitemap, `getArticleList`, `getArticleBySlug`, sitemap, pencarian `/search` (via list function).
+  - Probe REST: threshold masa lalu → `[]` (baris ber-`published_at` masa depan dikecualikan ✓); belum ada konten terjadwal saat ini (`published_at > now` → 0 baris).
+  - Kolom Tahap 1 (`image_alt`, `is_pinned`, `expires_at`) **ada** → probe graceful-degradation aktif, urutan sematan + filter kedaluwarsa jalan.
+  - Admin `/admin/news` & `/admin/articles`: input `datetime-local` "Tanggal Publish (WIB)" (konversi UTC↔WIB benar), "Tampil sampai (WIB)", tombol Reset, badge "Terjadwal · tgl", hint "Akan tayang otomatis pada … WIB" — semua ada.
+  - ⚠️ E2E langsung (1 baris terjadwal → lihat tersembunyi di publik) butuh **mutasi data** → belum dilakukan; bisa diuji user sendiri dari form admin (set tanggal publish masa depan → simpan → cek `/news`) atau dengan approval saya membuat baris uji.
 
 ### P2.7 — Media library
 
