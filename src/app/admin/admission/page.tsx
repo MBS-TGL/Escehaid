@@ -1479,11 +1479,14 @@ export default function AdminSPMBPage() {
           <table className="w-full">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
               <tr>
-                <th className="w-10 px-4 py-3">
+                {/* hidden sm:table-cell — checkbox & No hanya untuk tablet/desktop; di
+                bawah 640px sisa kolom biar lega, sama seperti
+                agenda/teachers/users/announcements/facilities. */}
+                <th className="hidden w-10 px-4 py-3 sm:table-cell">
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
                     className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
                 </th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">No</th>
+                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">No</th>
                 <th className="cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("full_name")}>
                   <span className="flex items-center gap-1">Nama {sortIcon("full_name")}</span>
                 </th>
@@ -1526,11 +1529,11 @@ export default function AdminSPMBPage() {
                   const StatusIcon = st.icon;
                   return (
                     <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[#082b59]/[0.03]" : ""}`}>
-                      <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                      <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
                         <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
                           className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
                       </td>
-                      <td className="px-4 py-3.5 text-sm text-slate-400">{(page - 1) * PAGE_SIZE + index + 1}</td>
+                      <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
                       <td className="px-4 py-3.5 cursor-pointer" onClick={() => openDetail(item)}>
                         <p className="text-sm font-medium text-slate-800">{item.full_name}</p>
                         {item.email && <p className="mt-0.5 text-xs text-slate-400">{item.email}</p>}
