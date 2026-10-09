@@ -166,10 +166,17 @@ export const Modal = memo(function Modal({
 });
 
 /* ─── ConfirmModal ──────────────────────────────────────── */
-const variantColorMap: Record<string, string> = {
-  danger: "bg-red-600 hover:bg-red-700",
-  warning: "bg-amber-600 hover:bg-amber-700",
-  info: "bg-blue-600 hover:bg-blue-700",
+/**
+ * Dua varian warna (hanya dua, sesuai kebutuhan UI admin):
+ *  - `danger`  → merah : aksi destruktif/permanen (hapus).
+ *  - `warning` → kuning brand #f4d21f : aksi konsekuensial tapi tidak
+ *                permanen (duplikat, tutup form tanpa simpan).
+ * `text-*` ikut di dalam map karena kuning butuh teks navy — jangan ada
+ * `text-white` generik di tombol (teks putih di atas kuning tidak kontras).
+ */
+const variantColorMap: Record<"danger" | "warning", string> = {
+  danger: "bg-red-600 hover:bg-red-700 text-white",
+  warning: "bg-[#f4d21f] hover:bg-[#ffe14d] text-[#082b59]",
 };
 
 type ConfirmModalProps = {
@@ -182,9 +189,10 @@ type ConfirmModalProps = {
   /** Alias for description */
   message?: string;
   confirmLabel?: string;
+  /** Warna tombol penuh (mis. "bg-purple-600 text-white") — meng-override variant */
   confirmColor?: string;
-  /** Shorthand: "danger" | "warning" | "info" — maps to confirmColor */
-  variant?: string;
+  /** Shorthand: "danger" (merah) | "warning" (kuning) — dipetakan ke confirmColor */
+  variant?: "danger" | "warning";
   loading?: boolean;
 };
 
@@ -201,7 +209,7 @@ export function ConfirmModal({
   loading = false,
 }: ConfirmModalProps) {
   const resolvedDesc = description || message;
-  const resolvedColor = confirmColor || (variant && variantColorMap[variant]) || "bg-red-600 hover:bg-red-700";
+  const resolvedColor = confirmColor || variantColorMap[variant ?? "danger"];
 
   return (
     <Modal open={open} onClose={onClose} size="sm" title={title} description={resolvedDesc}>
@@ -211,7 +219,7 @@ export function ConfirmModal({
           Batal
         </button>
         <button onClick={onConfirm} disabled={loading}
-          className={`flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-50 ${resolvedColor}`}>
+          className={`flex-1 rounded-xl py-2.5 text-sm font-semibold disabled:opacity-50 ${resolvedColor}`}>
           {loading ? "Memproses..." : confirmLabel}
         </button>
       </div>

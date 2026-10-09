@@ -407,6 +407,9 @@ export default function AdminPortalPage() {
   const [items, setItems] = useState<PortalAppAdmin[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteItem, setDeleteItem] = useState<PortalAppAdmin | null>(null);
+  // Item yang akan diduplikat — duplikasi menulis langsung ke server, jadi
+  // sama seperti hapus: minta konfirmasi dulu (dialog varian warning/kuning).
+  const [duplicateItem, setDuplicateItem] = useState<PortalAppAdmin | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<PortalAppAdmin | null>(null);
   const [form, setForm] = useState<PortalAppInput>(EMPTY_FORM);
@@ -573,8 +576,9 @@ export default function AdminPortalPage() {
       sort_order: maxSort + 1,
     };
     const { error } = await createPortalApp(input);
-    if (error) { toast(error, "error"); return; }
+    if (error) { toast(error, "error"); return; } // dialog tetap terbuka
     toast("Aplikasi diduplikat", "success");
+    setDuplicateItem(null);
     revalidatePortal().catch(() => { });
     fetchItems();
   }
@@ -921,7 +925,7 @@ export default function AdminPortalPage() {
                       onSelect={toggleOne}
                       onEdit={openEdit}
                       onDelete={setDeleteItem}
-                      onDuplicate={handleDuplicate}
+                      onDuplicate={(item) => setDuplicateItem(item)}
                       onSetStatus={(it, status) => applyStatus([it], status)}
                     />
                   ))
@@ -1111,6 +1115,20 @@ export default function AdminPortalPage() {
         title={`Hapus ${selectedItems.length} Aplikasi?`}
         description={`${selectedItems.length} aplikasi yang dipilih akan dihapus permanen dari portal.`}
         confirmLabel={`Hapus ${selectedItems.length} Aplikasi`}
+      />
+
+      {/* Konfirmasi duplikasi — varian warning (kuning), bukan merah:
+          duplikat menulis data baru, tetapi tidak menghilangkan apa pun. */}
+      <ConfirmModal
+        open={!!duplicateItem}
+        onClose={() => setDuplicateItem(null)}
+        onConfirm={() => {
+          if (duplicateItem) handleDuplicate(duplicateItem);
+        }}
+        title="Duplikat Aplikasi?"
+        description={`Salinan "${duplicateItem?.label}" akan dibuat dengan status Disembunyikan.`}
+        confirmLabel="Duplikat"
+        variant="warning"
       />
     </div>
   );
