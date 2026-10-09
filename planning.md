@@ -237,16 +237,20 @@ P1.1 (verifikasi bloker)
 
 - [x] Commit & push batch **Kelola Portal** — sudah masuk sebagai `829f9db` (portal/page.tsx + SortableRow/StatusSwitch/FilterBar, queries.ts, Icons.tsx, package.json) dan sudah di-push bersama `93d386a` (batch P1.2–P1.4)
 - [x] **Tanpa SQL** untuk batch ini — terkonfirmasi (`portal_apps` sudah terisi6 baris, urutan 10…60)
+- [ ] **Commit & push batch admin Kelola Portal** — selesai dikerjakan, **belum di-commit** (4 file: `portal/page.tsx`, `SortableRow.tsx`, `StatusControl.tsx`, `components/ui/SlideOver.tsx`); gerbang: tsc 0 · lint 68/0 · build 0
 - [ ] Deploy
 - [ ] Setelah live: login ulang ke `/admin/portal`, uji geser baris + toggle Aktif + filter
 
-## ➡ Fokus berikutnya: **Kelola Portal** (live-verify)
+## ➡ Fokus berikutnya: **commit batch admin → deploy → live-verify Portal**
 
-SPMB end-to-end (P2.1) ditunda atas permintaan user. Yang tersisa utk Portal murni **verifikasi langsung**, bukan penulisan kode:
+Dua task admin selesai (kode beres, belum masuk git):
 
-1. Deploy batch yang sudah ter-push
-2. Login `/admin/portal`
-3. Uji tiga hal: **geser baris** (persist setelah refresh) · **toggle Aktif** (optimistic + rollback bila gagal) · **filter/pencarian**
+1. **Status pill di tabel Portal** — pill warna + menu 3 opsi berdeskripsi (ARIA menu/menuitem, Esc/klik luar/panah, posisi `fixed` anti-terpotong), simpan langsung + `revalidatePortal`; chip ikon/warna + tooltip "Nama ikon · Nama warna"; link kosong/"#" → "—" abu; nomor urut berbasis posisi (lompatan 3→5 hilang) + hint "Menampilkan X dari Y"; investigasi "duplikat sidebar" → **tidak ada duplikat nyata** (aside + sheet saling eksklusif), akses per-role tak diubah.
+2. **Rework modal Tambah/Edit Aplikasi** — dua kolom seimbang "Informasi"/"Tampilan" (`max-w-4xl`, `min-w-0`, tanpa overflow-x), urutan mobile via `display:contents` + `order` (Pratinjau sticky → Informasi → Ikon → Warna → Lanjutan), pratinjau satu ubin & status-aware (tayang normal · segera hadir = penanda persis portal publik · disembunyikan redup + "Tidak tampil di portal"), caption status → `title` per segmen, muat tanpa scroll di viewport 720 (konten 492 vs 519), tips Ctrl+S pindah ke footer.
+
+Sisa verifikasi langsung (bukan penulisan kode):
+
+1. Commit & push batch di atas
+2. Deploy (Vercel)
+3. Login `/admin/portal` → uji **pill status** (buka menu, Esc, ganti status → toast + revalidate), **modal baru** (dua kolom, sticky pratinjau, Ctrl+S), geser baris, filter/pencarian
 4. Pastikan drag **nonaktif** saat filter aktif (memang didesain begitu)
-
-Rincian: `planning.md` baris238–241.

@@ -16,7 +16,7 @@ import {
   PORTAL_ICON_LABELS,
   resolvePortalColor,
 } from "@/lib/portal-theme";
-import { StatusControl, statusOf, type PortalStatus } from "./StatusControl";
+import { StatusPill, statusOf, type PortalStatus } from "./StatusControl";
 
 /**
  * Kolom grid desktop (dipakai header di page.tsx supaya sejajar):
@@ -28,7 +28,8 @@ import { StatusControl, statusOf, type PortalStatus } from "./StatusControl";
  *                              Dulu 4fr (setengah dari seluruh fr) sehingga melebar
  *                              ±540px padahal isinya cuma ±200px → terasa tak proporsional.
  *   Link      120px / 1.3fr  — isinya pendek ("#", "/news", domain)
- *   Ikon/Warna168px / 1.5fr  — tile 28px + gap 8px + teks "Grafik batang · Ungu"
+ *   Ikon/Warna168px / 1.5fr  — chip tile 28px saja; nama ikon & warna tampil
+ *                              sebagai tooltip title, bukan teks di baris.
  *   Status    250px / 3.6fr  — sisa ruang paling banyak justru DI SINI: kontrol
  *                              memakai w-full, jadi ikut melebar dan segmennya
  *                              lega. Di Aplikasi teks berhenti sendiri, ruang ekstra
@@ -46,24 +47,24 @@ export const PORTAL_GRID =
 function ThemeChip({ icon, color }: { icon: string; color: string }) {
   const Icon = PORTAL_ICONS[icon] ?? SquaresFour;
   const rc = resolvePortalColor(color);
+  const name = `${PORTAL_ICON_LABELS[icon] ?? icon} · ${rc.label}`;
   return (
-    <span className="inline-flex items-center gap-2 text-xs text-slate-500">
-      <span
-        className={`flex h-7 w-7 items-center justify-center rounded-lg ${rc.tileClass}`}
-        style={rc.tileStyle}
-      >
-        <Icon className="h-4 w-4" weight="fill" />
-      </span>
-      {PORTAL_ICON_LABELS[icon] ?? icon} · {rc.label}
+    <span
+      title={name}
+      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${rc.tileClass}`}
+      style={rc.tileStyle}
+    >
+      <Icon className="h-4 w-4" weight="fill" />
+      <span className="sr-only">{name}</span>
     </span>
   );
 }
 
-/** Tampilkan alamat singkat: path utuh untuk internal, domain untuk link luar. */
+/** Tampilkan alamat singkat: path utuh untuk internal, domain untuk link luar.
+ *  Link kosong atau "#" → "—" (tampil abu-abu di sel). */
 function shortHref(href: string): string {
   const h = href.trim();
-  if (!h) return "—";
-  if (h === "#") return "#";
+  if (!h || h === "#") return "—";
   if (h.startsWith("/")) return h;
   try {
     return new URL(h).hostname.replace(/^www\./, "");
@@ -117,6 +118,10 @@ function RowCheckbox({
 
 type RowProps = {
   item: PortalAppAdmin;
+  /** Posisi tampil (0-based) — angka "Urutan" dihitung dari posisi, bukan
+   *  nilai sort_order mentah, supaya tidak pernah melompat saat ada baris
+   *  terfilter atau celah sort_order lama di DB. */
+  index: number;
   /** Drag nonaktif saat pencarian/filter aktif — urutan hanya bermakna pada daftar penuh. */
   dragDisabled: boolean;
   selected: boolean;
@@ -124,11 +129,12 @@ type RowProps = {
   onEdit: (item: PortalAppAdmin) => void;
   onDelete: (item: PortalAppAdmin) => void;
   onDuplicate: (item: PortalAppAdmin) => void;
-  onSetStatus: (item: PortalAppAdmin, status: PortalStatus) => void;
+  onSetStatus: (item: PortalAppAdmin, status: PortalStatus) => Promise<void> | void;
 };
 
 export function SortableRow({
   item,
+  index,
   dragDisabled,
   selected,
   onSelect,
@@ -147,13 +153,15 @@ export function SortableRow({
   };
 
   const statusControl = (
-    <StatusControl
-      size="sm"
+    <StatusPill
       value={statusOf(item)}
       onChange={(status) => onSetStatus(item, status)}
       label={`Status ${item.label}`}
     />
   );
+
+  /** Link kosong/"#" → tanda "—" berwarna abu di sel Link. */
+  const noLink = !item.href.trim() || item.href.trim() === "#";
 
   const handle = (
     <button
@@ -226,7 +234,7 @@ export function SortableRow({
         <div role="cell" className="flex items-center gap-0.5">
           {handle}
           <span className="text-xs font-semibold tabular-nums text-slate-500">
-            {item.sort_order}
+            {index + 1}
           </span>
         </div>
         <div role="cell" className="min-w-0">
@@ -237,7 +245,7 @@ export function SortableRow({
         </div>
         <div role="cell" className="min-w-0">
           <span className="flex items-center gap-1 truncate text-xs text-slate-500">
-            <span className="truncate">{shortHref(item.href)}</span>
+            <span className={`truncate ${noLink ? "text-slate-400" : ""}`}>{shortHref(item.href)}</span>
             {item.is_external && (
               <span
                 title="Link luar — dibuka di tab baru"
@@ -270,7 +278,7 @@ export function SortableRow({
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-slate-700">{item.label}</p>
               <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-400">
-                <span className="truncate">{shortHref(item.href)}</span>
+                <span className={`truncate ${noLink ? "text-slate-400" : ""}`}>{shortHref(item.href)}</span>
                 {item.is_external && (
                   <span
                     title="Link luar — dibuka di tab baru"
@@ -289,7 +297,7 @@ export function SortableRow({
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0 flex-1">{statusControl}</div>
           <span className="shrink-0 text-[11px] tabular-nums text-slate-400">
-            Urutan {item.sort_order}
+            Urutan {index + 1}
           </span>
         </div>
       </div>

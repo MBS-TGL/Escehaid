@@ -120,41 +120,46 @@ function usePopover() {
  * (border #dce3ed, radius 2xl, ikon 48px, teks 14px/11px) supaya yang dilihat di form
  * sama persis dengan yang muncul di halaman publik.
  *
- * Dulu berupa kotak `border-dashed` berisi satu tile w-36 yang mengambang — terlihat
- * seperti wireframe/placeholder, bukan pratinjau. Sekarang memakai kartu putih + judul
- * bagian "Aplikasi Sekolah" + latar gray-50 (persis body portal) + petak tetangga,
- * agar ruangnya terisi dan konteks grid-nya jelas.
+ * Kini satu tile saja (petak tetangga / ubin bayangan kedua dihapus) dan mengikuti status:
+ *   live   → normal
+ *   soon   → penanda persis seperti portal publik (opacity-60 + aria-disabled + "Segera hadir")
+ *   hidden → redup + label kecil "Tidak tampil di portal"
+ * Ikon/warna selalu dari pilihan form, termasuk warna kustom via resolvePortalColor().
  */
 function TilePreview({
   label,
   description,
   icon,
   color,
-  soon,
+  status,
 }: {
   label: string;
   description: string;
   icon: string;
   color: string;
-  soon: boolean;
+  status: PortalStatus;
 }) {
   const Icon = PORTAL_ICONS[icon] ?? SquaresFour;
   const rc = resolvePortalColor(color);
+  const soon = status === "soon";
+  const hidden = status === "hidden";
 
   return (
     <div className="overflow-hidden rounded-2xl border border-[#dce3ed] bg-white shadow-sm">
       {/* Kepala — meniru judul bagian di /portal */}
-      <div className="flex items-center justify-between gap-2 border-b border-[#e7ecf3] px-3.5 py-2.5">
+      <div className="flex items-center justify-between gap-2 border-b border-[#e7ecf3] px-3.5 py-2 md:py-2.5">
         <span className="truncate text-[13px] font-bold text-[#082b59]">Aplikasi Sekolah</span>
         <span className="shrink-0 rounded-full bg-[#f4d21f]/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#082b59]">
           Pratinjau
         </span>
       </div>
 
-      {/* Latar sama dengan halaman portal (body bg-gray-50) supaya kontras tile terbaca */}
-      <div className="grid grid-cols-2 gap-2.5 bg-gray-50 p-3">
+      {/* Latar sama dengan halaman portal (body bg-gray-50); satu tile
+          terpusat, ukuran ringkas di layar kecil. */}
+      <div className="bg-gray-50 p-2.5 md:p-3">
         <div
-          className={`flex h-full flex-col items-center gap-1.5 rounded-2xl border border-[#dce3ed] bg-white px-2 py-4 text-center ${soon ? "opacity-60" : ""
+          aria-disabled={soon || hidden ? "true" : undefined}
+          className={`mx-auto flex w-full max-w-[240px] flex-col items-center gap-1.5 rounded-2xl border border-[#dce3ed] bg-white px-2 py-3 text-center md:max-w-[320px] md:py-4 ${soon ? "opacity-60" : hidden ? "opacity-40" : ""
             }`}
         >
           <span
@@ -166,20 +171,15 @@ function TilePreview({
           <span className="w-full break-words text-sm font-semibold leading-snug text-slate-800">
             {label.trim() || "Nama aplikasi"}
           </span>
-          <span className="line-clamp-2 w-full text-[11px] leading-tight text-slate-500">
-            {soon ? "Segera hadir" : description.trim() || "Deskripsi singkat"}
-          </span>
-        </div>
-
-        {/* Petak tetangga — agar terbaca sebagai bagian dari grid, bukan tile mengambang.
-            Rangka saja tanpa teks, supaya tidak dianggap konten sungguhan. */}
-        <div
-          aria-hidden="true"
-          className="flex h-full flex-col items-center gap-2 rounded-2xl border border-[#dce3ed] bg-white/70 px-2 py-4 text-center"
-        >
-          <span className="h-12 w-12 shrink-0 rounded-xl bg-slate-100" />
-          <span className="h-3 w-16 rounded-full bg-slate-100" />
-          <span className="h-2.5 w-20 rounded-full bg-slate-100" />
+          {hidden ? (
+            <span className="w-full text-[10px] font-bold uppercase tracking-wide text-slate-400">
+              Tidak tampil di portal
+            </span>
+          ) : (
+            <span className="line-clamp-2 w-full text-[11px] leading-tight text-slate-500">
+              {soon ? "Segera hadir" : description.trim() || "Deskripsi singkat"}
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -787,8 +787,8 @@ export default function AdminPortalPage() {
       {dragDisabled && (
         <p className="-mt-2 mb-3 flex items-start gap-1.5 text-[11px] text-slate-400">
           <Info className="mt-px h-3.5 w-3.5 shrink-0" />
-          Drag dinonaktifkan saat pencarian/filter aktif — tampilkan &quot;Semua&quot; tanpa
-          pencarian untuk mengubah urutan.
+          Menampilkan {visible.length} dari {counts.all} aplikasi — drag dinonaktifkan saat
+          pencarian/filter aktif; tampilkan &quot;Semua&quot; tanpa pencarian untuk mengubah urutan.
         </p>
       )}
 
@@ -909,10 +909,11 @@ export default function AdminPortalPage() {
                     </div>
                   </div>
                 ) : (
-                  visible.map((item) => (
+                  visible.map((item, index) => (
                     <SortableRow
                       key={item.id}
                       item={item}
+                      index={index}
                       dragDisabled={dragDisabled}
                       selected={selected.has(item.id)}
                       onSelect={toggleOne}
@@ -931,14 +932,19 @@ export default function AdminPortalPage() {
 
       {/* Create/Edit SlideOver */}
       <SlideOver open={formOpen} onClose={requestCloseForm}
+        wrapperClassName="md:max-w-4xl"
+        maxHeight="calc(100vh - 3rem)"
         title={editItem ? "Edit Aplikasi" : "Tambah Aplikasi"}
         description={editItem ? "Perbarui data aplikasi portal" : "Isi form untuk menambahkan aplikasi"}
         footer={
-          <div className="flex w-full items-center justify-between">
+          <div className="flex w-full items-center justify-between gap-2">
             <button onClick={requestCloseForm} disabled={formSaving}
               className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
               Batal
             </button>
+            <span className="hidden text-xs text-slate-400 md:block">
+              Ctrl + S untuk menyimpan
+            </span>
             <button onClick={handleSave} disabled={formSaving}
               className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
               {formSaving ? (
@@ -952,119 +958,125 @@ export default function AdminPortalPage() {
             </button>
           </div>
         }>
-        <div className="md:grid md:grid-cols-2 md:items-start md:gap-5">
-          {/* Pratinjau — di atas badan form (mobile) / kolom kanan (md), sticky
-              agar tetap terlihat saat memilih ikon dan warna. */}
-          <div className="sticky top-0 z-10 -mx-1 mb-4 bg-white px-1 pb-3 pt-1 shadow-[0_8px_16px_-12px_rgba(15,23,42,0.5)] md:order-2 md:mb-0">
-            <TilePreview
-              label={form.label}
-              description={form.description}
-              icon={form.icon}
-              color={form.color}
-              soon={formStatus === "soon"}
-            />
-          </div>
-
-          <div className="space-y-5 md:order-1">
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Nama Aplikasi <span className="text-red-500">*</span></label>
-              <input type="text" value={form.label}
-                onChange={(e) => setForm({ ...form, label: e.target.value })}
-                placeholder="Contoh: E-Learning"
-                className={inputClass} />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Deskripsi</label>
-              <textarea rows={2} value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Keterangan singkat yang tampil di bawah nama aplikasi"
-                className={inputClass} />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Status</label>
-              <StatusControl
-                value={formStatus}
-                onChange={(status) => setForm((f) => ({ ...f, ...flagsOf(status) }))}
-                label="Status tampilan aplikasi"
-              />
-              <p className="mt-1.5 text-xs text-slate-400">
-                <span className="font-semibold text-slate-500">Tayang</span> tampil biasa ·{" "}
-                <span className="font-semibold text-slate-500">Segera hadir</span> tile ditandai akan datang ·{" "}
-                <span className="font-semibold text-slate-500">Disembunyikan</span> tidak tampil.
+        {/* md+: dua kolom seimbang — kiri "Informasi" (form + Lanjutan), kanan
+            "Tampilan" (pratinjau, Ikon, Warna). Di bawah md pembungkus kolom jadi
+            display:contents sehingga satu kolom datar berurutan:
+            Pratinjau (sticky) → Informasi → Ikon → Warna → Lanjutan. */}
+        <div className="flex min-w-0 flex-col gap-5 md:grid md:grid-cols-2 md:items-start md:gap-x-6">
+          <div className="contents min-w-0 md:block">
+            <div className="min-w-0 order-2 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Informasi
               </p>
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                URL / Link {formStatus !== "soon" && <span className="text-red-500">*</span>}
-              </label>
-              <input type="text" value={form.href}
-                onChange={(e) => onHrefChange(e.target.value)}
-                placeholder="/news atau https://..."
-                className={inputClass} />
-              <p className="mt-1.5 text-xs text-slate-400">
-                Harus diawali &quot;/&quot;, &quot;#&quot;, atau http(s)://.
-                {formStatus === "soon"
-                  ? " Boleh dikosongkan — akan disimpan sebagai “#”."
-                  : " Kolom ini wajib diisi untuk status ini."}
-              </p>
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Ikon</label>
-              <IconPicker value={form.icon} color={form.color}
-                onChange={(name) => setForm({ ...form, icon: name })} />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Warna</label>
-              <ColorPicker value={form.color}
-                onChange={(key) => setForm({ ...form, color: key })} />
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Nama Aplikasi <span className="text-red-500">*</span></label>
+                <input type="text" value={form.label}
+                  onChange={(e) => setForm({ ...form, label: e.target.value })}
+                  placeholder="Contoh: E-Learning"
+                  className={inputClass} />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Deskripsi</label>
+                <textarea rows={2} value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="Keterangan singkat yang tampil di bawah nama aplikasi"
+                  className={inputClass} />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Status</label>
+                <StatusControl
+                  value={formStatus}
+                  onChange={(status) => setForm((f) => ({ ...f, ...flagsOf(status) }))}
+                  label="Status tampilan aplikasi"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  URL / Link {formStatus !== "soon" && <span className="text-red-500">*</span>}
+                </label>
+                <input type="text" value={form.href}
+                  onChange={(e) => onHrefChange(e.target.value)}
+                  placeholder="/news atau https://..."
+                  className={inputClass} />
+                <p className="mt-1.5 text-xs text-slate-400">
+                  Harus diawali &quot;/&quot;, &quot;#&quot;, atau http(s)://.
+                  {formStatus === "soon"
+                    ? " Boleh dikosongkan — akan disimpan sebagai “#”."
+                    : " Kolom ini wajib diisi untuk status ini."}
+                </p>
+              </div>
             </div>
 
-            {/* Lanjutan — urutan tampil & perilaku link */}
-            <div className="rounded-xl border border-slate-200 bg-slate-50/60">
-              <button
-                type="button"
-                onClick={() => setAdvancedOpen((v) => !v)}
-                aria-expanded={advancedOpen}
-                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
-              >
-                <span>
-                  Lanjutan{" "}
-                  <span className="font-normal text-slate-400">— urutan tampil &amp; perilaku link</span>
-                </span>
-                <ChevronDown open={advancedOpen} />
-              </button>
-              {advancedOpen && (
-                <div className="space-y-4 border-t border-slate-200 px-4 py-4">
-                  <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-slate-700">Urutan Tampil</label>
-                    <input type="number" value={form.sort_order}
-                      onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })}
-                      className={inputClass} />
-                    <p className="mt-1.5 text-xs text-slate-400">
-                      Angka kecil tampil lebih dulu. Aplikasi baru otomatis memakai urutan terbesar
-                      saat ini + 1. Bisa juga diubah dengan drag &amp; drop di tabel.
+            <div className="min-w-0 order-4 md:mt-3">
+              {/* Lanjutan — urutan tampil & perilaku link */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60">
+                <button
+                  type="button"
+                  onClick={() => setAdvancedOpen((v) => !v)}
+                  aria-expanded={advancedOpen}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+                >
+                  <span>
+                    Lanjutan{" "}
+                    <span className="font-normal text-slate-400">— urutan tampil &amp; perilaku link</span>
+                  </span>
+                  <ChevronDown open={advancedOpen} />
+                </button>
+                {advancedOpen && (
+                  <div className="space-y-4 border-t border-slate-200 px-4 py-4">
+                    <div>
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">Urutan Tampil</label>
+                      <input type="number" value={form.sort_order}
+                        onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })}
+                        className={inputClass} />
+                      <p className="mt-1.5 text-xs text-slate-400">
+                        Angka kecil tampil lebih dulu. Aplikasi baru otomatis memakai urutan terbesar
+                        saat ini + 1. Bisa juga diubah dengan drag &amp; drop di tabel.
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5">
+                      <span className="text-sm text-slate-700">Buka di tab baru (link luar)</span>
+                      <StatusSwitch
+                        checked={form.is_external}
+                        onChange={(value) => { setExtManual(true); setForm({ ...form, is_external: value }); }}
+                        label="Buka di tab baru"
+                      />
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      Otomatis: diawali http(s):// → tab baru; diawali &quot;/&quot; atau &quot;#&quot; →
+                      tab yang sama. Ubah sakelar di atas untuk menimpa nilai otomatis.
                     </p>
                   </div>
-                  <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5">
-                    <span className="text-sm text-slate-700">Buka di tab baru (link luar)</span>
-                    <StatusSwitch
-                      checked={form.is_external}
-                      onChange={(value) => { setExtManual(true); setForm({ ...form, is_external: value }); }}
-                      label="Buka di tab baru"
-                    />
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    Otomatis: diawali http(s):// → tab baru; diawali &quot;/&quot; atau &quot;#&quot; →
-                    tab yang sama. Ubah sakelar di atas untuk menimpa nilai otomatis.
-                  </p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
+          </div>
 
-            <p className="text-xs text-slate-400">
-              Tips: tekan <kbd className="rounded border border-slate-200 bg-slate-50 px-1 py-0.5 font-mono text-[10px]">Ctrl</kbd> +{" "}
-              <kbd className="rounded border border-slate-200 bg-slate-50 px-1 py-0.5 font-mono text-[10px]">S</kbd> untuk menyimpan.
-            </p>
+          <div className="contents min-w-0 md:block">
+            <div className="order-1 sticky top-0 z-10 -mx-1 min-w-0 bg-white px-1 pb-3 pt-1 shadow-[0_8px_16px_-12px_rgba(15,23,42,0.5)] md:static md:mx-0 md:p-0 md:shadow-none">
+              <p className="mb-2 hidden text-xs font-bold uppercase tracking-wider text-slate-400 md:block">
+                Tampilan
+              </p>
+              <TilePreview
+                label={form.label}
+                description={form.description}
+                icon={form.icon}
+                color={form.color}
+                status={formStatus}
+              />
+            </div>
+            <div className="min-w-0 order-3 space-y-3 md:mt-3">
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Ikon</label>
+                <IconPicker value={form.icon} color={form.color}
+                  onChange={(name) => setForm({ ...form, icon: name })} />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Warna</label>
+                <ColorPicker value={form.color}
+                  onChange={(key) => setForm({ ...form, color: key })} />
+              </div>
+            </div>
           </div>
         </div>
       </SlideOver>

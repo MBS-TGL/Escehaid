@@ -26,6 +26,10 @@ type SlideOverProps = {
   children: ReactNode;
   footer?: ReactNode;
   className?: string;
+  /** Kelas pembungkus panel — untuk lebar per-halaman (mis. "md:max-w-4xl"). */
+  wrapperClassName?: string;
+  /** Override max-height inline panel (default 85vh). */
+  maxHeight?: string;
 };
 
 export const SlideOver = memo(function SlideOver({
@@ -36,6 +40,8 @@ export const SlideOver = memo(function SlideOver({
   children,
   footer,
   className = "",
+  wrapperClassName = "",
+  maxHeight,
 }: SlideOverProps) {
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -106,7 +112,7 @@ export const SlideOver = memo(function SlideOver({
 
       {/* Desktop: centered panel, Mobile: bottom sheet */}
       <div
-        className="w-full z-10 md:max-w-2xl"
+        className={`w-full z-10 md:max-w-2xl ${wrapperClassName}`}
         style={{
           transform: visible
             ? "translateY(0) scale(1)"
@@ -118,7 +124,9 @@ export const SlideOver = memo(function SlideOver({
       >
         <div
           className={`bg-white shadow-2xl w-full relative overflow-hidden flex flex-col border border-slate-200/60 md:rounded-2xl md:max-h-[calc(100vh-6rem)] ${className}`}
-          style={{ maxHeight: "min(85vh, calc(100vh - env(safe-area-inset-bottom, 0px)))" }}
+          style={{
+            maxHeight: maxHeight ?? "min(85vh, calc(100vh - env(safe-area-inset-bottom, 0px)))",
+          }}
         >
           {/* Drag handle (mobile only) */}
           <div className="shrink-0 flex justify-center pt-3 md:hidden">
