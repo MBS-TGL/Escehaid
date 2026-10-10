@@ -15,10 +15,20 @@ import {
   GraduationCap,
   ChartBar,
   Clock,
+  ArrowUpRight,
+  ArrowSquareOut,
+  Megaphone,
+  WhatsappLogo,
 } from "@/components/Icons";
-import { getActiveAgendaEvents, getPortalApps } from "@/lib/queries";
+import {
+  getActiveAgendaEvents,
+  getActiveAnnouncements,
+  getPortalApps,
+  getSchoolProfile,
+} from "@/lib/queries";
 import type { PortalApp } from "@/lib/queries";
-import { CSSFadeIn } from "@/components/CSSAnimations";
+import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
+import { waLink } from "@/lib/site-config";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -63,81 +73,151 @@ const COLORS: Record<string, { box: string; ink: string }> = {
   emerald: { box: "bg-emerald-50", ink: "text-emerald-600" },
 };
 
-/** Tautan ke bagian website sendiri (sama dengan navbar, ditampilkan sebagai jalan pintas). */
-const SITE_LINKS = [
-  { href: "/profile", label: "Profil" },
-  { href: "/news", label: "Berita" },
-  { href: "/achievements", label: "Prestasi" },
-  { href: "/gallery", label: "Galeri" },
-  { href: "/articles", label: "Artikel" },
-  { href: "/activities", label: "Kegiatan" },
-  { href: "/contact", label: "Kontak" },
-];
+/** Pesan pembuka chat WhatsApp dari halaman portal. */
+const WA_PORTAL_MESSAGE =
+  "Assalamu'alaikum, saya ingin bertanya tentang portal sekolah.";
 
-const BULAN = [
-  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
-];
-const BULAN_PENDEK = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-const HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-
-/** Parse "YYYY-MM-DD" sebagai tanggal lokal (aman dari geser timezone). */
-function parseDate(iso: string): { tgl: number; bln: number; thn: number; date: Date } {
-  const [thn, bln, tgl] = iso.slice(0, 10).split("-").map(Number);
-  return { tgl, bln, thn, date: new Date(thn, bln - 1, tgl) };
+/**
+ * Tampilan tujuan tanpa protokol: "https://laporanmu.my.id" → "laporanmu.my.id".
+ * Tautan non-absolut (mis. "#", "/admission") → path-nya; "#" → "" (disembunyikan).
+ */
+function formatDomain(href: string): string {
+  try {
+    return new URL(href).hostname.replace(/^www\./, "");
+  } catch {
+    return href.startsWith("/") ? href : "";
+  }
 }
 
-function AppTile({ app }: { app: PortalApp }) {
+/** Kartu unggulan — dipakai bila tepat 1 aplikasi tayang. Seluruh kartu bisa diklik. */
+function FeaturedAppCard({ app }: { app: PortalApp }) {
   const Icon = ICONS[app.icon] ?? SquaresFour;
   const { box, ink } = COLORS[app.color] ?? COLORS.navy;
+  const domain = formatDomain(app.href);
 
-  const base =
-    "group flex h-full flex-col items-center gap-1.5 rounded-2xl border border-[#dce3ed] bg-white px-2 py-4 text-center sm:py-5";
-  const active =
-    "transition-all hover:-translate-y-0.5 hover:border-[#082b59]/25 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#082b59]";
+  const cls =
+    "group flex w-full items-center gap-4 rounded-2xl border-[1.5px] border-[#082b59] bg-white p-5 transition-all hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#082b59] sm:gap-5 sm:p-6";
 
   const content = (
     <>
-      <span
-        className={`flex h-12 w-12 items-center justify-center rounded-xl transition-transform group-hover:scale-105 ${box} ${ink}`}
-      >
+      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${box} ${ink}`}>
         <Icon className="h-6 w-6" weight="fill" />
       </span>
-      <span className="text-sm font-semibold text-slate-800">{app.label}</span>
-      <span className="line-clamp-2 text-[11px] leading-tight text-slate-500">
-        {app.is_coming_soon ? "Segera hadir" : app.description}
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1.5">
+          <span className="text-base font-bold text-[#082b59] sm:text-lg">{app.label}</span>
+          {app.is_external && <ArrowSquareOut className="h-4 w-4 shrink-0 text-[#1767b1]" />}
+        </span>
+        <span className="mt-0.5 block text-sm text-slate-600">{app.description}</span>
+        {domain && <span className="mt-1 block truncate text-xs text-slate-500">{domain}</span>}
+      </span>
+      <span className="shrink-0 rounded-full bg-[#082b59] px-4 py-2 text-xs font-bold text-white transition-transform group-hover:scale-105 sm:px-5 sm:py-2.5 sm:text-sm">
+        Buka aplikasi
       </span>
     </>
   );
 
-  if (app.is_coming_soon) {
-    return (
-      <div className={`${base} opacity-60`} aria-disabled="true">
-        {content}
-      </div>
-    );
-  }
-
+  const label = `${app.label}, buka aplikasi`;
   if (app.is_external) {
     return (
-      <a href={app.href} target="_blank" rel="noopener noreferrer" className={`${base} ${active}`}>
+      <a href={app.href} target="_blank" rel="noopener noreferrer" aria-label={label} className={cls}>
         {content}
       </a>
     );
   }
-
   return (
-    <Link href={app.href} className={`${base} ${active}`}>
+    <Link href={app.href} aria-label={label} className={cls}>
       {content}
     </Link>
   );
 }
 
+/** Kartu standar — dipakai bila aplikasi tayang 2 atau lebih (grid auto-fit, tanpa slot kosong). */
+function AppCard({ app }: { app: PortalApp }) {
+  const Icon = ICONS[app.icon] ?? SquaresFour;
+  const { box, ink } = COLORS[app.color] ?? COLORS.navy;
+
+  const cls =
+    "group flex h-full flex-col items-start gap-2 rounded-2xl border border-[#dce3ed] bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[#082b59]/25 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#082b59] sm:p-5";
+
+  const content = (
+    <>
+      <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${box} ${ink}`}>
+        <Icon className="h-5 w-5" weight="fill" />
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="text-sm font-semibold text-slate-800">{app.label}</span>
+        {app.is_external && <ArrowSquareOut className="h-3.5 w-3.5 shrink-0 text-[#1767b1]" />}
+      </span>
+      <span className="line-clamp-2 text-xs leading-relaxed text-slate-500">{app.description}</span>
+      <span className="mt-auto inline-flex items-center gap-1 rounded-full bg-[#082b59] px-3.5 py-1.5 text-xs font-bold text-white transition-transform group-hover:scale-105">
+        Buka
+        <ArrowUpRight className="h-3 w-3" />
+      </span>
+    </>
+  );
+
+  const label = `${app.label}, buka aplikasi`;
+  if (app.is_external) {
+    return (
+      <a href={app.href} target="_blank" rel="noopener noreferrer" aria-label={label} className={cls}>
+        {content}
+      </a>
+    );
+  }
+  return (
+    <Link href={app.href} aria-label={label} className={cls}>
+      {content}
+    </Link>
+  );
+}
+
+/** Baris "Sedang disiapkan" — ringkas, deskripsi tetap tampil, badge "Segera", bukan tautan. */
+function SoonItem({ app }: { app: PortalApp }) {
+  const Icon = ICONS[app.icon] ?? SquaresFour;
+  const { box, ink } = COLORS[app.color] ?? COLORS.navy;
+
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-dashed border-[#dce3ed] bg-white p-3.5 sm:p-4">
+      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${box} ${ink}`}>
+        <Icon className="h-4 w-4" weight="fill" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold text-slate-800">{app.label}</span>
+          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+            Segera
+          </span>
+        </span>
+        <span className="mt-0.5 block text-xs leading-relaxed text-slate-600">{app.description}</span>
+      </span>
+    </div>
+  );
+}
+
 export default async function PortalPage() {
-  const [apps, agenda] = await Promise.all([getPortalApps(), getActiveAgendaEvents()]);
+  const [apps, agenda, profile, announcements] = await Promise.all([
+    getPortalApps(),
+    getActiveAgendaEvents(),
+    getSchoolProfile(),
+    getActiveAnnouncements(),
+  ]);
+
+  // Pisahkan per status; urutan mengikuti sort_order dari admin (sudah di query).
+  const liveApps = apps.filter((a) => !a.is_coming_soon);
+  const soonApps = apps.filter((a) => a.is_coming_soon);
+
   // Agenda mendatang (bandingkan string ISO aman untuk kolom date) — maks 5.
   const todayIso = new Date().toISOString().slice(0, 10);
   const upcomingAgenda = agenda.filter((a) => a.event_date >= todayIso).slice(0, 5);
+
+  // Info tambahan di bawah banner SPMB — pengumuman aktif yang relevan (satu baris).
+  const spmbNote =
+    announcements.find((text) => /spmb|daftar\s*ulang/i.test(text)) ?? null;
+
+  // Nomor WhatsApp sekolah dari profil (kontak umum, fallback panitia SPMB).
+  const waRaw = profile?.phone?.trim() || profile?.spmb_contact_phone?.trim() || "";
+  const waNumber = waRaw ? waLink(waRaw) : "";
 
   return (
     <div>
@@ -185,6 +265,12 @@ export default async function PortalPage() {
               <span className="block text-sm text-slate-600">
                 Pendaftaran peserta didik baru SMP Muhammadiyah 4 Tanggul
               </span>
+              {spmbNote && (
+                <span className="mt-1 flex items-center gap-1.5 text-xs font-medium text-[#082b59]">
+                  <Megaphone className="h-3.5 w-3.5 shrink-0" weight="fill" />
+                  <span className="truncate">{spmbNote}</span>
+                </span>
+              )}
             </span>
             <span className="shrink-0 rounded-full bg-[#f4d21f] px-4 py-2 text-sm font-bold text-[#082b59] transition-transform group-hover:scale-105">
               Daftar
@@ -192,7 +278,7 @@ export default async function PortalPage() {
           </Link>
         </CSSFadeIn>
 
-        {/* Aplikasi sekolah */}
+        {/* Aplikasi sekolah — tersedia & sedang disiapkan dipisah */}
         <CSSFadeIn>
           <div className="mt-10">
             <h2 className="text-base font-bold text-[#082b59]">Aplikasi Sekolah</h2>
@@ -203,10 +289,41 @@ export default async function PortalPage() {
                 <p className="mt-1 text-xs text-slate-400">Aplikasi sekolah akan muncul di sini.</p>
               </div>
             ) : (
-              <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4 sm:gap-4">
-                {apps.map((app) => (
-                  <AppTile key={app.id} app={app} />
-                ))}
+              <div className="mt-3 space-y-8">
+                {/* Tersedia — hanya bila ada aplikasi tayang */}
+                {liveApps.length === 1 && (
+                  <div>
+                    <h3 className="mb-3 text-sm font-semibold text-slate-700">Tersedia</h3>
+                    <FeaturedAppCard app={liveApps[0]} />
+                  </div>
+                )}
+                {liveApps.length > 1 && (
+                  <div>
+                    <h3 className="mb-3 text-sm font-semibold text-slate-700">Tersedia</h3>
+                    <CSSStagger
+                      stagger={80}
+                      className="grid gap-3 sm:gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))]"
+                    >
+                      {liveApps.map((app) => (
+                        <AppCard key={app.id} app={app} />
+                      ))}
+                    </CSSStagger>
+                  </div>
+                )}
+
+                {/* Sedang disiapkan — daftar ringkas, deskripsi tetap tampil */}
+                {soonApps.length > 0 && (
+                  <div>
+                    <h3 className="mb-3 text-sm font-semibold text-slate-700">
+                      Sedang disiapkan ({soonApps.length})
+                    </h3>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {soonApps.map((app) => (
+                        <SoonItem key={app.id} app={app} />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -245,21 +362,34 @@ export default async function PortalPage() {
           </CSSFadeIn>
         )}
 
-        {/* Jalan pintas ke bagian website */}
+        {/* Butuh bantuan — pengganti chip "Jelajahi Website" */}
         <CSSFadeIn>
-          <div className="mt-10">
-            <h2 className="text-base font-bold text-[#082b59]">Jelajahi Website</h2>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {SITE_LINKS.map(({ href, label }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className="rounded-full border border-[#dce3ed] bg-white px-4 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:border-[#082b59]/25 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#082b59]"
-                >
-                  {label}
-                </Link>
-              ))}
+          <div className="mt-10 flex flex-col gap-4 rounded-2xl border border-[#dce3ed] bg-white p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div className="min-w-0">
+              <h2 className="text-base font-bold text-[#082b59]">Butuh bantuan?</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Ada pertanyaan seputar portal atau layanan sekolah? Hubungi kami lewat WhatsApp.
+              </p>
             </div>
+            {waNumber ? (
+              <a
+                href={`https://wa.me/${waNumber}?text=${encodeURIComponent(WA_PORTAL_MESSAGE)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[#082b59] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4d21f]"
+              >
+                <WhatsappLogo className="h-4 w-4" weight="fill" />
+                Chat WhatsApp
+              </a>
+            ) : (
+              <Link
+                href="/contact"
+                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[#082b59] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4d21f]"
+              >
+                Hubungi sekolah
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            )}
           </div>
         </CSSFadeIn>
 

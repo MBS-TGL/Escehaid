@@ -4,33 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
-  CalendarBlank,
   Clock,
   FileText,
   MagnifyingGlass,
-  Newspaper,
-  Trophy,
   X,
 } from "@/components/Icons";
 import { groupSearchResults, searchAllContent } from "@/lib/queries";
-import type { SearchItem, SearchKind } from "@/lib/queries";
+import type { SearchItem } from "@/lib/queries";
+import { KIND_META, formatSearchDate } from "@/components/SearchMeta";
 
 type Status = "idle" | "loading" | "done";
-
-/** Ikon + warna lencana per jenis konten (kelas statis agar terdeteksi JIT). */
-const KIND_META: Record<SearchKind, { icon: typeof Newspaper; chip: string }> = {
-  berita: { icon: Newspaper, chip: "border-blue-200 bg-blue-50 text-blue-700" },
-  artikel: { icon: FileText, chip: "border-[#1767b1]/20 bg-[#1767b1]/10 text-[#1767b1]" },
-  kegiatan: { icon: CalendarBlank, chip: "border-purple-200 bg-purple-50 text-purple-700" },
-  prestasi: { icon: Trophy, chip: "border-amber-200 bg-amber-50 text-amber-700" },
-};
-
-function formatDate(iso: string | null): string {
-  if (!iso) return "";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
-}
 
 /**
  * Kotak pencarian menyeluruh: satu istilah menjangkau berita, artikel,
@@ -212,7 +195,7 @@ export default function SearchView({
                           )}
                           <span className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
                             <Clock className="h-3.5 w-3.5" />
-                            {formatDate(item.date)}
+                            {formatSearchDate(item.date)}
                           </span>
                         </Link>
                       </li>

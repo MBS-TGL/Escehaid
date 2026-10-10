@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { MagnifyingGlass } from "@/components/Icons";
+import SearchOverlay from "@/components/SearchOverlay";
 
 const navLinks = [
   { href: "/", label: "Beranda" },
@@ -20,6 +21,7 @@ const navLinks = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -28,7 +30,20 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Pintasan Ctrl/⌘+K membuka/tutup pencarian ( sama dengan admin Topbar ).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen((v) => !v);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+
   return (
+    <>
     <nav
       aria-label="Navigasi utama"
       className={`sticky top-0 z-50 transition-all duration-300 ${
@@ -89,22 +104,32 @@ export default function Navbar() {
                 SPMB
               </Link>
             </div>
-            <Link
-              href="/search"
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
               aria-label="Cari di situs"
-              aria-current={pathname === "/search" ? "page" : undefined}
+              aria-haspopup="dialog"
+              aria-expanded={searchOpen}
               className={`rounded-lg p-2 transition-colors ${
-                pathname === "/search"
+                searchOpen
                   ? "text-[#082b59]"
                   : "text-slate-500 hover:text-[#082b59]"
               }`}
             >
               <MagnifyingGlass className="h-5 w-5" />
-            </Link>
+            </button>
           </div>
 
         </div>
       </div>
     </nav>
+    {/*
+      Overlay sengaja dirender DI LUAR <nav>: sticky + z-50 pada nav membuat
+      stacking context, sehingga z-[60] overlay "terkurung" di level 50 dan
+      FAB WhatsApp (z-50, belakangan di DOM) akan menempel di atas backdrop.
+      Sebagai sibling, z-[60] overlay menang atas nav (50) dan FAB (50).
+    */}
+    <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
+    </>
   );
 }
