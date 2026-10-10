@@ -51,7 +51,10 @@ export function FilterBar({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Chip selalu satu baris (nowrap + scroll horizontal) —4 chip dengan
+          angka tidak muat di layar sempit, jadi bila perlu digeser, bukan
+          wrap ke baris baru (menjaga tinggi FilterBar tetap satu baris). */}
+      <div className="flex flex-nowrap items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {CHIPS.map((chip) => {
           const active = filter === chip.key;
           return (
@@ -60,7 +63,7 @@ export function FilterBar({
               type="button"
               onClick={() => onFilterChange(chip.key)}
               aria-pressed={active}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+              className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                 active
                   ? "bg-[#082b59] text-white shadow-sm"
                   : "border border-slate-200 bg-white text-slate-600 hover:border-[#1767b1]/40 hover:text-[#082b59]"
