@@ -38,7 +38,6 @@ import {
   resolvePortalColor,
   normalizeHex,
 } from "@/lib/portal-theme";
-import { StatusSwitch } from "./StatusSwitch";
 import { StatusControl, statusOf, flagsOf, STATUS_META, type PortalStatus } from "./StatusControl";
 import { FilterBar, type PortalFilter } from "./FilterBar";
 import { SortableRow, PORTAL_GRID } from "./SortableRow";
@@ -64,14 +63,32 @@ function autoExternal(href: string): boolean {
   return /^https?:\/\//i.test(href.trim());
 }
 
+/* Mode "Buka di tab baru" di bagian Lanjutan — dimodelkan dari kolom
+ * `is_external` (boolean) + `extManual` yang dihitung saat load
+ * (`stored !== autoExternal(href)`), jadi TANPA kolom baru di DB.
+ * "auto" = ikut awalan href; dua lainnya = timpaan manual. Batas inherent:
+ * timpaan manual yang kebetulan sama dengan nilai auto terbaca kembali
+ * sebagai "Otomatis" (tidak bisa dibedakan dari penyimpanan). */
+type TabMode = "auto" | "newtab" | "sametab";
+const TAB_MODES: TabMode[] = ["auto", "newtab", "sametab"];
+const TAB_MODE_LABEL: Record<TabMode, string> = {
+  auto: "Otomatis",
+  newtab: "Tab baru",
+  sametab: "Tab yang sama",
+};
+/** Ringkasan header akordeon (saat tertutup): "Tab baru: otomatis|ya|tidak". */
+const TAB_MODE_SUMMARY: Record<TabMode, string> = {
+  auto: "otomatis",
+  newtab: "ya",
+  sametab: "tidak",
+};
+
 const inputClass =
   "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20";
 
 const focusRing =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]";
 const triggerClass = `${inputClass} flex items-center justify-between gap-3 bg-white text-left`;
-const popoverClass =
-  "absolute left-0 right-0 top-full z-30 mt-1.5 rounded-xl border border-slate-200 bg-white shadow-lg";
 
 function ChevronDown({ open }: { open: boolean }) {
   return (
@@ -88,33 +105,6 @@ function ChevronDown({ open }: { open: boolean }) {
       <path d="M5 8l5 5 5-5" />
     </svg>
   );
-}
-
-/** Buka/tutup dropdown; tutup saat klik di luar atau tekan Escape. */
-function usePopover() {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey, true);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey, true);
-    };
-  }, [open]);
-
-  return { open, setOpen, ref };
 }
 
 /**
@@ -380,32 +370,155 @@ function IconPicker({
   );
 }
 
+/**
+ * Pemilih warna form — panelnya kini di-portal ke document.body dengan
+ * position:fixed memakai hook bersama `useFloatingPanel` (flip atas/bawah,
+ * maxHeight 320 / minFit 280 karena berisi swatch + warna kustom).
+ * Dulu panel inline (usePopover) → tinggi modal bertambah saat dibuka;
+ * kini trigger tetap di alur layout sehingga tinggi modal tidak berubah.
+ * Hex diterima "#abc"/"aabbcc" → normalisasi "#aabbcc" huruf kecil; nilai
+ * tidak valid hanya menampilkan pesan error — panel tetap terbuka dan
+ * nilai terakhir yang valid tidak ditimpa. Esc (capture) hanya menutup
+ * panel; fokus kembali ke trigger.
+ */
 function ColorPicker({ value, onChange }: { value: string; onChange: (key: string) => void }) {
-  const { open, setOpen, ref } = usePopover();
-  const rc = resolvePortalColor(value);
+  const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
+  const [hexError, setHexError] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const selectedSwatchRef = useRef<HTMLButtonElement>(null);
+  const hexInputRef = useRef<HTMLInputElement>(null);
+  const rc = resolvePortalColor(value);
+
+  const { pos, reposition } = useFloatingPanel({
+    triggerRef,
+    open,
+    onTriggerLost: () => setOpen(false),
+    maxHeight: 320,
+    minFit: 280,
+  });
 
   // Sinkronkan kotak hex dengan nilai saat ini (kosong bila memakai preset) —
-  // pola "adjust state during render" supaya tidak perlu effect.
+  // pola "adjust state during render" supaya tidak perlu effect. Nilai berubah
+  // dari luar (klik swatch / color picker native) juga membersihkan error.
   const [prevValue, setPrevValue] = useState(value);
   if (value !== prevValue) {
     setPrevValue(value);
     setDraft(PORTAL_COLORS[value] ? "" : normalizeHex(value) ?? "");
+    setHexError(false);
   }
 
+  // Panel dibuka → reset draft & error sekali di awal (pola adjust-state).
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      setDraft(PORTAL_COLORS[value] ? "" : normalizeHex(value) ?? "");
+      setHexError(false);
+    }
+  }
+
+  // Buka → fokus ke swatch terpilih (bila warna kustom: kotak hex); tutup →
+  // kembalikan fokus ke trigger. wasOpen supaya fokus tidak "mencuri" saat mount.
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (open) {
+      wasOpen.current = true;
+      (selectedSwatchRef.current ?? hexInputRef.current)?.focus();
+    } else if (wasOpen.current) {
+      wasOpen.current = false;
+      triggerRef.current?.focus();
+    }
+  }, [open]);
+
+  // Tutup saat klik di luar trigger DAN di luar panel (portal-nya). Interaksi
+  // dengan color picker native tidak memicu ini (elemen ada di dalam panel).
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (wrapRef.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  // Esc → tutup panel saja; capture + stopPropagation mencegah Modal di
+  // belakangnya ikut tertutup (Modal menangani Esc di window/bubble).
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, [open]);
+
+  function toggle() {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    if (!triggerRef.current) return;
+    // Hitung posisi dalam batch yang sama dengan setOpen (tanpa frame kosong).
+    reposition();
+    setOpen(true);
+  }
+
+  // Saat mengetik: hex 6-digit utuh diterapkan langsung; 3 digit ("#abc")
+  // menunggu blur/Enter agar input tidak melompat mengembang di tengah mengetik.
+  function onHexInput(v: string) {
+    setDraft(v);
+    const t = v.trim();
+    if (t === "") {
+      setHexError(false);
+      return;
+    }
+    const hex = normalizeHex(t);
+    if (hex && /^#?[0-9a-f]{6}$/i.test(t)) {
+      onChange(hex);
+      setHexError(false);
+    } else {
+      // Error hanya bila mustahil jadi valid (karakter di luar hex / >6 digit);
+      // input yang masih bisa dilanjutkan ("12345") belum ditandai.
+      setHexError(!/^#?[0-9a-f]{0,6}$/i.test(t));
+    }
+  }
+
+  // Blur/Enter: hex valid → terapkan & tampilkan normalisasi; kosong →
+  // kembalikan ke nilai saat ini; tidak valid → error, nilai TIDAK ditimpa.
   function commitDraft() {
-    const hex = normalizeHex(draft);
-    if (hex) onChange(hex);
-    else setDraft(PORTAL_COLORS[value] ? "" : normalizeHex(value) ?? "");
+    const t = draft.trim();
+    if (t === "") {
+      setDraft(PORTAL_COLORS[value] ? "" : normalizeHex(value) ?? "");
+      setHexError(false);
+      return;
+    }
+    const hex = normalizeHex(t);
+    if (hex) {
+      onChange(hex);
+      setDraft(hex);
+      setHexError(false);
+    } else {
+      setHexError(true);
+    }
   }
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={wrapRef} className="relative">
       <button
+        ref={triggerRef}
         type="button"
-        aria-haspopup="listbox"
+        aria-haspopup="dialog"
         aria-expanded={open}
-        onClick={() => setOpen(!open)}
+        onClick={toggle}
         className={triggerClass}
       >
         <span className="flex min-w-0 items-center gap-3">
@@ -415,73 +528,93 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (key: strin
         <ChevronDown open={open} />
       </button>
 
-      {open && (
-        <div className={`${popoverClass} p-3`}>
-          <div role="listbox" aria-label="Warna preset" className="grid grid-cols-6 gap-2.5">
-            {COLOR_KEYS.map((key) => {
-              const c = PORTAL_COLORS[key];
-              const selected = key === value;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  role="option"
-                  aria-selected={selected}
-                  aria-label={c.label}
-                  title={c.label}
-                  onClick={() => {
-                    onChange(key);
-                    setOpen(false);
-                  }}
-                  className={`h-9 w-9 justify-self-center rounded-full ring-2 ring-offset-2 transition-shadow ${focusRing} ${selected ? "ring-[#082b59]" : "ring-transparent hover:ring-slate-200"
-                    }`}
-                >
-                  <span className={`flex h-full w-full items-center justify-center rounded-full ${c.dot}`}>
-                    {selected && <span className="h-2.5 w-2.5 rounded-full bg-white" />}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+      {open && pos &&
+        createPortal(
+          <div
+            ref={panelRef}
+            style={{
+              position: "fixed",
+              top: pos.top,
+              bottom: pos.bottom,
+              left: pos.left,
+              width: pos.width,
+              maxHeight: pos.maxHeight,
+              // Di atas overlay Modal (z-[9999]) karena panel di-portal keluar.
+              zIndex: 10000,
+            }}
+            className="flex flex-col overflow-hidden rounded-xl border border-[#dce3ed] bg-white shadow-lg"
+          >
+            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+              <div role="group" aria-label="Warna preset" className="grid grid-cols-6 gap-2.5">
+                {COLOR_KEYS.map((key) => {
+                  const c = PORTAL_COLORS[key];
+                  const selected = key === value;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      ref={selected ? selectedSwatchRef : undefined}
+                      aria-pressed={selected}
+                      aria-label={c.label}
+                      title={c.label}
+                      onClick={() => {
+                        onChange(key);
+                        setOpen(false);
+                      }}
+                      className={`h-9 w-9 justify-self-center rounded-full ring-2 ring-offset-2 transition-shadow ${focusRing} ${selected ? "ring-[#082b59]" : "ring-transparent hover:ring-slate-200"
+                        }`}
+                    >
+                      <span className={`flex h-full w-full items-center justify-center rounded-full ${c.dot}`}>
+                        {selected && <span className="h-2.5 w-2.5 rounded-full bg-white" />}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
 
-          <div className="mt-3 border-t border-slate-100 pt-3">
-            <p className="mb-2 text-xs font-semibold text-slate-500">Warna kustom</p>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                aria-label="Pilih warna kustom"
-                value={normalizeHex(value) ?? "#7c3aed"}
-                onChange={(e) => onChange(e.target.value.toLowerCase())}
-                className={`h-10 w-12 shrink-0 cursor-pointer rounded-lg border bg-white p-1 ${rc.custom ? "border-[#082b59] ring-2 ring-[#082b59]/30" : "border-slate-200"
-                  }`}
-              />
-              <input
-                type="text"
-                value={draft}
-                maxLength={7}
-                placeholder="#7c3aed"
-                aria-label="Kode warna hex"
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setDraft(v);
-                  if (/^#?[0-9a-f]{6}$/i.test(v.trim())) onChange(normalizeHex(v) as string);
-                }}
-                onBlur={commitDraft}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    commitDraft();
-                  }
-                }}
-                className={inputClass}
-              />
+              <div className="mt-3 border-t border-slate-100 pt-3">
+                <p className="mb-2 text-xs font-semibold text-slate-500">Warna kustom</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    aria-label="Pilih warna kustom"
+                    value={normalizeHex(value) ?? "#7c3aed"}
+                    onChange={(e) => onChange(e.target.value.toLowerCase())}
+                    className={`h-10 w-12 shrink-0 cursor-pointer rounded-lg border bg-white p-1 ${rc.custom ? "border-[#082b59] ring-2 ring-[#082b59]/30" : "border-slate-200"
+                      }`}
+                  />
+                  <input
+                    ref={hexInputRef}
+                    type="text"
+                    value={draft}
+                    maxLength={7}
+                    placeholder="#7c3aed"
+                    aria-label="Kode warna hex"
+                    aria-invalid={hexError}
+                    onChange={(e) => onHexInput(e.target.value)}
+                    onBlur={commitDraft}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        commitDraft();
+                      }
+                    }}
+                    className={`${inputClass} ${hexError ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" : ""}`}
+                  />
+                </div>
+                {hexError && (
+                  <p role="alert" className="mt-1.5 text-xs text-red-500">
+                    Kode hex tidak valid — gunakan format #abc atau #aabbcc.
+                  </p>
+                )}
+                <p className="mt-1.5 text-xs text-slate-400">
+                  Pilih dari kotak warna atau ketik kode hex, mis. #7c3aed.
+                </p>
+              </div>
             </div>
-            <p className="mt-1.5 text-xs text-slate-400">
-              Pilih dari kotak warna atau ketik kode hex, mis. #7c3aed.
-            </p>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
@@ -503,6 +636,25 @@ export default function AdminPortalPage() {
   const [extManual, setExtManual] = useState(false);
   // Bagian "Lanjutan" form (urutan tampil + buka di tab baru).
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  // Ref isi akordeon Lanjutan & field urutannya — untuk scrollIntoView saat
+  // akordeon dibuka, dan fokus otomatis saat validasi di area itu gagal.
+  const advancedContentRef = useRef<HTMLDivElement>(null);
+  const sortOrderRef = useRef<HTMLInputElement>(null);
+
+  // Buka "Lanjutan" → pastikan isi akordeon terlihat di viewport modal (tidak
+  // tertutup footer). Tunggu selesai animasi grid 0fr→1fr (~200ms) agar tinggi
+  // sudah final; hormati prefers-reduced-motion (langsung, tanpa smooth).
+  useEffect(() => {
+    if (!advancedOpen) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const t = window.setTimeout(() => {
+      advancedContentRef.current?.scrollIntoView({
+        block: "nearest",
+        behavior: reduce ? "auto" : "smooth",
+      });
+    }, 250);
+    return () => window.clearTimeout(t);
+  }, [advancedOpen]);
 
   // Pilihan baris untuk aksi massal
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -575,6 +727,20 @@ export default function AdminPortalPage() {
     }));
   }
 
+  /** Mode segmented "Buka di tab baru" — turunan dari extManual + is_external. */
+  const tabMode: TabMode = !extManual ? "auto" : form.is_external ? "newtab" : "sametab";
+
+  /** Pilih mode tab; "auto" kembali mengikuti awalan href yang sedang diketik. */
+  function setTabMode(mode: TabMode) {
+    if (mode === "auto") {
+      setExtManual(false);
+      setForm((f) => ({ ...f, is_external: autoExternal(f.href) }));
+    } else {
+      setExtManual(true);
+      setForm((f) => ({ ...f, is_external: mode === "newtab" }));
+    }
+  }
+
   const dirty =
     formOpen && JSON.stringify(form) !== JSON.stringify(initialForm);
 
@@ -596,6 +762,13 @@ export default function AdminPortalPage() {
     if (!href) { toast("URL/link wajib diisi", "error"); return; }
     if (!/^(\/|#|https?:\/\/)/i.test(href)) {
       toast("URL tidak valid — harus diawali “/”, “#”, atau http(s)://", "error");
+      return;
+    }
+    // Validasi field bagian "Lanjutan" → buka akordeon + fokus ke fieldnya.
+    if (!Number.isFinite(Number(form.sort_order))) {
+      toast("Urutan tampil harus berupa angka", "error");
+      setAdvancedOpen(true);
+      requestAnimationFrame(() => sortOrderRef.current?.focus());
       return;
     }
 
@@ -1048,8 +1221,9 @@ export default function AdminPortalPage() {
             </button>
           </div>
         }>
-        {/* md+: dua kolom seimbang — kiri "Informasi" (form + Lanjutan), kanan
-            "Tampilan" (pratinjau, Ikon, Warna). Di bawah md pembungkus kolom jadi
+        {/* md+: dua kolom seimbang — kiri "Informasi" (form), kanan "Tampilan"
+            (pratinjau, Ikon, Warna) — lalu satu baris penuh "Lanjutan" di
+            bawahnya (md:col-span-2). Di bawah md pembungkus kolom jadi
             display:contents sehingga satu kolom datar berurutan:
             Pratinjau (sticky) → Informasi → Ikon → Warna → Lanjutan. */}
         <div className="flex min-w-0 flex-col gap-5 md:grid md:grid-cols-2 md:items-start md:gap-x-6">
@@ -1096,50 +1270,6 @@ export default function AdminPortalPage() {
                 </p>
               </div>
             </div>
-
-            <div className="min-w-0 order-4 md:mt-3">
-              {/* Lanjutan — urutan tampil & perilaku link */}
-              <div className="rounded-xl border border-slate-200 bg-slate-50/60">
-                <button
-                  type="button"
-                  onClick={() => setAdvancedOpen((v) => !v)}
-                  aria-expanded={advancedOpen}
-                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
-                >
-                  <span>
-                    Lanjutan{" "}
-                    <span className="font-normal text-slate-400">— urutan tampil &amp; perilaku link</span>
-                  </span>
-                  <ChevronDown open={advancedOpen} />
-                </button>
-                {advancedOpen && (
-                  <div className="space-y-4 border-t border-slate-200 px-4 py-4">
-                    <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">Urutan Tampil</label>
-                      <input type="number" value={form.sort_order}
-                        onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })}
-                        className={inputClass} />
-                      <p className="mt-1.5 text-xs text-slate-400">
-                        Angka kecil tampil lebih dulu. Aplikasi baru otomatis memakai urutan terbesar
-                        saat ini + 1. Bisa juga diubah dengan drag &amp; drop di tabel.
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5">
-                      <span className="text-sm text-slate-700">Buka di tab baru (link luar)</span>
-                      <StatusSwitch
-                        checked={form.is_external}
-                        onChange={(value) => { setExtManual(true); setForm({ ...form, is_external: value }); }}
-                        label="Buka di tab baru"
-                      />
-                    </div>
-                    <p className="text-xs text-slate-400">
-                      Otomatis: diawali http(s):// → tab baru; diawali &quot;/&quot; atau &quot;#&quot; →
-                      tab yang sama. Ubah sakelar di atas untuk menimpa nilai otomatis.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
 
           <div className="contents min-w-0 md:block">
@@ -1165,6 +1295,76 @@ export default function AdminPortalPage() {
                 <label className="mb-1.5 block text-sm font-semibold text-slate-700">Warna</label>
                 <ColorPicker value={form.color}
                   onChange={(key) => setForm({ ...form, color: key })} />
+              </div>
+            </div>
+          </div>
+
+          {/* Lanjutan — baris full-width di bawah kedua kolom (B1). Konten
+              selalu ter-mount (state & validasi tidak hilang) tapi saat
+              tertutup dibuat 0fr + inert sehingga keluar dari tab order;
+              header menampilkan ringkasan nilai + aria-expanded/controls. */}
+          <div className="min-w-0 order-4 md:col-span-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/60">
+              <button
+                type="button"
+                onClick={() => setAdvancedOpen((v) => !v)}
+                aria-expanded={advancedOpen}
+                aria-controls="lanjutan-panel"
+                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="shrink-0">Lanjutan</span>
+                  <span className="truncate font-normal text-slate-400">— urutan tampil &amp; perilaku link</span>
+                  <span className="hidden shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-normal text-slate-500 sm:inline">
+                    Urutan {form.sort_order || 0} · Tab baru: {TAB_MODE_SUMMARY[tabMode]}
+                  </span>
+                </span>
+                <ChevronDown open={advancedOpen} />
+              </button>
+              <div
+                className={`grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none ${advancedOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                  }`}
+              >
+                <div className="min-h-0 overflow-hidden">
+                  <div
+                    id="lanjutan-panel"
+                    ref={advancedContentRef}
+                    inert={!advancedOpen}
+                    className="grid gap-4 border-t border-slate-200 px-4 py-4 md:grid-cols-2"
+                  >
+                    <div>
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">Urutan Tampil</label>
+                      <input ref={sortOrderRef} type="number" value={form.sort_order}
+                        onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })}
+                        className={inputClass} />
+                      <p className="mt-1.5 text-xs text-slate-400" title="Bisa juga diubah dengan drag & drop di tabel.">
+                        Angka kecil tampil lebih dulu. Default: urutan terbesar + 1.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">Buka di tab baru (link luar)</label>
+                      <div role="group" aria-label="Buka di tab baru" className="grid grid-cols-3 gap-1 rounded-xl border border-slate-200 bg-white p-1">
+                        {TAB_MODES.map((mode) => (
+                          <button
+                            key={mode}
+                            type="button"
+                            aria-pressed={tabMode === mode}
+                            onClick={() => setTabMode(mode)}
+                            className={`rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${focusRing} ${tabMode === mode
+                                ? "bg-[#1767b1] text-white shadow-sm"
+                                : "text-slate-500 hover:bg-slate-100"
+                              }`}
+                          >
+                            {TAB_MODE_LABEL[mode]}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="mt-1.5 text-xs text-slate-400" title="Ubah pilihan di atas untuk menimpa nilai otomatis.">
+                        Otomatis: link http(s):// buka di tab baru, &quot;/&quot; atau &quot;#&quot; di tab yang sama.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
