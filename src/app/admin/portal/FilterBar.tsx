@@ -132,8 +132,10 @@ export function FilterBar({
   }
 
   return (
-    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-      <div className="relative w-full sm:max-w-xs">
+    // Selalu satu baris (termasuk layar sempit): pencarian melebar
+    // (flex-1 + min-w-0 supaya bisa menyusut) dan dropdown tetap di kanan.
+    <div className="mb-4 flex items-center gap-2 sm:justify-between sm:gap-3">
+      <div className="relative min-w-0 flex-1 sm:max-w-sm">
         <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input
           type="search"
@@ -155,7 +157,7 @@ export function FilterBar({
         )}
       </div>
 
-      <div ref={wrapRef} className="relative shrink-0 self-start sm:self-auto">
+      <div ref={wrapRef} className="relative shrink-0">
         <button
           ref={triggerRef}
           type="button"
@@ -164,7 +166,7 @@ export function FilterBar({
           aria-controls={open ? menuId : undefined}
           aria-label={`Filter status — ${current.label}`}
           onClick={toggle}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white py-2.5 pl-3 pr-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2.5 pl-2.5 pr-2 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] sm:gap-2 sm:pl-3 sm:pr-2.5"
         >
           <Funnel className="h-4 w-4 shrink-0 text-slate-400" />
           <span>{current.label}</span>
