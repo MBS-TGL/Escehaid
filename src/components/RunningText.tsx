@@ -2,14 +2,13 @@
 
 import { Megaphone } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { getPublishedWaves, getWaveStatus } from "@/lib/queries";
-import { SITE } from "@/lib/site-config";
+import { getActiveAnnouncements } from "@/lib/queries";
 
 const SPEED_PX_PER_SEC = 70; // ganti di sini kalau mau lebih cepet/lambat
 const MIN_COPIES = 2; // minimal 2 salinan biar loop selalu punya "pasangan"
 
 export function RunningText() {
-  const [text, setText] = useState("");
+  const [items, setItems] = useState<string[]>([]);
   const [paused, setPaused] = useState(false);
   // Jumlah salinan teks yang di-render, dihitung dinamis dari lebar
   // container vs lebar 1 teks — supaya track SELALU penuh dari ujung ke
@@ -31,21 +30,16 @@ export function RunningText() {
   useEffect(() => {
     let cancelled = false;
 
-    // Banner SPMB hanya tampil bila ada gelombang berstatus "open";
-    // tanpa gelombang terbuka (atau saat gagal memuat) → tidak dirender.
-    getPublishedWaves()
-      .then((waves) => {
+    // Ambil semua pengumuman aktif dari database (urut sort_order).
+    // Marquee menampilkan SEMUA teks, dipisahkan bullet — bukan satu teks hardcode.
+    getActiveAnnouncements()
+      .then((texts) => {
         if (cancelled) return;
-        const hasOpenWave = waves.some((w) => getWaveStatus(w) === "open");
-        setText(
-          hasOpenWave
-            ? `SPMB ${SITE.spmb.academicYear} Sudah Dibuka! Segera Daftar di Halaman SPMB`
-            : ""
-        );
+        setItems(texts.map((t) => t.trim()).filter(Boolean));
       })
       .catch((err) => {
-        console.error("Failed to load wave status:", err);
-        if (!cancelled) setText("");
+        console.error("Failed to load announcements:", err);
+        if (!cancelled) setItems([]);
       });
 
     return () => {
@@ -72,7 +66,7 @@ export function RunningText() {
   }, []);
 
   useEffect(() => {
-    if (!text || !containerRef.current || !contentRef.current) return;
+    if (items.length === 0 || !containerRef.current || !contentRef.current) return;
 
     const container = containerRef.current;
 
@@ -126,9 +120,9 @@ export function RunningText() {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       resizeObserver.disconnect();
     };
-  }, [text, measure]);
+  }, [items, measure]);
 
-  if (!text) return null;
+  if (items.length === 0) return null;
 
   return (
     <div
@@ -136,7 +130,7 @@ export function RunningText() {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       role="marquee"
-      aria-label={text}
+      aria-label={items.join(". ")}
     >
       {/* Solid badge — fully opaque, so it always fully hides whatever
           text is underneath. No gradient here: a translucent color would
@@ -164,17 +158,22 @@ export function RunningText() {
           aria-hidden="true"
         >
           {Array.from({ length: copies }).map((_, i) => (
-            // Separator is INSIDE this same item unit (not a sibling), so
-            // firstItemRef's offsetWidth already includes it. That keeps
-            // itemWidth (used for the loop-wrap math) automatically correct
-            // — no separate gap constant to keep in sync.
+            // Each copy renders the FULL set of announcements. The separator
+            // is INSIDE this same item unit (not a sibling), so firstItemRef's
+            // offsetWidth already includes every announcement + separator.
+            // That keeps itemWidth (used for the loop-wrap math) automatically
+            // correct — no separate gap constant to keep in sync.
             <span
               key={i}
               ref={i === 0 ? firstItemRef : undefined}
               className="flex shrink-0 items-center whitespace-nowrap text-xs font-medium tracking-wide"
             >
-              {text}
-              <span className="mx-6 text-[#f4d21f]">•</span>
+              {items.map((t, j) => (
+                <span key={j} className="flex items-center">
+                  {t}
+                  <span className="mx-6 text-[#f4d21f]">•</span>
+                </span>
+              ))}
             </span>
           ))}
         </div>
