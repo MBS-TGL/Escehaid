@@ -19,6 +19,7 @@ import {
 } from "@/lib/queries";
 import { StatCard, StatCardRow, Modal, SlideOver, RichTextEditor } from "@/components/ui";
 import { sanitize } from "@/lib/sanitize";
+import CoverImage from "@/components/CoverImage";
 import { compressImage } from "@/lib/compress-image";
 import {
   Note,
@@ -972,8 +973,8 @@ export default function AdminArticlesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setViewItem(null)}>
           <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
             {viewItem.image_url && (
-              <div className="h-48 overflow-hidden rounded-t-2xl sm:h-64">
-                <img src={viewItem.image_url} alt={viewItem.image_alt || viewItem.title} loading="lazy" className="h-full w-full object-cover" />
+              <div className="rounded-t-2xl">
+                <CoverImage src={viewItem.image_url} alt={viewItem.image_alt || viewItem.title} />
               </div>
             )}
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
@@ -1482,10 +1483,11 @@ export default function AdminArticlesPage() {
             {form.title || "Tanpa judul"}
           </h1>
           {imagePreview && (
-            <div className="mt-4 w-full overflow-hidden rounded-2xl shadow-md aspect-video">
-              <img src={imagePreview} alt={form.image_alt || form.title || "Sampul"}
-                className="h-full w-full object-cover" />
-            </div>
+            <CoverImage
+              src={imagePreview}
+              alt={form.image_alt || form.title || "Sampul"}
+              className="mt-4 shadow-md"
+            />
           )}
           {form.excerpt && (
             <div className="mt-4 border-l-4 border-[#f4d21f] bg-amber-50/50 px-5 py-4">

@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { Clock, User, ArrowLeft, Newspaper, MagnifyingGlass, BookmarkSimple, ShareNetwork, WhatsappLogo, FacebookLogo, TwitterLogo } from "@/components/Icons";
 import { getNewsBySlug, getNewsList, getRelatedNews } from "@/lib/queries";
 import { RichContent } from "@/components/RichContent";
-import ImageZoom from "./ImageZoom";
+import CoverImage from "@/components/CoverImage";
 import AttachmentPanel from "./AttachmentPanel";
 
 export const revalidate = 300;
@@ -51,12 +51,6 @@ const categoryConfig: Record<string, { label: string; color: string; bg: string;
   agenda: { label: "Agenda", color: "text-purple-700", bg: "bg-purple-50", border: "border-purple-200" },
 };
 
-const positionMap: Record<string, string> = {
-  top: "center 20%",
-  center: "center center",
-  bottom: "center 80%",
-};
-
 function EstimateReadingTime(content: string | null): number {
   if (!content) return 1;
   const text = content.replace(/<[^>]*>/g, "");
@@ -81,7 +75,6 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
   const cat = categoryConfig[berita.category] || { label: berita.category, color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" };
   const readTime = EstimateReadingTime(berita.content);
   const publishDate = new Date(berita.published_at || berita.created_at);
-  const objectPosition = positionMap[berita.cover_image_position || "center"] || positionMap.center;
 
   const shareUrl = `https://www.smpmuh4tanggul.sch.id/news/${berita.slug}`;
   const shareText = encodeURIComponent(berita.title);
@@ -211,13 +204,13 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
         <div className="flex flex-col gap-8 lg:flex-row">
           {/* Article Body */}
           <article className="min-w-0 flex-1">
-            {/* Cover Image — di atas summary, selebar kolom */}
+            {/* Cover Image — di atas summary, selebar kolom (rasio mengikuti gambar) */}
             {berita.image_url && (
-              <div className="mb-6 w-full overflow-hidden rounded-2xl shadow-md aspect-[1200/630]">
-                <ImageZoom
+              <div className="mb-6">
+                <CoverImage
                   src={berita.image_url}
                   alt={berita.image_alt || berita.title}
-                  objectPosition={objectPosition}
+                  priority
                 />
               </div>
             )}

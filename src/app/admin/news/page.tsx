@@ -21,6 +21,7 @@ import {
 import type { NewsWithAuthor } from "@/lib/queries";
 import { compressImage } from "@/lib/compress-image";
 import { RichContent } from "@/components/RichContent";
+import CoverImage from "@/components/CoverImage";
 import { StatCard, StatCardRow, Modal, ConfirmModal, SlideOver, RichTextEditor } from "@/components/ui";
 import type { News } from "@/lib/supabase";
 import {
@@ -948,8 +949,8 @@ export default function AdminBeritaPage() {
         }
       >
         {viewItem?.image_url && (
-          <div className="mb-4 -mx-6 -mt-5 overflow-hidden">
-            <img src={viewItem.image_url} alt={viewItem.image_alt || viewItem.title} loading="lazy" className="h-48 w-full object-cover sm:h-64" />
+          <div className="mb-4 -mx-6 -mt-5">
+            <CoverImage src={viewItem.image_url} alt={viewItem.image_alt || viewItem.title} />
           </div>
         )}
         {viewItem && (
@@ -1433,13 +1434,11 @@ export default function AdminBeritaPage() {
             {form.title || "Tanpa judul"}
           </h1>
           {imagePreview && (
-            <div className="mt-4 w-full overflow-hidden rounded-2xl shadow-md aspect-[1200/630]">
-              <img src={imagePreview} alt={form.image_alt || form.title || "Sampul"}
-                className="h-full w-full object-cover"
-                style={{
-                  objectPosition: form.cover_image_position === "top" ? "center 20%" : form.cover_image_position === "bottom" ? "center 80%" : "center center",
-                }} />
-            </div>
+            <CoverImage
+              src={imagePreview}
+              alt={form.image_alt || form.title || "Sampul"}
+              className="mt-4 shadow-md"
+            />
           )}
           {form.summary && (
             <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">

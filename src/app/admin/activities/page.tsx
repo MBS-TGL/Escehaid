@@ -22,6 +22,7 @@ import {
 } from "@/lib/activity-types";
 import { compressImage } from "@/lib/compress-image";
 import { RichContent } from "@/components/RichContent";
+import CoverImage from "@/components/CoverImage";
 import { StatCard, StatCardRow, Modal, ConfirmModal, SlideOver, RichTextEditor } from "@/components/ui";
 import type { Activity } from "@/lib/supabase";
 import {
@@ -652,9 +653,9 @@ export default function AdminActivitiesPage() {
         }
       >
         {viewItem?.image_url && (
-          <div className="mb-4 -mx-6 -mt-5 overflow-hidden bg-slate-100">
-            {/* Rasio asli — poster portrait tampil utuh, tak dipotong */}
-            <img src={viewItem.image_url} alt={viewItem.title} loading="lazy" className="h-auto w-full" />
+          <div className="mb-4 -mx-6 -mt-5">
+            {/* Rasio asli — poster portrait tampil utuh + latar blur */}
+            <CoverImage src={viewItem.image_url} alt={viewItem.title} />
           </div>
         )}
         {viewItem && (

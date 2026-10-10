@@ -8,10 +8,13 @@ export default function NewsImageZoom({
   src,
   alt,
   objectPosition = "center center",
+  children,
 }: {
   src: string;
   alt: string;
   objectPosition?: string;
+  /** Konten thumbnail kustom (mis. CoverImage). Bila ada, menggantikan gambar bawaan. */
+  children?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -51,20 +54,23 @@ export default function NewsImageZoom({
       {/* Thumbnail — mengikuti ukuran container dari parent */}
       <div className="relative h-full w-full">
         <div className="group relative h-full w-full overflow-hidden">
-          <Image
-            src={src}
-            alt={alt}
-            fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) calc(100vw - 2rem), 720px"
-            className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-            style={{ objectPosition }}
-            priority
-          />
+          {children ?? (
+            <Image
+              src={src}
+              alt={alt}
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) calc(100vw - 2rem), 720px"
+              className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+              style={{ objectPosition }}
+              priority
+            />
+          )}
           {/* Clickable overlay */}
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="absolute inset-0 z-10 cursor-zoom-in bg-black/0 transition-colors hover:bg-black/10"
+            aria-label={`Perbesar gambar: ${alt || "sampul"}`}
+            className="absolute inset-0 z-10 cursor-zoom-in bg-black/0 transition-colors hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#f4d21f]"
           />
           {/* Perbesar badge */}
           <div className="absolute right-3 top-3 z-20 flex items-center gap-1.5 rounded-lg bg-[#082b59]/80 px-3 py-2 text-xs font-semibold text-white shadow-lg border border-white/20 pointer-events-none">

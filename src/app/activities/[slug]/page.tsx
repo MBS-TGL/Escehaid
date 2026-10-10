@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import CoverImage from "@/components/CoverImage";
 import { getActivityBySlug, getActivityList } from "@/lib/queries";
 import { RichContent } from "@/components/RichContent";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
@@ -46,7 +47,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       title: activity.title,
       description,
       type: "article",
-      images: activity.image_url ? [{ url: activity.image_url, width: 1200, height: 630 }] : [],
+      // Tanpa width/height palsu — dimensi asli tak diketahui (Fase A), biar crawler baca sendiri
+      images: activity.image_url ? [{ url: activity.image_url }] : [],
     },
     twitter: {
       card: "summary_large_image",
@@ -283,16 +285,13 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         <div className="flex flex-col gap-8 lg:flex-row">
           <article className="min-w-0 flex-1">
             <CSSFadeIn>
-              {/* Poster — rasio asli TANPA crop (16:9 dipaksa memotong poster portrait) */}
+              {/* Poster — rasio asli TANPA crop; portrait tampil utuh + latar blur */}
               {activity.image_url && (
-                <div className="mb-6 w-full overflow-hidden rounded-2xl shadow-md">
-                  <Image
+                <div className="mb-6">
+                  <CoverImage
                     src={activity.image_url}
                     alt={activity.title}
-                    width={1600}
-                    height={1200}
-                    sizes="(max-width: 1024px) 100vw, 66vw"
-                    className="h-auto w-full"
+                    priority
                   />
                 </div>
               )}
