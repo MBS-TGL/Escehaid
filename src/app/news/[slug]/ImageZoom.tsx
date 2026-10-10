@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { X } from "@/components/Icons";
 
@@ -48,6 +48,16 @@ export default function NewsImageZoom({
     setZoom(1);
     setDrag({ x: 0, y: 0 });
   }
+
+  // Tutup lightbox dengan tombol Esc (aksesibilitas keyboard).
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   return (
     <>

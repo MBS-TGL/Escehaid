@@ -126,7 +126,7 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
       {/* Content */}
       <article className="mx-auto max-w-4xl px-4 py-10 md:py-14">
         {article.image_url && (
-          <div className="mb-8">
+          <div className="mb-6 md:mb-8">
             <CoverImage
               src={article.image_url}
               alt={article.image_alt || article.title}

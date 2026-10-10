@@ -204,9 +204,9 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
         <div className="flex flex-col gap-8 lg:flex-row">
           {/* Article Body */}
           <article className="min-w-0 flex-1">
-            {/* Cover Image — di atas summary, selebar kolom (rasio mengikuti gambar) */}
+            {/* Cover Image — di atas summary, rata tengah (rasio mengikuti gambar) */}
             {berita.image_url && (
-              <div className="mb-6">
+              <div className="mb-6 md:mb-8">
                 <CoverImage
                   src={berita.image_url}
                   alt={berita.image_alt || berita.title}

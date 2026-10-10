@@ -1,95 +1,49 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import ImageZoom from "@/app/news/[slug]/ImageZoom";
 
 /**
- * Sampul yang menyesuaikan rasio asli gambar.
+ * Sampul sederhana: gambar tampil dengan ukuran natural (rasio asli), rata tengah,
+ * tanpa crop dan tanpa latar blur.
  *
- * - Wadah `relative` dengan tinggi mengikuti rasio (aspect-ratio).
- * - Gambar utama `object-contain` (poster portrait tampil utuh) di atas latar blur.
- * - Rasio di-clamp antara 4/5 dan 16/9 supaya tak terlalu tinggi/lebar.
- * - Bila `width`/`height` tidak diketahui, rasio awal 16:9 lalu dikoreksi saat
- *   gambar load (naturalWidth/naturalHeight) — Fase A, tanpa kolom DB.
- * - Tinggi dibatasi `max-h-[80vh]` (mobile 70vh) & `min-h-[220px]`; saat batas
- *   tercapai gambar mengecil dan sisi kiri-kanan terisi latar blur.
- * - Reuse lightbox "Perbesar" yang sudah ada (ImageZoom) lewat `children`.
+ * - Wadah `relative mx-auto w-fit max-w-full` → mengikuti lebar gambar, rata tengah.
+ * - Gambar `block h-auto w-auto max-w-full max-h-[75vh] object-contain`:
+ *     * poster portrait tampil utuh (lebar mengikuti tinggi, tak terpotong),
+ *     * foto landscape hampir selebar kolom,
+ *     * tak pernah melebihi 75vh (mobile 70vh) dan tak merusak layout.
+ * - `width`/`height` tebakan 1200×675 (16:9) hanya untuk mencadangkan tempat saat
+ *   gambar belum dimuat; rasio sesungguhnya dipakai browser setelah load lewat
+ *   `style width/height: auto` (Fase A, tanpa kolom DB).
+ * - Tombol "Perbesar" (lightbox ImageZoom yang sudah ada) menempel di pojok kanan
+ *   atas gambar, karena wadah mengikuti ukuran gambar (w-fit).
  */
-
-const MIN_RATIO = 4 / 5; // 0.8
-const MAX_RATIO = 16 / 9; // ~1.778
-const FALLBACK_RATIO = 16 / 9;
-
-function clampRatio(r: number): number {
-  if (!Number.isFinite(r) || r <= 0) return FALLBACK_RATIO;
-  return Math.min(MAX_RATIO, Math.max(MIN_RATIO, r));
-}
 
 export default function CoverImage({
   src,
   alt,
   priority,
-  width,
-  height,
   className = "",
 }: {
   src: string;
   alt: string;
   priority?: boolean;
-  width?: number;
-  height?: number;
   className?: string;
 }) {
-  // Rasio awal: dari dimensi diketahui, atau fallback 16:9 (dikoreksi saat load).
-  const knownRatio =
-    width && height ? clampRatio(width / height) : null;
-  const [ratio, setRatio] = useState<number>(knownRatio ?? FALLBACK_RATIO);
-  const imgRef = useRef<HTMLImageElement>(null);
-
-  const applyNatural = useCallback((el: HTMLImageElement | null | undefined) => {
-    // Jangan override rasio yang sudah diketahui dari props.
-    if (knownRatio != null) return;
-    if (!el) return;
-    const nw = el.naturalWidth;
-    const nh = el.naturalHeight;
-    if (nw > 0 && nh > 0) setRatio(clampRatio(nw / nh));
-  }, [knownRatio]);
-
-  // Gambar mungkin sudah termuat dari cache sebelum hydrasi → cek saat mount.
-  // naturalWidth cukup sebagai penanda (tak wajib `complete`) bila dimensi sudah terbaca.
-  useEffect(() => {
-    applyNatural(imgRef.current);
-  }, [applyNatural, src]);
-
   return (
-    <ImageZoom src={src} alt={alt}>
-      <div
-        className={`relative w-full overflow-hidden rounded-2xl bg-slate-100 min-h-[220px] max-h-[70vh] md:max-h-[80vh] motion-reduce:transition-none transition-[aspect-ratio] duration-300 ease-out ${className}`}
-        style={{ aspectRatio: String(ratio) }}
-      >
-        {/* Latar blur dekoratif — mengisi sisi saat rasio berbeda / batas tinggi tercapai */}
+    <div className={`relative mx-auto w-fit max-w-full ${className}`}>
+      <ImageZoom src={src} alt={alt}>
         <Image
-          src={src}
-          alt=""
-          aria-hidden="true"
-          fill
-          sizes="200px"
-          quality={20}
-          className="object-cover scale-110 blur-2xl opacity-60"
-        />
-        {/* Gambar utama — utuh (contain), tak melebihi rasio asli */}
-        <Image
-          ref={imgRef}
           src={src}
           alt={alt}
-          fill
+          width={1200}
+          height={675}
           preload={priority}
-          sizes="(max-width: 1024px) 100vw, 896px"
-          className="object-contain"
-          onLoad={(e) => applyNatural(e.currentTarget)}
+          sizes="(min-width: 1024px) 896px, 100vw"
+          className="block h-auto w-auto max-w-full max-h-[70vh] md:max-h-[75vh] rounded-2xl border border-[#dce3ed] shadow-sm object-contain"
+          style={{ width: "auto", height: "auto" }}
         />
-      </div>
-    </ImageZoom>
+      </ImageZoom>
+    </div>
   );
 }

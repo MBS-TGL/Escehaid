@@ -285,9 +285,9 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         <div className="flex flex-col gap-8 lg:flex-row">
           <article className="min-w-0 flex-1">
             <CSSFadeIn>
-              {/* Poster — rasio asli TANPA crop; portrait tampil utuh + latar blur */}
+              {/* Poster — rata tengah, ukuran natural TANPA crop dan tanpa latar blur */}
               {activity.image_url && (
-                <div className="mb-6">
+                <div className="mb-6 md:mb-8">
                   <CoverImage
                     src={activity.image_url}
                     alt={activity.title}
