@@ -168,5 +168,7 @@ export {
   UserPlus,
   ArrowSquareOut,
   DotsSixVertical,
+  DotsThreeVertical,
+  CheckSquare,
   Copy
 } from "@phosphor-icons/react/dist/ssr";

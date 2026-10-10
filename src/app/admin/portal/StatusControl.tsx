@@ -49,6 +49,14 @@ export const STATUS_META: Record<
 
 const ORDER: PortalStatus[] = ["live", "soon", "hidden"];
 
+/** Label pendek untuk baris mobile (chip harus ramping; teks lengkap di
+ *  aria-label/title). Ditambahkan lewat prop `compact` pada StatusPill. */
+export const STATUS_SHORT: Record<PortalStatus, string> = {
+  live: "Tayang",
+  soon: "Segera",
+  hidden: "Sembunyi",
+};
+
 /** Ubah dua kolom boolean menjadi satu status. Kombinasi tidak valid → "hidden". */
 export function statusOf(item: { is_active: boolean; is_coming_soon: boolean }): PortalStatus {
   if (!item.is_active) return "hidden";
@@ -151,6 +159,7 @@ export function StatusPill({
   value,
   onChange,
   label,
+  compact = false,
   disabled = false,
 }: {
   value: PortalStatus;
@@ -158,6 +167,9 @@ export function StatusPill({
   onChange: (status: PortalStatus) => Promise<void> | void;
   /** Label baris (a11izabilitas) — mis. "Status E-Learning". */
   label: string;
+  /** Baris mobile: tampilkan label pendek (Tayang/Segera/Sembunyi); teks
+   *  lengkap tetap di aria-label & title. Menu tidak berubah. */
+  compact?: boolean;
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -278,11 +290,12 @@ export function StatusPill({
         aria-controls={open ? menuId : undefined}
         aria-label={`${label} — ${meta.label}`}
         aria-busy={saving}
+        title={compact ? `${meta.label} — ${meta.hint}` : undefined}
         onClick={toggle}
-        className={`inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:opacity-60 ${PILL_CLASS[value]}`}
+        className={`inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1.5 ${compact ? "text-[11px]" : "text-xs"} font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:opacity-60 ${PILL_CLASS[value]}`}
       >
         <span className={`h-2 w-2 shrink-0 rounded-full ${meta.dotClass}`} />
-        <span className="truncate">{meta.label}</span>
+        <span className="truncate">{compact ? STATUS_SHORT[value] : meta.label}</span>
         {saving ? (
           <span
             className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-[1.5px] border-current border-t-transparent"

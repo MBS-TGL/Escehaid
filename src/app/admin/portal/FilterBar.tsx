@@ -34,12 +34,15 @@ export function FilterBar({
   filter,
   onFilterChange,
   counts,
+  action,
 }: {
   query: string;
   onQueryChange: (value: string) => void;
   filter: PortalFilter;
   onFilterChange: (value: PortalFilter) => void;
   counts: Record<PortalFilter, number>;
+  /** Aksi tambahan di ujung kanan baris (mis. tombol "Pilih" mode pilih mobile). */
+  action?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -219,6 +222,8 @@ export function FilterBar({
           </div>
         )}
       </div>
+
+      {action}
     </div>
   );
 }

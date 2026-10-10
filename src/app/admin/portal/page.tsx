@@ -29,7 +29,7 @@ import type { PortalAppAdmin, PortalAppInput } from "@/lib/queries";
 import { StatCard, StatCardRow, ConfirmModal, SlideOver } from "@/components/ui";
 import { useFloatingPanel } from "@/components/ui/useFloatingPanel";
 import { useToast } from "@/components/ui/Toast";
-import { SquaresFour, Plus, FloppyDisk, Info, MagnifyingGlass, ArrowSquareOut, Checks } from "@/components/Icons";
+import { SquaresFour, Plus, FloppyDisk, Info, MagnifyingGlass, ArrowSquareOut, Checks, CheckSquare } from "@/components/Icons";
 import {
   PORTAL_ICONS,
   PORTAL_ICON_LABELS,
@@ -660,6 +660,9 @@ export default function AdminPortalPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const selectAllRef = useRef<HTMLInputElement>(null);
+  // Mode pilih (mobile): checkbox menggantikan handle, tap baris = toggle,
+  // bar aksi massal sticky di bawah. Desktop tetap pakai checkbox tabel.
+  const [pickMode, setPickMode] = useState(false);
 
   // Filter & pencarian
   const [query, setQuery] = useState("");
@@ -843,9 +846,11 @@ export default function AdminPortalPage() {
   /**
    * Ubah status (tiga keadaan) dengan optimisme lokal — rollback + toast error
    * bila ada yang gagal ke server. `targets` boleh lebih dari satu (aksi massal).
+   * Mengembalikan true bila semua berhasil (dipakai untuk keluar dari mode
+   * pilih mobile setelah aksi massal sukses).
    */
-  async function applyStatus(targets: PortalAppAdmin[], status: PortalStatus) {
-    if (targets.length === 0) return;
+  async function applyStatus(targets: PortalAppAdmin[], status: PortalStatus): Promise<boolean> {
+    if (targets.length === 0) return false;
     const previous = items;
     const flags = flagsOf(status);
     const ids = new Set(targets.map((t) => t.id));
@@ -856,7 +861,7 @@ export default function AdminPortalPage() {
     if (failed?.error) {
       setItems(previous);
       toast(`Gagal memperbarui status: ${failed.error}`, "error");
-      return;
+      return false;
     }
     const many = targets.length > 1;
     toast(
@@ -866,6 +871,7 @@ export default function AdminPortalPage() {
       "success"
     );
     revalidatePortal().catch(() => { });
+    return true;
   }
 
   function toggleOne(id: string, checked: boolean) {
@@ -956,6 +962,25 @@ export default function AdminPortalPage() {
     });
   }
 
+  // ── Mode pilih (mobile) ─────────────────────────────────────
+  /** Masuk mode pilih; bila `id` diisi (long-press), baris itu langsung tercentang. */
+  function enterPickMode(id?: string) {
+    setPickMode(true);
+    if (id) toggleOne(id, true);
+  }
+
+  /** Keluar mode pilih dan hapus semua centang. */
+  function exitPickMode() {
+    setPickMode(false);
+    setSelected(new Set());
+  }
+
+  /** Aksi massal dari bar sticky mobile — keluar mode pilih bila sukses. */
+  async function bulkSetStatus(status: PortalStatus) {
+    const ok = await applyStatus(selectedItems, status);
+    if (ok) exitPickMode();
+  }
+
   /** Hapus massal baris yang terpilih. */
   async function handleBulkDelete() {
     const targets = selectedItems;
@@ -966,6 +991,7 @@ export default function AdminPortalPage() {
     if (failed?.error) { toast(`Gagal menghapus: ${failed.error}`, "error"); return; }
     toast(`${targets.length} aplikasi dihapus`, "success");
     setSelected(new Set());
+    setPickMode(false);
     revalidatePortal().catch(() => { });
     fetchItems();
   }
@@ -1037,14 +1063,56 @@ export default function AdminPortalPage() {
         ))}
       </StatCardRow>
 
-      {/* Pencarian + filter */}
-      <FilterBar
-        query={query}
-        onQueryChange={setQuery}
-        filter={filter}
-        onFilterChange={setFilter}
-        counts={counts}
-      />
+      {/* Toolbar — mode pilih (mobile) menggantikan baris pencarian/filter;
+          desktop tetap memakai FilterBar + checkbox tabel seperti semula. */}
+      {pickMode && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-[#1767b1]/30 bg-[#1767b1]/5 px-3 py-2.5 md:hidden">
+          <span
+            aria-live="polite"
+            className="flex items-center gap-1.5 text-sm font-semibold text-[#082b59]"
+          >
+            <Checks className="h-4 w-4" />
+            {selected.size} dipilih
+          </span>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => toggleAllVisible(true)}
+              disabled={visible.length === 0}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Pilih semua
+            </button>
+            <button
+              type="button"
+              onClick={exitPickMode}
+              className="rounded-lg px-2 text-xs font-semibold text-slate-500 underline-offset-2 transition-colors hover:text-slate-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+            >
+              Selesai
+            </button>
+          </div>
+        </div>
+      )}
+      <div className={pickMode ? "hidden md:block" : ""}>
+        <FilterBar
+          query={query}
+          onQueryChange={setQuery}
+          filter={filter}
+          onFilterChange={setFilter}
+          counts={counts}
+          action={
+            <button
+              type="button"
+              onClick={() => enterPickMode()}
+              aria-label="Masuk mode pilih"
+              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2.5 pl-2.5 pr-3 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] md:hidden"
+            >
+              <CheckSquare className="h-4 w-4 shrink-0 text-[#1767b1]" />
+              Pilih
+            </button>
+          }
+        />
+      </div>
       {dragDisabled && (
         <p className="-mt-2 mb-3 flex items-start gap-1.5 text-[11px] text-slate-400">
           <Info className="mt-px h-3.5 w-3.5 shrink-0" />
@@ -1053,9 +1121,10 @@ export default function AdminPortalPage() {
         </p>
       )}
 
-      {/* Bar aksi massal — muncul saat ada baris terpilih */}
+      {/* Bar aksi massal inline — desktop saja; mobile memakai bar sticky
+          di bawah saat mode pilih. */}
       {selectedItems.length > 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-[#1767b1]/30 bg-[#1767b1]/5 px-3.5 py-3">
+        <div className="mb-3 hidden flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-[#1767b1]/30 bg-[#1767b1]/5 px-3.5 py-3 md:flex">
           <span className="flex items-center gap-2 text-sm font-semibold text-[#082b59]">
             <Checks className="h-4 w-4" />
             {selectedItems.length} aplikasi dipilih
@@ -1094,8 +1163,13 @@ export default function AdminPortalPage() {
       )}
 
       {/* Table — overflow-x-auto karena jumlah minimum kolom (±900px) melebihi
-          breakpoint md (768px); tanpa ini kolom Aksi terpotong, bukan bisa digeser. */}
-      <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white shadow-sm">
+          breakpoint md (768px); tanpa ini kolom Aksi terpotong, bukan bisa digeser.
+          pb saat mode pilih supaya bar sticky mobile tidak menutup baris terakhir. */}
+      <div
+        className={`overflow-x-auto rounded-xl border border-slate-200/80 bg-white shadow-sm ${
+          pickMode ? "pb-20 md:pb-0" : ""
+        }`}
+      >
         <div role="table" aria-label="Daftar aplikasi portal">
           {/* Header (desktop) */}
           <div
@@ -1179,11 +1253,15 @@ export default function AdminPortalPage() {
                       index={index}
                       dragDisabled={dragDisabled}
                       selected={selected.has(item.id)}
+                      selectMode={pickMode}
+                      onEnterPickMode={enterPickMode}
                       onSelect={toggleOne}
                       onEdit={openEdit}
                       onDelete={setDeleteItem}
                       onDuplicate={(item) => setDuplicateItem(item)}
-                      onSetStatus={(it, status) => applyStatus([it], status)}
+                      onSetStatus={async (it, status) => {
+                        await applyStatus([it], status);
+                      }}
                     />
                   ))
                 )}
@@ -1192,6 +1270,41 @@ export default function AdminPortalPage() {
           </DndContext>
         </div>
       </div>
+
+      {/* Bar aksi massal sticky (mobile, mode pilih) — safe-area-inset-bottom
+          diperhitungkan; daftar diberi pb-20 supaya baris terakhir tidak
+          tertutup. Aksi nonaktif bila n = 0. */}
+      {pickMode && (
+        <div
+          className="fixed inset-x-0 bottom-0 z-40 border-t border-[#1767b1]/20 bg-white/95 backdrop-blur-md md:hidden"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          <div className="flex items-center gap-2 px-4 py-3">
+            {([
+              { status: "live" as PortalStatus, label: "Tayangkan" },
+              { status: "hidden" as PortalStatus, label: "Sembunyikan" },
+            ]).map((act) => (
+              <button
+                key={act.status}
+                type="button"
+                onClick={() => bulkSetStatus(act.status)}
+                disabled={selectedItems.length === 0}
+                className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {act.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setConfirmBulkDelete(true)}
+              disabled={selectedItems.length === 0}
+              className="flex-1 rounded-xl border border-red-200 bg-white px-3 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Hapus
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Create/Edit SlideOver */}
       <SlideOver open={formOpen} onClose={requestCloseForm}
