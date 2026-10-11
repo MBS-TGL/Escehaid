@@ -17,7 +17,7 @@ import {
   revalidatePaths,
   type ArticleWithAuthor,
 } from "@/lib/queries";
-import { StatCard, StatCardRow, Modal, SlideOver, RichTextEditor, ConfirmModal } from "@/components/ui";
+import { StatCard, StatCardRow, Modal, SlideOver, RichTextEditor, ConfirmModal, SkeletonBlock } from "@/components/ui";
 import { sanitize } from "@/lib/sanitize";
 import CoverImage from "@/components/CoverImage";
 import { compressImage } from "@/lib/compress-image";
@@ -49,6 +49,15 @@ import {
   DeviceMobile,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
+import {
+  MobileFilterBar,
+  MobilePagination,
+  MobilePickButton,
+  MobileListRow,
+  MobileSelectBar,
+  RowActionsMenu,
+  type RowAction,
+} from "@/components/admin/mobile";
 
 const PAGE_SIZE = 10;
 const EXCERPT_MAX = 160;
@@ -192,6 +201,9 @@ export default function AdminArticlesPage() {
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // Mode pilih (mobile): checkbox menggantikan thumbnail, tap baris = toggle,
+  // bar aksi massal sticky di bawah. Desktop tetap pakai checkbox tabel.
+  const [pickMode, setPickMode] = useState(false);
 
   // Modals
   const [viewItem, setViewItem] = useState<ArticleWithAuthor | null>(null);
@@ -339,6 +351,23 @@ export default function AdminArticlesPage() {
     const s = new Set(selectedIds);
     if (s.has(id)) s.delete(id); else s.add(id);
     setSelectedIds(s);
+  }
+
+  // ── Mode pilih (mobile) ─────────────────────────────────────
+  /** Masuk mode pilih; bila `id` diisi (long-press), baris itu langsung tercentang. */
+  function enterPickMode(id?: string) {
+    setPickMode(true);
+    if (id) {
+      const s = new Set(selectedIds);
+      s.add(id);
+      setSelectedIds(s);
+    }
+  }
+
+  /** Keluar mode pilih dan hapus semua centang. */
+  function exitPickMode() {
+    setPickMode(false);
+    setSelectedIds(new Set());
   }
 
   function toggleSort(field: SortField) {
@@ -693,7 +722,7 @@ export default function AdminArticlesPage() {
     } catch (e) {
       toast(e instanceof Error && e.message ? e.message : "Gagal menghapus artikel", "error");
     }
-    setSelectedIds(new Set());
+    exitPickMode();
     setBulkDelete(false);
     fetchArticles();
   }
@@ -709,7 +738,7 @@ export default function AdminArticlesPage() {
     } catch (e) {
       toast(e instanceof Error && e.message ? e.message : "Gagal memperbarui status artikel", "error");
     }
-    setSelectedIds(new Set());
+    exitPickMode();
     fetchArticles();
   }
 
@@ -766,20 +795,20 @@ export default function AdminArticlesPage() {
         <StatCard label="Bulan Ini" value={stats.thisMonth} variant="info" />
       </StatCardRow>
 
-      {/* Bulk actions */}
+      {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5">
+        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5 md:flex">
           <Checks className="h-4 w-4 text-[#082b59]" />
           <span className="text-xs font-semibold text-[#082b59]">{selectedIds.size} dipilih</span>
-          <button onClick={() => handleBulkPublish(true)} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Publish</button>
-          <button onClick={() => handleBulkPublish(false)} className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-600">Unpublish</button>
-          <button onClick={() => setBulkDelete(true)} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
-          <button onClick={() => setSelectedIds(new Set())} className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
+          <button onClick={() => handleBulkPublish(true)} aria-label={`Terbitkan ${selectedIds.size} artikel terpilih`} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Publish</button>
+          <button onClick={() => handleBulkPublish(false)} aria-label={`Kembalikan ${selectedIds.size} artikel ke draft`} className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-600">Unpublish</button>
+          <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} artikel terpilih`} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
+          <button onClick={() => setSelectedIds(new Set())} aria-label="Hapus pilihan" title="Hapus pilihan" className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
         </div>
       )}
 
-      {/* Filter + Search */}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* Filter + Search (desktop md+) */}
+      <div className="mb-4 hidden flex-col gap-3 md:flex md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
             {[
@@ -797,13 +826,53 @@ export default function AdminArticlesPage() {
         <div className="relative">
           <MagnifyingGlass className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input type="text" placeholder="Cari judul, ringkasan..."
+            aria-label="Cari judul atau ringkasan"
             className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 sm:w-72"
             value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
+      {/* Toolbar mobile (<md): pencarian + filter + urut + Pilih */}
+      <MobileFilterBar
+        placeholder="Cari judul, ringkasan…"
+        searchLabel="Cari judul atau ringkasan"
+        query={search}
+        onQueryChange={(v) => { setSearch(v); setPage(1); }}
+        filter={{
+          value: filter,
+          options: [
+            { key: "all", label: "Semua", count: articles.length },
+            { key: "published", label: "Diterbitkan", count: stats.published },
+            { key: "draft", label: "Draft", count: stats.draft },
+          ],
+          onChange: (k) => { setFilter(k); setPage(1); setSelectedIds(new Set()); },
+        }}
+        sort={{
+          value: `${sortField}:${sortDir}`,
+          options: [
+            { key: "created_at:desc", label: "Terbaru" },
+            { key: "created_at:asc", label: "Terlama" },
+            { key: "title:asc", label: "Judul A–Z" },
+            { key: "title:desc", label: "Judul Z–A" },
+            { key: "category:asc", label: "Kategori A–Z" },
+            { key: "category:desc", label: "Kategori Z–A" },
+          ],
+          onChange: (k) => {
+            const [f, d] = k.split(":");
+            setSortField(f as SortField);
+            setSortDir(d as SortDir);
+          },
+        }}
+        action={<MobilePickButton onClick={() => setPickMode(true)} />}
+        selectMode={pickMode}
+        selectedCount={selectedIds.size}
+        allSelected={allVisibleSelected}
+        onSelectAllVisible={toggleSelectAll}
+        onCancelSelect={exitPickMode}
+      />
+
+      {/* Tabel desktop (md+) — tampilan & perilaku sama seperti sebelumnya */}
+      <div className="hidden overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:block">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
@@ -898,6 +967,7 @@ export default function AdminArticlesPage() {
                     </td>
                     <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => handleTogglePublish(item)}
+                        aria-label={`${item.is_published ? "Jadikan draft" : "Terbitkan"} ${item.title}`}
                         title={item.is_published ? "Jadikan draft" : "Terbitkan sekarang"}
                         className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${STATUS_BADGE_CLS[articleStatus(item)]}`}>
                         {articleStatus(item) === "live" ? (
@@ -917,22 +987,22 @@ export default function AdminArticlesPage() {
                     </td>
                     <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => setViewItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat">
+                        <button onClick={() => setViewItem(item)} aria-label={`Lihat ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat">
                           <Eye className="h-4 w-4" />
                         </button>
                         {articleStatus(item) === "live" && (
                           <a href={`/articles/${item.slug}`} target="_blank" rel="noopener noreferrer"
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat di Website">
+                            aria-label={`Lihat di website: ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat di Website">
                             <ArrowUpRight className="h-4 w-4" />
                           </a>
                         )}
-                        <button onClick={() => openEdit(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
+                        <button onClick={() => openEdit(item)} aria-label={`Edit ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
                           <PencilSimple className="h-4 w-4" />
                         </button>
-                        <button onClick={() => openDuplicate(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-purple-50 hover:text-purple-600" title="Duplikat">
+                        <button onClick={() => openDuplicate(item)} aria-label={`Duplikat ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-purple-50 hover:text-purple-600" title="Duplikat">
                           <Files className="h-4 w-4" />
                         </button>
-                        <button onClick={() => setDeleteItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
+                        <button onClick={() => setDeleteItem(item)} aria-label={`Hapus ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
                           <Trash className="h-4 w-4" />
                         </button>
                       </div>
@@ -968,10 +1038,101 @@ export default function AdminArticlesPage() {
         )}
       </div>
 
+      {/* Daftar mobile (<md) — baris ringkas tanpa scroll horizontal; semua
+          fitur tetap ada: pilih (mode pilih), lihat, edit, duplikat & hapus
+          via menu ⋯, toggle status ketuk pill. */}
+      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:hidden">
+        <div role="list" aria-label="Daftar artikel" className="divide-y divide-slate-100">
+          {loading ? (
+            <div className="space-y-3 px-3 py-4" aria-hidden="true">
+              {Array.from({ length: 4 }, (_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <SkeletonBlock className="h-12 w-12 rounded-lg" />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <SkeletonBlock className="h-3.5 w-2/3 rounded" />
+                    <SkeletonBlock className="h-3 w-1/2 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : paginated.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+                <Note className="h-7 w-7 text-slate-300" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
+                <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada artikel"}</p>
+              </div>
+              {!search && filter === "all" && (
+                <button onClick={openCreate} className="mt-1 flex min-h-10 items-center gap-1.5 rounded-lg bg-[#082b59] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1767b1]">
+                  <Plus className="h-3.5 w-3.5" /> Buat Artikel Pertama
+                </button>
+              )}
+            </div>
+          ) : (
+            paginated.map((item) => (
+              <ArticleMobileRow
+                key={item.id}
+                item={item}
+                selected={selectedIds.has(item.id)}
+                selectMode={pickMode}
+                onEnterPickMode={enterPickMode}
+                onToggleSelect={toggleSelect}
+                onView={setViewItem}
+                onEdit={openEdit}
+                onDuplicate={openDuplicate}
+                onDelete={setDeleteItem}
+                onTogglePublish={handleTogglePublish}
+              />
+            ))
+          )}
+        </div>
+        {!loading && filtered.length > 0 && (
+          <MobilePagination
+            page={page}
+            totalPages={totalPages}
+            total={filtered.length}
+            from={(page - 1) * PAGE_SIZE + 1}
+            to={Math.min(page * PAGE_SIZE, filtered.length)}
+            onPageChange={setPage}
+            itemLabel="artikel"
+          />
+        )}
+        {/* Ruang ekstra agar baris terakhir tidak tertutup bar sticky mode pilih */}
+        {pickMode && <div className="h-24" aria-hidden="true" />}
+      </div>
+
+      {/* Bar aksi massal sticky (mobile, mode pilih) — di atas bottom nav admin */}
+      {pickMode && (
+        <MobileSelectBar
+          count={selectedIds.size}
+          onDelete={() => setBulkDelete(true)}
+          onCancel={exitPickMode}
+        >
+          <button
+            type="button"
+            onClick={() => handleBulkPublish(true)}
+            disabled={selectedIds.size === 0}
+            className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Terbitkan
+          </button>
+          <button
+            type="button"
+            onClick={() => handleBulkPublish(false)}
+            disabled={selectedIds.size === 0}
+            className="min-h-10 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Draft
+          </button>
+        </MobileSelectBar>
+      )}
+
       {/* ── VIEW MODAL ──────────────────────────────── */}
       {viewItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setViewItem(null)}>
-          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()} style={{ overscrollBehavior: "contain" }}>
             {viewItem.image_url && (
               <div className="rounded-t-2xl">
                 <CoverImage src={viewItem.image_url} alt={viewItem.image_alt || viewItem.title} />
@@ -1001,7 +1162,7 @@ export default function AdminArticlesPage() {
                   </div>
                 </div>
               </div>
-              <button onClick={() => setViewItem(null)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X className="h-5 w-5" /></button>
+              <button onClick={() => setViewItem(null)} aria-label="Tutup pratinjau" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X className="h-5 w-5" /></button>
             </div>
             <div className="max-h-[50vh] overflow-y-auto px-6 py-5">
               <div className="mb-4 flex items-center gap-4 text-xs text-slate-500">
@@ -1020,18 +1181,18 @@ export default function AdminArticlesPage() {
                 </div>
               )}
             </div>
-            <div className="flex flex-wrap gap-3 border-t border-slate-100 px-6 py-4">
+            <div className="flex flex-wrap gap-3 border-t border-slate-100 px-4 py-4 md:px-6">
               <button onClick={() => { const v = viewItem; setViewItem(null); openDuplicate(v); }}
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 md:flex-none">
                 <Files className="h-4 w-4" /> Duplikat
               </button>
               <button onClick={() => { setViewItem(null); openEdit(viewItem); }}
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 md:flex-none">
                 <PencilSimple className="h-4 w-4" /> Edit
               </button>
               {articleStatus(viewItem) === "live" ? (
                 <a href={`/articles/${viewItem.slug}`} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1]">
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] md:flex-none">
                   <Eye className="h-4 w-4" /> Lihat di Website
                 </a>
               ) : (
@@ -1154,7 +1315,7 @@ export default function AdminArticlesPage() {
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Judul <span className="text-red-500">*</span></label>
             <input type="text" value={form.title} onChange={(e) => handleTitleChange(e.target.value)}
-              className={`w-full rounded-xl border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 ${titleError ? "border-red-300 focus:border-red-400 focus:ring-red-100" : "border-slate-200 focus:border-[#1767b1] focus:ring-[#1767b1]/20"}`}
+              className={`w-full rounded-xl border px-4 py-2.5 text-base md:text-sm focus:outline-none focus:ring-2 ${titleError ? "border-red-300 focus:border-red-400 focus:ring-red-100" : "border-slate-200 focus:border-[#1767b1] focus:ring-[#1767b1]/20"}`}
               placeholder="Judul artikel" />
             {titleError && <p className="mt-1 text-xs font-medium text-red-500">{titleError}</p>}
           </div>
@@ -1172,7 +1333,7 @@ export default function AdminArticlesPage() {
             <input type="text" value={form.slug} readOnly={slugReadonly}
               onChange={(e) => { setSlugTouched(true); setForm({ ...form, slug: e.target.value }); }}
               onBlur={() => { if (form.slug) setForm((f) => ({ ...f, slug: slugify(f.slug) })); }}
-              className={`w-full rounded-xl border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 ${slugReadonly ? "cursor-not-allowed bg-slate-50 text-slate-500" : "border-slate-200 focus:border-[#1767b1] focus:ring-[#1767b1]/20"}`}
+              className={`w-full rounded-xl border px-4 py-2.5 text-base md:text-sm focus:outline-none focus:ring-2 ${slugReadonly ? "cursor-not-allowed bg-slate-50 text-slate-500" : "border-slate-200 focus:border-[#1767b1] focus:ring-[#1767b1]/20"}`}
               placeholder="otomatis dari judul" />
             {slugOverride && editItem?.is_published && (
               <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-amber-600">
@@ -1287,7 +1448,7 @@ export default function AdminArticlesPage() {
                   maxLength={125}
                   value={form.image_alt}
                   onChange={(e) => setForm({ ...form, image_alt: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
                   placeholder="Deskripsi singkat isi gambar"
                 />
                 <div className="mt-1 flex items-center justify-between gap-3">
@@ -1309,7 +1470,7 @@ export default function AdminArticlesPage() {
             </div>
             <textarea value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })}
               rows={3}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-none"
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-none"
               placeholder="Ringkasan singkat artikel (opsional)" />
             {excerptOver && (
               <p className="mt-1 text-xs font-medium text-red-500">Melebihi {EXCERPT_MAX} karakter — disarankan maksimal {EXCERPT_MAX} karakter.</p>
@@ -1323,7 +1484,7 @@ export default function AdminArticlesPage() {
                   <label className="mb-1.5 block text-sm font-semibold text-slate-700">Penulis</label>
                   <input type="text" value={form.author_name}
                     onChange={(e) => setForm({ ...form, author_name: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
                     placeholder="Nama penulis (opsional)" />
                 </div>
               )}
@@ -1332,7 +1493,7 @@ export default function AdminArticlesPage() {
                   <label className="mb-1.5 block text-sm font-semibold text-slate-700">Editor</label>
                   <input type="text" value={form.editor_name}
                     onChange={(e) => setForm({ ...form, editor_name: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
                     placeholder="Nama editor (opsional)" />
                 </div>
               )}
@@ -1364,7 +1525,8 @@ export default function AdminArticlesPage() {
                 </p>
               </div>
               <button type="button" onClick={() => setForm({ ...form, is_published: !form.is_published })}
-                className={`relative h-6 w-11 rounded-full transition-colors ${form.is_published ? "bg-[#1767b1]" : "bg-slate-300"}`}>
+                aria-label="Terbitkan artikel"
+                className={`relative h-6 w-11 rounded-full transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[""] ${form.is_published ? "bg-[#1767b1]" : "bg-slate-300"}`}>
                 <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_published ? "left-[22px]" : "left-0.5"}`} />
               </button>
             </div>
@@ -1372,7 +1534,7 @@ export default function AdminArticlesPage() {
               <label className="whitespace-nowrap text-xs font-semibold text-slate-500">Tanggal Publish (WIB)</label>
               <input type="datetime-local" value={form.published_at}
                 onChange={(e) => setForm({ ...form, published_at: e.target.value })}
-                className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-xs text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
               {form.published_at && (
                 <button type="button" onClick={() => setForm({ ...form, published_at: "" })}
                   className="text-[11px] font-medium text-slate-400 hover:text-slate-600">
@@ -1401,7 +1563,7 @@ export default function AdminArticlesPage() {
                   </div>
                   <button type="button" onClick={togglePin}
                     aria-pressed={form.is_pinned}
-                    className={`relative h-6 w-11 rounded-full transition-colors ${form.is_pinned ? "bg-[#1767b1]" : "bg-slate-300"}`}>
+                    className={`relative h-6 w-11 rounded-full transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[""] ${form.is_pinned ? "bg-[#1767b1]" : "bg-slate-300"}`}>
                     <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_pinned ? "left-[22px]" : "left-0.5"}`} />
                   </button>
                 </div>
@@ -1409,7 +1571,7 @@ export default function AdminArticlesPage() {
                   <label className="whitespace-nowrap text-xs font-semibold text-slate-500">Tampil sampai (WIB)</label>
                   <input type="datetime-local" value={form.expires_at}
                     onChange={(e) => setForm({ ...form, expires_at: e.target.value })}
-                    className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                    className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-xs text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
                   {form.expires_at && (
                     <button type="button" onClick={() => setForm({ ...form, expires_at: "" })}
                       className="text-[11px] font-medium text-slate-400 hover:text-slate-600">
@@ -1548,6 +1710,140 @@ function SharePreviewCard({ form, imagePreview }: { form: FormData; imagePreview
         </div>
       </div>
       <p className="mt-1.5 text-[11px] text-slate-400">Kartu tautan di WhatsApp / Facebook.</p>
+    </div>
+  );
+}
+
+/**
+ * Satu baris artikel versi mobile (<md): [thumb 48px] [judul (+ikon sematan)
+ * + kategori·tanggal·penulis] [pill status 4 keadaan (ketuk = toggle)]
+ * [menu ⋯: Lihat, Edit, Duplikat, Hapus]. Tap baris = modal lihat (padanan
+ * klik kolom Judul di desktop); long-press = mode pilih; di mode pilih
+ * checkbox menggantikan thumb dan tap baris = toggle centang. Artikel live
+ * dapat tautan "Lihat di Website" di menu ⋯ (padanan ikon ArrowUpRight).
+ * Tidak ada geser urutan — halaman ini memakai sortir kolom, sudah pindah ke
+ * dropdown "Urut" di toolbar mobile.
+ */
+function ArticleMobileRow({
+  item,
+  selected,
+  selectMode,
+  onEnterPickMode,
+  onToggleSelect,
+  onView,
+  onEdit,
+  onDuplicate,
+  onDelete,
+  onTogglePublish,
+}: {
+  item: ArticleWithAuthor;
+  selected: boolean;
+  selectMode: boolean;
+  onEnterPickMode: (id: string) => void;
+  onToggleSelect: (id: string) => void;
+  onView: (a: ArticleWithAuthor) => void;
+  onEdit: (a: ArticleWithAuthor) => void;
+  onDuplicate: (a: ArticleWithAuthor) => void;
+  onDelete: (a: ArticleWithAuthor) => void;
+  onTogglePublish: (a: ArticleWithAuthor) => void;
+}) {
+  const status = articleStatus(item);
+  const actions: RowAction[] = [
+    { key: "view", label: "Lihat", icon: <Eye className="h-4 w-4" />, run: () => onView(item) },
+    ...(status === "live"
+      ? [{
+          key: "open",
+          label: "Lihat di Website",
+          icon: <ArrowUpRight className="h-4 w-4" />,
+          run: () => window.open(`/articles/${item.slug}`, "_blank", "noopener,noreferrer"),
+        }]
+      : []),
+    { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) },
+    { key: "duplicate", label: "Duplikat", icon: <Files className="h-4 w-4" />, run: () => onDuplicate(item) },
+    { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) },
+  ];
+
+  return (
+    <div role="listitem">
+      <MobileListRow
+        lead={
+          selectMode ? (
+            <span
+              data-no-longpress=""
+              onClick={(e) => e.stopPropagation()}
+              className="flex h-10 w-10 shrink-0 items-center justify-center"
+            >
+              <input
+                type="checkbox"
+                checked={selected}
+                onChange={() => onToggleSelect(item.id)}
+                aria-label={`Pilih ${item.title}`}
+                className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+              />
+            </span>
+          ) : undefined
+        }
+        thumb={
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100">
+            {item.image_url ? (
+              <img src={item.image_url} alt="" loading="lazy" className="h-full w-full object-cover" />
+            ) : (
+              <FileText className="h-6 w-6 text-slate-300" />
+            )}
+          </span>
+        }
+        title={
+          <span className="flex items-center gap-1.5">
+            {item.is_pinned && (
+              <BookmarkSimple weight="fill" className="h-3.5 w-3.5 shrink-0 text-[#f4d21f]" aria-label="Disematkan" />
+            )}
+            <span className="min-w-0">{item.title}</span>
+          </span>
+        }
+        subtitle={
+          <>
+            <span className="inline-flex shrink-0 items-center rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700">
+              {item.category || "-"}
+            </span>
+            <span className="min-w-0 truncate">
+              {new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+              {item.author_name ? ` · ${item.author_name}` : ""}
+            </span>
+          </>
+        }
+        status={
+          <button
+            type="button"
+            data-no-longpress=""
+            onClick={(e) => {
+              e.stopPropagation();
+              onTogglePublish(item);
+            }}
+            disabled={selectMode}
+            title={item.is_published ? "Jadikan draft" : "Terbitkan sekarang"}
+            aria-label={`${item.is_published ? "Jadikan draft" : "Terbitkan"} ${item.title}`}
+            className={`inline-flex min-h-10 items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:opacity-60 ${STATUS_BADGE_CLS[status]}`}
+          >
+            {status === "live" ? (
+              <CheckCircle className="h-3 w-3" />
+            ) : status === "expired" ? (
+              <Warning className="h-3 w-3" />
+            ) : (
+              <Clock className="h-3 w-3" />
+            )}
+            {status === "scheduled" && item.published_at
+              ? `Terjadwal · ${new Date(item.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}`
+              : STATUS_TEXT[status]}
+          </button>
+        }
+        actions={<RowActionsMenu label={item.title} actions={actions} disabled={selectMode} />}
+        selected={selected}
+        onClick={() => {
+          if (selectMode) onToggleSelect(item.id);
+          else onView(item);
+        }}
+        onLongPress={() => onEnterPickMode(item.id)}
+      />
     </div>
   );
 }
