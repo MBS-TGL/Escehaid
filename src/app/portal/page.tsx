@@ -96,7 +96,7 @@ function FeaturedAppCard({ app }: { app: PortalApp }) {
   const domain = formatDomain(app.href);
 
   const cls =
-    "group flex w-full items-center gap-4 rounded-2xl border-[1.5px] border-[#082b59] bg-white p-5 transition-all hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#082b59] sm:gap-5 sm:p-6";
+    "group flex w-full items-center gap-4 rounded-3xl border-[1.5px] border-[#082b59] bg-white p-5 transition-all hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#082b59] sm:gap-5 sm:p-6";
 
   const content = (
     <>
@@ -138,7 +138,7 @@ function AppCard({ app }: { app: PortalApp }) {
   const { box, ink } = COLORS[app.color] ?? COLORS.navy;
 
   const cls =
-    "group flex h-full flex-col items-start gap-2 rounded-2xl border border-[#dce3ed] bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[#082b59]/25 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#082b59] sm:p-5";
+    "group flex h-full flex-col items-start gap-2 rounded-3xl border border-[#dce3ed] bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[#082b59]/25 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#082b59] sm:p-5";
 
   const content = (
     <>

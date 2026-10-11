@@ -43,6 +43,15 @@ h3 {
   border-radius: calc(var(--radius) * 1.33);
 }
 
+/* Tile aplikasi (portal publik + pratinjau di form admin) berukuran 240–737px,
+   sehingga rounded-2xl (≈16px) hanya ~2–7% dari lebarnya dan terbaca kotak.
+   rounded-3xl = 2× radius dasar = 24px, lengkungannya jelas terlihat.
+   Dipakai bersama di AppCard/FeaturedAppCard (/portal) dan TilePreview (admin)
+   supaya pratinjau tetap sama persis dengan yang tampil di halaman publik. */
+.rounded-3xl {
+  border-radius: calc(var(--radius) * 2);
+}
+
 .rounded-lg {
   border-radius: calc(var(--radius) * 0.67);
 }

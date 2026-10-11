@@ -109,7 +109,7 @@ function ChevronDown({ open }: { open: boolean }) {
 
 /**
  * Pratinjau tile pada form — sengaja ditiru dari `AppTile` di `src/app/portal/page.tsx`
- * (border #dce3ed, radius 2xl, ikon 48px, teks 14px/11px) supaya yang dilihat di form
+ * (border #dce3ed, radius 3xl, ikon 48px, teks 14px/11px) supaya yang dilihat di form
  * sama persis dengan yang muncul di halaman publik.
  *
  * Kini satu tile saja (petak tetangga / ubin bayangan kedua dihapus) dan mengikuti status:
@@ -137,7 +137,7 @@ function TilePreview({
   const hidden = status === "hidden";
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[#dce3ed] bg-white shadow-sm">
+    <div className="overflow-hidden rounded-3xl border border-[#dce3ed] bg-white shadow-sm">
       {/* Kepala — meniru judul bagian di /portal */}
       <div className="flex items-center justify-between gap-2 border-b border-[#e7ecf3] px-3.5 py-2 md:py-2.5">
         <span className="truncate text-[13px] font-bold text-[#082b59]">Aplikasi Sekolah</span>
@@ -151,7 +151,7 @@ function TilePreview({
       <div className="bg-gray-50 p-2.5 md:p-3">
         <div
           aria-disabled={soon || hidden ? "true" : undefined}
-          className={`mx-auto flex w-full max-w-[240px] flex-col items-center gap-1.5 rounded-2xl border border-[#dce3ed] bg-white px-2 py-3 text-center md:max-w-[320px] md:py-4 ${soon ? "opacity-60" : hidden ? "opacity-40" : ""
+          className={`mx-auto flex w-full max-w-[240px] flex-col items-center gap-1.5 rounded-3xl border border-[#dce3ed] bg-white px-2 py-3 text-center md:max-w-[320px] md:py-4 ${soon ? "opacity-60" : hidden ? "opacity-40" : ""
             }`}
         >
           <span
