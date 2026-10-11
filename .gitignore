@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
+/screenshots/
 
 # next.js
 /.next/
@@ -32,6 +35,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+
+# opencode: konfigurasi izin lokal (jangan di-commit)
+opencode.json
 
 # opencode plugin credentials — token Telegram, jangan sampai ikut ter-commit
 .opencode/**/secrets.json
