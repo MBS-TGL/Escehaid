@@ -1200,7 +1200,23 @@ export default function AdminPortalPage() {
             <div role="columnheader" className="text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</div>
           </div>
 
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          {/* autoScroll dimatikan: bawaan dnd-kit aktif otomatis (threshold 20%
+              tinggi viewport di tiap tepi, dihitung dari posisi pointer). Saat
+              menyeret, jari/kursor yang mendekati tepi bawah langsung memicu
+              window menggulir sendiri dan terus mempercepat — halaman "ikut
+              kabur" sehingga baris sasaran sulit dibidik. Diukur pada viewport
+              382px: pointer ditahan di y=378 membuat scrollY melompat 0 → 1453
+              dalam ~2 detik; dengan autoScroll={false} scrollY tetap 0.
+              Daftar aplikasi pendek (±6 baris) sehingga tetap bisa menyeret ke
+              posisi mana pun tanpa auto-scroll. Bila daftar ini kelak panjang
+              sekali, kembalikan autoScroll dengan threshold kecil (mis. 0.05)
+              alih-alih mengaktifkan ulang bawaannya. */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            autoScroll={false}
+            onDragEnd={handleDragEnd}
+          >
             <SortableContext
               items={visible.map((i) => i.id)}
               strategy={verticalListSortingStrategy}
