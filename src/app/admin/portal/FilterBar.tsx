@@ -19,12 +19,18 @@ const CHIPS: { key: PortalFilter; label: string }[] = [
 const MENU_MIN_W = 180;
 
 /**
- * Baris filter: input pencarian + dropdown status (di samping pencarian).
+ * Baris filter: input pencarian + dropdown status + aksi (mis. "Pilih").
  *
- * Dulu4 chip label panjang berdampingan → di layar sempit wrap ke dua baris
+ * Dulu 4 chip label panjang berdampingan → di layar sempit wrap ke dua baris
  * (lalu diganti nowrap + scroll). Kini satu tombol dropdown ("Semua" + badge
- * jumlah) yang membuka menu; baris pencarian tetap selalu satu baris di semua
- * lebar, dan jumlah tiap status tidak hilang — pindah ke dalam menu.
+ * jumlah) yang membuka menu; jumlah tiap status tidak hilang — pindah ke
+ * dalam menu.
+ *
+ * Tata letak mengikuti lebar, dipisah breakpoint sm (640px):
+ *   < sm → dua baris: pencarian selebar penuh (placeholder tak lagi
+ *           terpotong), lalu dropdown + aksi di baris kedua.
+ *   ≥ sm → satu baris: pencarian melebar (flex-1, maks max-w-sm) di kiri,
+ *           dropdown + aksi di kanan.
  *
  * Menu memakai `useFloatingPanel` (fixed, flip atas/bawah, re-posisi saat
  * scroll/resize) dan pola ARIA yang sama dengan StatusPill di halaman ini:
@@ -139,22 +145,38 @@ export function FilterBar({
 
   // Flip horizontal — pola yang sama dengan menu ⋯ di SortableRow.
   // `useFloatingPanel` mengunci `left` ke sisi KIRI trigger, padahal menu ini
-  // dipaksa lebih lebar (180px) dari tombolnya (~175px). Tanpa flip, kelebaran
-  // itu menjorok ke kanan — keluar dari tepi tombol & tepi kontainer.
-  // Karena trigger selalu di ujung kanan bar, rapatkan tepi KANAN menu ke tepi
-  // kanan trigger supaya kelebaran menjorok ke kiri (menutupi kolom pencarian,
-  // yang memang lebih lebar). clientWidth = ICB supaya tidak meleset 15px
-  // karena scrollbar Windows.
+  // dipaksa lebih lebar (180px) dari tombolnya. Tanpa flip, kelebaran itu
+  // menjorok ke kanan — keluar dari tepi tombol & tepi kontainer.
+  //
+  // Sisi yang dirapatkan mengikuti posisi trigger, karena tata letaknya kini
+  // berbeda antar lebar (lihat return di bawah):
+  //   sm+  → trigger di ujung KANAN bar → rapatkan tepi KANAN menu, kelebaran
+  //          menjorok ke kiri (menutupi kolom pencarian yang lebih lebar).
+  //   < sm → trigger di ujung KIRI baris 2 → tepi kanan tak muat (menu 180px
+  //          lebih lebar dari jarak trigger ke tepi kiri), jadi jatuh ke
+  //          left-align: tepi kiri menu sejajar tepi kiri trigger.
+  // clientWidth = ICB supaya tidak meleset 15px karena scrollbar Windows.
   const menuW = Math.max(MENU_MIN_W, pos?.width ?? MENU_MIN_W);
   const vw = typeof document !== "undefined" ? document.documentElement.clientWidth : 0;
+  const rightAlignedLeft = pos ? pos.left + pos.width - menuW : 0;
   const menuLeft =
-    pos && vw ? Math.max(8, Math.min(pos.left + pos.width - menuW, vw - menuW - 8)) : 0;
+    pos && vw
+      ? rightAlignedLeft >= 8
+        ? Math.min(rightAlignedLeft, vw - menuW - 8)
+        : Math.max(8, pos.left)
+      : 0;
 
   return (
-    // Selalu satu baris (termasuk layar sempit): pencarian melebar
-    // (flex-1 + min-w-0 supaya bisa menyusut) dan dropdown tetap di kanan.
-    <div className="mb-4 flex items-center gap-2 sm:justify-between sm:gap-3">
-      <div className="relative min-w-0 flex-1 sm:max-w-sm">
+    // Mobile: dua baris — pencarian selebar penuh (baris 1), lalu dropdown
+    // + tombol "Pilih" (baris 2). Dulu ketiganya dipaksa satu baris sehingga
+    // placeholder "Cari nama atau deskripsi..." terpotong jadi "Cari nar…".
+    // `flex-wrap` + `w-full` pada pencarian yang memecah baris; `justify-between`
+    // menyebar dropdown ke kiri dan "Pilih" ke kanan pada baris keduanya (pada
+    // baris pertama tak berpengaruh — cuma satu item dan sudah selebar penuh).
+    // sm+ (≥640px): kembali satu baris seperti semula — `sm:flex-nowrap` dan
+    // pencarian jadi `sm:flex-1 sm:w-auto sm:max-w-sm` yang menyerap ruang sisa.
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-2 sm:flex-nowrap sm:gap-3">
+      <div className="relative w-full min-w-0 sm:w-auto sm:max-w-sm sm:flex-1">
         <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input
           type="search"
