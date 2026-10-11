@@ -5,9 +5,9 @@
   JANGAN berhenti menunggu persetujuan. Semua izin sudah diberikan (edit, bash, webfetch, install).
 - Jika ada keraguan, pilih opsi paling konservatif yang tidak mengubah perilaku desktop, lalu catat
   keputusan itu di laporan akhir. Jangan berhenti karena warning lint; perbaiki error sampai build lulus.
-- Pertama: `git checkout -b mobile-ui-polish` (jika sudah ada, pakai saja). Commit setelah SETIAP halaman
-  selesai dengan pesan `ui(mobile): <halaman>`. Jangan `git push`, jangan `git reset --hard`, jangan
-  menghapus branch/riwayat.
+- Kerjakan langsung di BRANCH YANG SEDANG AKTIF; JANGAN membuat atau berpindah branch. Commit setelah
+  SETIAP halaman selesai dengan pesan `ui(mobile): <halaman>`. Jangan `git push`, jangan
+  `git reset --hard`, jangan menghapus branch/riwayat.
 - DILARANG: mengubah isi `.env*`, skema/migrasi database, fungsi di `@/lib/queries` dan server action
   (logika data), RLS/Supabase policy, menghapus data, atau menyentuh halaman PORTAL (sudah selesai;
   hanya boleh DIBACA sebagai referensi, tidak boleh diubah kecuali mengekstrak komponen bersama tanpa
@@ -151,4 +151,4 @@ Jika halaman punya fitur lain (statistik, ekspor, bulk action), buat versi mobil
 Tulis `MOBILE_UI_REPORT.md`: ringkasan perubahan per halaman, daftar komponen bersama baru,
 keputusan konservatif yang diambil, hal yang perlu dites manual di ponsel, dan hasil tsc/lint/build.
 Cetak ringkasan singkat di terminal. Selesai = semua 9 halaman sudah dikerjakan dan di-commit di
-branch `mobile-ui-polish`.
+branch yang sedang aktif.
