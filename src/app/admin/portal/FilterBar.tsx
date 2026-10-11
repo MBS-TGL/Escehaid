@@ -15,6 +15,9 @@ const CHIPS: { key: PortalFilter; label: string }[] = [
   { key: "inactive", label: "Disembunyikan" },
 ];
 
+/** Lebar minimum menu — label "Disembunyikan" + angka + ikon centang. */
+const MENU_MIN_W = 180;
+
 /**
  * Baris filter: input pencarian + dropdown status (di samping pencarian).
  *
@@ -134,6 +137,19 @@ export function FilterBar({
     setOpen(false);
   }
 
+  // Flip horizontal — pola yang sama dengan menu ⋯ di SortableRow.
+  // `useFloatingPanel` mengunci `left` ke sisi KIRI trigger, padahal menu ini
+  // dipaksa lebih lebar (180px) dari tombolnya (~175px). Tanpa flip, kelebaran
+  // itu menjorok ke kanan — keluar dari tepi tombol & tepi kontainer.
+  // Karena trigger selalu di ujung kanan bar, rapatkan tepi KANAN menu ke tepi
+  // kanan trigger supaya kelebaran menjorok ke kiri (menutupi kolom pencarian,
+  // yang memang lebih lebar). clientWidth = ICB supaya tidak meleset 15px
+  // karena scrollbar Windows.
+  const menuW = Math.max(MENU_MIN_W, pos?.width ?? MENU_MIN_W);
+  const vw = typeof document !== "undefined" ? document.documentElement.clientWidth : 0;
+  const menuLeft =
+    pos && vw ? Math.max(8, Math.min(pos.left + pos.width - menuW, vw - menuW - 8)) : 0;
+
   return (
     // Selalu satu baris (termasuk layar sempit): pencarian melebar
     // (flex-1 + min-w-0 supaya bisa menyusut) dan dropdown tetap di kanan.
@@ -192,8 +208,8 @@ export function FilterBar({
               position: "fixed",
               top: pos.top,
               bottom: pos.bottom,
-              left: pos.left,
-              width: Math.max(pos.width, 180),
+              left: menuLeft,
+              width: menuW,
               maxHeight: pos.maxHeight,
               zIndex: 10000,
             }}
