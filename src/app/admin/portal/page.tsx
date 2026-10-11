@@ -1190,9 +1190,12 @@ export default function AdminPortalPage() {
             <div role="columnheader" className="text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Urutan</div>
             <div role="columnheader" className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aplikasi</div>
             <div role="columnheader" className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Link</div>
-            <div role="columnheader" className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Ikon / Warna</div>
+            {/* "Ikon" saja (bukan "Ikon / Warna"): warna sudah tercermin dari
+                latar tile, dan teks "Ikon / Warna" pecah dua baris di kolom
+                80px — membuat baris header terlihat tak seragam. */}
+            <div role="columnheader" className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Ikon</div>
             {/* Rata kiri — selaras dengan sel Status di baris (default kiri)
-                dan header "Ikon / Warna" di sebelahnya. */}
+                dan header "Ikon" di sebelahnya. */}
             <div role="columnheader" className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</div>
             <div role="columnheader" className="text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</div>
           </div>

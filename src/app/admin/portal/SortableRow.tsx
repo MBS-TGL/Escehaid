@@ -37,14 +37,20 @@ import { StatusPill, statusOf, type PortalStatus } from "./StatusControl";
  * — kolom "No" dihapus karena duplikat dengan "Urutan".
  *
  * Pembagian ruang (bar = batas bawah, fr = bagian ruang sisa):
- *   Aplikasi   200px / 1.6fr — kolom paling lebar; label + deskripsi, keduanya
- *                              truncate + title (full text saat hover).
- *   Link       140px / 1fr   — path utuh / domain; cukup lega supaya tidak
- *                              mudah terpotong.
- *   Ikon/Warna 80px (fix)    — cukup untuk tile chip ±28px dengan ruang
+ *   Aplikasi   220px / 2.2fr — kolom paling lebar; label + deskripsi, keduanya
+ *                              truncate + title (full text saat hover). Fr
+ *                              terbesar karena ini satu-satunya kolom yang
+ *                              selalu terisi di setiap baris.
+ *   Link       120px / 0.6fr — sengaja ramping: di data nyata kolom ini hampir
+ *                              selalu "—" (status "Segera hadir" dibolehkan
+ *                              tanpa URL). Domain terpanjang saat ini,
+ *                              "laporanmu.my.id", masih muat tanpa terpotong.
+ *                              Lebih berguna memberi ruangnya ke kolom Aplikasi.
+ *   Ikon       80px (fix)    — cukup untuk tile chip ±28px dengan ruang
  *                              bernapas; nama ikon & warna tetap di tooltip title.
  *   Status     160px (fix)   — muat badge terpanjang ("Segera hadir") + chevron.
- *   Aksi       112px (fix)   — 3 tombol ikon: edit, duplikat, hapus.
+ *   Aksi       112px (fix)   — 3 tombol ikon: edit, duplikat, hapus. Termasuk
+ *                              pemisah vertikal sebelum hapus (lihat `actions`).
  *
  * `minmax` dipakai agar di layar sempit kolom tidak menyusut di bawah kebutuhan
  * isinya; kelebihan ruang baru dibagi menurut fr. Kolom berisi teks wajib punya
@@ -52,13 +58,14 @@ import { StatusPill, statusOf, type PortalStatus } from "./StatusControl";
  *
  * Total minimum = 796px (kolom) + 72px (6 × gap-3) + 32px (px-4) = ±900px —
  * titik munculnya scroll horizontal (overflow-x-auto di page.tsx); sudah
- * diukur pada viewport 800px.
+ * diukur pada viewport 800px. (Aplikasi +20px dan Link −20px saling meniadakan,
+ * jadi ambang scroll tidak berubah.)
  */
 export const PORTAL_GRID =
-  "md:grid-cols-[40px_64px_minmax(200px,1.6fr)_minmax(140px,1fr)_80px_160px_112px]";
+  "md:grid-cols-[40px_64px_minmax(220px,2.2fr)_minmax(120px,0.6fr)_80px_160px_112px]";
 
 /**
- * Tile ikon aplikasi — dipakai kolom "Ikon / Warna" desktop (sm, 28px) dan
+ * Tile ikon aplikasi — dipakai kolom "Ikon" desktop (sm, 28px) dan
  * baris mobile (lg, 40px). Warna pekat di atas latar pucat diambil dari
  * resolvePortalColor (preset navy dsb. atau hex kustom → kelas + style).
  */
@@ -490,7 +497,7 @@ export function SortableRow({
         onClick={() => onEdit(item)}
         aria-label={`Edit ${item.label}`}
         title="Edit"
-        className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+        className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-blue-50 hover:text-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
       >
         <PencilSimple className="h-4 w-4" />
       </button>
@@ -499,16 +506,20 @@ export function SortableRow({
         onClick={() => onDuplicate(item)}
         aria-label={`Duplikat ${item.label}`}
         title="Duplikat"
-        className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+        className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-emerald-50 hover:text-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
       >
         <Copy className="h-4 w-4" />
       </button>
+      {/* Pemisah aksi destruktif — hapus tak bersebelahan langsung dengan
+          duplikat. Tak ada undo: sekali konfirmasi, data hilang, jadi jarak +
+          garis tipis menurunkan risiko klik salah di tengah deretan ikon serupa. */}
+      <span aria-hidden="true" className="mx-0.5 h-5 w-px bg-slate-200" />
       <button
         type="button"
         onClick={() => onDelete(item)}
         aria-label={`Hapus ${item.label}`}
         title="Hapus"
-        className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+        className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
       >
         <Trash className="h-4 w-4" />
       </button>
