@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -9,6 +9,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type Modifier,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -29,7 +30,7 @@ import {
   revalidateFacilities,
 } from "@/lib/queries";
 import { compressImage } from "@/lib/compress-image";
-import { StatCard, StatCardRow, Modal, ConfirmModal, SlideOver } from "@/components/ui";
+import { StatCard, StatCardRow, Modal, ConfirmModal, SlideOver, SkeletonBlock } from "@/components/ui";
 import type { Facility } from "@/lib/supabase";
 import {
   ImageSquare,
@@ -51,13 +52,26 @@ import {
   ArrowDown,
   SortAscending,
   Checks,
+  CheckSquare,
   DotsSixVertical,
   Copy,
   ArrowSquareOut,
+  Info,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
+import {
+  MobileFilterBar,
+  MobilePagination,
+  MobilePickButton,
+  MobileListRow,
+  MobileSelectBar,
+  RowActionsMenu,
+} from "@/components/admin/mobile";
 
 const PAGE_SIZE = 10;
+
+/** Kunci sumbu X saat drag mobile — baris hanya boleh bergeser vertikal. */
+const lockY: Modifier = ({ transform }) => ({ ...transform, x: 0 });
 
 type SortField = "created_at" | "name" | "sort_order";
 type SortDir = "asc" | "desc";
@@ -90,6 +104,9 @@ export default function AdminFacilitiesPage() {
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // Mode pilih (mobile): checkbox menggantikan handle, tap baris = toggle,
+  // bar aksi massal sticky di bawah. Desktop tetap pakai checkbox tabel.
+  const [pickMode, setPickMode] = useState(false);
 
   // Modals
   const [viewItem, setViewItem] = useState<Facility | null>(null);
@@ -107,6 +124,9 @@ export default function AdminFacilitiesPage() {
   const [imageUploading, setImageUploading] = useState(false);
   // Bagian "Lanjutan" (input Urutan) — bisa dilipat
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  // Ref input file gambar — area unggah dipicu lewat klik/keyboard, bukan
+  // hanya drag & drop (dulu klik area tidak membuka pemilih berkas).
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Sensor drag: pointer untuk seret, keyboard untuk aksesibilitas
   const sensors = useSensors(
@@ -211,6 +231,23 @@ export default function AdminFacilitiesPage() {
     const s = new Set(selectedIds);
     if (s.has(id)) s.delete(id); else s.add(id);
     setSelectedIds(s);
+  }
+
+  // ── Mode pilih (mobile) ─────────────────────────────────────
+  /** Masuk mode pilih; bila `id` diisi (long-press), baris itu langsung tercentang. */
+  function enterPickMode(id?: string) {
+    setPickMode(true);
+    if (id) {
+      const s = new Set(selectedIds);
+      s.add(id);
+      setSelectedIds(s);
+    }
+  }
+
+  /** Keluar mode pilih dan hapus semua centang. */
+  function exitPickMode() {
+    setPickMode(false);
+    setSelectedIds(new Set());
   }
 
   function toggleSort(field: SortField) {
@@ -381,7 +418,7 @@ export default function AdminFacilitiesPage() {
     }
     revalidateFacilities().catch(() => {});
     toast(`${ids.length} fasilitas berhasil dihapus`, "success");
-    setSelectedIds(new Set());
+    exitPickMode();
     setBulkDelete(false);
     fetchFacilities();
   }
@@ -441,18 +478,18 @@ export default function AdminFacilitiesPage() {
         <StatCard label="Bergambar" value={stats.withImage} variant="info" />
       </StatCardRow>
 
-      {/* Bulk actions */}
+      {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5">
+        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5 md:flex">
           <Checks className="h-4 w-4 text-[#082b59]" />
           <span className="text-xs font-semibold text-[#082b59]">{selectedIds.size} dipilih</span>
           <button onClick={() => setBulkDelete(true)} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
-          <button onClick={() => setSelectedIds(new Set())} className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
+          <button onClick={() => setSelectedIds(new Set())} aria-label="Hapus pilihan" title="Hapus pilihan" className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
         </div>
       )}
 
-      {/* Filter + Search */}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* Filter + Search (desktop md+) */}
+      <div className="mb-4 hidden flex-col gap-3 md:flex md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
             {[
@@ -475,8 +512,52 @@ export default function AdminFacilitiesPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
+      {/* Toolbar mobile (<md): pencarian penuh + dropdown filter/urut + Pilih */}
+      <MobileFilterBar
+        placeholder="Cari fasilitas…"
+        searchLabel="Cari fasilitas"
+        query={search}
+        onQueryChange={(v) => { setSearch(v); setPage(1); }}
+        filter={{
+          value: filter,
+          options: [
+            { key: "all", label: "Semua", count: stats.total },
+            { key: "active", label: "Aktif", count: stats.active },
+            { key: "inactive", label: "Nonaktif", count: stats.inactive },
+          ],
+          onChange: (k) => { setFilter(k); setPage(1); setSelectedIds(new Set()); },
+        }}
+        sort={{
+          value: `${sortField}:${sortDir}`,
+          options: [
+            { key: "sort_order:asc", label: "Urutan tampil" },
+            { key: "name:asc", label: "Nama A–Z" },
+            { key: "name:desc", label: "Nama Z–A" },
+            { key: "created_at:desc", label: "Terbaru" },
+          ],
+          onChange: (k) => {
+            const [f, d] = k.split(":");
+            setSortField(f as SortField);
+            setSortDir(d as SortDir);
+          },
+        }}
+        action={<MobilePickButton onClick={() => setPickMode(true)} />}
+        selectMode={pickMode}
+        selectedCount={selectedIds.size}
+        allSelected={allVisibleSelected}
+        onSelectAllVisible={toggleSelectAll}
+        onCancelSelect={exitPickMode}
+      />
+      {dragDisabled && (
+        <p className="-mt-2 mb-3 flex items-start gap-1.5 text-[11px] text-slate-400 md:hidden">
+          <Info className="mt-px h-3.5 w-3.5 shrink-0" />
+          Urutan hanya bisa diubah saat menampilkan &quot;Semua&quot; tanpa pencarian dan diurut
+          &quot;Urutan tampil&quot;.
+        </p>
+      )}
+
+      {/* Tabel desktop (md+) — tampilan & perilaku sama seperti sebelumnya */}
+      <div className="hidden overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:block">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={paginated.map((i) => i.id)} strategy={verticalListSortingStrategy}>
             <div className="overflow-x-auto">
@@ -573,6 +654,91 @@ export default function AdminFacilitiesPage() {
         )}
       </div>
 
+      {/* Daftar mobile (<md) — baris ringkas tanpa scroll horizontal; semua
+          fitur tetap ada: pilih (mode pilih), urut (dropdown toolbar), aksi
+          via menu ⋯, dan geser urutan lewat handle di kiri. */}
+      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:hidden">
+        <DndContext
+          sensors={sensors}
+          modifiers={[lockY]}
+          autoScroll={{ threshold: { x: 0, y: 0.08 }, acceleration: 4 }}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={paginated.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+            <div role="list" aria-label="Daftar fasilitas" className="divide-y divide-slate-100">
+              {loading ? (
+                <div className="space-y-3 px-3 py-4" aria-hidden="true">
+                  {Array.from({ length: 4 }, (_, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <SkeletonBlock className="h-12 w-12 rounded-lg" />
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <SkeletonBlock className="h-3.5 w-2/3 rounded" />
+                        <SkeletonBlock className="h-3 w-1/2 rounded" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : paginated.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+                    <ImageSquare className="h-7 w-7 text-slate-300" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
+                    <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada fasilitas"}</p>
+                  </div>
+                  {!search && filter === "all" && (
+                    <button onClick={openCreate} className="mt-1 flex min-h-10 items-center gap-1.5 rounded-lg bg-[#082b59] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1767b1]">
+                      <Plus className="h-3.5 w-3.5" /> Tambah Fasilitas Pertama
+                    </button>
+                  )}
+                </div>
+              ) : (
+                paginated.map((item) => (
+                  <FacilityMobileRow
+                    key={item.id}
+                    item={item}
+                    selected={selectedIds.has(item.id)}
+                    dragDisabled={dragDisabled}
+                    selectMode={pickMode}
+                    onEnterPickMode={enterPickMode}
+                    onToggleSelect={toggleSelect}
+                    onView={setViewItem}
+                    onEdit={openEdit}
+                    onDelete={setDeleteItem}
+                    onDuplicate={openDuplicate}
+                    onToggleActive={handleToggleActive}
+                  />
+                ))
+              )}
+            </div>
+          </SortableContext>
+        </DndContext>
+        {!loading && filtered.length > 0 && (
+          <MobilePagination
+            page={page}
+            totalPages={totalPages}
+            total={filtered.length}
+            from={(page - 1) * PAGE_SIZE + 1}
+            to={Math.min(page * PAGE_SIZE, filtered.length)}
+            onPageChange={setPage}
+            itemLabel="fasilitas"
+          />
+        )}
+        {/* Ruang ekstra agar baris terakhir tidak tertutup bar sticky mode pilih */}
+        {pickMode && <div className="h-24" aria-hidden="true" />}
+      </div>
+
+      {/* Bar aksi massal sticky (mobile, mode pilih) — di atas bottom nav admin */}
+      {pickMode && (
+        <MobileSelectBar
+          count={selectedIds.size}
+          onDelete={() => setBulkDelete(true)}
+          onCancel={exitPickMode}
+        />
+      )}
+
       {/* ── VIEW MODAL ──────────────────────────────── */}
       <Modal
         open={!!viewItem}
@@ -580,17 +746,28 @@ export default function AdminFacilitiesPage() {
         title={viewItem?.name}
         description={viewItem ? `${viewItem.is_active ? "Aktif" : "Nonaktif"} · Urutan: ${viewItem.sort_order || 0}` : undefined}
         footer={
-          <>
+          <div className="flex w-full items-center gap-2 md:w-auto">
             <button onClick={() => { setViewItem(null); openEdit(viewItem!); }}
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 md:flex-none">
               <PencilSimple className="h-4 w-4" /> Edit
             </button>
-          </>
+            {viewItem && (
+              <div className="flex shrink-0 md:hidden">
+                <RowActionsMenu
+                  label={viewItem.name}
+                  actions={[
+                    { key: "duplicate", label: "Duplikat", icon: <Copy className="h-4 w-4" />, run: () => openDuplicate(viewItem) },
+                    { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => { setViewItem(null); setDeleteItem(viewItem); } },
+                  ]}
+                />
+              </div>
+            )}
+          </div>
         }
       >
         {viewItem?.image_url && (
-          <div className="mb-4 -mx-6 -mt-5 overflow-hidden">
-            <img src={viewItem.image_url} alt={viewItem.name} loading="lazy" className="h-48 w-full object-cover sm:h-64" />
+          <div className="mb-4 -mx-5 -mt-5 overflow-hidden md:-mx-6">
+            <img src={viewItem.image_url} alt={viewItem.name} loading="lazy" className="aspect-video w-full object-cover" />
           </div>
         )}
         {viewItem && (
@@ -659,17 +836,18 @@ export default function AdminFacilitiesPage() {
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Nama <span className="text-red-500">*</span></label>
             <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+              autoComplete="off"
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
               placeholder="Nama fasilitas" />
           </div>
 
           {/* Status */}
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Status</label>
-            <div className="flex w-full items-center gap-3 rounded-xl border border-slate-200 px-4 py-2.5">
+            <div className="flex w-full items-center gap-3 rounded-xl border border-slate-200 px-4 py-2">
               <button type="button" onClick={() => setForm({ ...form, is_active: !form.is_active })}
                 aria-pressed={form.is_active}
-                className={`relative h-6 w-11 rounded-full transition-colors ${form.is_active ? "bg-[#1767b1]" : "bg-slate-300"}`}>
+                className={`relative h-6 w-11 rounded-full transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[""] ${form.is_active ? "bg-[#1767b1]" : "bg-slate-300"}`}>
                 <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_active ? "left-[22px]" : "left-0.5"}`} />
               </button>
               <span className="text-sm text-slate-700">{form.is_active ? "Aktif" : "Nonaktif"}</span>
@@ -681,7 +859,7 @@ export default function AdminFacilitiesPage() {
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Deskripsi</label>
             <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
               rows={3}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-none"
+              className="w-full resize-none rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
               placeholder="Deskripsi singkat fasilitas (opsional)" />
           </div>
 
@@ -693,13 +871,24 @@ export default function AdminFacilitiesPage() {
                 <div className="relative overflow-hidden rounded-xl border border-slate-200">
                   <img src={imagePreview} alt="Preview" className="h-40 w-full object-cover" />
                   <button onClick={() => { setImageFile(null); setImagePreview(""); setForm({ ...form, image_url: "" }); }}
-                    className="absolute right-2 top-2 rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
+                    aria-label="Hapus gambar"
+                    className="absolute right-2 top-2 flex h-10 w-10 items-center justify-center rounded-lg bg-black/50 text-white hover:bg-black/70 md:h-7 md:w-7 md:p-1.5">
                     <X className="h-4 w-4" />
                   </button>
                 </div>
               </div>
             ) : (
               <div
+                role="button"
+                tabIndex={0}
+                aria-label="Unggah gambar fasilitas"
+                onClick={() => imageInputRef.current?.click()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    imageInputRef.current?.click();
+                  }
+                }}
                 onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add("border-[#1767b1]", "bg-[#1767b1]/5"); }}
                 onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("border-[#1767b1]", "bg-[#1767b1]/5"); }}
                 onDrop={async (e) => {
@@ -718,7 +907,7 @@ export default function AdminFacilitiesPage() {
                     }
                   }
                 }}
-                className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50"
+                className="flex min-h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 text-center transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
               >
                 {imageUploading ? (
                   <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#1767b1] border-t-transparent" />
@@ -726,9 +915,9 @@ export default function AdminFacilitiesPage() {
                   <ImageIcon className="h-8 w-8 text-slate-300" />
                 )}
                 <span className="text-xs text-slate-400">
-                  {imageUploading ? "Mengkompresi gambar..." : "Klik, seret & lepas, atau Ctrl+V untuk paste gambar"}
+                  {imageUploading ? "Mengkompresi gambar..." : "Ketuk untuk memilih gambar, seret & lepas, atau Ctrl+V untuk paste"}
                 </span>
-                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onClick={(e) => e.stopPropagation()} onChange={handleImageChange} />
               </div>
             )}
             <p className="mt-2 text-xs text-slate-500">
@@ -751,7 +940,8 @@ export default function AdminFacilitiesPage() {
               <div className="border-t border-slate-100 px-4 py-4">
                 <label className="mb-1.5 block text-sm font-semibold text-slate-700">Urutan</label>
                 <input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                  inputMode="numeric"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
                   placeholder="0" />
                 <p className="mt-1.5 text-xs text-slate-400">Angka kecil tampil lebih dulu. Fasilitas baru otomatis memakai urutan terbesar + 10.</p>
               </div>
@@ -882,21 +1072,207 @@ function SortableFacilityRow({
         <div className="flex items-center justify-center gap-1">
           {/* Lihat & Duplikat hidden di bawah sm — 4 tombol (±124px) + Status
               (±78px) membuat kolom Nama tinggal ±62px dan terpotong. Lihat
-              tetap bisa dengan mengetuk nama baris (onClick onView). */}
-          <button onClick={() => onView(item)} className="hidden rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 sm:flex" title="Lihat">
+              tetap bisa dengan mengetuk nama baris (onClick onView).
+              (Tampilan ini hanya dipakai di md+; di bawah md memakai
+              FacilityMobileRow dengan menu ⋯ — lihat bawah.) */}
+          <button onClick={() => onView(item)} className="hidden rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 sm:flex" title="Lihat" aria-label={`Lihat ${item.name}`}>
             <Eye className="h-4 w-4" />
           </button>
-          <button onClick={() => onEdit(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
+          <button onClick={() => onEdit(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit" aria-label={`Edit ${item.name}`}>
             <PencilSimple className="h-4 w-4" />
           </button>
-          <button onClick={() => onDuplicate(item)} className="hidden rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-[#082b59] sm:flex" title="Duplikat">
+          <button onClick={() => onDuplicate(item)} className="hidden rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-[#082b59] sm:flex" title="Duplikat" aria-label={`Duplikat ${item.name}`}>
             <Copy className="h-4 w-4" />
           </button>
-          <button onClick={() => onDelete(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
+          <button onClick={() => onDelete(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus" aria-label={`Hapus ${item.name}`}>
             <Trash className="h-4 w-4" />
           </button>
         </div>
       </td>
     </tr>
+  );
+}
+
+/**
+ * Satu baris fasilitas versi mobile (< md) — dipisah dari baris tabel karena
+ * `useSortable` harus dipanggil per baris, dan dua varian (tabel desktop +
+ * daftar) memakai DndContext TERPISAH: mendaftarkan id sortable yang sama di
+ * dua tempat membuat context hanya melacak satu node (node tersembunyi
+ * display:none berukuran nol → drag rusak di layar yang satunya).
+ *
+ * Layout: [handle + nomor urut (kiri penuh, touch-none)] [thumbnail 48px]
+ * [nama line-clamp-2 + subteks] [pill status (ketuk = toggle)] [menu ⋯].
+ * Tap baris = Lihat; long-press = masuk mode pilih; di mode pilih checkbox
+ * menggantikan handle dan tap baris = toggle centang.
+ */
+function FacilityMobileRow({
+  item,
+  selected,
+  dragDisabled,
+  selectMode,
+  onEnterPickMode,
+  onToggleSelect,
+  onView,
+  onEdit,
+  onDelete,
+  onDuplicate,
+  onToggleActive,
+}: {
+  item: Facility;
+  selected: boolean;
+  dragDisabled: boolean;
+  selectMode: boolean;
+  onEnterPickMode: (id: string) => void;
+  onToggleSelect: (id: string) => void;
+  onView: (f: Facility) => void;
+  onEdit: (f: Facility) => void;
+  onDelete: (f: Facility) => void;
+  onDuplicate: (f: Facility) => void;
+  onToggleActive: (f: Facility) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: item.id, disabled: dragDisabled || selectMode });
+
+  // Handle mobile — nomor urut (11px) menempel di dalam handle sehingga
+  // tinggi baris tidak bertambah. Tombol setinggi baris penuh (self-stretch +
+  // margin negatif yang meniadakan padding baris) dan selebar w-16 supaya
+  // SELURUH kolom kiri menjadi area drag; `touch-action: none` hanya di
+  // handle ini agar sentuhan di area lain tetap men-scroll halaman.
+  const mobileHandle = (
+    <button
+      type="button"
+      {...attributes}
+      {...(dragDisabled ? {} : listeners)}
+      disabled={dragDisabled}
+      data-no-longpress=""
+      aria-label={`Ubah urutan ${item.name}`}
+      title={
+        dragDisabled
+          ? "Urutan hanya bisa diubah saat menampilkan Semua, tanpa pencarian, dan diurut Urutan tampil"
+          : "Seret untuk mengubah urutan"
+      }
+      onClick={(e) => e.stopPropagation()}
+      style={{ touchAction: "none" }}
+      className={`-my-2.5 -ml-3 flex w-16 shrink-0 touch-none flex-col items-center justify-center gap-0.5 self-stretch rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] ${
+        dragDisabled
+          ? "cursor-not-allowed text-slate-200"
+          : "cursor-grab text-slate-400 hover:bg-[#1767b1]/10 hover:text-[#082b59] active:cursor-grabbing"
+      }`}
+    >
+      <DotsSixVertical className="h-4 w-4" />
+      <span className="text-[11px] font-semibold leading-none tabular-nums text-slate-400">
+        {item.sort_order || 0}
+      </span>
+    </button>
+  );
+
+  // Chip peringatan: fasilitas tampil di website tapi tidak punya gambar —
+  // versi baris mobile berupa ikon kecil (bukan chip lebar).
+  const missingImage = item.is_active && !item.image_url;
+
+  const statusPill = (
+    <button
+      type="button"
+      data-no-longpress=""
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggleActive(item);
+      }}
+      disabled={selectMode}
+      title={item.is_active ? "Klik untuk menonaktifkan" : "Klik untuk mengaktifkan"}
+      aria-label={`${item.is_active ? "Nonaktifkan" : "Aktifkan"} ${item.name}`}
+      className={`inline-flex min-h-10 items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:opacity-60 ${
+        item.is_active
+          ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+          : "border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+      }`}
+    >
+      {item.is_active ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+      {item.is_active ? "Aktif" : "Nonaktif"}
+    </button>
+  );
+
+  return (
+    <div
+      ref={setNodeRef}
+      role="listitem"
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 10 : undefined,
+      }}
+      // `relative` supaya zIndex saat drag berlaku — baris yang diseret tidak
+      // tertutup baris tetangga yang ikut bergeser.
+      className={`relative ${isDragging ? "bg-slate-50 opacity-70" : ""}`}
+    >
+      <MobileListRow
+        lead={
+          selectMode ? (
+            <span
+              data-no-longpress=""
+              onClick={(e) => e.stopPropagation()}
+              className="flex h-10 w-10 shrink-0 items-center justify-center"
+            >
+              <input
+                type="checkbox"
+                checked={selected}
+                onChange={() => onToggleSelect(item.id)}
+                aria-label={`Pilih ${item.name}`}
+                className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+              />
+            </span>
+          ) : (
+            mobileHandle
+          )
+        }
+        thumb={
+          item.image_url ? (
+            <img src={item.image_url} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
+          ) : (
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+              <ImageSquare className="h-6 w-6 text-slate-300" />
+            </span>
+          )
+        }
+        title={item.name}
+        subtitle={
+          <>
+            {item.description && (
+              <span className="min-w-0 truncate" title={item.description}>
+                {item.description}
+              </span>
+            )}
+            {missingImage && (
+              <span
+                title="Tanpa gambar"
+                className="inline-flex shrink-0 items-center text-amber-500"
+              >
+                <Warning className="h-3 w-3" />
+                <span className="sr-only">Tanpa gambar</span>
+              </span>
+            )}
+          </>
+        }
+        status={statusPill}
+        actions={
+          <RowActionsMenu
+            label={item.name}
+            disabled={selectMode}
+            actions={[
+              { key: "view", label: "Lihat", icon: <Eye className="h-4 w-4" />, run: () => onView(item) },
+              { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) },
+              { key: "duplicate", label: "Duplikat", icon: <Copy className="h-4 w-4" />, run: () => onDuplicate(item) },
+              { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) },
+            ]}
+          />
+        }
+        selected={selected}
+        onClick={() => {
+          if (selectMode) onToggleSelect(item.id);
+          else onView(item);
+        }}
+        onLongPress={() => onEnterPickMode(item.id)}
+      />
+    </div>
   );
 }
