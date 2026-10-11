@@ -24,7 +24,7 @@ import {
   GOOGLE_FORM_URL,
   revalidatePaths,
 } from "@/lib/queries";
-import { StatCard, StatCardRow, SlideOver } from "@/components/ui";
+import { StatCard, StatCardRow, SlideOver, SkeletonBlock } from "@/components/ui";
 import type { SpmbRegistration, SpmbWave, SpmbFormField, SpmbFieldType } from "@/lib/supabase";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/Toast";
@@ -56,6 +56,15 @@ import {
   Checks,
   CalendarBlank,
 } from "@/components/Icons";
+import {
+  MobileFilterBar,
+  MobilePagination,
+  MobilePickButton,
+  MobileListRow,
+  MobileSelectBar,
+  RowActionsMenu,
+  type RowAction,
+} from "@/components/admin/mobile";
 
 const PAGE_SIZE = 10;
 
@@ -142,6 +151,9 @@ export default function AdminSPMBPage() {
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // Mode pilih (mobile) — baris memakai checkbox, bar aksi massal sticky
+  // muncul di atas bottom nav admin.
+  const [pickMode, setPickMode] = useState(false);
 
   // Modals
   const [viewItem, setViewItem] = useState<SpmbRegistration | null>(null);
@@ -587,6 +599,23 @@ export default function AdminSPMBPage() {
     setSelectedIds(s);
   }
 
+  // ── Mode pilih (mobile) ─────────────────────────────────────
+  /** Masuk mode pilih; bila `id` diisi (long-press), baris itu langsung tercentang. */
+  function enterPickMode(id?: string) {
+    setPickMode(true);
+    if (id) {
+      const s = new Set(selectedIds);
+      s.add(id);
+      setSelectedIds(s);
+    }
+  }
+
+  /** Keluar mode pilih dan hapus semua centang. */
+  function exitPickMode() {
+    setPickMode(false);
+    setSelectedIds(new Set());
+  }
+
   function toggleSort(field: SortField) {
     if (sortField === field) setSortDir((d) => d === "asc" ? "desc" : "asc");
     else { setSortField(field); setSortDir("asc"); }
@@ -640,7 +669,7 @@ export default function AdminSPMBPage() {
     }
     setConfirmAction(null);
     setViewItem(null);
-    setSelectedIds(new Set());
+    exitPickMode();
     fetchData();
   }
 
@@ -653,8 +682,8 @@ export default function AdminSPMBPage() {
     } catch (e) {
       toast(e instanceof Error && e.message ? e.message : "Gagal mengubah status", "error");
     }
-    setSelectedIds(new Set());
     setConfirmAction(null);
+    exitPickMode();
     fetchData();
   }
 
@@ -680,8 +709,8 @@ export default function AdminSPMBPage() {
     } catch (e) {
       toast(e instanceof Error && e.message ? e.message : "Gagal menghapus pendaftaran", "error");
     }
-    setSelectedIds(new Set());
     setBulkDelete(false);
+    exitPickMode();
     fetchData();
   }
 
@@ -831,7 +860,7 @@ export default function AdminSPMBPage() {
                 onChange={(e) => setGoogleUrlDraft(e.target.value)}
                 placeholder={GOOGLE_FORM_URL}
                 disabled={regModeSaving}
-                className="mt-4 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60"
+                className="mt-4 w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60"
               />
               <div className="mt-5 flex gap-3">
                 <button onClick={() => { setGoogleUrlDraft(regUrl); setGoogleModal(false); }} disabled={regModeSaving}
@@ -982,7 +1011,7 @@ export default function AdminSPMBPage() {
                   onChange={(e) => { setDocBrochure(e.target.value); setDocBrochureErr(null); }}
                   aria-invalid={!!docBrochureErr} aria-describedby="doc-brochure-desc"
                   placeholder="https://drive.google.com/file/d/..." disabled={docSaving}
-                  className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
+                  className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
                 {docBrochure.trim().startsWith("https://") && (
                   <a href={docBrochure.trim()} target="_blank" rel="noopener noreferrer"
                     aria-label="Buka link di tab baru" title="Buka link di tab baru"
@@ -1006,7 +1035,7 @@ export default function AdminSPMBPage() {
                   onChange={(e) => { setDocOffline(e.target.value); setDocOfflineErr(null); }}
                   aria-invalid={!!docOfflineErr} aria-describedby="doc-offline-desc"
                   placeholder="https://drive.google.com/file/d/..." disabled={docSaving}
-                  className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
+                  className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
                 {docOffline.trim().startsWith("https://") && (
                   <a href={docOffline.trim()} target="_blank" rel="noopener noreferrer"
                     aria-label="Buka link di tab baru" title="Buka link di tab baru"
@@ -1029,7 +1058,7 @@ export default function AdminSPMBPage() {
                 onChange={(e) => { setDocPhone(e.target.value); setDocPhoneErr(null); }}
                 aria-invalid={!!docPhoneErr} aria-describedby="doc-phone-desc"
                 placeholder="0858-0673-8160" disabled={docSaving}
-                className="w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
+                className="w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
               {docPhoneErr ? (
                 <p id="doc-phone-desc" className="mt-1 text-xs font-medium text-red-600">{docPhoneErr}</p>
               ) : (
@@ -1044,7 +1073,7 @@ export default function AdminSPMBPage() {
                 onChange={(e) => setDocHighlight(e.target.value)}
                 aria-describedby="doc-highlight-desc" disabled={docSaving}
                 placeholder="Pada SPMB Indent 2027/2028, 35 calon murid telah dinyatakan diterima."
-                className="w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
+                className="w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
               <p id="doc-highlight-desc" className="mt-1 text-xs text-slate-400">
                 Tampil di halaman SPMB. Kosongkan untuk menyembunyikan.
               </p>
@@ -1194,7 +1223,7 @@ export default function AdminSPMBPage() {
                 <input type="text" value={waveForm.name}
                   onChange={(e) => setWaveForm({ ...waveForm, name: e.target.value })}
                   placeholder="cth: Gelombang Inden"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1204,7 +1233,7 @@ export default function AdminSPMBPage() {
                   </label>
                   <input type="date" value={waveForm.start_date}
                     onChange={(e) => setWaveForm({ ...waveForm, start_date: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-slate-700">
@@ -1212,7 +1241,7 @@ export default function AdminSPMBPage() {
                   </label>
                   <input type="date" value={waveForm.end_date} min={waveForm.start_date || undefined}
                     onChange={(e) => setWaveForm({ ...waveForm, end_date: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
                 </div>
               </div>
 
@@ -1220,7 +1249,7 @@ export default function AdminSPMBPage() {
                 <label className="mb-1.5 block text-sm font-semibold text-slate-700">Keterangan (opsional)</label>
                 <textarea value={waveForm.note} onChange={(e) => setWaveForm({ ...waveForm, note: e.target.value })}
                   rows={3} placeholder="cth: khusus pendaftar yang mendaftar lebih awal"
-                  className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                  className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1228,7 +1257,7 @@ export default function AdminSPMBPage() {
                   <label className="mb-1.5 block text-sm font-semibold text-slate-700">Urutan Tampil</label>
                   <input type="number" min={0} value={waveForm.sort_order}
                     onChange={(e) => setWaveForm({ ...waveForm, sort_order: e.target.value === "" ? 0 : Number(e.target.value) })}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tampil di Website</label>
@@ -1315,14 +1344,14 @@ export default function AdminSPMBPage() {
                 <input type="text" maxLength={200} value={fieldForm.label}
                   onChange={(e) => { setFieldForm({ ...fieldForm, label: e.target.value }); setFieldFormError(null); }}
                   placeholder="cth: Apakah anak Anda pernah mengikuti tahfidz?"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
               </div>
 
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-slate-700">Jenis Jawaban</label>
                 <select value={fieldForm.type}
                   onChange={(e) => { setFieldForm({ ...fieldForm, type: e.target.value as SpmbFieldType }); setFieldFormError(null); }}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20">
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20">
                   {SPMB_FIELD_TYPES.map((t) => (
                     <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
@@ -1337,7 +1366,7 @@ export default function AdminSPMBPage() {
                   <textarea rows={5} value={fieldForm.optionsText}
                     onChange={(e) => { setFieldForm({ ...fieldForm, optionsText: e.target.value }); setFieldFormError(null); }}
                     placeholder={"Ya\nTidak\nKadang-kadang"}
-                    className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                    className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
                   <p className="mt-1 text-xs text-slate-400">Tulis satu opsi per baris.</p>
                 </div>
               )}
@@ -1347,7 +1376,7 @@ export default function AdminSPMBPage() {
                 <input type="text" maxLength={200} value={fieldForm.placeholder}
                   onChange={(e) => setFieldForm({ ...fieldForm, placeholder: e.target.value })}
                   placeholder="Teks petunjuk di dalam kolom isian"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
               </div>
 
               <div>
@@ -1355,7 +1384,7 @@ export default function AdminSPMBPage() {
                 <input type="text" maxLength={300} value={fieldForm.help}
                   onChange={(e) => setFieldForm({ ...fieldForm, help: e.target.value })}
                   placeholder="Keterangan tambahan di bawah pertanyaan"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1432,20 +1461,20 @@ export default function AdminSPMBPage() {
         <StatCard label="Ditolak" value={stats.rejected} variant="danger" />
       </StatCardRow>
 
-      {/* Bulk actions */}
+      {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5">
+        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5 md:flex">
           <Checks className="h-4 w-4 text-[#082b59]" />
           <span className="text-xs font-semibold text-[#082b59]">{selectedIds.size} dipilih</span>
-          <button onClick={() => setConfirmAction({ id: "bulk", status: "accepted" })} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Terima</button>
-          <button onClick={() => setConfirmAction({ id: "bulk", status: "rejected" })} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Tolak</button>
-          <button onClick={() => setBulkDelete(true)} className="rounded-lg bg-slate-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-slate-700">Hapus</button>
-          <button onClick={() => setSelectedIds(new Set())} className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
+          <button onClick={() => setConfirmAction({ id: "bulk", status: "accepted" })} aria-label={`Terima ${selectedIds.size} pendaftar terpilih`} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Terima</button>
+          <button onClick={() => setConfirmAction({ id: "bulk", status: "rejected" })} aria-label={`Tolak ${selectedIds.size} pendaftar terpilih`} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Tolak</button>
+          <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} pendaftar terpilih`} className="rounded-lg bg-slate-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-slate-700">Hapus</button>
+          <button onClick={() => setSelectedIds(new Set())} aria-label="Batalkan pilihan" title="Batalkan pilihan" className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
         </div>
       )}
 
-      {/* Filter + Search */}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* Filter + Search (desktop md+) */}
+      <div className="mb-4 hidden flex-col gap-3 md:flex md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           {/* overflow-x-auto bukan flex-wrap: ini segmented control — menggulung
             satu baris lebih wajar daripada memecah jadi dua baris di dalam
@@ -1468,13 +1497,56 @@ export default function AdminSPMBPage() {
         <div className="relative">
           <MagnifyingGlass className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input type="text" placeholder="Cari nama, sekolah, email..."
+            aria-label="Cari nama, sekolah, atau email"
             className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 sm:w-72"
             value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
+      {/* Toolbar mobile (<md): pencarian + filter (dengan jumlah) + urut + Pilih */}
+      <MobileFilterBar
+        placeholder="Cari nama, sekolah, email…"
+        searchLabel="Cari nama, sekolah, atau email"
+        query={search}
+        onQueryChange={(v) => { setSearch(v); setPage(1); }}
+        filter={{
+          value: filter,
+          options: [
+            { key: "all", label: "Semua", count: stats.total },
+            { key: "pending", label: "Menunggu", count: stats.pending },
+            { key: "accepted", label: "Diterima", count: stats.accepted },
+            { key: "rejected", label: "Ditolak", count: stats.rejected },
+          ],
+          onChange: (k) => { setFilter(k); setPage(1); setSelectedIds(new Set()); },
+        }}
+        sort={{
+          value: `${sortField}:${sortDir}`,
+          options: [
+            { key: "created_at:desc", label: "Terbaru" },
+            { key: "created_at:asc", label: "Terlama" },
+            { key: "full_name:asc", label: "Nama A–Z" },
+            { key: "full_name:desc", label: "Nama Z–A" },
+            { key: "status:asc", label: "Status A–Z" },
+            { key: "status:desc", label: "Status Z–A" },
+            { key: "registration_path:asc", label: "Jalur A–Z" },
+            { key: "registration_path:desc", label: "Jalur Z–A" },
+          ],
+          onChange: (k) => {
+            const [f, d] = k.split(":");
+            setSortField(f as SortField);
+            setSortDir(d as SortDir);
+          },
+        }}
+        action={<MobilePickButton onClick={() => setPickMode(true)} />}
+        selectMode={pickMode}
+        selectedCount={selectedIds.size}
+        allSelected={allVisibleSelected}
+        onSelectAllVisible={toggleSelectAll}
+        onCancelSelect={exitPickMode}
+      />
+
+      {/* Tabel desktop (md+) — tampilan & perilaku sama seperti sebelumnya */}
+      <div className="hidden overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:block">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
@@ -1556,13 +1628,13 @@ export default function AdminSPMBPage() {
                       </td>
                       <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => openDetail(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Detail">
+                          <button onClick={() => openDetail(item)} aria-label={`Lihat detail ${item.full_name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Detail">
                             <Eye className="h-4 w-4" />
                           </button>
-                          <button onClick={() => { setEditItem(item); setEditNotes(item.admin_notes || ""); }} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit Catatan">
+                          <button onClick={() => { setEditItem(item); setEditNotes(item.admin_notes || ""); }} aria-label={`Edit catatan ${item.full_name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit Catatan">
                             <PencilSimple className="h-4 w-4" />
                           </button>
-                          <button onClick={() => setDeleteItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
+                          <button onClick={() => setDeleteItem(item)} aria-label={`Hapus pendaftaran ${item.full_name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
                             <Trash className="h-4 w-4" />
                           </button>
                         </div>
@@ -1598,6 +1670,93 @@ export default function AdminSPMBPage() {
           </div>
         )}
       </div>
+
+      {/* Daftar mobile (<md) — baris ringkas: inisial, nama, jalur + tanggal,
+          pill status bisa diketuk (siklus Menunggu → Diterima → Ditolak),
+          aksi via menu ⋯. Tanpa scroll horizontal, semua fitur tabel tetap ada. */}
+      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:hidden">
+        <div role="list" aria-label="Daftar pendaftar SPMB" className="divide-y divide-slate-100">
+          {loading ? (
+            <div className="space-y-3 px-3 py-4" aria-hidden="true">
+              {Array.from({ length: 4 }, (_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <SkeletonBlock className="h-10 w-10 rounded-full" />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <SkeletonBlock className="h-3.5 w-2/3 rounded" />
+                    <SkeletonBlock className="h-3 w-1/2 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : paginated.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+                <Users className="h-7 w-7 text-slate-300" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
+                <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada pendaftar SPMB"}</p>
+              </div>
+            </div>
+          ) : (
+            paginated.map((item) => (
+              <RegistrationMobileRow
+                key={item.id}
+                item={item}
+                selected={selectedIds.has(item.id)}
+                selectMode={pickMode}
+                onEnterPickMode={enterPickMode}
+                onToggleSelect={toggleSelect}
+                onDetail={openDetail}
+                onEditNotes={(r) => { setEditItem(r); setEditNotes(r.admin_notes || ""); }}
+                onToggleStatus={handleToggleStatus}
+                onDelete={setDeleteItem}
+              />
+            ))
+          )}
+        </div>
+        {!loading && filtered.length > 0 && (
+          <MobilePagination
+            page={page}
+            totalPages={totalPages}
+            total={filtered.length}
+            from={(page - 1) * PAGE_SIZE + 1}
+            to={Math.min(page * PAGE_SIZE, filtered.length)}
+            onPageChange={setPage}
+            itemLabel="pendaftar"
+          />
+        )}
+        {/* Ruang ekstra agar baris terakhir tidak tertutup bar sticky mode pilih */}
+        {pickMode && <div className="h-24" aria-hidden="true" />}
+      </div>
+
+      {/* Bar aksi massal sticky (mobile, mode pilih) — di atas bottom nav admin */}
+      {pickMode && (
+        <MobileSelectBar
+          count={selectedIds.size}
+          onDelete={() => setBulkDelete(true)}
+          onCancel={exitPickMode}
+        >
+          <button
+            type="button"
+            onClick={() => setConfirmAction({ id: "bulk", status: "accepted" })}
+            disabled={selectedIds.size === 0}
+            aria-label="Terima pendaftar terpilih"
+            className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Terima
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirmAction({ id: "bulk", status: "rejected" })}
+            disabled={selectedIds.size === 0}
+            aria-label="Tolak pendaftar terpilih"
+            className="min-h-10 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Tolak
+          </button>
+        </MobileSelectBar>
+      )}
 
       {/* ── VIEW MODAL ──────────────────────────────── */}
       {viewItem && (
@@ -1819,7 +1978,7 @@ export default function AdminSPMBPage() {
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Catatan Admin</label>
               <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)}
                 rows={8}
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-y"
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-y"
                 placeholder="Tambahkan catatan untuk pendaftar ini..." />
             </div>
             <div className="rounded-xl border border-slate-200 p-4 space-y-3">
@@ -2047,6 +2206,118 @@ function BerkasItem({ label, url, isImage, isPdf }: { label: string; url: string
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Baris daftar mobile (SPMB): inisial + nama, badge jalur + asal
+ * sekolah/email + tanggal, pill status yang bisa diketuk (siklus Menunggu →
+ * Diterima → Ditolak, sama seperti kolom Status di desktop), menu ⋯ berisi
+ * Detail, Edit Catatan, Telepon (bila ada nomor) & Hapus. Tap baris = buka
+ * modal detail; tekan lama = mode pilih. Nomor urut & kolom tanggal tetap
+ * desktop-saja, sama seperti tabel lamanya.
+ */
+function RegistrationMobileRow({
+  item,
+  selected,
+  selectMode,
+  onEnterPickMode,
+  onToggleSelect,
+  onDetail,
+  onEditNotes,
+  onToggleStatus,
+  onDelete,
+}: {
+  item: SpmbRegistration;
+  selected: boolean;
+  selectMode: boolean;
+  onEnterPickMode: (id: string) => void;
+  onToggleSelect: (id: string) => void;
+  onDetail: (r: SpmbRegistration) => void;
+  onEditNotes: (r: SpmbRegistration) => void;
+  onToggleStatus: (r: SpmbRegistration) => void;
+  onDelete: (r: SpmbRegistration) => void;
+}) {
+  const st = statusConfig[item.status] || statusConfig.pending;
+  const StatusIcon = st.icon;
+  const actions: RowAction[] = [
+    { key: "detail", label: "Detail", icon: <Eye className="h-4 w-4" />, run: () => onDetail(item) },
+    { key: "notes", label: "Edit Catatan", icon: <PencilSimple className="h-4 w-4" />, run: () => onEditNotes(item) },
+    ...(item.phone
+      ? [{
+          key: "call",
+          label: "Telepon",
+          icon: <Phone className="h-4 w-4" />,
+          run: () => { window.location.href = `tel:${item.phone?.replace(/[^0-9]/g, "")}`; },
+        }]
+      : []),
+    { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) },
+  ];
+
+  return (
+    <div role="listitem">
+      <MobileListRow
+        lead={
+          selectMode ? (
+            <span
+              data-no-longpress=""
+              onClick={(e) => e.stopPropagation()}
+              className="flex h-10 w-10 shrink-0 items-center justify-center"
+            >
+              <input
+                type="checkbox"
+                checked={selected}
+                onChange={() => onToggleSelect(item.id)}
+                aria-label={`Pilih ${item.full_name}`}
+                className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+              />
+            </span>
+          ) : (
+            <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#082b59]/10 text-[11px] font-bold text-[#082b59]">
+              {item.full_name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+            </span>
+          )
+        }
+        title={item.full_name}
+        subtitle={
+          <>
+            <span className={`inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${pathColors[item.registration_path] || "bg-slate-100 text-slate-600"}`}>
+              {pathLabels[item.registration_path] || item.registration_path}
+            </span>
+            {(item.previous_school || item.email) && (
+              <span className="min-w-0 truncate">{item.previous_school || item.email}</span>
+            )}
+            <span className="shrink-0">
+              {new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+            </span>
+          </>
+        }
+        status={
+          <button
+            type="button"
+            data-no-longpress=""
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleStatus(item);
+            }}
+            disabled={selectMode}
+            title="Ubah status (Menunggu → Diterima → Ditolak)"
+            aria-label={`Ubah status ${item.full_name} — saat ini ${st.label}`}
+            className={`inline-flex min-h-10 items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:opacity-60 ${st.bg} ${st.color}`}
+          >
+            <StatusIcon className="h-3 w-3" />
+            {st.label}
+          </button>
+        }
+        actions={<RowActionsMenu label={item.full_name} actions={actions} disabled={selectMode} />}
+        selected={selected}
+        onClick={() => {
+          if (selectMode) onToggleSelect(item.id);
+          else onDetail(item);
+        }}
+        onLongPress={() => onEnterPickMode(item.id)}
+      />
     </div>
   );
 }
