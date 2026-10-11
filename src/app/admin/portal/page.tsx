@@ -10,6 +10,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type Modifier,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -57,6 +58,8 @@ const EMPTY_FORM: PortalAppInput = {
   is_active: true,
   sort_order: 0,
 };
+
+const lockY: Modifier = ({ transform }) => ({ ...transform, x: 0 });
 
 /** Is_external dihitung otomatis dari awalan URL: http(s):// → tab baru. */
 function autoExternal(href: string): boolean {
@@ -1212,11 +1215,12 @@ export default function AdminPortalPage() {
               sekali, kembalikan autoScroll dengan threshold kecil (mis. 0.05)
               alih-alih mengaktifkan ulang bawaannya. */}
           <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            autoScroll={false}
-            onDragEnd={handleDragEnd}
-          >
+              sensors={sensors}
+              modifiers={[lockY]}
+              autoScroll={{ threshold: { x: 0, y: 0.08 }, acceleration: 4 }}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
             <SortableContext
               items={visible.map((i) => i.id)}
               strategy={verticalListSortingStrategy}
@@ -1405,7 +1409,7 @@ export default function AdminPortalPage() {
           </div>
 
           <div className="contents min-w-0 md:block">
-            <div className="order-1 sticky top-0 z-10 -mx-1 min-w-0 bg-white px-1 pb-3 pt-1 shadow-[0_8px_16px_-12px_rgba(15,23,42,0.5)] md:static md:mx-0 md:p-0 md:shadow-none">
+            <div className="order-1 sticky top-0 z-10 -mx-1 min-w-0 bg-white px-1 pb-3 pt-1 after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-4 after:bg-linear-to-b after:from-white after:to-transparent md:static md:mx-0 md:p-0 md:after:hidden">
               <p className="mb-2 hidden text-xs font-bold uppercase tracking-wider text-slate-400 md:block">
                 Tampilan
               </p>

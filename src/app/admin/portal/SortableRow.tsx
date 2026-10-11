@@ -458,10 +458,13 @@ export function SortableRow({
     </button>
   );
 
-  /** Handle mobile (40px) — nomor urutan (11px) menempel di dalam handle
-   *  sehingga teks "Urutan N" tidak diperlukan lagi dan tinggi baris tidak
-   *  bertambah. `touch-action: none` hanya di sini: drag bisa dimulai dari
-   *  handle tanpa membajak scroll vertikal halaman di area baris lainnya. */
+  /** Handle mobile — nomor urutan (11px) menempel di dalam handle sehingga
+   *  teks "Urutan N" tidak diperlukan lagi dan tinggi baris tidak bertambah.
+   *  Tombol dibuat setinggi baris penuh (self-stretch + margin negatif
+   *  -my-2.5 -ml-3 yang meniadakan padding py-2.5/px-3 baris) dan selebar
+   *  w-16 (64px; ±52px bersih setelah -ml-3) supaya SELURUH kolom kiri
+   *  menjadi area drag. `touch-action: none` hanya di tombol ini: sentuhan
+   *  di luar kolom kiri (ikon, nama, status) tetap men-scroll halaman. */
   const mobileHandle = (
     <button
       type="button"
@@ -477,7 +480,7 @@ export function SortableRow({
       }
       onClick={(e) => e.stopPropagation()}
       style={{ touchAction: "none" }}
-      className={`flex h-10 w-10 shrink-0 touch-none flex-col items-center justify-center gap-0.5 rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] ${
+      className={`-my-2.5 -ml-3 flex w-16 shrink-0 touch-none flex-col items-center justify-center gap-0.5 self-stretch rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] ${
         dragDisabled
           ? "cursor-not-allowed text-slate-300"
           : "cursor-grab text-slate-400 hover:bg-[#1767b1]/10 hover:text-[#082b59] active:cursor-grabbing"
@@ -590,7 +593,10 @@ export function SortableRow({
       ref={setNodeRef}
       style={style}
       role="row"
-      className={`group transition-colors ${
+      // `relative` supaya zIndex saat drag benar-benar berlaku (z-index tidak
+      // bekerja pada elemen yang tidak berposisi) — baris yang diseret tidak
+      // tertutup baris tetangga yang ikut bergeser.
+      className={`group relative transition-colors ${
         isDragging ? "bg-slate-50 opacity-70" : "hover:bg-slate-50/80"
       }`}
     >
@@ -648,13 +654,15 @@ export function SortableRow({
       </div>
 
       {/* ── Mobile: satu baris ringkas ─────────────────────────
-          [handle/checkbox 40px] [tile ikon 40px] [nama+subteks] [chip status] [⋯ 40px]
+          [handle/checkbox] [tile ikon 40px] [nama+subteks] [chip status] [⋯ 40px]
           — satu baris penuh, tanpa "Urutan N" (nomor di dalam handle), tanpa
           ikon aksi terpisah (pindah ke menu ⋯). Tap baris = edit; di mode
           pilih, checkbox menggantikan handle di slot yang sama (lebar baris
-          tidak berubah) dan tap baris = toggle centang. */}
+          tidak berubah) dan tap baris = toggle centang.
+          `select-none` + `-webkit-touch-callout:none` mencegah seleksi teks /
+          callout bawaan browser saat long-press (bentrok dengan mode pilih). */}
       <div
-        className="flex items-center gap-2 px-3 py-2.5 md:hidden"
+        className="flex select-none items-center gap-2 px-3 py-2.5 [-webkit-touch-callout:none] md:hidden"
         onClick={onRowClick}
         onPointerDown={onPointerDownRow}
         onPointerMove={onPointerMoveRow}
@@ -683,7 +691,13 @@ export function SortableRow({
         <ThemeChip icon={item.icon} color={item.color} size="lg" />
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium leading-tight text-slate-700" title={item.label}>
+          {/* line-clamp-2: nama boleh membungkus 2 baris supaya tidak
+              terpotong ("Jadwal Pela…"); ganti ke `truncate` bila ingin
+              tinggi baris selalu seragam. */}
+          <p
+            className="line-clamp-2 break-words text-sm font-medium leading-tight text-slate-700"
+            title={item.label}
+          >
             {item.label}
           </p>
           {subtext && (
