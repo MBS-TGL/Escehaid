@@ -1025,10 +1025,10 @@ export default function AdminAchievementsPage() {
         open={confirmClose}
         onClose={() => setConfirmClose(false)}
         onConfirm={() => { setConfirmClose(false); closeForm(); }}
-        title="Perubahan belum disimpan?"
-        description="Tutup tanpa menyimpan?"
-        confirmLabel="Tutup Tanpa Simpan"
-        variant="warning"
+        title="Buang perubahan?"
+        description="Perubahan pada form ini belum disimpan dan akan hilang."
+        cancelLabel="Lanjut mengedit"
+        confirmLabel="Buang"
       />
     </div>
   );

@@ -167,16 +167,28 @@ export const Modal = memo(function Modal({
 
 /* ─── ConfirmModal ──────────────────────────────────────── */
 /**
+ * Konfirmasi dua tombol TANPA header `Modal` (judul & deskripsi dirender di
+ * badan dialog, bukan lewat prop `title`/`description` `Modal`). Dua alasan:
+ *
+ *  1. Header `Modal` membawa border-b + tombol ❌. Pada dialog konfirmasi ❌
+ *     hanya menduplikasi peran "Batal" dan menimbulkan ambigu (❌ = batal, atau
+ *     = lanjutkan aksi?) — konvensi alert native pun hanya punya tombol aksi.
+ *  2. Tombol TIDAK memakai `flex-1`. Versi lama melebarkan tombol aksi setengah
+ *     lebar dialog, sehingga aksi berisiko (hapus/buang) justru menjadi target
+ *     klik terbesar. Mengikuti konten membuat aksi aman (tombol kiri) lebih
+ *     luas secara alami.
+ *
  * Dua varian warna (hanya dua, sesuai kebutuhan UI admin):
- *  - `danger`  → merah : aksi destruktif/permanen (hapus).
- *  - `warning` → kuning brand #f4d21f : aksi konsekuensial tapi tidak
- *                permanen (duplikat, tutup form tanpa simpan).
- * `text-*` ikut di dalam map karena kuning butuh teks navy — jangan ada
- * `text-white` generik di tombol (teks putih di atas kuning tidak kontras).
+ *  - `danger`  → merah lembut : aksi destruktif (hapus permanen, buang perubahan).
+ *  - `warning` → amber lembut : aksi konsekuensial tapi tak menghilangkan apa pun
+ *                (duplikat). Kuning brand #f4d21f versi padat sudah dilepas:
+ *                warna terang justru menjadikan aksi berisiko elemen paling
+ *                mencolok di layar. Teks memakai `red-700`/`amber-800` (bukan
+ *                `red-600`) agar kontras di atas basis lembut tetap lulus AA.
  */
 const variantColorMap: Record<"danger" | "warning", string> = {
-  danger: "bg-red-600 hover:bg-red-700 text-white",
-  warning: "bg-[#f4d21f] hover:bg-[#ffe14d] text-[#082b59]",
+  danger: "bg-red-100 hover:bg-red-200 text-red-700",
+  warning: "bg-amber-100 hover:bg-amber-200 text-amber-800",
 };
 
 type ConfirmModalProps = {
@@ -188,10 +200,12 @@ type ConfirmModalProps = {
   description?: string;
   /** Alias for description */
   message?: string;
+  /** Label tombol pembatal — sebutkan OUTCOME-nya, jangan "Batal" generik */
+  cancelLabel?: string;
   confirmLabel?: string;
   /** Warna tombol penuh (mis. "bg-purple-600 text-white") — meng-override variant */
   confirmColor?: string;
-  /** Shorthand: "danger" (merah) | "warning" (kuning) — dipetakan ke confirmColor */
+  /** Shorthand: "danger" (merah) | "warning" (amber) — dipetakan ke confirmColor */
   variant?: "danger" | "warning";
   loading?: boolean;
 };
@@ -203,6 +217,7 @@ export function ConfirmModal({
   title,
   description,
   message,
+  cancelLabel = "Batal",
   confirmLabel = "Ya, Hapus",
   confirmColor,
   variant,
@@ -212,16 +227,33 @@ export function ConfirmModal({
   const resolvedColor = confirmColor || variantColorMap[variant ?? "danger"];
 
   return (
-    <Modal open={open} onClose={onClose} size="sm" title={title} description={resolvedDesc}>
-      <div className="flex gap-3">
-        <button onClick={onClose} disabled={loading}
-          className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
-          Batal
-        </button>
-        <button onClick={onConfirm} disabled={loading}
-          className={`flex-1 rounded-xl py-2.5 text-sm font-semibold disabled:opacity-50 ${resolvedColor}`}>
-          {loading ? "Memproses..." : confirmLabel}
-        </button>
+    <Modal open={open} onClose={onClose} size="sm">
+      <div>
+        <h3 className="text-base font-bold tracking-tight text-slate-800">{title}</h3>
+        {resolvedDesc && (
+          <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{resolvedDesc}</p>
+        )}
+        {/* justify-between: "Batal" (aksi aman) di ujung kiri, konfirmasi di
+            ujung kanan — ruang di antaranya kosong, bukan tombol saling rapat.
+            flex-wrap tetap dipertahankan sebagai pengaman agar label panjang
+            (mis. "Hapus 12 Aplikasi") tak terpotong di layar 360px — panel
+            memakai overflow-hidden. */}
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
+          >
+            {cancelLabel}
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 ${resolvedColor}`}
+          >
+            {loading ? "Memproses..." : confirmLabel}
+          </button>
+        </div>
       </div>
     </Modal>
   );

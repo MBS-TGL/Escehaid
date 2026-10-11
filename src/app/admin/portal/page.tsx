@@ -1489,10 +1489,10 @@ export default function AdminPortalPage() {
         open={confirmClose}
         onClose={() => setConfirmClose(false)}
         onConfirm={() => { setConfirmClose(false); setFormOpen(false); }}
-        title="Perubahan belum disimpan?"
-        description="Tutup form tanpa menyimpan perubahan?"
-        confirmLabel="Tutup Tanpa Simpan"
-        variant="warning"
+        title="Buang perubahan?"
+        description="Perubahan pada form ini belum disimpan dan akan hilang."
+        cancelLabel="Lanjut mengedit"
+        confirmLabel="Buang"
       />
 
       {/* Delete Confirm */}
