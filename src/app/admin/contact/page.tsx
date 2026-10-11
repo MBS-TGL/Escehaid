@@ -9,7 +9,7 @@ import {
   toggleReadContactMessage,
   toggleReadContactMessageBulk,
 } from "@/lib/queries";
-import { SlideOver, StatCard, StatCardRow } from "@/components/ui";
+import { SlideOver, StatCard, StatCardRow, SkeletonBlock } from "@/components/ui";
 import type { ContactMessage } from "@/lib/supabase";
 import {
   Envelope,
@@ -32,6 +32,15 @@ import {
   PencilSimple,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
+import {
+  MobileFilterBar,
+  MobilePagination,
+  MobilePickButton,
+  MobileListRow,
+  MobileSelectBar,
+  RowActionsMenu,
+  type RowAction,
+} from "@/components/admin/mobile";
 
 const PAGE_SIZE = 10;
 
@@ -50,6 +59,9 @@ export default function AdminContactPage() {
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // Mode pilih (mobile) — baris memakai checkbox, bar aksi massal sticky
+  // muncul di atas bottom nav admin.
+  const [pickMode, setPickMode] = useState(false);
 
   // Modals
   const [viewItem, setViewItem] = useState<ContactMessage | null>(null);
@@ -129,6 +141,23 @@ export default function AdminContactPage() {
     setSelectedIds(s);
   }
 
+  // ── Mode pilih (mobile) ─────────────────────────────────────
+  /** Masuk mode pilih; bila `id` diisi (long-press), baris itu langsung tercentang. */
+  function enterPickMode(id?: string) {
+    setPickMode(true);
+    if (id) {
+      const s = new Set(selectedIds);
+      s.add(id);
+      setSelectedIds(s);
+    }
+  }
+
+  /** Keluar mode pilih dan hapus semua centang. */
+  function exitPickMode() {
+    setPickMode(false);
+    setSelectedIds(new Set());
+  }
+
   function toggleSort(field: SortField) {
     if (sortField === field) setSortDir((d) => d === "asc" ? "desc" : "asc");
     else { setSortField(field); setSortDir("asc"); }
@@ -161,8 +190,8 @@ export default function AdminContactPage() {
     try {
       await deleteContactMessageBulk(ids);
       toast(`${ids.length} pesan berhasil dihapus`, "success");
-      setSelectedIds(new Set());
       setBulkDelete(false);
+      exitPickMode();
       fetchMessages();
     } catch {
       toast("Gagal menghapus pesan", "error");
@@ -175,7 +204,7 @@ export default function AdminContactPage() {
     try {
       await toggleReadContactMessageBulk(ids, isRead);
       toast(isRead ? `${ids.length} pesan ditandai sudah dibaca` : `${ids.length} pesan ditandai belum dibaca`, "success");
-      setSelectedIds(new Set());
+      exitPickMode();
       fetchMessages();
     } catch {
       toast("Gagal mengubah status pesan", "error");
@@ -222,20 +251,20 @@ export default function AdminContactPage() {
         <StatCard label="Hari Ini" value={stats.today} variant="info" />
       </StatCardRow>
 
-      {/* Bulk actions */}
+      {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5">
+        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5 md:flex">
           <Checks className="h-4 w-4 text-[#082b59]" />
           <span className="text-xs font-semibold text-[#082b59]">{selectedIds.size} dipilih</span>
-          <button onClick={() => handleBulkMarkRead(true)} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Tandai Dibaca</button>
-          <button onClick={() => handleBulkMarkRead(false)} className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-600">Tandai Belum Dibaca</button>
-          <button onClick={() => setBulkDelete(true)} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
-          <button onClick={() => setSelectedIds(new Set())} className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
+          <button onClick={() => handleBulkMarkRead(true)} aria-label={`Tandai ${selectedIds.size} pesan terpilih sudah dibaca`} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Tandai Dibaca</button>
+          <button onClick={() => handleBulkMarkRead(false)} aria-label={`Tandai ${selectedIds.size} pesan terpilih belum dibaca`} className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-600">Tandai Belum Dibaca</button>
+          <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} pesan terpilih`} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
+          <button onClick={() => setSelectedIds(new Set())} aria-label="Batalkan pilihan" title="Batalkan pilihan" className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
         </div>
       )}
 
-      {/* Filter + Search */}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* Filter + Search (desktop md+) */}
+      <div className="mb-4 hidden flex-col gap-3 md:flex md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
             {[
@@ -253,13 +282,53 @@ export default function AdminContactPage() {
         <div className="relative">
           <MagnifyingGlass className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input type="text" placeholder="Cari nama, email, subjek..."
+            aria-label="Cari nama, email, atau subjek"
             className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 sm:w-72"
             value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
+      {/* Toolbar mobile (<md): pencarian + filter (dengan jumlah) + urut + Pilih */}
+      <MobileFilterBar
+        placeholder="Cari nama, email, subjek…"
+        searchLabel="Cari nama, email, atau subjek"
+        query={search}
+        onQueryChange={(v) => { setSearch(v); setPage(1); }}
+        filter={{
+          value: filter,
+          options: [
+            { key: "all", label: "Semua", count: stats.total },
+            { key: "unread", label: "Belum Dibaca", count: stats.unread },
+            { key: "read", label: "Sudah Dibaca", count: stats.read },
+          ],
+          onChange: (k) => { setFilter(k); setPage(1); setSelectedIds(new Set()); },
+        }}
+        sort={{
+          value: `${sortField}:${sortDir}`,
+          options: [
+            { key: "created_at:desc", label: "Terbaru" },
+            { key: "created_at:asc", label: "Terlama" },
+            { key: "name:asc", label: "Nama A–Z" },
+            { key: "name:desc", label: "Nama Z–A" },
+            { key: "is_read:asc", label: "Belum Dibaca Dahulu" },
+            { key: "is_read:desc", label: "Sudah Dibaca Dahulu" },
+          ],
+          onChange: (k) => {
+            const [f, d] = k.split(":");
+            setSortField(f as SortField);
+            setSortDir(d as SortDir);
+          },
+        }}
+        action={<MobilePickButton onClick={() => setPickMode(true)} />}
+        selectMode={pickMode}
+        selectedCount={selectedIds.size}
+        allSelected={allVisibleSelected}
+        onSelectAllVisible={toggleSelectAll}
+        onCancelSelect={exitPickMode}
+      />
+
+      {/* Tabel desktop (md+) — tampilan & perilaku sama seperti sebelumnya */}
+      <div className="hidden overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:block">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
@@ -340,10 +409,10 @@ export default function AdminContactPage() {
                     </td>
                     <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => handleViewMessage(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat">
+                        <button onClick={() => handleViewMessage(item)} aria-label={`Lihat pesan dari ${item.name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat">
                           <Eye className="h-4 w-4" />
                         </button>
-                        <button onClick={() => setDeleteItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
+                        <button onClick={() => setDeleteItem(item)} aria-label={`Hapus pesan dari ${item.name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
                           <Trash className="h-4 w-4" />
                         </button>
                       </div>
@@ -379,6 +448,92 @@ export default function AdminContactPage() {
         )}
       </div>
 
+      {/* Daftar mobile (<md) — baris gaya inbox: titik/tanda belum dibaca,
+          subjek + tanggal, pill status bisa diketuk, aksi via menu ⋯.
+          Semua fitur tabel desktop tetap tersedia tanpa scroll horizontal. */}
+      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:hidden">
+        <div role="list" aria-label="Daftar pesan masuk" className="divide-y divide-slate-100">
+          {loading ? (
+            <div className="space-y-3 px-3 py-4" aria-hidden="true">
+              {Array.from({ length: 4 }, (_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <SkeletonBlock className="h-10 w-10 rounded-full" />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <SkeletonBlock className="h-3.5 w-2/3 rounded" />
+                    <SkeletonBlock className="h-3 w-1/2 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : paginated.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+                <Envelope className="h-7 w-7 text-slate-300" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
+                <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada pesan masuk"}</p>
+              </div>
+            </div>
+          ) : (
+            paginated.map((item) => (
+              <ContactMobileRow
+                key={item.id}
+                item={item}
+                selected={selectedIds.has(item.id)}
+                selectMode={pickMode}
+                onEnterPickMode={enterPickMode}
+                onToggleSelect={toggleSelect}
+                onView={handleViewMessage}
+                onToggleRead={handleToggleRead}
+                onDelete={setDeleteItem}
+              />
+            ))
+          )}
+        </div>
+        {!loading && filtered.length > 0 && (
+          <MobilePagination
+            page={page}
+            totalPages={totalPages}
+            total={filtered.length}
+            from={(page - 1) * PAGE_SIZE + 1}
+            to={Math.min(page * PAGE_SIZE, filtered.length)}
+            onPageChange={setPage}
+            itemLabel="pesan"
+          />
+        )}
+        {/* Ruang ekstra agar baris terakhir tidak tertutup bar sticky mode pilih */}
+        {pickMode && <div className="h-24" aria-hidden="true" />}
+      </div>
+
+      {/* Bar aksi massal sticky (mobile, mode pilih) — di atas bottom nav admin */}
+      {pickMode && (
+        <MobileSelectBar
+          count={selectedIds.size}
+          onDelete={() => setBulkDelete(true)}
+          onCancel={exitPickMode}
+        >
+          <button
+            type="button"
+            onClick={() => handleBulkMarkRead(true)}
+            disabled={selectedIds.size === 0}
+            aria-label="Tandai pesan terpilih sudah dibaca"
+            className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Dibaca
+          </button>
+          <button
+            type="button"
+            onClick={() => handleBulkMarkRead(false)}
+            disabled={selectedIds.size === 0}
+            aria-label="Tandai pesan terpilih belum dibaca"
+            className="min-h-10 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Belum Dibaca
+          </button>
+        </MobileSelectBar>
+      )}
+
       {/* ── DETAIL SLIDE-OVER ──────────────────────── */}
       <SlideOver
         open={!!detailItem}
@@ -403,6 +558,8 @@ export default function AdminContactPage() {
                 </a>
               )}
               <button onClick={() => { setDetailItem(null); setDeleteItem(detailItem); }}
+                aria-label="Hapus pesan ini"
+                title="Hapus pesan"
                 className="flex items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100">
                 <Trash className="h-4 w-4" />
               </button>
@@ -471,6 +628,112 @@ export default function AdminContactPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Baris daftar mobile (Pesan Masuk) — gaya kotak masuk: avatar + nama (bold
+ * bila belum dibaca) + titik biru, baris subjek · tanggal, pill status yang
+ * bisa diketuk (padanan kolom Status di desktop), menu ⋯ berisi Lihat &
+ * Hapus. Tap baris = buka detail di SlideOver (otomatis menandai sudah
+ * dibaca); tekan lama = mode pilih. Nomor urut tetap kolom desktop-saja,
+ * sama seperti tabel lamanya (hidden sm:table-cell).
+ */
+function ContactMobileRow({
+  item,
+  selected,
+  selectMode,
+  onEnterPickMode,
+  onToggleSelect,
+  onView,
+  onToggleRead,
+  onDelete,
+}: {
+  item: ContactMessage;
+  selected: boolean;
+  selectMode: boolean;
+  onEnterPickMode: (id: string) => void;
+  onToggleSelect: (id: string) => void;
+  onView: (m: ContactMessage) => void;
+  onToggleRead: (m: ContactMessage) => void;
+  onDelete: (m: ContactMessage) => void;
+}) {
+  const actions: RowAction[] = [
+    { key: "view", label: "Lihat", icon: <Eye className="h-4 w-4" />, run: () => onView(item) },
+    { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) },
+  ];
+
+  return (
+    <div role="listitem">
+      <MobileListRow
+        lead={
+          selectMode ? (
+            <span
+              data-no-longpress=""
+              onClick={(e) => e.stopPropagation()}
+              className="flex h-10 w-10 shrink-0 items-center justify-center"
+            >
+              <input
+                type="checkbox"
+                checked={selected}
+                onChange={() => onToggleSelect(item.id)}
+                aria-label={`Pilih pesan dari ${item.name}`}
+                className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+              />
+            </span>
+          ) : (
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${!item.is_read ? "bg-[#082b59]/10" : "bg-slate-100"}`}>
+              <User className={`h-5 w-5 ${!item.is_read ? "text-[#082b59]" : "text-slate-400"}`} />
+            </span>
+          )
+        }
+        title={
+          <span className="flex items-center gap-1.5">
+            {!item.is_read && (
+              <span className="h-2 w-2 shrink-0 rounded-full bg-[#1767b1]" aria-label="Belum dibaca" />
+            )}
+            <span className={`min-w-0 ${!item.is_read ? "font-semibold" : "font-medium"}`}>{item.name}</span>
+          </span>
+        }
+        subtitle={
+          <>
+            <span className="min-w-0 truncate">{item.subject || item.email}</span>
+            <span className="shrink-0 text-slate-300" aria-hidden="true">·</span>
+            <span className="shrink-0">
+              {new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+            </span>
+          </>
+        }
+        status={
+          <button
+            type="button"
+            data-no-longpress=""
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleRead(item);
+            }}
+            disabled={selectMode}
+            title={item.is_read ? "Tandai belum dibaca" : "Tandai sudah dibaca"}
+            aria-label={`${item.is_read ? "Tandai belum dibaca" : "Tandai sudah dibaca"} — pesan dari ${item.name}`}
+            className={`inline-flex min-h-10 items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:opacity-60 ${
+              item.is_read
+                ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
+            }`}
+          >
+            {item.is_read ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+            {item.is_read ? "Dibaca" : "Baru"}
+          </button>
+        }
+        actions={<RowActionsMenu label={`pesan dari ${item.name}`} actions={actions} disabled={selectMode} />}
+        selected={selected}
+        onClick={() => {
+          if (selectMode) onToggleSelect(item.id);
+          else onView(item);
+        }}
+        onLongPress={() => onEnterPickMode(item.id)}
+      />
     </div>
   );
 }

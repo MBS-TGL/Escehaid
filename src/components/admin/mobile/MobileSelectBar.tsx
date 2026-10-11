@@ -37,7 +37,9 @@ export function MobileSelectBar({
       className="fixed inset-x-0 z-40 border-t border-[#1767b1]/20 bg-white/95 backdrop-blur-md md:hidden"
       style={{ bottom: `calc(${ADMIN_BOTTOM_NAV_H}px + env(safe-area-inset-bottom, 0px))` }}
     >
-      <div className="flex items-center gap-2 px-4 py-3">
+      {/* flex-wrap: aksi massal (mis. Dibaca + Belum Dibaca + Hapus + Batal)
+          bisa melebihi 360px — baris kedua turun, bukan overflow horizontal. */}
+      <div className="flex flex-wrap items-center gap-2 px-4 py-3">
         <span
           aria-live="polite"
           className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-[#082b59]"
