@@ -11,7 +11,7 @@ import {
 } from "@/lib/queries";
 import { compressImage, TEACHER_PHOTO } from "@/lib/compress-image";
 import type { Teacher } from "@/lib/supabase";
-import { StatCard, StatCardRow, ConfirmModal, SlideOver } from "@/components/ui";
+import { StatCard, StatCardRow, ConfirmModal, SlideOver, SkeletonBlock } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
 import {
   Users,
@@ -25,8 +25,18 @@ import {
   CaretLeft,
   CaretRight,
   User,
-  ImageSquare,
+  ArrowUp,
+  ArrowDown,
 } from "@/components/Icons";
+import {
+  MobileFilterBar,
+  MobilePagination,
+  MobilePickButton,
+  MobileListRow,
+  MobileSelectBar,
+  RowActionsMenu,
+  type RowAction,
+} from "@/components/admin/mobile";
 
 type FilterTab = "all" | "active" | "inactive";
 
@@ -40,6 +50,9 @@ export default function AdminTeachersPage() {
   const [filter, setFilter] = useState<FilterTab>("all");
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // Mode pilih (mobile): checkbox menggantikan nomor, tap baris = toggle,
+  // bar aksi massal sticky di bawah. Desktop tetap pakai checkbox tabel.
+  const [pickMode, setPickMode] = useState(false);
   const [deleteItem, setDeleteItem] = useState<Teacher | null>(null);
   const [bulkDelete, setBulkDelete] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -99,6 +112,23 @@ export default function AdminTeachersPage() {
     const s = new Set(selectedIds);
     if (s.has(id)) s.delete(id); else s.add(id);
     setSelectedIds(s);
+  }
+
+  // ── Mode pilih (mobile) ─────────────────────────────────────
+  /** Masuk mode pilih; bila `id` diisi (long-press), baris itu langsung tercentang. */
+  function enterPickMode(id?: string) {
+    setPickMode(true);
+    if (id) {
+      const s = new Set(selectedIds);
+      s.add(id);
+      setSelectedIds(s);
+    }
+  }
+
+  /** Keluar mode pilih dan hapus semua centang. */
+  function exitPickMode() {
+    setPickMode(false);
+    setSelectedIds(new Set());
   }
 
   function openCreate() {
@@ -199,7 +229,7 @@ export default function AdminTeachersPage() {
     if (ids.length === 0) return;
     await deleteTeacherBulk(ids);
     toast(`${ids.length} guru dihapus`, "success");
-    setSelectedIds(new Set());
+    exitPickMode();
     setBulkDelete(false);
     fetchItems();
   }
@@ -246,9 +276,9 @@ export default function AdminTeachersPage() {
         <StatCard label="Nonaktif" value={inactiveCount} variant="warning" />
       </StatCardRow>
 
-      {/* Bulk actions */}
+      {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5">
+        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5 md:flex">
           <Checks className="h-4 w-4 text-[#082b59]" />
           <span className="text-xs font-semibold text-[#082b59]">{selectedIds.size} dipilih</span>
           <button onClick={() => setBulkDelete(true)}
@@ -256,14 +286,15 @@ export default function AdminTeachersPage() {
             Hapus
           </button>
           <button onClick={() => setSelectedIds(new Set())}
+            aria-label="Hapus pilihan" title="Hapus pilihan"
             className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600">
             <X className="h-4 w-4" />
           </button>
         </div>
       )}
 
-      {/* Filter + Search */}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* Filter + Search (desktop md+) */}
+      <div className="mb-4 hidden flex-col gap-3 md:flex md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
             {([
@@ -286,8 +317,31 @@ export default function AdminTeachersPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
+      {/* Toolbar mobile (<md): pencarian penuh + dropdown filter + Pilih */}
+      <MobileFilterBar
+        placeholder="Cari guru…"
+        searchLabel="Cari guru"
+        query={search}
+        onQueryChange={(v) => { setSearch(v); setPage(1); }}
+        filter={{
+          value: filter,
+          options: [
+            { key: "all", label: "Semua", count: items.length },
+            { key: "active", label: "Aktif", count: activeCount },
+            { key: "inactive", label: "Nonaktif", count: inactiveCount },
+          ],
+          onChange: (k) => { setFilter(k as FilterTab); setPage(1); setSelectedIds(new Set()); },
+        }}
+        action={<MobilePickButton onClick={() => setPickMode(true)} />}
+        selectMode={pickMode}
+        selectedCount={selectedIds.size}
+        allSelected={allVisibleSelected}
+        onSelectAllVisible={toggleSelectAll}
+        onCancelSelect={exitPickMode}
+      />
+
+      {/* Tabel desktop (md+) — tampilan & perilaku sama seperti sebelumnya */}
+      <div className="hidden overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:block">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
@@ -347,11 +401,13 @@ export default function AdminTeachersPage() {
                     <td className="hidden px-4 py-3.5 sm:table-cell">
                       <div className="flex items-center justify-center gap-1">
                         <button onClick={() => handleReorder(item.id, "up")} disabled={index === 0}
+                          aria-label={`Naikkan urutan ${item.name}`} title="Naik"
                           className="rounded p-0.5 text-slate-400 hover:text-slate-600 disabled:opacity-30">
                           <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-8 8h5v8h6v-8h5z" /></svg>
                         </button>
                         <span className="w-6 text-center text-xs font-semibold text-slate-500">{item.sort_order}</span>
                         <button onClick={() => handleReorder(item.id, "down")} disabled={index === paginated.length - 1}
+                          aria-label={`Turunkan urutan ${item.name}`} title="Turun"
                           className="rounded p-0.5 text-slate-400 hover:text-slate-600 disabled:opacity-30">
                           <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20l8-8h-5V4H9v8H4z" /></svg>
                         </button>
@@ -383,11 +439,11 @@ export default function AdminTeachersPage() {
                     </td>
                     <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => openEdit(item)}
+                        <button onClick={() => openEdit(item)} aria-label={`Edit ${item.name}`}
                           className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
                           <PencilSimple className="h-4 w-4" />
                         </button>
-                        <button onClick={() => setDeleteItem(item)}
+                        <button onClick={() => setDeleteItem(item)} aria-label={`Hapus ${item.name}`}
                           className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
                           <Trash className="h-4 w-4" />
                         </button>
@@ -423,6 +479,83 @@ export default function AdminTeachersPage() {
           </div>
         )}
       </div>
+
+      {/* Daftar mobile (<md) — baris ringkas tanpa scroll horizontal; semua
+          fitur tetap ada: pilih (mode pilih), geser urutan (Naik/Turun di
+          menu ⋯), edit & hapus via menu ⋯. */}
+      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:hidden">
+        <div role="list" aria-label="Daftar guru" className="divide-y divide-slate-100">
+          {loading ? (
+            <div className="space-y-3 px-3 py-4" aria-hidden="true">
+              {Array.from({ length: 4 }, (_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <SkeletonBlock className="h-12 w-12 rounded-full" />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <SkeletonBlock className="h-3.5 w-2/3 rounded" />
+                    <SkeletonBlock className="h-3 w-1/2 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : paginated.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+                <Users className="h-7 w-7 text-slate-300" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
+                <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada data guru"}</p>
+              </div>
+              {!search && filter === "all" && (
+                <button onClick={openCreate} className="mt-1 flex min-h-10 items-center gap-1.5 rounded-lg bg-[#082b59] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1767b1]">
+                  <Plus className="h-3.5 w-3.5" /> Tambah Guru Pertama
+                </button>
+              )}
+            </div>
+          ) : (
+            paginated.map((item, index) => (
+              <TeacherMobileRow
+                key={item.id}
+                item={item}
+                index={(page - 1) * PAGE_SIZE + index}
+                selected={selectedIds.has(item.id)}
+                selectMode={pickMode}
+                photoBust={photoBust}
+                onEnterPickMode={enterPickMode}
+                onToggleSelect={toggleSelect}
+                onEdit={openEdit}
+                onDelete={setDeleteItem}
+                onToggle={handleToggle}
+                onReorder={handleReorder}
+                canGoUp={index > 0}
+                canGoDown={index < paginated.length - 1}
+              />
+            ))
+          )}
+        </div>
+        {!loading && filtered.length > 0 && (
+          <MobilePagination
+            page={page}
+            totalPages={totalPages}
+            total={filtered.length}
+            from={(page - 1) * PAGE_SIZE + 1}
+            to={Math.min(page * PAGE_SIZE, filtered.length)}
+            onPageChange={setPage}
+            itemLabel="guru"
+          />
+        )}
+        {/* Ruang ekstra agar baris terakhir tidak tertutup bar sticky mode pilih */}
+        {pickMode && <div className="h-24" aria-hidden="true" />}
+      </div>
+
+      {/* Bar aksi massal sticky (mobile, mode pilih) — di atas bottom nav admin */}
+      {pickMode && (
+        <MobileSelectBar
+          count={selectedIds.size}
+          onDelete={() => setBulkDelete(true)}
+          onCancel={exitPickMode}
+        />
+      )}
 
       {/* Create/Edit SlideOver */}
       <SlideOver open={formOpen} onClose={() => !formSaving && setFormOpen(false)}
@@ -462,7 +595,7 @@ export default function AdminTeachersPage() {
                 )}
               </div>
               <div>
-                <label className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50">
+                <label className="min-h-10 cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50">
                   Pilih Foto
                   <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
                 </label>
@@ -474,14 +607,14 @@ export default function AdminTeachersPage() {
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Nama Lengkap <span className="text-red-500">*</span></label>
             <input type="text" value={formName} onChange={(e) => setFormName(e.target.value)}
-              placeholder="Contoh: Ahmad Fauzi, S.Pd"
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+              placeholder="Contoh: Ahmad Fauzi, S.Pd" autoComplete="off"
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Jabatan</label>
             <input type="text" value={formPosition} onChange={(e) => setFormPosition(e.target.value)}
-              placeholder="Contoh: Guru Matematika"
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+              placeholder="Contoh: Guru Matematika" autoComplete="off"
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
           </div>
         </div>
       </SlideOver>
@@ -502,6 +635,136 @@ export default function AdminTeachersPage() {
         onConfirm={handleBulkDelete}
         title={`Hapus ${selectedIds.size} Guru?`}
         description="Semua data guru yang dipilih akan dihapus permanen."
+      />
+    </div>
+  );
+}
+
+/**
+ * Satu baris guru versi mobile (<md): [nomor urut] [avatar bulat 48px]
+ * [nama + jabatan] [pill status (ketuk = toggle)] [menu ⋯: Edit, Naik,
+ * Turun, Hapus]. Tap baris = Edit (halaman ini tidak punya modal lihat);
+ * long-press = mode pilih; di mode pilih checkbox menggantikan nomor dan
+ * tap baris = toggle centang. Geser urutan lewat Naik/Turun di menu ⋯ —
+ * padanan tombol panah kolom "Urutan" di tabel desktop.
+ */
+function TeacherMobileRow({
+  item,
+  index,
+  selected,
+  selectMode,
+  photoBust,
+  onEnterPickMode,
+  onToggleSelect,
+  onEdit,
+  onDelete,
+  onToggle,
+  onReorder,
+  canGoUp,
+  canGoDown,
+}: {
+  item: Teacher;
+  index: number;
+  selected: boolean;
+  selectMode: boolean;
+  photoBust: Record<string, number>;
+  onEnterPickMode: (id: string) => void;
+  onToggleSelect: (id: string) => void;
+  onEdit: (t: Teacher) => void;
+  onDelete: (t: Teacher) => void;
+  onToggle: (t: Teacher) => void;
+  onReorder: (id: string, direction: "up" | "down") => void;
+  canGoUp: boolean;
+  canGoDown: boolean;
+}) {
+  const actions: RowAction[] = [
+    { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) },
+    ...(canGoUp
+      ? [{ key: "up", label: "Naik", icon: <ArrowUp className="h-4 w-4" />, run: () => onReorder(item.id, "up") }]
+      : []),
+    ...(canGoDown
+      ? [{ key: "down", label: "Turun", icon: <ArrowDown className="h-4 w-4" />, run: () => onReorder(item.id, "down") }]
+      : []),
+    { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) },
+  ];
+
+  return (
+    <div role="listitem">
+      <MobileListRow
+        lead={
+          selectMode ? (
+            <span
+              data-no-longpress=""
+              onClick={(e) => e.stopPropagation()}
+              className="flex h-10 w-10 shrink-0 items-center justify-center"
+            >
+              <input
+                type="checkbox"
+                checked={selected}
+                onChange={() => onToggleSelect(item.id)}
+                aria-label={`Pilih ${item.name}`}
+                className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+              />
+            </span>
+          ) : (
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center text-xs font-semibold tabular-nums text-slate-400">
+              {index + 1}
+            </span>
+          )
+        }
+        thumb={
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100">
+            {item.photo_url ? (
+              <img
+                src={`${item.photo_url}?v=${photoBust[item.id] || 0}`}
+                alt=""
+                loading="lazy"
+                onError={(e) => {
+                  const el = e.target as HTMLImageElement;
+                  el.style.display = "none";
+                  el.nextElementSibling?.classList.remove("hidden");
+                }}
+                className="h-full w-full object-cover"
+              />
+            ) : null}
+            <User className={`h-6 w-6 text-slate-300 ${item.photo_url ? "hidden" : ""}`} weight="light" />
+          </span>
+        }
+        title={item.name}
+        subtitle={
+          item.position ? (
+            <span className="min-w-0 truncate" title={item.position}>
+              {item.position}
+            </span>
+          ) : undefined
+        }
+        status={
+          <button
+            type="button"
+            data-no-longpress=""
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle(item);
+            }}
+            disabled={selectMode}
+            title={item.is_active ? "Klik untuk menonaktifkan" : "Klik untuk mengaktifkan"}
+            aria-label={`${item.is_active ? "Nonaktifkan" : "Aktifkan"} ${item.name}`}
+            className={`inline-flex min-h-10 items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:opacity-60 ${
+              item.is_active
+                ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                : "border border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200"
+            }`}
+          >
+            {item.is_active ? "Aktif" : "Nonaktif"}
+          </button>
+        }
+        actions={<RowActionsMenu label={item.name} actions={actions} disabled={selectMode} />}
+        selected={selected}
+        onClick={() => {
+          if (selectMode) onToggleSelect(item.id);
+          else onEdit(item);
+        }}
+        onLongPress={() => onEnterPickMode(item.id)}
       />
     </div>
   );
