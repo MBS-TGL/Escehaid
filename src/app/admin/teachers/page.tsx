@@ -26,6 +26,8 @@ import {
   User,
   ArrowUp,
   ArrowDown,
+  CheckCircle,
+  Clock,
 } from "@/components/Icons";
 import {
   MobileFilterBar,
@@ -34,6 +36,8 @@ import {
   MobileListRow,
   MobileSelectBar,
   RowActionsMenu,
+  MobileThumb,
+  QuietBadge,
   type RowAction,
 } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
@@ -276,12 +280,17 @@ export default function AdminTeachersPage() {
         </button>
       </div>
 
-      {/* Stats */}
-      <StatCardRow>
-        <StatCard label="Total" value={items.length} variant="brand" />
-        <StatCard label="Aktif" value={activeCount} variant="success" />
-        <StatCard label="Nonaktif" value={inactiveCount} variant="warning" />
-      </StatCardRow>
+      {/* Stats desktop — mobile memakai ringkasan satu baris. */}
+      <div className="hidden md:block">
+        <StatCardRow>
+          <StatCard label="Total" value={items.length} variant="brand" />
+          <StatCard label="Aktif" value={activeCount} variant="success" />
+          <StatCard label="Nonaktif" value={inactiveCount} variant="warning" />
+        </StatCardRow>
+      </div>
+      <p className="mb-4 text-xs font-medium text-[#64748b] md:hidden">
+        {items.length} guru · {activeCount} aktif · {inactiveCount} nonaktif
+      </p>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
@@ -482,8 +491,8 @@ export default function AdminTeachersPage() {
       {/* Daftar mobile (<md) — baris ringkas tanpa scroll horizontal; semua
           fitur tetap ada: pilih (mode pilih), geser urutan (Naik/Turun di
           menu ⋯), edit & hapus via menu ⋯. */}
-      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:hidden">
-        <div role="list" aria-label="Daftar guru" className="divide-y divide-slate-100">
+      <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden">
+        <div role="list" aria-label="Daftar guru">
           {loading ? (
             <div className="space-y-3 px-3 py-4" aria-hidden="true">
               {Array.from({ length: 4 }, (_, i) => (
@@ -640,12 +649,14 @@ export default function AdminTeachersPage() {
 }
 
 /**
- * Satu baris guru versi mobile (<md): [nomor urut] [avatar bulat 48px]
- * [nama + jabatan] [pill status (ketuk = toggle)] [menu ⋯: Edit, Naik,
- * Turun, Hapus]. Tap baris = Edit (halaman ini tidak punya modal lihat);
- * long-press = mode pilih; di mode pilih checkbox menggantikan nomor dan
- * tap baris = toggle centang. Geser urutan lewat Naik/Turun di menu ⋯ —
- * padanan tombol panah kolom "Urutan" di tabel desktop.
+ * Satu baris guru versi mobile (<md): [nomor urut] [avatar bulat 56px +
+ * titik status] [nama + jabatan + badge "Nonaktif"] [menu ⋯: Edit,
+ * Nonaktifkan/Aktifkan, Naik, Turun, Hapus]. Tap baris = Edit (halaman ini
+ * tidak punya modal lihat); long-press = mode pilih; di mode pilih checkbox
+ * menggantikan nomor dan tap baris = toggle centang. Status TIDAK diubah
+ * lewat ketukan pada baris — hanya lewat menu ⋯. Geser urutan lewat
+ * Naik/Turun di menu ⋯ — padanan tombol panah kolom "Urutan" di tabel
+ * desktop.
  */
 function TeacherMobileRow({
   item,
@@ -678,6 +689,12 @@ function TeacherMobileRow({
 }) {
   const actions: RowAction[] = [
     { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) },
+    {
+      key: "toggle",
+      label: item.is_active ? "Nonaktifkan" : "Aktifkan",
+      icon: item.is_active ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
+      run: () => onToggle(item),
+    },
     ...(canGoUp
       ? [{ key: "up", label: "Naik", icon: <ArrowUp className="h-4 w-4" />, run: () => onReorder(item.id, "up") }]
       : []),
@@ -712,50 +729,24 @@ function TeacherMobileRow({
           )
         }
         thumb={
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100">
-            {item.photo_url ? (
-              <img
-                src={`${item.photo_url}?v=${photoBust[item.id] || 0}`}
-                alt=""
-                loading="lazy"
-                onError={(e) => {
-                  const el = e.target as HTMLImageElement;
-                  el.style.display = "none";
-                  el.nextElementSibling?.classList.remove("hidden");
-                }}
-                className="h-full w-full object-cover"
-              />
-            ) : null}
-            <User className={`h-6 w-6 text-slate-300 ${item.photo_url ? "hidden" : ""}`} weight="light" />
-          </span>
+          <MobileThumb
+            src={item.photo_url ? `${item.photo_url}?v=${photoBust[item.id] || 0}` : null}
+            shape="circle"
+            icon={<User className="h-6 w-6" weight="light" />}
+            status={{
+              tone: item.is_active ? "active" : "off",
+              label: item.is_active ? "Aktif" : "Nonaktif",
+            }}
+          />
         }
         title={item.name}
+        badge={!item.is_active ? <QuietBadge>Nonaktif</QuietBadge> : undefined}
         subtitle={
           item.position ? (
             <span className="min-w-0 truncate" title={item.position}>
               {item.position}
             </span>
           ) : undefined
-        }
-        status={
-          <button
-            type="button"
-            data-no-longpress=""
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggle(item);
-            }}
-            disabled={selectMode}
-            title={item.is_active ? "Klik untuk menonaktifkan" : "Klik untuk mengaktifkan"}
-            aria-label={`${item.is_active ? "Nonaktifkan" : "Aktifkan"} ${item.name}`}
-            className={`inline-flex min-h-10 items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:opacity-60 ${
-              item.is_active
-                ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                : "border border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200"
-            }`}
-          >
-            {item.is_active ? "Aktif" : "Nonaktif"}
-          </button>
         }
         actions={<RowActionsMenu label={item.name} actions={actions} disabled={selectMode} />}
         selected={selected}
