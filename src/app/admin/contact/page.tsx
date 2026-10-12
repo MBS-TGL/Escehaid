@@ -38,6 +38,7 @@ import {
   MobileListRow,
   MobileSelectBar,
   RowActionsMenu,
+  StatusDot,
   type RowAction,
 } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
@@ -240,23 +241,32 @@ export default function AdminContactPage() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#082b59]/10">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[#082b59]/10">
             <Envelope className="h-5 w-5 text-[#082b59]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Pesan Masuk</h1>
-            <p className="text-sm text-slate-500">Pesan dari formulir kontak website</p>
+            <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">Pesan dari formulir kontak website</p>
           </div>
         </div>
       </div>
 
-      {/* Stats */}
-      <StatCardRow>
+      {/* Stats — desktop: StatCardRow; mobile: grid 2 kolom tanpa pager
+          (kartu memuat metrik unik "Hari Ini"). */}
+      <div className="hidden md:block">
+        <StatCardRow>
+          <StatCard label="Total" value={stats.total} variant="brand" />
+          <StatCard label="Belum Dibaca" value={stats.unread} variant="warning" />
+          <StatCard label="Sudah Dibaca" value={stats.read} variant="success" />
+          <StatCard label="Hari Ini" value={stats.today} variant="info" />
+        </StatCardRow>
+      </div>
+      <div className="mb-6 grid grid-cols-2 gap-3 md:hidden">
         <StatCard label="Total" value={stats.total} variant="brand" />
         <StatCard label="Belum Dibaca" value={stats.unread} variant="warning" />
         <StatCard label="Sudah Dibaca" value={stats.read} variant="success" />
         <StatCard label="Hari Ini" value={stats.today} variant="info" />
-      </StatCardRow>
+      </div>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
@@ -446,11 +456,12 @@ export default function AdminContactPage() {
         )}
       </div>
 
-      {/* Daftar mobile (<md) — baris gaya inbox: titik/tanda belum dibaca,
-          subjek + tanggal, pill status bisa diketuk, aksi via menu ⋯.
-          Semua fitur tabel desktop tetap tersedia tanpa scroll horizontal. */}
-      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:hidden">
-        <div role="list" aria-label="Daftar pesan masuk" className="divide-y divide-slate-100">
+      {/* Daftar mobile (<md) — baris gaya inbox: belum dibaca = titik biru +
+          nama bold, sudah dibaca tanpa penanda; aksi (termasuk ganti status
+          baca) via menu ⋯. Semua fitur tabel desktop tetap tersedia tanpa
+          scroll horizontal. */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden">
+        <div role="list" aria-label="Daftar pesan masuk">
           {loading ? (
             <div className="space-y-3 px-3 py-4" aria-hidden="true">
               {Array.from({ length: 4 }, (_, i) => (
@@ -631,12 +642,13 @@ export default function AdminContactPage() {
 }
 
 /**
- * Baris daftar mobile (Pesan Masuk) — gaya kotak masuk: avatar + nama (bold
- * bila belum dibaca) + titik biru, baris subjek · tanggal, pill status yang
- * bisa diketuk (padanan kolom Status di desktop), menu ⋯ berisi Lihat &
- * Hapus. Tap baris = buka detail di SlideOver (otomatis menandai sudah
- * dibaca); tekan lama = mode pilih. Nomor urut tetap kolom desktop-saja,
- * sama seperti tabel lamanya (hidden sm:table-cell).
+ * Baris daftar mobile (Pesan Masuk) — gaya kotak masuk: avatar + nama
+ * (bold + titik biru bila belum dibaca; tanpa penanda bila sudah dibaca),
+ * baris subjek · tanggal, menu ⋯ berisi Lihat, Tandai Sudah/Belum Dibaca &
+ * Hapus (status baca TIDAK lewat satu ketukan pada baris). Tap baris = buka
+ * detail di SlideOver (otomatis menandai sudah dibaca); tekan lama = mode
+ * pilih. Nomor urut tetap kolom desktop-saja, sama seperti tabel lamanya
+ * (hidden sm:table-cell).
  */
 function ContactMobileRow({
   item,
@@ -659,6 +671,12 @@ function ContactMobileRow({
 }) {
   const actions: RowAction[] = [
     { key: "view", label: "Lihat", icon: <Eye className="h-4 w-4" />, run: () => onView(item) },
+    {
+      key: "read",
+      label: item.is_read ? "Tandai Belum Dibaca" : "Tandai Sudah Dibaca",
+      icon: item.is_read ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
+      run: () => onToggleRead(item),
+    },
     { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) },
   ];
 
@@ -689,9 +707,9 @@ function ContactMobileRow({
         title={
           <span className="flex items-center gap-1.5">
             {!item.is_read && (
-              <span className="h-2 w-2 shrink-0 rounded-full bg-[#1767b1]" aria-label="Belum dibaca" />
+              <StatusDot tone="info" label="Belum dibaca" className="shrink-0" />
             )}
-            <span className={`min-w-0 ${!item.is_read ? "font-semibold" : "font-medium"}`}>{item.name}</span>
+            <span className={`min-w-0 ${!item.is_read ? "font-semibold" : "font-medium text-[#0f2a4d]"}`}>{item.name}</span>
           </span>
         }
         subtitle={
@@ -702,27 +720,6 @@ function ContactMobileRow({
               {new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
             </span>
           </>
-        }
-        status={
-          <button
-            type="button"
-            data-no-longpress=""
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleRead(item);
-            }}
-            disabled={selectMode}
-            title={item.is_read ? "Tandai belum dibaca" : "Tandai sudah dibaca"}
-            aria-label={`${item.is_read ? "Tandai belum dibaca" : "Tandai sudah dibaca"} — pesan dari ${item.name}`}
-            className={`inline-flex min-h-10 items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:opacity-60 ${
-              item.is_read
-                ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
-            }`}
-          >
-            {item.is_read ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-            {item.is_read ? "Dibaca" : "Baru"}
-          </button>
         }
         actions={<RowActionsMenu label={`pesan dari ${item.name}`} actions={actions} disabled={selectMode} />}
         selected={selected}
