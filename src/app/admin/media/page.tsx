@@ -16,12 +16,23 @@ import { StatCard, StatCardRow } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
 import {
   ArrowSquareOut,
+  Copy,
   FileText,
   FolderOpen,
   Trash,
   Warning,
 } from "@/components/Icons";
 import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
+import {
+  MobileFilterBar,
+  MobileListRow,
+  MobilePickButton,
+  MobileSelectBar,
+  MobileThumb,
+  QuietBadge,
+  RowActionsMenu,
+  type RowAction,
+} from "@/components/admin/mobile";
 
 function formatBytes(bytes: number | null): string {
   if (bytes == null) return "–";
@@ -72,6 +83,12 @@ export default function AdminMediaPage() {
   const [search, setSearch] = useState("");
   const [confirmPath, setConfirmPath] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Mode pilih (mobile) untuk hapus massal + konfirmasi hapus baris mobile.
+  const [pickMode, setPickMode] = useState(false);
+  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState<MediaFile | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   // Muat file bucket aktif (setState hanya di callback async → aman untuk lint effect).
   useEffect(() => {
@@ -152,6 +169,68 @@ export default function AdminMediaPage() {
     );
   }
 
+  /** File boleh dihapus hanya setelah pemindaian lengkap dan file yatim. */
+  function canDeleteFile(file: MediaFile): boolean {
+    return scanComplete && refs !== null && !isMediaReferenced(file, refs);
+  }
+
+  /** Salin URL file (publik, atau URL bertanda tangan untuk bucket privat). */
+  async function handleCopyLink(file: MediaFile) {
+    const url =
+      file.bucket === "spmb-documents" ? await mediaSignedUrl(file) : mediaPublicUrl(file);
+    if (!url) {
+      toast("Tidak bisa menyalin tautan file ini", "error");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast("Tautan disalin", "success");
+    } catch {
+      toast("Gagal menyalin tautan", "error");
+    }
+  }
+
+  function toggleSelectPath(path: string) {
+    setSelectedPaths((s) => {
+      const n = new Set(s);
+      if (n.has(path)) n.delete(path);
+      else n.add(path);
+      return n;
+    });
+  }
+
+  function exitPickMode() {
+    setPickMode(false);
+    setSelectedPaths(new Set());
+  }
+
+  /** Hapus massal (mobile, mode pilih) — hanya file yang boleh dihapus. */
+  async function handleBulkDelete() {
+    const targets = visible.filter((f) => selectedPaths.has(f.path) && canDeleteFile(f));
+    const skipped = selectedPaths.size - targets.length;
+    setDeleting(true);
+    let ok = 0;
+    for (const file of targets) {
+      const res = await deleteMediaFile(file);
+      if (res.ok) ok += 1;
+      else toast(`Gagal menghapus ${file.name}: ${res.error}`, "error");
+    }
+    setDeleting(false);
+    setBulkDeleteOpen(false);
+    if (ok > 0) {
+      setListing((prev) =>
+        prev
+          ? { ...prev, files: prev.files.filter((f) => !targets.some((t) => t.path === f.path)) }
+          : prev
+      );
+      toast(`${ok} file dihapus`, "success");
+    }
+    if (skipped > 0) {
+      toast(`${skipped} file dilewati (dipakai konten/pemindaian belum lengkap)`, "error");
+    }
+    exitPickMode();
+  }
+
   // Grup dropdown bucket — hint tiap bucket tampil sebagai teks kecil di menu.
   const bucketFilterGroup: FilterGroup = {
     value: bucket,
@@ -163,38 +242,69 @@ export default function AdminMediaPage() {
     menuLabel: "Pilih bucket media",
   };
 
+  const allVisibleSelected =
+    visible.length > 0 && visible.every((f) => selectedPaths.has(f.path));
+
+  function toggleSelectAllVisible() {
+    setSelectedPaths(
+      allVisibleSelected
+        ? new Set()
+        : new Set(visible.map((f) => f.path))
+    );
+  }
+
+  /** Warna tint thumb per tipe berkas (gbr = biru, dokumen = violet, lain = slate). */
+  function thumbTint(file: MediaFile): "sky" | "violet" | "slate" {
+    if (file.isImage) return "sky";
+    if (file.bucket === "spmb-documents") return "violet";
+    return "slate";
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1767b1]/10">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[#1767b1]/10">
             <FolderOpen className="h-5 w-5 text-[#1767b1]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Media Library</h1>
-            <p className="text-sm text-slate-500">
+            <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">
               Lihat, cari, dan hapus file Storage — hapus hanya untuk file yang tidak dipakai
             </p>
           </div>
         </div>
       </div>
 
-      {/* Stats */}
-      <StatCardRow>
+      {/* Stats desktop — mobile: grid 2 kolom tanpa pager titik
+          (kartu memuat metrik unik "Total ukuran" & "Yatim"). */}
+      <div className="hidden md:block">
+        <StatCardRow>
+          <StatCard label="File (bucket ini)" value={files.length} variant="brand" />
+          <StatCard label="Total ukuran" value={formatBytes(totalSize)} variant="info" />
+          <StatCard
+            label="Terpakai"
+            value={usedCount ?? "…"}
+            variant="success"
+          />
+          <StatCard
+            label="Yatim (tidak direferensikan)"
+            value={orphanCount ?? "…"}
+            variant={orphanCount ? "warning" : "brand"}
+          />
+        </StatCardRow>
+      </div>
+      <div className="mb-6 grid grid-cols-2 gap-3 md:hidden">
         <StatCard label="File (bucket ini)" value={files.length} variant="brand" />
         <StatCard label="Total ukuran" value={formatBytes(totalSize)} variant="info" />
-        <StatCard
-          label="Terpakai"
-          value={usedCount ?? "…"}
-          variant="success"
-        />
+        <StatCard label="Terpakai" value={usedCount ?? "…"} variant="success" />
         <StatCard
           label="Yatim (tidak direferensikan)"
           value={orphanCount ?? "…"}
           variant={orphanCount ? "warning" : "brand"}
         />
-      </StatCardRow>
+      </div>
 
       {/* Pemindaian referensi belum lengkap → hapus dinonaktifkan */}
       {scan && !scanComplete && (
@@ -210,15 +320,40 @@ export default function AdminMediaPage() {
         </div>
       )}
 
-      {/* Bucket + pencarian — gaya Portal: pencarian di kiri, bucket sebagai
-          pill dropdown (hint pindah ke dalam menu) di kanan. */}
-      <div className="mt-6">
+      {/* Bucket + pencarian (desktop md+) — gaya Portal: pencarian di kiri,
+          bucket sebagai pill dropdown (hint pindah ke dalam menu) di kanan. */}
+      <div className="mt-6 hidden md:block">
         <FilterBar
           placeholder="Cari nama file atau folder…"
           searchLabel="Cari file"
           query={search}
           onQueryChange={setSearch}
           filters={[bucketFilterGroup]}
+        />
+      </div>
+
+      {/* Toolbar mobile (<md): pencarian + filter bucket + Pilih */}
+      <div className="mt-6">
+        <MobileFilterBar
+          placeholder="Cari file…"
+          searchLabel="Cari file"
+          query={search}
+          onQueryChange={setSearch}
+          filter={{
+            value: bucket,
+            options: MEDIA_BUCKETS.map((b) => ({ key: b.id, label: b.label })),
+            onChange: (k) => {
+              setBucket(k as MediaBucket);
+              setConfirmPath(null);
+              setSelectedPaths(new Set());
+            },
+          }}
+          action={<MobilePickButton onClick={() => setPickMode(true)} />}
+          selectMode={pickMode}
+          selectedCount={selectedPaths.size}
+          allSelected={allVisibleSelected}
+          onSelectAllVisible={toggleSelectAllVisible}
+          onCancelSelect={exitPickMode}
         />
       </div>
 
@@ -255,13 +390,13 @@ export default function AdminMediaPage() {
         </div>
       )}
 
-      {/* Grid file */}
+      {/* Grid file (desktop md+) */}
       {!loading && !loadError && visible.length > 0 && (
         <>
-          <p className="mb-3 text-xs text-slate-400">
+          <p className="mb-3 text-xs text-[#64748b] md:text-slate-400">
             {visible.length} file ditampilkan{search ? ` dari ${files.length} total` : ""}
           </p>
-          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <ul className="hidden md:grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {visible.map((file) => {
               const referenced = refs ? isMediaReferenced(file, refs) : null;
               const canDelete = scanComplete && refs !== null && referenced === false;
@@ -374,7 +509,171 @@ export default function AdminMediaPage() {
               );
             })}
           </ul>
+
+          {/* Daftar mobile (<md) — baris 56px tipe berkas + nama + ukuran/tanggal,
+              aksi di menu ⋯ (Buka, Salin tautan, Hapus), mode Pilih + bar sticky. */}
+          <div
+            role="list"
+            aria-label="Daftar file media"
+            className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden"
+          >
+            {visible.map((file) => {
+              const referenced = refs ? isMediaReferenced(file, refs) : null;
+              const canDelete = canDeleteFile(file);
+              const isSelected = selectedPaths.has(file.path);
+              const actions: RowAction[] = [
+                { key: "open", label: "Buka", icon: <ArrowSquareOut className="h-4 w-4" />, run: () => void handleOpen(file) },
+                { key: "copy", label: "Salin tautan", icon: <Copy className="h-4 w-4" />, run: () => void handleCopyLink(file) },
+                {
+                  key: "delete",
+                  label: canDelete ? "Hapus" : "Tidak bisa dihapus",
+                  icon: <Trash className="h-4 w-4" />,
+                  danger: canDelete,
+                  run: () => {
+                    if (!canDelete) {
+                      toast(
+                        !scanComplete
+                          ? "Pemindaian referensi belum lengkap — hapus dinonaktifkan"
+                          : "File masih dipakai konten — tidak boleh dihapus",
+                        "error"
+                      );
+                      return;
+                    }
+                    setConfirmDelete(file);
+                  },
+                },
+              ];
+
+              return (
+                <div key={file.path} role="listitem">
+                  <MobileListRow
+                    lead={
+                      pickMode ? (
+                        <span
+                          data-no-longpress=""
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex h-10 w-10 shrink-0 items-center justify-center"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectPath(file.path)}
+                            aria-label={`Pilih ${file.name}`}
+                            className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+                          />
+                        </span>
+                      ) : null
+                    }
+                    thumb={
+                      <MobileThumb
+                        src={file.bucket !== "spmb-documents" && file.isImage ? mediaPublicUrl(file) : null}
+                        alt=""
+                        tint={thumbTint(file)}
+                        icon={
+                          <span className="flex flex-col items-center gap-0.5">
+                            <FileText className="h-5 w-5" />
+                            <span className="text-[9px] font-bold tracking-wide">
+                              {fileExt(file.name)}
+                            </span>
+                          </span>
+                        }
+                        status={
+                          referenced === null
+                            ? undefined
+                            : referenced
+                              ? { tone: "active", label: "Terpakai" }
+                              : { tone: "pending", label: "Yatim" }
+                        }
+                      />
+                    }
+                    title={file.name}
+                    badge={!referenced && referenced !== null ? <QuietBadge>Yatim</QuietBadge> : undefined}
+                    subtitle={
+                      <>
+                        <span className="min-w-0 truncate">
+                          {file.folder ? `folder: ${file.folder}` : "folder: (root)"}
+                        </span>
+                        <span className="shrink-0">
+                          {formatBytes(file.size)} · {formatDate(file.createdAt)}
+                        </span>
+                      </>
+                    }
+                    actions={
+                      <RowActionsMenu
+                        label={file.name}
+                        actions={actions}
+                        disabled={pickMode && !isSelected}
+                      />
+                    }
+                    selected={isSelected}
+                    onClick={() => {
+                      if (pickMode) toggleSelectPath(file.path);
+                      else void handleOpen(file);
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Ruang ekstra agar baris terakhir tidak tertutup bar sticky mode pilih */}
+          {pickMode && <div className="h-24" aria-hidden="true" />}
         </>
+      )}
+
+      {/* Bar aksi massal sticky (mobile, mode pilih) — di atas bottom nav admin */}
+      {pickMode && (
+        <MobileSelectBar
+          count={selectedPaths.size}
+          onDelete={() => setBulkDeleteOpen(true)}
+          onCancel={exitPickMode}
+        />
+      )}
+
+      {/* ── KONFIRMASI HAPUS (baris mobile) ─────────── */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => !deleting && setConfirmDelete(null)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto">
+              <Warning className="h-6 w-6 text-red-600" />
+            </div>
+            <h3 className="text-center text-lg font-bold text-slate-800">Hapus File?</h3>
+            <p className="mt-2 break-all text-center text-sm text-slate-500">&ldquo;{confirmDelete.name}&rdquo; akan dihapus permanen dari Storage.</p>
+            <div className="mt-6 flex gap-3">
+              <button onClick={() => setConfirmDelete(null)} disabled={deleting} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">Batal</button>
+              <button
+                onClick={() => {
+                  const f = confirmDelete;
+                  setConfirmDelete(null);
+                  void handleDelete(f);
+                }}
+                disabled={deleting}
+                className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleting ? "Menghapus…" : "Ya, Hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── KONFIRMASI HAPUS MASSAL (mobile) ────────── */}
+      {bulkDeleteOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => !deleting && setBulkDeleteOpen(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto">
+              <Warning className="h-6 w-6 text-red-600" />
+            </div>
+            <h3 className="text-center text-lg font-bold text-slate-800">Hapus {selectedPaths.size} File?</h3>
+            <p className="mt-2 text-center text-sm text-slate-500">File yang dipakai konten akan dilewati.</p>
+            <div className="mt-6 flex gap-3">
+              <button onClick={() => setBulkDeleteOpen(false)} disabled={deleting} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">Batal</button>
+              <button onClick={() => void handleBulkDelete()} disabled={deleting} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+                {deleting ? "Menghapus…" : "Ya, Hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
