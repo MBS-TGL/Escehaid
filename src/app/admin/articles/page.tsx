@@ -55,6 +55,8 @@ import {
   MobileListRow,
   MobileSelectBar,
   RowActionsMenu,
+  MobileThumb,
+  QuietBadge,
   type RowAction,
 } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
@@ -209,6 +211,8 @@ export default function AdminArticlesPage() {
   const [viewItem, setViewItem] = useState<ArticleWithAuthor | null>(null);
   const [deleteItem, setDeleteItem] = useState<ArticleWithAuthor | null>(null);
   const [bulkDelete, setBulkDelete] = useState(false);
+  // Terbitkan ke publik (dari menu ⋯ mobile) selalu lewat konfirmasi singkat.
+  const [publishItem, setPublishItem] = useState<ArticleWithAuthor | null>(null);
 
   // Form panel
   const [formOpen, setFormOpen] = useState(false);
@@ -760,6 +764,16 @@ export default function AdminArticlesPage() {
     fetchArticles();
   }
 
+  /* Menu ⋯ mobile: Terbitkan = konfirmasi singkat (publikasi ke publik),
+     Jadikan Draft = langsung (menurunkan dari publik tidak berisiko). */
+  function requestPublish(item: ArticleWithAuthor) {
+    if (item.is_published) {
+      handleTogglePublish(item).catch(() => {});
+    } else {
+      setPublishItem(item);
+    }
+  }
+
   const sortIcon = (field: SortField) => {
     if (sortField !== field) return <SortAscending className="h-3 w-3 text-slate-300" />;
     return sortDir === "asc"
@@ -781,26 +795,35 @@ export default function AdminArticlesPage() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0d4a8a]/10">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[#0d4a8a]/10">
             <Note className="h-5 w-5 text-[#0d4a8a]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Kelola Artikel</h1>
-            <p className="text-sm text-slate-500">Artikel, tips, dan edukasi</p>
+            <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">Artikel, tips, dan edukasi</p>
           </div>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1]">
+        <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[#082b59] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1] md:py-2.5">
           <Plus className="h-4 w-4" /> Buat Baru
         </button>
       </div>
 
-      {/* Stats */}
-      <StatCardRow>
+      {/* Stats — desktop: StatCardRow; mobile: grid 2 kolom tanpa pager
+          (kartu memuat metrik unik "Bulan Ini"). */}
+      <div className="hidden md:block">
+        <StatCardRow>
+          <StatCard label="Total" value={stats.total} variant="brand" />
+          <StatCard label="Diterbitkan" value={stats.published} variant="success" />
+          <StatCard label="Draft" value={stats.draft} variant="warning" />
+          <StatCard label="Bulan Ini" value={stats.thisMonth} variant="info" />
+        </StatCardRow>
+      </div>
+      <div className="mb-6 grid grid-cols-2 gap-3 md:hidden">
         <StatCard label="Total" value={stats.total} variant="brand" />
         <StatCard label="Diterbitkan" value={stats.published} variant="success" />
         <StatCard label="Draft" value={stats.draft} variant="warning" />
         <StatCard label="Bulan Ini" value={stats.thisMonth} variant="info" />
-      </StatCardRow>
+      </div>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
@@ -1037,9 +1060,10 @@ export default function AdminArticlesPage() {
 
       {/* Daftar mobile (<md) — baris ringkas tanpa scroll horizontal; semua
           fitur tetap ada: pilih (mode pilih), lihat, edit, duplikat & hapus
-          via menu ⋯, toggle status ketuk pill. */}
-      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:hidden">
-        <div role="list" aria-label="Daftar artikel" className="divide-y divide-slate-100">
+          via menu ⋯, Terbitkan/Jadikan Draft lewat menu ⋯ (dengan konfirmasi
+          saat menerbitkan). */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden">
+        <div role="list" aria-label="Daftar artikel">
           {loading ? (
             <div className="space-y-3 px-3 py-4" aria-hidden="true">
               {Array.from({ length: 4 }, (_, i) => (
@@ -1080,7 +1104,7 @@ export default function AdminArticlesPage() {
                 onEdit={openEdit}
                 onDuplicate={openDuplicate}
                 onDelete={setDeleteItem}
-                onTogglePublish={handleTogglePublish}
+                onPublish={requestPublish}
               />
             ))
           )}
@@ -1239,6 +1263,21 @@ export default function AdminArticlesPage() {
           </div>
         </div>
       )}
+
+      {/* ── PUBLISH CONFIRM (menu ⋯ mobile) ─────────── */}
+      <ConfirmModal
+        open={!!publishItem}
+        onClose={() => setPublishItem(null)}
+        onConfirm={() => {
+          const it = publishItem;
+          setPublishItem(null);
+          if (it) handleTogglePublish(it).catch(() => {});
+        }}
+        title="Terbitkan Artikel?"
+        description={`"${publishItem?.title}" akan tampil di website untuk publik.`}
+        confirmLabel="Ya, Terbitkan"
+        variant="warning"
+      />
 
       {/* ── UNSAVED CHANGES CONFIRM ─────────────────── */}
       <ConfirmModal
@@ -1712,14 +1751,15 @@ function SharePreviewCard({ form, imagePreview }: { form: FormData; imagePreview
 }
 
 /**
- * Satu baris artikel versi mobile (<md): [thumb 48px] [judul (+ikon sematan)
- * + kategori·tanggal·penulis] [pill status 4 keadaan (ketuk = toggle)]
- * [menu ⋯: Lihat, Edit, Duplikat, Hapus]. Tap baris = modal lihat (padanan
- * klik kolom Judul di desktop); long-press = mode pilih; di mode pilih
- * checkbox menggantikan thumb dan tap baris = toggle centang. Artikel live
- * dapat tautan "Lihat di Website" di menu ⋯ (padanan ikon ArrowUpRight).
- * Tidak ada geser urutan — halaman ini memakai sortir kolom, sudah pindah ke
- * dropdown "Urut" di toolbar mobile.
+ * Satu baris artikel versi mobile (<md): [thumb 56px + titik status] [judul
+ * (+ikon sematan) + kategori·tanggal·penulis + badge Draft/Terjadwal/
+ * Kedaluwarsa] [menu ⋯: Lihat, Lihat di Website (bila live), Edit,
+ * Terbitkan/Jadikan Draft, Duplikat, Hapus]. Perubahan status lewat menu ⋯ —
+ * Terbitkan minta konfirmasi singkat; tidak ada pill sekali ketuk. Tap baris
+ * = modal lihat (padanan klik kolom Judul di desktop); long-press = mode
+ * pilih; di mode pilih checkbox menggantikan thumb dan tap baris = toggle
+ * centang. Tidak ada geser urutan — halaman ini memakai sortir kolom, sudah
+ * pindah ke dropdown "Urut" di toolbar mobile.
  */
 function ArticleMobileRow({
   item,
@@ -1731,7 +1771,7 @@ function ArticleMobileRow({
   onEdit,
   onDuplicate,
   onDelete,
-  onTogglePublish,
+  onPublish,
 }: {
   item: ArticleWithAuthor;
   selected: boolean;
@@ -1742,9 +1782,15 @@ function ArticleMobileRow({
   onEdit: (a: ArticleWithAuthor) => void;
   onDuplicate: (a: ArticleWithAuthor) => void;
   onDelete: (a: ArticleWithAuthor) => void;
-  onTogglePublish: (a: ArticleWithAuthor) => void;
+  onPublish: (a: ArticleWithAuthor) => void;
 }) {
   const status = articleStatus(item);
+  const DOT_TONE =
+    status === "live"
+      ? ({ tone: "active", label: "Terbit" } as const)
+      : status === "scheduled"
+        ? ({ tone: "pending", label: "Terjadwal" } as const)
+        : ({ tone: "off", label: STATUS_TEXT[status] } as const);
   const actions: RowAction[] = [
     { key: "view", label: "Lihat", icon: <Eye className="h-4 w-4" />, run: () => onView(item) },
     ...(status === "live"
@@ -1756,6 +1802,12 @@ function ArticleMobileRow({
         }]
       : []),
     { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) },
+    {
+      key: "publish",
+      label: item.is_published ? "Jadikan Draft" : "Terbitkan",
+      icon: item.is_published ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
+      run: () => onPublish(item),
+    },
     { key: "duplicate", label: "Duplikat", icon: <Files className="h-4 w-4" />, run: () => onDuplicate(item) },
     { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) },
   ];
@@ -1781,13 +1833,12 @@ function ArticleMobileRow({
           ) : undefined
         }
         thumb={
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100">
-            {item.image_url ? (
-              <img src={item.image_url} alt="" loading="lazy" className="h-full w-full object-cover" />
-            ) : (
-              <FileText className="h-6 w-6 text-slate-300" />
-            )}
-          </span>
+          <MobileThumb
+            src={item.image_url}
+            tint="violet"
+            icon={<FileText className="h-5 w-5" />}
+            status={DOT_TONE}
+          />
         }
         title={
           <span className="flex items-center gap-1.5">
@@ -1797,6 +1848,9 @@ function ArticleMobileRow({
             <span className="min-w-0">{item.title}</span>
           </span>
         }
+        badge={
+          status !== "live" ? <QuietBadge>{STATUS_TEXT[status]}</QuietBadge> : undefined
+        }
         subtitle={
           <>
             <span className="inline-flex shrink-0 items-center rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700">
@@ -1805,33 +1859,11 @@ function ArticleMobileRow({
             <span className="min-w-0 truncate">
               {new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
               {item.author_name ? ` · ${item.author_name}` : ""}
+              {status === "scheduled" && item.published_at
+                ? ` · Terjadwal ${new Date(item.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}`
+                : ""}
             </span>
           </>
-        }
-        status={
-          <button
-            type="button"
-            data-no-longpress=""
-            onClick={(e) => {
-              e.stopPropagation();
-              onTogglePublish(item);
-            }}
-            disabled={selectMode}
-            title={item.is_published ? "Jadikan draft" : "Terbitkan sekarang"}
-            aria-label={`${item.is_published ? "Jadikan draft" : "Terbitkan"} ${item.title}`}
-            className={`inline-flex min-h-10 items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:opacity-60 ${STATUS_BADGE_CLS[status]}`}
-          >
-            {status === "live" ? (
-              <CheckCircle className="h-3 w-3" />
-            ) : status === "expired" ? (
-              <Warning className="h-3 w-3" />
-            ) : (
-              <Clock className="h-3 w-3" />
-            )}
-            {status === "scheduled" && item.published_at
-              ? `Terjadwal · ${new Date(item.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}`
-              : STATUS_TEXT[status]}
-          </button>
         }
         actions={<RowActionsMenu label={item.title} actions={actions} disabled={selectMode} />}
         selected={selected}
