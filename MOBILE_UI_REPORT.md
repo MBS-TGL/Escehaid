@@ -29,7 +29,7 @@ Semua halaman memakai komponen ini (tidak menyalin kode 9 kali):
 | Komponen | Peran |
 | --- | --- |
 | `RowActionsMenu` (+ tipe `RowAction`) | Tombol ⋯ + menu aksi floating, di-portal ke `document.body` (`position: fixed`, flip atas/bawah, re-posisi saat scroll/resize). ARIA `menu`/`menuitem`, item min-h 11 (44px), Esc/klik luar menutup + fokus kembali ke tombol, panah/Home/End berpindah opsi, aksi hapus merah. |
-| `MobileFilterBar` (+ `MobilePickButton`) | Toolbar mobile: pencarian satu baris penuh (16px, tombol bersihkan), dropdown filter **dengan jumlah** per opsi, dropdown Urut, tombol "Pilih". Saat mode pilih: berubah jadi baris "n dipilih + Pilih semua/Hapus centang + Selesai". |
+| `MobileFilterBar` (+ `MobilePickButton`) | Toolbar mobile **dua baris**: baris 1 = pencarian selebar sisa (tombol bersihkan) + tombol "Pilih"; baris 2 = pill dropdown filter **dengan jumlah** per opsi (+ `filter2`) + dropdown Urut, digulir mendatang bila tak muat (tak pernah wrap jadi baris 3). Saat mode pilih: berubah jadi baris "n dipilih + Pilih semua/Hapus centang + Selesai". |
 | `MobileSelectBar` (+ `ADMIN_BOTTOM_NAV_H`) | Bar aksi massal sticky di bawah layar, `bottom: calc(54px + env(safe-area-inset-bottom))` — tepat di **atas** bottom nav admin (z-40, `md:hidden`), `role="region"` + `aria-live` pada jumlah. Slot `children` untuk aksi tambahan (Terbitkan, Terima, Tandai Dibaca, dll). |
 | `MobilePagination` | Paginasi ringkas "‹ Sebelumnya · Hal x / y · Berikutnya ›" + teks "Menampilkan a–b dari n" yang membungkus. Tanpa deretan nomor halaman. |
 | `MobileListRow` | Layout baris daftar serbaguna `[lead] [thumb] [judul+subteks] [status] [aksi]`, `select-none [-webkit-touch-callout:none]`, long-press 500ms (dibatalka­n­ gerak > 10px; klik lahir dari long-press dibuang). |
@@ -125,7 +125,7 @@ Karena uji visual otomatis tidak memungkinkan, verifikasi mobile dilakukan lewat
 
 1. **Nol scroll horizontal** di kesembilan halaman, termasuk saat:
    - mode pilih aktif dan bar bawah muncul; teks judul panjang (line-clamp) di baris.
-2. **Toolbar mobile**: filter dengan jumlah benar; urut mengubah daftar; "Pilih" masuk mode pilih; "Selesai" keluar & membersihkan centang.
+2. **Toolbar mobile**: filter dengan jumlah benar; urut mengubah daftar; "Pilih" masuk mode pilih; "Selesai" keluar & membersihkan centang; toolbar **selalu dua baris** — baris 1 pencarian + "Pilih", baris 2 pill (tak pernah jadi tiga baris).
 3. **Long-press** baris (~0,5 dtk) masuk mode pilih + baris tercentang; menggeser/scroll tidak memicu long-press; tap ⋯ tidak membocorkan ke tap baris.
 4. **Menu ⋯**: buka/tutup dengan Esc & klik luar, navigasi panah/Home/End, hapus merah, fokus kembali ke tombol.
 5. **Bar aaksi massal** (Pesan: Dibaca/Belum Dibaca; SPMB: Terima/Tolak; Kegiatan/Berita: Terbitkan/Draft) muncul di **atas** bottom nav admin, tidak menutup baris terakhir, aman dengan safe-area iPhone.
@@ -226,6 +226,12 @@ Konteks: tinjauan UI menemukan bahwa **Portal** punya toolbar terbaik — pencar
   mobile Kegiatan dihapus** (butir 5 di atas), keputusan "picker native" diganti agar seluruh
   filter tampil sebagai pill seperti Portal.
 - Pencarian **pindah ke kiri** di semua toolbar (dulu di kanan `justify-between`), mengikuti Portal.
+- **`MobileFilterBar` dirapikan jadi tepat dua baris** (12 Okt 2026): tombol "Pilih" pindah ke
+  baris pencarian (baris 1, `flex-1` + aksi `shrink-0`); pill filter/urut tetap baris 2 tanpa
+  `flex-wrap` — bila tak muat (mis. tiga pill Kegiatan di 360px) digulir mendatang
+  (`overflow-x-auto` + `scrollbar-hide`, ruang outline fokus via `p-1 -m-1` agar jarak antarbaris
+  tetap 8px). Dulu "Pilih" ikut baris pill dan wrap sendiri ke **baris ketiga** di layar
+  360–390px (terlihat di halaman Fasilitas); panel menu ter-portal ke body jadi tak terclip.
 - Opsi filter kini didefinisikan sekali (`statusOptions` / `filterGroups`) lalu dipakai bersama
   toolbar desktop & `MobileFilterBar` — label & jumlah tak lagi bisa beda antar versi.
 - Tidak disentuh (memang bukan filter daftar): tab utama SPMB, tab preview device di modal
@@ -249,6 +255,7 @@ warning baru); `npm run build` sukses (36 route). EOL semua file tetap CRLF.
 1. Desktop tiap halaman: pencarian di kiri, pill status di kanan menampilkan jumlah; buka
    dropdown → opsi aktif tercentang + fokus keyboard (panah, Esc, klik luar).
 2. Kegiatan desktop: dua pill (status + tipe, ikon `Funnel`/`Tag`); mobile: tiga pill
-   (status + tipe + urut), tak ada lagi baris select native penuh lebar.
+   (status + tipe + urut) di **satu baris** (gulir mendatang bila tak muat), "Pilih" di baris
+   pencarian, tak ada lagi baris select native penuh lebar.
 3. Media: pill bucket menampilkan hint tiap bucket di dalam menu.
 4. Portal: tak ada perubahan perilaku (adapter) — mode pilih mobile & "Pilih" tetap jalan.

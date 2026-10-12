@@ -102,13 +102,19 @@ function Dropdown({
 }
 
 /**
- * Toolbar mobile (< md): pencarian satu baris penuh + dropdown filter
- * (dengan jumlah) + dropdown filter kedua opsional (filter2) + dropdown
- * urut + aksi (mis. tombol "Pilih").
+ * Toolbar mobile (< md) — **dua baris**:
+ *   baris 1 — pencarian (melebar) + aksi (mis. tombol "Pilih");
+ *   baris 2 — pill dropdown filter (dengan jumlah) + dropdown filter kedua
+ *   opsional (filter2) + dropdown urut, digulir mendatang bila tak muat.
  *
- * Saat `selectMode`, baris pencarian/filter digantikan bar mode pilih
- * (jumlah dipilih + Pilih semua + Selesai) — desktop tetap memakai toolbar
- * lamanya (tab + pencarian), jadi komponen ini selalu dirender `md:hidden`.
+ * Aksi sengaja berada di baris pencarian: bila ikut baris pill, tombol wrap
+ * ke baris ketiga saat tak muat di layar 360–390px (toolbar jadi 3 baris).
+ * Baris pill memakai `overflow-x-auto` tanpa `flex-wrap`, sehingga jumlah
+ * pill berapa pun tetap menghasilkan tepat dua baris.
+ *
+ * Saat `selectMode`, kedua baris digantikan bar mode pilih (jumlah dipilih +
+ * Pilih semua + Selesai) — desktop tetap memakai toolbar lamanya (tab +
+ * pencarian), jadi komponen ini selalu dirender `md:hidden`.
  */
 export function MobileFilterBar({
   query,
@@ -136,7 +142,7 @@ export function MobileFilterBar({
   };
   /**
    * Filter kedua (opsional) — mis. tipe kegiatan di halaman Kegiatan.
-   * Tampil sebagai pill dropdown ketiga, sebelum urut.
+   * Tampil sebagai pill kedua di baris filter, sebelum urut.
    */
   filter2?: {
     value: string;
@@ -150,7 +156,7 @@ export function MobileFilterBar({
     options: MobileSortOption[];
     onChange: (key: string) => void;
   };
-  /** Aksi tambahan di ujung kanan baris kedua (mis. tombol "Pilih"). */
+  /** Aksi tambahan di ujung kanan baris pertama, sebelah pencarian (mis. tombol "Pilih"). */
   action?: ReactNode;
   selectMode?: boolean;
   selectedCount?: number;
@@ -195,29 +201,40 @@ export function MobileFilterBar({
 
   return (
     <div className="mb-4 flex flex-col gap-2 md:hidden">
-      <div className="relative w-full min-w-0">
-        <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => onQueryChange(e.target.value)}
-          placeholder={placeholder}
-          aria-label={searchLabel}
-          className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-9 text-base focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
-        />
-        {query && (
-          <button
-            type="button"
-            onClick={() => onQueryChange("")}
-            aria-label="Bersihkan pencarian"
-            className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
+      {/* Baris 1 — pencarian (melebar) + aksi. Pindah ke baris ini agar
+          toolbar tetap dua baris (dulu "Pilih" ikut baris pill & wrap ke
+          baris ketiga di layar 360–390px). */}
+      <div className="flex items-center gap-2">
+        <div className="relative min-w-0 flex-1">
+          <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            placeholder={placeholder}
+            aria-label={searchLabel}
+            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-9 text-base focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => onQueryChange("")}
+              aria-label="Bersihkan pencarian"
+              className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Baris 2 — pill filter + urut selalu satu baris: tanpa `flex-wrap`,
+          bila tak muat (mis. tiga pill di layar 360px) digulir mendatar —
+          toolbar dijamin tak pernah jadi tiga baris. `p-1 -m-1` memberi ruang
+          outline fokus agar tak terpotong kotak scroll (jarak antarbaris tetap
+          8px); panel menu ter-portal ke body sehingga tidak ikut terclip. */}
+      <div className="-m-1 flex items-center gap-2 overflow-x-auto p-1 scrollbar-hide">
         {filter && (
           <Dropdown
             triggerLabel={currentFilter?.label ?? "Filter"}
@@ -250,7 +267,6 @@ export function MobileFilterBar({
             icon={<SortAscending className="h-4 w-4" />}
           />
         )}
-        {action && <div className="ml-auto flex shrink-0 items-center gap-2">{action}</div>}
       </div>
     </div>
   );
