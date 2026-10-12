@@ -130,7 +130,7 @@ export default async function AdminPage() {
             <Link
               key={action.label}
               href={action.href}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${action.color}`}
+              className={`flex min-h-11 items-center gap-1.5 rounded-xl px-3 py-3 text-xs font-semibold transition-colors md:min-h-0 md:rounded-lg md:py-2 ${action.color}`}
             >
               <action.icon className="h-3.5 w-3.5" />
               {action.label}
