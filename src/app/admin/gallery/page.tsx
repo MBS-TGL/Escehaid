@@ -13,7 +13,6 @@ import { StatCard, StatCardRow, SlideOver } from "@/components/ui";
 import type { Gallery } from "@/lib/supabase";
 import {
   ImageSquare,
-  MagnifyingGlass,
   Video,
   Image as ImageIcon,
   X,
@@ -26,6 +25,7 @@ import {
   FloppyDisk,
   Checks,
 } from "@/components/Icons";
+import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
 import { useToast } from "@/components/ui/Toast";
 import { getYoutubeId, youtubeThumb, youtubeEmbedUrl } from "@/lib/youtube";
 
@@ -135,6 +135,35 @@ export default function AdminGalleryPage() {
   };
 
   const allVisibleSelected = paginated.length > 0 && paginated.every((item) => selectedIds.has(item.id));
+
+  // Grup dropdown filter — tipe media + kategori (dari data).
+  const filterGroups: FilterGroup[] = [
+    {
+      value: typeFilter,
+      options: [
+        { key: "all", label: "Semua", count: gallery.length },
+        { key: "foto", label: "Foto", count: stats.foto },
+        { key: "video", label: "Video", count: stats.video },
+      ],
+      onChange: (k) => { setTypeFilter(k); setPage(1); setSelectedIds(new Set()); },
+      menuLabel: "Filter tipe media",
+    },
+  ];
+  if (categories.length > 0) {
+    filterGroups.push({
+      value: filter,
+      options: [
+        { key: "all", label: "Semua Kategori" },
+        ...categories.map((cat) => ({
+          key: cat,
+          label: cat,
+          count: gallery.filter((g) => g.category === cat).length,
+        })),
+      ],
+      onChange: (k) => { setFilter(k); setPage(1); setSelectedIds(new Set()); },
+      menuLabel: "Filter kategori",
+    });
+  }
 
   function toggleSelectAll() {
     if (allVisibleSelected) {
@@ -277,38 +306,15 @@ export default function AdminGalleryPage() {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
-            {[
-              { key: "all", label: "Semua" },
-              { key: "foto", label: "Foto" },
-              { key: "video", label: "Video" },
-            ].map((tab) => (
-              <button key={tab.key} onClick={() => { setTypeFilter(tab.key); setPage(1); setSelectedIds(new Set()); }}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${typeFilter === tab.key ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-          {categories.length > 0 && (
-            <select value={filter} onChange={(e) => { setFilter(e.target.value); setPage(1); setSelectedIds(new Set()); }}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 focus:border-[#1767b1] focus:outline-none">
-              <option value="all">Semua Kategori</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          )}
-        </div>
-        <div className="relative">
-          <MagnifyingGlass className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input type="text" placeholder="Cari gallery..."
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 sm:w-72"
-            value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
-        </div>
-      </div>
+      {/* Filters — gaya Portal: pencarian di kiri, tipe & kategori sebagai
+          pill dropdown berjumlah di kanan. */}
+      <FilterBar
+        placeholder="Cari gallery..."
+        searchLabel="Cari judul atau kategori"
+        query={search}
+        onQueryChange={(v) => { setSearch(v); setPage(1); }}
+        filters={filterGroups}
+      />
 
       {/* Grid View */}
       {loading ? (

@@ -18,11 +18,10 @@ import {
   ArrowSquareOut,
   FileText,
   FolderOpen,
-  MagnifyingGlass,
   Trash,
   Warning,
-  X,
 } from "@/components/Icons";
+import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
 
 function formatBytes(bytes: number | null): string {
   if (bytes == null) return "–";
@@ -127,8 +126,6 @@ export default function AdminMediaPage() {
   const orphanCount = refs ? files.filter((f) => !isMediaReferenced(f, refs)).length : null;
   const usedCount = orphanCount === null ? null : files.length - orphanCount;
 
-  const bucketMeta = MEDIA_BUCKETS.find((b) => b.id === bucket);
-
   async function handleOpen(file: MediaFile) {
     const url = file.bucket === "spmb-documents" ? await mediaSignedUrl(file) : mediaPublicUrl(file);
     if (!url) {
@@ -154,6 +151,17 @@ export default function AdminMediaPage() {
         : prev
     );
   }
+
+  // Grup dropdown bucket — hint tiap bucket tampil sebagai teks kecil di menu.
+  const bucketFilterGroup: FilterGroup = {
+    value: bucket,
+    options: MEDIA_BUCKETS.map((b) => ({ key: b.id, label: b.label, hint: b.hint })),
+    onChange: (k) => {
+      setBucket(k as MediaBucket);
+      setConfirmPath(null);
+    },
+    menuLabel: "Pilih bucket media",
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -202,51 +210,16 @@ export default function AdminMediaPage() {
         </div>
       )}
 
-      {/* Bucket tabs + pencarian */}
-      <div className="mt-6 mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
-            {MEDIA_BUCKETS.map((b) => (
-              <button
-                key={b.id}
-                onClick={() => {
-                  setBucket(b.id);
-                  setConfirmPath(null);
-                }}
-                className={`rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
-                  bucket === b.id
-                    ? "bg-[#082b59] text-white shadow-sm"
-                    : "text-slate-500 hover:bg-slate-50 hover:text-[#082b59]"
-                }`}
-              >
-                {b.label}
-              </button>
-            ))}
-          </div>
-          {bucketMeta && <span className="hidden text-xs text-slate-400 lg:inline">{bucketMeta.hint}</span>}
-        </div>
-
-        <div className="relative w-full sm:w-72">
-          <MagnifyingGlass className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari nama file atau folder…"
-            aria-label="Cari file"
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-9 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/15"
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch("")}
-              aria-label="Hapus pencarian"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
+      {/* Bucket + pencarian — gaya Portal: pencarian di kiri, bucket sebagai
+          pill dropdown (hint pindah ke dalam menu) di kanan. */}
+      <div className="mt-6">
+        <FilterBar
+          placeholder="Cari nama file atau folder…"
+          searchLabel="Cari file"
+          query={search}
+          onQueryChange={setSearch}
+          filters={[bucketFilterGroup]}
+        />
       </div>
 
       {/* State: memuat / error */}

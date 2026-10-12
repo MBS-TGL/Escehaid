@@ -23,13 +23,11 @@ import {
 } from "@/lib/site-config";
 import {
   Trophy,
-  MagnifyingGlass,
   Eye,
   X,
   Medal,
   CaretLeft,
   CaretRight,
-  CaretDown,
   Plus,
   PencilSimple,
   Trash,
@@ -45,6 +43,7 @@ import {
   Users,
   Megaphone,
 } from "@/components/Icons";
+import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
 
 const PAGE_SIZE = 10;
 /** Batas unggulan aktif (Tahap 3.6). */
@@ -193,6 +192,39 @@ export default function AdminAchievementsPage() {
   };
 
   const allVisibleSelected = paginated.length > 0 && paginated.every((item) => selectedIds.has(item.id));
+
+  // Grup dropdown filter — kategori (dari data) + tahun (yang benar-benar
+  // ada). Dipakai toolbar responsif halaman ini (tak punya MobileFilterBar).
+  const filterGroups: FilterGroup[] = [
+    {
+      value: filter,
+      options: [
+        { key: "all", label: "Semua", count: achievements.length },
+        ...categories.map((cat) => ({
+          key: cat,
+          label: catMeta(cat).label,
+          count: achievements.filter((a) => a.category === cat).length,
+        })),
+      ],
+      onChange: (k) => { setFilter(k); setPage(1); setSelectedIds(new Set()); },
+      menuLabel: "Filter kategori",
+    },
+  ];
+  if (availableYears.length > 0) {
+    filterGroups.push({
+      value: yearFilter,
+      options: [
+        { key: "all", label: "Semua Tahun" },
+        ...availableYears.map((y) => ({
+          key: String(y),
+          label: String(y),
+          count: achievements.filter((a) => a.year === y).length,
+        })),
+      ],
+      onChange: (k) => { setYearFilter(k); setPage(1); setSelectedIds(new Set()); },
+      menuLabel: "Filter tahun",
+    });
+  }
 
   function toggleSelectAll() {
     if (allVisibleSelected) {
@@ -505,42 +537,15 @@ export default function AdminAchievementsPage() {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
-          <button onClick={() => { setFilter("all"); setPage(1); setSelectedIds(new Set()); }}
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${filter === "all" ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-            Semua
-          </button>
-          {categories.map((cat) => (
-            <button key={cat} onClick={() => { setFilter(cat); setPage(1); setSelectedIds(new Set()); }}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${filter === cat ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-              {catMeta(cat).label}
-            </button>
-          ))}
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative">
-            <MagnifyingGlass className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input type="text" placeholder="Cari judul, peraih, penyelenggara, peringkat..."
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 sm:w-72"
-              value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
-          </div>
-          {availableYears.length > 0 && (
-            <div className="relative">
-              <select value={yearFilter}
-                onChange={(e) => { setYearFilter(e.target.value); setPage(1); setSelectedIds(new Set()); }}
-                className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-3 pr-9 text-sm text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 sm:w-40">
-                <option value="all">Semua Tahun</option>
-                {availableYears.map((y) => (
-                  <option key={y} value={String(y)}>{y}</option>
-                ))}
-              </select>
-              <CaretDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Filters — gaya Portal: pencarian di kiri, kategori & tahun sebagai
+          pill dropdown berjumlah di kanan. */}
+      <FilterBar
+        placeholder="Cari judul, peraih, penyelenggara, peringkat..."
+        searchLabel="Cari judul, peraih, penyelenggara, atau peringkat"
+        query={search}
+        onQueryChange={(v) => { setSearch(v); setPage(1); }}
+        filters={filterGroups}
+      />
 
       {/* Table */}
       <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">

@@ -12,11 +12,10 @@ import { StatCard, StatCardRow } from "@/components/ui";
 import {
   CaretLeft,
   CaretRight,
-  MagnifyingGlass,
   Scroll,
   Warning,
-  X,
 } from "@/components/Icons";
+import { FilterBar } from "@/components/admin/FilterBar";
 
 const PAGE_SIZE = 20;
 
@@ -166,59 +165,33 @@ export default function AdminLogsPage() {
         </StatCardRow>
       )}
 
-      {/* Filter */}
+      {/* Filter — gaya Portal: pencarian di kiri, aksi & objek sebagai pill
+          dropdown di kanan (jumlah tak ditampilkan — penyaringan di server). */}
       {available && (
-        <div className="mt-6 mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative w-full sm:w-72">
-            <MagnifyingGlass className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Cari aktor atau id objek…"
-              aria-label="Cari log"
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-9 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/15"
-            />
-            {searchInput && (
-              <button
-                type="button"
-                onClick={() => setSearchInput("")}
-                aria-label="Hapus pencarian"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-
-          <select
-            value={action}
-            onChange={(e) =>
-              applyFilter(() => setAction(e.target.value as AuditAction | ""))
-            }
-            aria-label="Filter aksi"
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/15"
-          >
-            {ACTION_FILTERS.map((f) => (
-              <option key={f.value} value={f.value}>
-                {f.label}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={entity}
-            onChange={(e) => applyFilter(() => setEntity(e.target.value))}
-            aria-label="Filter objek"
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/15"
-          >
-            <option value="">Semua objek</option>
-            {ENTITY_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+        <div className="mt-6">
+          <FilterBar
+            placeholder="Cari aktor atau id objek…"
+            searchLabel="Cari log"
+            query={searchInput}
+            onQueryChange={setSearchInput}
+            filters={[
+              {
+                value: action,
+                options: ACTION_FILTERS.map((f) => ({ key: f.value, label: f.label })),
+                onChange: (k) => applyFilter(() => setAction(k as AuditAction | "")),
+                menuLabel: "Filter aksi",
+              },
+              {
+                value: entity,
+                options: [
+                  { key: "", label: "Semua objek" },
+                  ...ENTITY_OPTIONS.map((o) => ({ key: o.value, label: o.label })),
+                ],
+                onChange: (k) => applyFilter(() => setEntity(k)),
+                menuLabel: "Filter objek",
+              },
+            ]}
+          />
         </div>
       )}
 

@@ -26,7 +26,6 @@ import { StatCard, StatCardRow, Modal, ConfirmModal, SlideOver, RichTextEditor, 
 import type { News } from "@/lib/supabase";
 import {
   Megaphone,
-  MagnifyingGlass,
   Eye,
   CheckCircle,
   XCircle,
@@ -64,6 +63,7 @@ import {
   RowActionsMenu,
   type RowAction,
 } from "@/components/admin/mobile";
+import { FilterBar } from "@/components/admin/FilterBar";
 
 const PAGE_SIZE = 10;
 
@@ -335,6 +335,13 @@ export default function AdminBeritaPage() {
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     }).length,
   };
+
+  // Opsi dropdown status — dipakai toolbar desktop & mobile agar seragam.
+  const statusOptions = [
+    { key: "all", label: "Semua", count: news.length },
+    { key: "published", label: "Diterbitkan", count: stats.published },
+    { key: "draft", label: "Draft", count: stats.draft },
+  ];
 
   const allVisibleSelected = paginated.length > 0 && paginated.every((item) => selectedIds.has(item.id));
 
@@ -755,29 +762,23 @@ export default function AdminBeritaPage() {
         </div>
       )}
 
-      {/* Filter + Search (desktop md+) */}
-      <div className="mb-4 hidden flex-col gap-3 md:flex md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
-            {[
-              { key: "all", label: "Semua" },
-              { key: "published", label: "Diterbitkan" },
-              { key: "draft", label: "Draft" },
-            ].map((tab) => (
-              <button key={tab.key} onClick={() => { setFilter(tab.key); setPage(1); setSelectedIds(new Set()); }}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${filter === tab.key ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="relative">
-          <MagnifyingGlass className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input type="text" placeholder="Cari judul, ringkasan..."
-            aria-label="Cari judul atau ringkasan"
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 sm:w-72"
-            value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
-        </div>
+      {/* Filter + Search (desktop md+) — gaya Portal: pencarian di kiri,
+          status sebagai pill dropdown berjumlah di kanan. */}
+      <div className="hidden md:block">
+        <FilterBar
+          placeholder="Cari judul, ringkasan..."
+          searchLabel="Cari judul atau ringkasan"
+          query={search}
+          onQueryChange={(v) => { setSearch(v); setPage(1); }}
+          filters={[
+            {
+              value: filter,
+              options: statusOptions,
+              onChange: (k) => { setFilter(k); setPage(1); setSelectedIds(new Set()); },
+              menuLabel: "Filter status",
+            },
+          ]}
+        />
       </div>
 
       {/* Toolbar mobile (<md): pencarian + filter + urut + Pilih */}
@@ -788,11 +789,7 @@ export default function AdminBeritaPage() {
         onQueryChange={(v) => { setSearch(v); setPage(1); }}
         filter={{
           value: filter,
-          options: [
-            { key: "all", label: "Semua", count: news.length },
-            { key: "published", label: "Diterbitkan", count: stats.published },
-            { key: "draft", label: "Draft", count: stats.draft },
-          ],
+          options: statusOptions,
           onChange: (k) => { setFilter(k); setPage(1); setSelectedIds(new Set()); },
         }}
         sort={{

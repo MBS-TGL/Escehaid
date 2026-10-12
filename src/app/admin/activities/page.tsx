@@ -28,7 +28,6 @@ import { StatCard, StatCardRow, Modal, ConfirmModal, SlideOver, RichTextEditor, 
 import type { Activity } from "@/lib/supabase";
 import {
   CalendarBlank,
-  MagnifyingGlass,
   Eye,
   CheckCircle,
   XCircle,
@@ -54,6 +53,7 @@ import {
   YoutubeLogo,
   InstagramLogo,
   Video,
+  Tag,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -65,6 +65,7 @@ import {
   RowActionsMenu,
   type RowAction,
 } from "@/components/admin/mobile";
+import { FilterBar } from "@/components/admin/FilterBar";
 
 const PAGE_SIZE = 10;
 
@@ -241,6 +242,29 @@ export default function AdminActivitiesPage() {
   };
 
   const allVisibleSelected = paginated.length > 0 && paginated.every((item) => selectedIds.has(item.id));
+
+  // Opsi dropdown filter — dipakai toolbar desktop (FilterBar) & mobile
+  // (MobileFilterBar) agar label & jumlah di kedua versi selalu seragam.
+  const statusOptions = useMemo(
+    () => [
+      { key: "all", label: "Semua", count: activities.length },
+      { key: "published", label: "Diterbitkan", count: stats.published },
+      { key: "draft", label: "Draft", count: stats.draft },
+    ],
+    [activities.length, stats.published, stats.draft]
+  );
+
+  const typeOptions = useMemo(
+    () => [
+      { key: "all", label: "Semua Tipe" },
+      ...Object.values(ACTIVITY_TYPES).map((cfg) => ({
+        key: cfg.key,
+        label: cfg.label,
+        count: activities.filter((a) => a.activity_type === cfg.key).length,
+      })),
+    ],
+    [activities]
+  );
 
   function toggleSelectAll() {
     if (allVisibleSelected) {
@@ -492,37 +516,30 @@ export default function AdminActivitiesPage() {
         </div>
       )}
 
-      {/* Filter + Search (desktop md+) */}
-      <div className="mb-4 hidden flex-col gap-3 md:flex md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
-            {[
-              { key: "all", label: "Semua" },
-              { key: "published", label: "Diterbitkan" },
-              { key: "draft", label: "Draft" },
-            ].map((tab) => (
-              <button key={tab.key} onClick={() => { setFilter(tab.key); setPage(1); setSelectedIds(new Set()); }}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${filter === tab.key ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-          <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); setSelectedIds(new Set()); }}
-            aria-label="Filter tipe kegiatan"
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 focus:border-[#1767b1] focus:outline-none">
-            <option value="all">Semua Tipe</option>
-            {Object.values(ACTIVITY_TYPES).map((cfg) => (
-              <option key={cfg.key} value={cfg.key}>{cfg.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className="relative">
-          <MagnifyingGlass className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input type="text" placeholder="Cari judul, lokasi..."
-            aria-label="Cari judul atau lokasi"
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 sm:w-72"
-            value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
-        </div>
+      {/* Filter + Search (desktop md+) — gaya Portal: pencarian di kiri,
+          status & tipe sebagai pill dropdown berjumlah di kanan. */}
+      <div className="hidden md:block">
+        <FilterBar
+          placeholder="Cari judul, lokasi..."
+          searchLabel="Cari judul atau lokasi"
+          query={search}
+          onQueryChange={(v) => { setSearch(v); setPage(1); }}
+          filters={[
+            {
+              value: filter,
+              options: statusOptions,
+              onChange: (k) => { setFilter(k); setPage(1); setSelectedIds(new Set()); },
+              menuLabel: "Filter status",
+            },
+            {
+              value: typeFilter,
+              options: typeOptions,
+              onChange: (k) => { setTypeFilter(k); setPage(1); setSelectedIds(new Set()); },
+              menuLabel: "Filter tipe kegiatan",
+              icon: <Tag className="h-4 w-4" />,
+            },
+          ]}
+        />
       </div>
 
       {/* Toolbar mobile (<md): pencarian + filter status + filter tipe + urut + Pilih */}
@@ -533,12 +550,14 @@ export default function AdminActivitiesPage() {
         onQueryChange={(v) => { setSearch(v); setPage(1); }}
         filter={{
           value: filter,
-          options: [
-            { key: "all", label: "Semua", count: activities.length },
-            { key: "published", label: "Diterbitkan", count: stats.published },
-            { key: "draft", label: "Draft", count: stats.draft },
-          ],
+          options: statusOptions,
           onChange: (k) => { setFilter(k); setPage(1); setSelectedIds(new Set()); },
+        }}
+        filter2={{
+          value: typeFilter,
+          options: typeOptions,
+          onChange: (k) => { setTypeFilter(k); setPage(1); setSelectedIds(new Set()); },
+          icon: <Tag className="h-4 w-4" />,
         }}
         sort={{
           value: `${sortField}:${sortDir}`,
@@ -564,17 +583,6 @@ export default function AdminActivitiesPage() {
         onSelectAllVisible={toggleSelectAll}
         onCancelSelect={exitPickMode}
       />
-      {/* Filter tipe (baris kedua, mobile) — dropdown agar muat di 360px */}
-      <div className="mb-4 md:hidden">
-        <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); setSelectedIds(new Set()); }}
-          aria-label="Filter tipe kegiatan"
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold text-slate-600 focus:border-[#1767b1] focus:outline-none">
-          <option value="all">Semua Tipe</option>
-          {Object.values(ACTIVITY_TYPES).map((cfg) => (
-            <option key={cfg.key} value={cfg.key}>{cfg.label}</option>
-          ))}
-        </select>
-      </div>
 
       {/* Tabel desktop (md+) — tampilan & perilaku sama seperti sebelumnya */}
       <div className="hidden overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:block">

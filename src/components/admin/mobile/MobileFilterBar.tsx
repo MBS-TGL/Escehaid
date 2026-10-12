@@ -103,7 +103,8 @@ function Dropdown({
 
 /**
  * Toolbar mobile (< md): pencarian satu baris penuh + dropdown filter
- * (dengan jumlah) + dropdown urut + aksi (mis. tombol "Pilih").
+ * (dengan jumlah) + dropdown filter kedua opsional (filter2) + dropdown
+ * urut + aksi (mis. tombol "Pilih").
  *
  * Saat `selectMode`, baris pencarian/filter digantikan bar mode pilih
  * (jumlah dipilih + Pilih semua + Selesai) — desktop tetap memakai toolbar
@@ -115,6 +116,7 @@ export function MobileFilterBar({
   placeholder = "Cari…",
   searchLabel = "Cari",
   filter,
+  filter2,
   sort,
   action,
   selectMode = false,
@@ -132,6 +134,17 @@ export function MobileFilterBar({
     options: MobileFilterOption[];
     onChange: (key: string) => void;
   };
+  /**
+   * Filter kedua (opsional) — mis. tipe kegiatan di halaman Kegiatan.
+   * Tampil sebagai pill dropdown ketiga, sebelum urut.
+   */
+  filter2?: {
+    value: string;
+    options: MobileFilterOption[];
+    onChange: (key: string) => void;
+    /** Ikon kiri tombol (default Funnel). */
+    icon?: ReactNode;
+  };
   sort?: {
     value: string;
     options: MobileSortOption[];
@@ -146,6 +159,7 @@ export function MobileFilterBar({
   onCancelSelect?: () => void;
 }) {
   const currentFilter = filter?.options.find((o) => o.key === filter.value);
+  const currentFilter2 = filter2?.options.find((o) => o.key === filter2.value);
   const currentSort = sort?.options.find((o) => o.key === sort.value);
 
   if (selectMode) {
@@ -213,6 +227,17 @@ export function MobileFilterBar({
             onChoose={filter.onChange}
             icon={<Funnel className="h-4 w-4" />}
             badge={currentFilter?.count}
+          />
+        )}
+        {filter2 && (
+          <Dropdown
+            triggerLabel={currentFilter2?.label ?? "Filter"}
+            menuLabel="Filter tambahan"
+            currentKey={filter2.value}
+            options={filter2.options}
+            onChoose={filter2.onChange}
+            icon={filter2.icon ?? <Funnel className="h-4 w-4" />}
+            badge={currentFilter2?.count}
           />
         )}
         {sort && (

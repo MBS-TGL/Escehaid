@@ -92,7 +92,7 @@ Semua halaman memakai komponen ini (tidak menyalin kode 9 kali):
 2. **Tabel desktop tidak disentuh** selain dibungkus `hidden … md:block` + penambahan `aria-label` pada tombol ikon. Saran `table-fixed`/`max-w-0` agar `truncate` bekerja **tidak diterapkan** karena berisiko mengubah lebar kolom di desktop.
 3. **Perilaku tap baris** mengikuti klik baris desktop masing-masing: tap = lihat bila halaman punya modal detail (Fasilitas, Kegiatan, Artikel, Berita, Pesan, SPMB); tap = Edit bila tidak ada (Guru, Agenda, Pengumuman).
 4. **Guru/Agenda/Pengumuman tidak diberi drag-and-drop** — halaman itu memang tidak pernah punya DnD; urutan dipakai lewat aksi **Naik/Turun** di menu ⋯ (menggunakan handler reorder yang sudah ada), disembunyikan otomatis di batas atas/bawah.
-5. **Kegiatan**: filter jenis kegiatan tetap baris `<select>` native terpisah (`md:hidden`) di bawah toolbar — picker native justru UX sentuh terbaik; hanya status+urut yang masuk dropdown.
+5. **Kegiatan**: ~~filter jenis kegiatan tetap baris `<select>` native terpisah (`md:hidden`)~~ — **keputusan ini diganti** saat penyamaan toolbar (lihat bagian "Toolbar admin seragam" di bawah): tipe kini ikut dropdown `filter2` di `MobileFilterBar`, baris select native dihapus.
 6. **Kunci sort** mobile disimpan sebagai `${field}:${dir}` lalu dipecah kembali (`split(":")`) — tidak menambah state baru.
 7. **`MobileSelectBar` diberi `flex-wrap`** pada baris isinya (perubahan komponen bersama): deretan aksi (mis. Dibaca + Belum Dibaca + Hapus + Batal) bisa melebihi 360px; dengan wrap baris kedua turun, bukan overflow. Tidak mengubah tampilan bila muat.
 8. **Pesan**: dialog hapus buatan halaman (`z-[60]`) dipertahankan, tidak diganti `ConfirmModal` — sudah mobile-friendly dan menghindari perubahan perilaku.
@@ -196,3 +196,59 @@ Pilih kegiatan → edit → isi **Link Video**, simpan, lalu buka `/activities/<
    https://"**; `video_url` kosong → blok video & JSON-LD tidak tampil sama sekali.
 6. Sebelum SQL dijalankan: buka form & simpan kegiatan → tidak ada error (kolom dilepas dari
    payload), kolom video tidak muncul di tabel admin.
+
+---
+
+## Toolbar admin seragam (pola Portal) — 12 Okt 2026
+
+Konteks: tinjauan UI menemukan bahwa **Portal** punya toolbar terbaik — pencarian di kiri
+(melebar), filter sebagai pill dropdown berikon `Funnel` + label + badge jumlah — sedangkan
+14 halaman admin lain masih memakai **segmented tabs** (`bg-white p-1`) + **`<select>` native**
++ pencarian di kanan. Dua bahasa UI berbeda dalam satu panel admin.
+
+### Yang dikerjakan
+
+- **Komponen bersama baru `src/components/admin/FilterBar.tsx`** — toolbar generik pola Portal:
+  pencarian kiri (`type="search"` + tombol bersihkan), satu grup filter per pill (opsi berjumlah,
+  ikon per grup, `hint` opsional di bawah label), aksi opsional di kanan. Dibangun di atas primitif
+  `useMenu` + `MenuPanel`/`MenuItem` (portal ke body, flip atas/bawah + horizontal, klamp viewport,
+  fokus ke opsi aktif) — primitif yang sama dengan menu ⋯ & `MobileFilterBar`, jadi ARIA/keyboard/
+  gaya seragam. Responsif: `< sm` dua baris, `≥ sm` satu baris.
+- **`src/app/admin/portal/FilterBar.tsx`** dirombak jadi adapter tipis (API & tipe `PortalFilter`
+  tak berubah → `portal/page.tsx` tidak disentuh); logika dropdown duplikat ±250 baris terbuang.
+- **Segmented tabs + `<select>` native di toolbar diganti `FilterBar`** di 15 halaman:
+  Kegiatan (status + tipe), Agenda, Pengumuman, Guru, Fasilitas, Pesan, Berita, Artikel, SPMB
+  (dibungkus `hidden md:block` — mobile tetap punya `MobileFilterBar` + mode pilih + urut),
+  serta Pencapaian (kategori + tahun), Galeri (tipe + kategori), Pengguna (role), Log (aksi +
+  objek), Media (bucket) yang ber-toolbar tunggal → memakai `FilterBar` langsung di semua lebar.
+- **`MobileFilterBar` diberi prop opsional `filter2`** (non-breaking; hanya Kegiatan yang
+  memakai): pill dropdown ketiga berikon `Tag` untuk tipe kegiatan — **baris `<select>` native
+  mobile Kegiatan dihapus** (butir 5 di atas), keputusan "picker native" diganti agar seluruh
+  filter tampil sebagai pill seperti Portal.
+- Pencarian **pindah ke kiri** di semua toolbar (dulu di kanan `justify-between`), mengikuti Portal.
+- Opsi filter kini didefinisikan sekali (`statusOptions` / `filterGroups`) lalu dipakai bersama
+  toolbar desktop & `MobileFilterBar` — label & jumlah tak lagi bisa beda antar versi.
+- Tidak disentuh (memang bukan filter daftar): tab utama SPMB, tab preview device di modal
+  Berita/Artikel, dan kontrol segmented di dalam modal lainnya. Bucket Media memang sengaja
+  diganti menjadi dropdown (itu filter file), dengan hint pindah ke dalam menu.
+
+### Berkas
+
+Baru: `src/components/admin/FilterBar.tsx`.
+Diubah: `portal/FilterBar.tsx`, `mobile/MobileFilterBar.tsx`, dan 14 halaman admin
+(activities, agenda, news, articles, announcements, teachers, facilities, contact, admission,
+achievements, gallery, users, logs, media) + laporan ini.
+
+### Verifikasi
+
+`npx tsc --noEmit` bersih; `npm run lint` 0 error, 62 warning (baseline identik — tak ada
+warning baru); `npm run build` sukses (36 route). EOL semua file tetap CRLF.
+
+### Perlu dites manual
+
+1. Desktop tiap halaman: pencarian di kiri, pill status di kanan menampilkan jumlah; buka
+   dropdown → opsi aktif tercentang + fokus keyboard (panah, Esc, klik luar).
+2. Kegiatan desktop: dua pill (status + tipe, ikon `Funnel`/`Tag`); mobile: tiga pill
+   (status + tipe + urut), tak ada lagi baris select native penuh lebar.
+3. Media: pill bucket menampilkan hint tiap bucket di dalam menu.
+4. Portal: tak ada perubahan perilaku (adapter) — mode pilih mobile & "Pilih" tetap jalan.
