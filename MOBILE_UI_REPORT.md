@@ -125,7 +125,7 @@ Karena uji visual otomatis tidak memungkinkan, verifikasi mobile dilakukan lewat
 
 1. **Nol scroll horizontal** di kesembilan halaman, termasuk saat:
    - mode pilih aktif dan bar bawah muncul; teks judul panjang (line-clamp) di baris.
-2. **Toolbar mobile**: filter dengan jumlah benar; urut mengubah daftar; "Pilih" masuk mode pilih; "Selesai" keluar & membersihkan centang; toolbar **dua baris** — baris 1 pencarian + "Pilih", baris 2 pill; pill **terlihat penuh**, tak ada yang terpotong di tepi kanan.
+2. **Toolbar mobile**: filter dengan jumlah benar; urut mengubah daftar; "Pilih" masuk mode pilih; "Selesai" keluar & membersihkan centang; toolbar **dua baris** — baris 1 pencarian + "Pilih", baris 2 pill; pill **terlihat penuh**, tak ada yang terpotong di tepi kanan; pill **fit-width** — baris 2 terisi penuh sampai tepi (tak ada jarak menggantung), label kiri & caret kanan.
 3. **Long-press** baris (~0,5 dtk) masuk mode pilih + baris tercentang; menggeser/scroll tidak memicu long-press; tap ⋯ tidak membocorkan ke tap baris.
 4. **Menu ⋯**: buka/tutup dengan Esc & klik luar, navigasi panah/Home/End, hapus merah, fokus kembali ke tombol.
 5. **Bar aaksi massal** (Pesan: Dibaca/Belum Dibaca; SPMB: Terima/Tolak; Kegiatan/Berita: Terbitkan/Draft) muncul di **atas** bottom nav admin, tidak menutup baris terakhir, aman dengan safe-area iPhone.
@@ -237,6 +237,14 @@ Konteks: tinjauan UI menemukan bahwa **Portal** punya toolbar terbaik — pencar
   kini tak ada pill terpotong. Label urut panjang dipendekkan (mobile): "Tanggal
   terdekat/terjauh" → "Terdekat/Terjauh". Ikon tetap ada di pill desktop; `filter2.icon` masih
   didukung (opsional).
+- **Pill toolbar mobile jadi fit-width** (12 Okt 2026, instruksi user): setiap pill filter/urut
+  diberi `grow` + isi di `justify-between` (label kiri, caret kanan) sehingga **melebar mengisi
+  baris sampai tepi** — tak ada jarak menggantung antara pill terakhir dan tepi/aksi (user sempat
+  mengeluhkan baris terasa "bolong" di tengah). Diterapkan **konsisten di semua toolbar** —
+  `MobileFilterBar` (baris 2) maupun `FilterBar` di `< sm` — bukan cuma Portal, agar tetap satu
+  bahasa UI. Overflow tetap ditangani `flex-wrap` (tak pernah memaksa pill menyusut → label tak
+  terpotong); pada `≥ sm` baris kedua berlebar konten sehingga `grow` tak punya ruang → desktop
+  tak berubah.
 - Opsi filter kini didefinisikan sekali (`statusOptions` / `filterGroups`) lalu dipakai bersama
   toolbar desktop & `MobileFilterBar` — label & jumlah tak lagi bisa beda antar versi.
 - Tidak disentuh (memang bukan filter daftar): tab utama SPMB, tab preview device di modal

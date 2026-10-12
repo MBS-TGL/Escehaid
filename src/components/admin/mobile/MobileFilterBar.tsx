@@ -44,7 +44,10 @@ function Dropdown({
 
   return (
     <>
-      <div className="relative shrink-0">
+      {/* grow → pill melebar mengisi sisa baris (fit-width): baris terisi
+          penuh sampai tepi, tak ada jarak menggantung. Overflow ditangani
+          flex-wrap baris induk, jadi label tidak pernah terpotong. */}
+      <div className="relative grow">
         <button
           ref={triggerRef}
           type="button"
@@ -53,15 +56,17 @@ function Dropdown({
           aria-controls={open ? menuId : undefined}
           aria-label={menuLabel}
           onClick={toggle}
-          className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2 pl-2 pr-1.5 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+          className="inline-flex min-h-10 w-full items-center justify-between gap-1.5 rounded-xl border border-slate-200 bg-white py-2 pl-2 pr-1.5 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
         >
-          {icon && <span className="shrink-0 text-slate-400">{icon}</span>}
-          <span className="max-w-[9rem] truncate">{triggerLabel}</span>
-          {typeof badge === "number" && (
-            <span className="rounded-full bg-[#082b59] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white tabular-nums">
-              {badge}
-            </span>
-          )}
+          <span className="flex min-w-0 items-center gap-1.5">
+            {icon && <span className="shrink-0 text-slate-400">{icon}</span>}
+            <span className="min-w-0 max-w-[9rem] truncate">{triggerLabel}</span>
+            {typeof badge === "number" && (
+              <span className="rounded-full bg-[#082b59] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white tabular-nums">
+                {badge}
+              </span>
+            )}
+          </span>
           <CaretDown
             className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
           />
@@ -112,7 +117,9 @@ function Dropdown({
  * Pill baris 2 tanpa ikon + padding ringkas agar tiga pill (status + tipe +
  * urut) muat satu baris di layar 360–430px dan **terlihat penuh** — tanpa
  * scroll mendatang (dulu pill terpotong di tepi kanan). Bila tetap tak muat,
- * pill wrap ke baris berikutnya, tidak pernah terpotong.
+ * pill wrap ke baris berikutnya, tidak pernah terpotong. Setiap pill juga
+ * `grow` + `justify-between` (**fit-width**): baris terisi penuh sampai tepi
+ * kanan, tak ada jarak menggantung antara pill terakhir dan tepi.
  *
  * Saat `selectMode`, kedua baris digantikan bar mode pilih (jumlah dipilih +
  * Pilih semua + Selesai) — desktop tetap memakai toolbar lamanya (tab +
@@ -231,9 +238,10 @@ export function MobileFilterBar({
         {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
       </div>
 
-      {/* Baris 2 — pill filter + urut: tanpa ikon & padding ringkas agar tiga
-          pill muat satu baris (terlihat penuh, tanpa scroll yang memotong di
-          tepi kanan); `flex-wrap` sebagai cadangan bila label sangat panjang. */}
+      {/* Baris 2 — pill filter + urut: `grow` → semua pill melebar mengisi
+          baris sampai tepi (fit-width, tanpa jarak menggantung); tanpa ikon &
+          padding ringkas agar tiga pill Kegiatan tetap muat satu baris di
+          360–430px; `flex-wrap` sebagai cadangan bila label sangat panjang. */}
       <div className="flex flex-wrap items-center gap-2">
         {filter && (
           <Dropdown

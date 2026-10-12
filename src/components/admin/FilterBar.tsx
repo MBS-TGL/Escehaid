@@ -11,7 +11,8 @@ import { MenuPanel, MenuItem, useMenu } from "@/components/admin/mobile";
  * di hampir semua halaman, agar satu bahasa UI di seluruh admin.
  *
  * Komponen ini responsif (di luar md pun tetap layak):
- *   < sm  → dua baris: pencarian selebar penuh, lalu dropdown + aksi.
+ *   < sm  → dua baris: pencarian selebar penuh, lalu dropdown (grow /
+ *     fit-width — melebar mengisi baris, tak ada jarak menggantung) + aksi.
  *   ≥ sm  → satu baris: pencarian melebar (maks max-w-sm) di kiri.
  * Halaman yang punya `MobileFilterBar` sendiri cukup membungkusnya dengan
  * `hidden md:block` agar versi mobile tetap milik MobileFilterBar.
@@ -46,7 +47,9 @@ function FilterDropdown({ group }: { group: FilterGroup }) {
   const current = group.options.find((o) => o.key === group.value) ?? group.options[0];
 
   return (
-    <div className="relative shrink-0">
+    // grow: hanya berpengaruh saat baris selebar layar (<sm); pada ≥sm baris
+    // berlebar konten sehingga grow tidak punya ruang → tampilan lama persis.
+    <div className="relative grow">
       <button
         ref={triggerRef}
         type="button"
@@ -55,15 +58,17 @@ function FilterDropdown({ group }: { group: FilterGroup }) {
         aria-controls={open ? menuId : undefined}
         aria-label={`${group.menuLabel} — ${current?.label ?? ""}`}
         onClick={toggle}
-        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2.5 pl-2.5 pr-2 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] sm:gap-2 sm:pl-3 sm:pr-2.5"
+        className="inline-flex w-full items-center justify-between gap-1.5 rounded-xl border border-slate-200 bg-white py-2.5 pl-2.5 pr-2 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] sm:gap-2 sm:pl-3 sm:pr-2.5"
       >
-        <span className="shrink-0 text-slate-400">{group.icon ?? <Funnel className="h-4 w-4" />}</span>
-        <span className="max-w-[9rem] truncate">{current?.label}</span>
-        {typeof current?.count === "number" && (
-          <span className="rounded-full bg-[#082b59] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white tabular-nums">
-            {current.count}
-          </span>
-        )}
+        <span className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+          <span className="shrink-0 text-slate-400">{group.icon ?? <Funnel className="h-4 w-4" />}</span>
+          <span className="min-w-0 max-w-[9rem] truncate">{current?.label}</span>
+          {typeof current?.count === "number" && (
+            <span className="rounded-full bg-[#082b59] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white tabular-nums">
+              {current.count}
+            </span>
+          )}
+        </span>
         <CaretDown
           className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
         />
