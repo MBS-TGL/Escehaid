@@ -65,6 +65,9 @@ import {
   MobileListRow,
   MobileSelectBar,
   RowActionsMenu,
+  RowGrip,
+  MobileThumb,
+  QuietBadge,
 } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
 
@@ -477,13 +480,19 @@ export default function AdminFacilitiesPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <StatCardRow>
-        <StatCard label="Total" value={stats.total} variant="brand" />
-        <StatCard label="Aktif" value={stats.active} variant="success" />
-        <StatCard label="Nonaktif" value={stats.inactive} variant="warning" />
-        <StatCard label="Bergambar" value={stats.withImage} variant="info" />
-      </StatCardRow>
+      {/* Stats desktop — kartu statistik tetap di desktop; mobile memakai
+          ringkasan satu baris (hanya menduplikasi jumlah filter). */}
+      <div className="hidden md:block">
+        <StatCardRow>
+          <StatCard label="Total" value={stats.total} variant="brand" />
+          <StatCard label="Aktif" value={stats.active} variant="success" />
+          <StatCard label="Nonaktif" value={stats.inactive} variant="warning" />
+          <StatCard label="Bergambar" value={stats.withImage} variant="info" />
+        </StatCardRow>
+      </div>
+      <p className="mb-4 text-xs font-medium text-[#64748b] md:hidden">
+        {stats.total} fasilitas · {stats.active} aktif · {stats.inactive} nonaktif
+      </p>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
@@ -654,8 +663,11 @@ export default function AdminFacilitiesPage() {
 
       {/* Daftar mobile (<md) — baris ringkas tanpa scroll horizontal; semua
           fitur tetap ada: pilih (mode pilih), urut (dropdown toolbar), aksi
-          via menu ⋯, dan geser urutan lewat handle di kiri. */}
-      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:hidden">
+          via menu ⋯, dan geser urutan lewat handle di kiri.
+          Kartu: rounded-2xl border slate-200/70 (tanpa bayangan tebal);
+          pemisah baris = border-t tiap baris (MobileListRow), tanpa divide-y
+          agar garis tidak dobel. */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden">
         <DndContext
           sensors={sensors}
           modifiers={[lockY]}
@@ -664,7 +676,7 @@ export default function AdminFacilitiesPage() {
           onDragEnd={handleDragEnd}
         >
           <SortableContext items={paginated.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-            <div role="list" aria-label="Daftar fasilitas" className="divide-y divide-slate-100">
+            <div role="list" aria-label="Daftar fasilitas">
               {loading ? (
                 <div className="space-y-3 px-3 py-4" aria-hidden="true">
                   {Array.from({ length: 4 }, (_, i) => (
@@ -1098,10 +1110,11 @@ function SortableFacilityRow({
  * dua tempat membuat context hanya melacak satu node (node tersembunyi
  * display:none berukuran nol → drag rusak di layar yang satunya).
  *
- * Layout: [handle + nomor urut (kiri penuh, touch-none)] [thumbnail 48px]
- * [nama line-clamp-2 + subteks] [pill status (ketuk = toggle)] [menu ⋯].
- * Tap baris = Lihat; long-press = masuk mode pilih; di mode pilih checkbox
- * menggantikan handle dan tap baris = toggle centang.
+ * Anatomi baris (putaran 2): [grip 30px] [thumb 56px + titik status] [nama
+ * 15px line-clamp-2 + badge "Nonaktif" + deskripsi 2 baris] [⋯ 36×44].
+ * Status aktif/nonaktif lewat menu ⋯ ("Nonaktifkan"/"Aktifkan") — tidak ada
+ * pill yang bisa diketuk sekali langsung menyimpan. Tap baris = Lihat;
+ * long-press = masuk mode pilih; di mode pilih checkbox menggantikan grip.
  */
 function FacilityMobileRow({
   item,
@@ -1131,64 +1144,22 @@ function FacilityMobileRow({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id, disabled: dragDisabled || selectMode });
 
-  // Handle mobile — nomor urut (11px) menempel di dalam handle sehingga
-  // tinggi baris tidak bertambah. Tombol setinggi baris penuh (self-stretch +
-  // margin negatif yang meniadakan padding baris) dan selebar w-16 supaya
-  // SELURUH kolom kiri menjadi area drag; `touch-action: none` hanya di
-  // handle ini agar sentuhan di area lain tetap men-scroll halaman.
+  // Grip urutan — kolom tampilan 30px (nomor = sort_order), area sentuh
+  // penuh tinggi baris & >= 44px lebar (RowGrip bersama, touch-none).
   const mobileHandle = (
-    <button
-      type="button"
-      {...attributes}
-      {...(dragDisabled ? {} : listeners)}
+    <RowGrip
+      index={0}
+      number={item.sort_order || 0}
+      label={item.name}
       disabled={dragDisabled}
-      data-no-longpress=""
-      aria-label={`Ubah urutan ${item.name}`}
-      title={
-        dragDisabled
-          ? "Urutan hanya bisa diubah saat menampilkan Semua, tanpa pencarian, dan diurut Urutan tampil"
-          : "Seret untuk mengubah urutan"
-      }
-      onClick={(e) => e.stopPropagation()}
-      style={{ touchAction: "none" }}
-      className={`-my-2.5 -ml-3 flex w-16 shrink-0 touch-none flex-col items-center justify-center gap-0.5 self-stretch rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] ${
-        dragDisabled
-          ? "cursor-not-allowed text-slate-200"
-          : "cursor-grab text-slate-400 hover:bg-[#1767b1]/10 hover:text-[#082b59] active:cursor-grabbing"
-      }`}
-    >
-      <DotsSixVertical className="h-4 w-4" />
-      <span className="text-[11px] font-semibold leading-none tabular-nums text-slate-400">
-        {item.sort_order || 0}
-      </span>
-    </button>
+      attributes={attributes}
+      listeners={dragDisabled ? {} : listeners}
+    />
   );
 
   // Chip peringatan: fasilitas tampil di website tapi tidak punya gambar —
   // versi baris mobile berupa ikon kecil (bukan chip lebar).
   const missingImage = item.is_active && !item.image_url;
-
-  const statusPill = (
-    <button
-      type="button"
-      data-no-longpress=""
-      onClick={(e) => {
-        e.stopPropagation();
-        onToggleActive(item);
-      }}
-      disabled={selectMode}
-      title={item.is_active ? "Klik untuk menonaktifkan" : "Klik untuk mengaktifkan"}
-      aria-label={`${item.is_active ? "Nonaktifkan" : "Aktifkan"} ${item.name}`}
-      className={`inline-flex min-h-10 items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:opacity-60 ${
-        item.is_active
-          ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-          : "border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-      }`}
-    >
-      {item.is_active ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-      {item.is_active ? "Aktif" : "Nonaktif"}
-    </button>
-  );
 
   return (
     <div
@@ -1224,19 +1195,21 @@ function FacilityMobileRow({
           )
         }
         thumb={
-          item.image_url ? (
-            <img src={item.image_url} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
-          ) : (
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-100">
-              <ImageSquare className="h-6 w-6 text-slate-300" />
-            </span>
-          )
+          <MobileThumb
+            src={item.image_url}
+            tint="sky"
+            status={{
+              tone: item.is_active ? "active" : "off",
+              label: item.is_active ? "Aktif" : "Nonaktif",
+            }}
+          />
         }
         title={item.name}
+        badge={!item.is_active ? <QuietBadge>Nonaktif</QuietBadge> : undefined}
         subtitle={
           <>
             {item.description && (
-              <span className="min-w-0 truncate" title={item.description}>
+              <span className="min-w-0" title={item.description}>
                 {item.description}
               </span>
             )}
@@ -1251,7 +1224,6 @@ function FacilityMobileRow({
             )}
           </>
         }
-        status={statusPill}
         actions={
           <RowActionsMenu
             label={item.name}
@@ -1260,6 +1232,12 @@ function FacilityMobileRow({
               { key: "view", label: "Lihat", icon: <Eye className="h-4 w-4" />, run: () => onView(item) },
               { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) },
               { key: "duplicate", label: "Duplikat", icon: <Copy className="h-4 w-4" />, run: () => onDuplicate(item) },
+              {
+                key: "toggle",
+                label: item.is_active ? "Nonaktifkan" : "Aktifkan",
+                icon: item.is_active ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
+                run: () => onToggleActive(item),
+              },
               { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) },
             ]}
           />
