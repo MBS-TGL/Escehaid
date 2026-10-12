@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Checks, CaretDown, CheckSquare, Funnel, MagnifyingGlass, SortAscending, X } from "@/components/Icons";
+import { Checks, CaretDown, CheckSquare, MagnifyingGlass, X } from "@/components/Icons";
 import { useMenu } from "./useMenu";
 import { MenuPanel, MenuItem } from "./Menu";
 
@@ -23,8 +23,8 @@ type DropdownProps = {
   currentKey: string;
   options: { key: string; label: string; count?: number }[];
   onChoose: (key: string) => void;
-  /** Ikon kiri tombol pemicu. */
-  icon: ReactNode;
+  /** Ikon kiri tombol pemicu (opsional — default tanpa ikon, hemat ruang). */
+  icon?: ReactNode;
   /** Badge angka di samping label tombol (nilainya saat ini). */
   badge?: number;
 };
@@ -53,9 +53,9 @@ function Dropdown({
           aria-controls={open ? menuId : undefined}
           aria-label={menuLabel}
           onClick={toggle}
-          className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2 pl-2.5 pr-2 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+          className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2 pl-2 pr-1.5 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
         >
-          <span className="shrink-0 text-slate-400">{icon}</span>
+          {icon && <span className="shrink-0 text-slate-400">{icon}</span>}
           <span className="max-w-[9rem] truncate">{triggerLabel}</span>
           {typeof badge === "number" && (
             <span className="rounded-full bg-[#082b59] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white tabular-nums">
@@ -109,8 +109,10 @@ function Dropdown({
  *
  * Aksi sengaja berada di baris pencarian: bila ikut baris pill, tombol wrap
  * ke baris ketiga saat tak muat di layar 360–390px (toolbar jadi 3 baris).
- * Baris pill memakai `overflow-x-auto` tanpa `flex-wrap`, sehingga jumlah
- * pill berapa pun tetap menghasilkan tepat dua baris.
+ * Pill baris 2 tanpa ikon + padding ringkas agar tiga pill (status + tipe +
+ * urut) muat satu baris di layar 360–430px dan **terlihat penuh** — tanpa
+ * scroll mendatang (dulu pill terpotong di tepi kanan). Bila tetap tak muat,
+ * pill wrap ke baris berikutnya, tidak pernah terpotong.
  *
  * Saat `selectMode`, kedua baris digantikan bar mode pilih (jumlah dipilih +
  * Pilih semua + Selesai) — desktop tetap memakai toolbar lamanya (tab +
@@ -148,7 +150,7 @@ export function MobileFilterBar({
     value: string;
     options: MobileFilterOption[];
     onChange: (key: string) => void;
-    /** Ikon kiri tombol (default Funnel). */
+    /** Ikon kiri tombol (opsional — default tanpa ikon; hemat ruang di layar kecil). */
     icon?: ReactNode;
   };
   sort?: {
@@ -229,12 +231,10 @@ export function MobileFilterBar({
         {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
       </div>
 
-      {/* Baris 2 — pill filter + urut selalu satu baris: tanpa `flex-wrap`,
-          bila tak muat (mis. tiga pill di layar 360px) digulir mendatar —
-          toolbar dijamin tak pernah jadi tiga baris. `p-1 -m-1` memberi ruang
-          outline fokus agar tak terpotong kotak scroll (jarak antarbaris tetap
-          8px); panel menu ter-portal ke body sehingga tidak ikut terclip. */}
-      <div className="-m-1 flex items-center gap-2 overflow-x-auto p-1 scrollbar-hide">
+      {/* Baris 2 — pill filter + urut: tanpa ikon & padding ringkas agar tiga
+          pill muat satu baris (terlihat penuh, tanpa scroll yang memotong di
+          tepi kanan); `flex-wrap` sebagai cadangan bila label sangat panjang. */}
+      <div className="flex flex-wrap items-center gap-2">
         {filter && (
           <Dropdown
             triggerLabel={currentFilter?.label ?? "Filter"}
@@ -242,7 +242,6 @@ export function MobileFilterBar({
             currentKey={filter.value}
             options={filter.options}
             onChoose={filter.onChange}
-            icon={<Funnel className="h-4 w-4" />}
             badge={currentFilter?.count}
           />
         )}
@@ -253,7 +252,7 @@ export function MobileFilterBar({
             currentKey={filter2.value}
             options={filter2.options}
             onChoose={filter2.onChange}
-            icon={filter2.icon ?? <Funnel className="h-4 w-4" />}
+            icon={filter2.icon}
             badge={currentFilter2?.count}
           />
         )}
@@ -264,7 +263,6 @@ export function MobileFilterBar({
             currentKey={sort.value}
             options={sort.options}
             onChoose={sort.onChange}
-            icon={<SortAscending className="h-4 w-4" />}
           />
         )}
       </div>

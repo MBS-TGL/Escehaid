@@ -557,7 +557,6 @@ export default function AdminActivitiesPage() {
           value: typeFilter,
           options: typeOptions,
           onChange: (k) => { setTypeFilter(k); setPage(1); setSelectedIds(new Set()); },
-          icon: <Tag className="h-4 w-4" />,
         }}
         sort={{
           value: `${sortField}:${sortDir}`,
@@ -566,8 +565,8 @@ export default function AdminActivitiesPage() {
             { key: "created_at:asc", label: "Terlama" },
             { key: "title:asc", label: "Judul A–Z" },
             { key: "title:desc", label: "Judul Z–A" },
-            { key: "activity_date:asc", label: "Tanggal terdekat" },
-            { key: "activity_date:desc", label: "Tanggal terjauh" },
+            { key: "activity_date:asc", label: "Terdekat" },
+            { key: "activity_date:desc", label: "Terjauh" },
             { key: "activity_type:asc", label: "Tipe A–Z" },
           ],
           onChange: (k) => {
