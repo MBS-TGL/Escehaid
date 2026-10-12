@@ -273,3 +273,145 @@ warning baru); `npm run build` sukses (36 route). EOL semua file tetap CRLF.
    native penuh lebar.
 3. Media: pill bucket menampilkan hint tiap bucket di dalam menu.
 4. Portal: tak ada perubahan perilaku (adapter) — mode pilih mobile & "Pilih" tetap jalan.
+
+---
+
+## Putaran 2 — bahasa desain baru — 12 Okt 2026
+
+Putaran ini menjalankan seluruh isi `PROMPT_REDESIGN.md`: menerapkan bahasa desain hasil
+mockup yang disetujui ke **semua** halaman admin (Coverage A yang sudah ada + Coverage B yang
+belum tersentuh), tanpa mengubah tampilan desktop (≥768px) dan tanpa menyentuh data/query.
+
+### Ringkasan commit putaran 2
+
+| Commit | Halaman / komponen |
+| --- | --- |
+| `d8a364a` | Snapshot kebersihan sebelum redesign |
+| `d56eb97` | Komponen bersama (`src/components/admin/mobile/`) |
+| `8bbc154` | Portal |
+| `5639b90` | Fasilitas |
+| `d2bc37f` | Guru |
+| `f848a8c` | Agenda |
+| `759458c` | Kegiatan |
+| `2cfb5cf` | Pengumuman |
+| `11c9d9e` | Artikel |
+| `a64620f` | Berita |
+| `c163e7e` | Pesan |
+| `164412f` | SPMB |
+| `0219a22` | Dashboard (Coverage B) |
+| `a5ca55b` | Galeri (Coverage B) |
+| `18c66b7` | Media (Coverage B) |
+| `2777562` | Prestasi (Coverage B) |
+| `7aa5d2d` | Log Aktivitas (Coverage B) |
+
+### Komponen bersama yang diubah
+
+- `mobile/RowBits.tsx` — `StatusDot` kini mendukung tone `danger` (`#dc2626`, cincin putih
+  2.5px) untuk status Ditolak (SPMB); `MobileThumb` 56×56 r12/bulat dengan fallback tint;
+  `QuietBadge` 20px hanya untuk keadaan tidak biasa; `RowGrip` 30px.
+- `mobile/MobileListRow.tsx` — anatomi baris `[grip/lead 30px] [thumb] [judul 15px/600
+  `#0f2a4d` line-clamp-2 + badge + subteks 12px `#64748b`] [⋯ 36×44]`, kontainer `flex
+  items-center gap-2.5 py-2 pl-1.5 pr-0.5 border-t border-slate-100` (daftar pembungkus tidak
+  lagi memakai `divide-y` agar garis tidak dobel), dukungan `lead`/`status`/`onLongPress`.
+- `mobile/MobileFilterBar.tsx` — toolbar dua baris: baris 1 pencarian penuh 44px r12, baris 2
+  Filter + Urut + aksi dalam SATU baris 44px tanpa wrap (pill `flex-1` terpotong, aksi
+  `shrink-0`).
+- `mobile/MobilePagination.tsx` — footer kartu: "Menampilkan a–b dari n" + tombol
+  Sebelumnya/Berikutnya hanya bila `totalPages > 1`.
+- `mobile/MobileSelectBar.tsx` — bar sticky mode pilih (jumlah + Pilih semua + Selesai).
+- `mobile/RowActionsMenu.tsx` — menu ⋯ untuk semua aksi baris; perubahan status/tombol
+  sekali-tekan dihapus dari tampilan baris.
+
+### Anatomi & aturan yang dipakai di semua halaman
+
+- **Baris**: `[grip 30px][thumb/tile][teks fleksibel][⋯ 36×44]`; nama 15px/600 `#0f2a4d`
+  line-clamp-2; subteks 12px `#64748b`; titik status 14px di sudut thumb dengan cincin putih
+  2.5px (hijau `#16a34a`, abu `#94a3b8`, amber `#f59e0b`, biru `#1767b1`, merah `#dc2626`).
+- **Tidak ada perubahan status satu-klik**: Terima/Tolak/Publish/Hapus selalu lewat menu ⋯ →
+  `ConfirmModal`/`confirmAction`.
+- **Header halaman**: ikon 40px r12 `bg-[#e4ecf6] md:bg-[<tint lama>]`, judul 20px/700,
+  subjudul `text-[13px] text-[#64748b] md:text-sm md:text-slate-500`.
+- **Statistik**: carousel/blok stat disembunyikan di mobile (`hidden md:block`) bila angkanya
+  hanya menduplikasi hitungan filter → diganti ringkasan satu baris; bila kartu memuat metrik
+  unik → grid 2 kolom (tanpa dot pager).
+- **Kartu daftar**: `bg-white border border-slate-200/70 rounded-2xl` (baris membawa `border-t`
+  sendiri).
+- **Tombol utama**: `min-h-11 py-3 md:py-2.5`.
+- **Input**: `text-base md:text-sm` (mencegah iOS zoom 16px).
+
+### Ringkasan per halaman
+
+**Coverage A (dikerjakan berurutan, komponen bersama dulu):**
+
+1. **Portal** — grip 30px + nama 15px line-clamp-2, pill status 28px, ringkasan satu baris
+   menggantikan carousel statistik, toolbar dua baris.
+2. **Fasilitas** — thumb 56px + titik status di sudutnya, badge "Nonaktif" (QuietBadge),
+   aktif/nonaktif hanya lewat menu ⋯, ringkasan satu baris, kartu `rounded-2xl`.
+3. **Guru** — daftar guru jadi `MobileListRow` + thumb foto/bulat-inisial, ringkasan satu
+   baris, mode pilih + bar sticky, paginasi hanya bila >1 halaman.
+4. **Agenda** — kartu agenda mobile (tanggal + judul + waktu), filter/urut dua baris.
+5. **Kegiatan** — grid metrik unik 2 kolom, daftar kartu, baris status lewat menu.
+6. **Pengumuman** — ringkasan satu baris, kartu + badge status (Draft/Terjadwal) quiet.
+7. **Artikel** — grid metrik 2 kolom, kartu dengan thumb + badge status, mode pilih.
+8. **Berita** — sama seperti Artikel; status publish lewat menu ⋯ + konfirmasi.
+9. **Pesan** — kartu pesan (pengirim, waktu, pratinjau), aksi Balas/Hapus di menu ⋯ + modal.
+10. **SPMB** — statistik → ringkasan satu baris, kartu `rounded-2xl` tanpa divide-y,
+    `RegistrationMobileRow` baru (StatusDot `danger` di sudut avatar untuk Ditolak, QuietBadge
+    "Ditolak", opsi status "Jadikan Menunggu/Terima/Tolak" di menu ⋯ → `handleSetPending`
+    langsung / `confirmAction` untuk terima–tolak), tombol Export CSV/Tambah Gelombang
+    `min-h-11 py-3 md:py-2.5`.
+
+**Coverage B:**
+
+11. **Dashboard** — cepat-aksi jadi tautan sentuh `min-h-11 … md:min-h-0 md:py-2`, grid ringkas
+    tanpa horizontal scroll.
+12. **Galeri** — header/stat/toolbar dipisah (`hidden md:*`), `MobileFilterBar` + mode pilih +
+    `MobileSelectBar`, kartu gambar rasio `4:3` mobile (`md:aspect-square` desktop), judul
+    `line-clamp-2 md:line-clamp-1`, menu ⋯ di sudut gambar (`md:hidden`, latar `bg-black/45`),
+    tombol hover desktop `hidden md:flex`, checkbox selalu tampil di desktop & hanya di mode
+    pilih pada mobile, `MobilePagination`.
+13. **Media** — header/stat dipisah, `MobileFilterBar`, grid desktop `hidden md:grid`, daftar
+    mobile `MobileListRow` dengan thumb 56px + Salin tautan di menu ⋯ + mode pilih, konfirmasi
+    massal, input `text-base md:text-sm`.
+14. **Prestasi** — impor komponen mobile, `pickMode` + `enterPickMode`/`exitPickMode`, header/
+    statistik/toolbar/tabel desktop `hidden md:*` + `MobileFilterBar`, daftar mobile
+    (`MobileThumb` medali/trofi, QuietBadge Unggulan/peringkat, long-press → mode pilih),
+    `MobilePagination`, `MobileSelectBar`.
+15. **Log Aktivitas** — timeline kartu (bukan tabel): avatar inisial pelaku, kalimat
+    "<pelaku> <aksi> <objek>", badge tipe aksi (quiet, warna aman/biru/merah), waktu +
+    entity_id, tap baris untuk membuka/menutup detail JSON (panah berputar), filter aksi +
+    objek via `MobileFilterBar`, ringkasan metrik 2 kolom, `MobilePagination` sebagai footer
+    kartu; tanpa mode pilih (halaman hanya-baca).
+
+### Keputusan konservatif (putaran 2)
+
+- **Tampilan desktop tidak diubah**: setiap elemen yang disamarkan di mobile memakai
+  `hidden md:*` dengan gaya desktop persis seperti semula (tabel, StatCardRow, FilterBar,
+  tombol hover, rasio gambar).
+- **Upload Media dihilangkan di mobile** — tidak ada fungsi query upload yang ada (dan query
+  data tidak boleh diubah), jadi tombol Upload hanya ditampilkan di desktop.
+- Tidak ada perubahan `.env*`, skema DB, migrasi, RLS, maupun `@/lib/queries`.
+- Grid tanpa scroll horizontal pada 360/390/430px (`min-w-[680px]` tabel hanya untuk desktop).
+- EOL per file dipertahankan (file bersama mobile LF; file lain sesuai keadaan awal).
+
+### Verifikasi (putaran 2)
+
+- `npx tsc --noEmit` — bersih, 0 error.
+- `npm run lint` — **0 error**, 57 warning (baseline identik: warning pra-adanya + `<img>` di
+  `RowBits.tsx`); tak ada error baru.
+- `npm run build` — sukses (Next 16, 36 route).
+
+### Perlu dites manual di ponsel (360 / 390 / 430px)
+
+1. Semua halaman: tak ada scroll horizontal; toolbar dua baris (cari 44px + Filter/Urut/Pilih
+   satu baris) tidak terpotong.
+2. Baris daftar: tap membuka detail/edit, tekan lama 500ms masuk mode pilih (halaman yang
+   mendukung), menu ⋯ terbuka tanpa membajak tap baris.
+3. Publish/Terima/Tolak/Hapus selalu tetap memunculkan `ConfirmModal` (tidak ada aksi satu-ketuk
+   langsung).
+4. Log Aktivitas: tap baris membuka/tutup JSON detail; panah berputar; paginasi hanya muncul
+   bila >1 halaman.
+5. Galeri: menu ⋯ di sudut gambar terlihat kontras (latar `bg-black/45`), checkbox hanya di
+   mode pilih; kartu rasio 4:3.
+6. SPMB: status Ditolak menampilkan titik merah + badge "Ditolak"; ubah status lewat menu ⋯.
+7. Input 16px di iOS (tidak zoom otomatis saat fokus).
