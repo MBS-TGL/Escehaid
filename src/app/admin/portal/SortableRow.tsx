@@ -84,9 +84,8 @@ function ThemeChip({
   return (
     <span
       title={name}
-      className={`flex shrink-0 items-center justify-center ${
-        size === "lg" ? "h-10 w-10 rounded-xl" : "h-7 w-7 rounded-lg"
-      } ${rc.tileClass}`}
+      className={`flex shrink-0 items-center justify-center ${size === "lg" ? "h-10 w-10 rounded-xl" : "h-7 w-7 rounded-lg"
+        } ${rc.tileClass}`}
       style={rc.tileStyle}
     >
       <Icon className={size === "lg" ? "h-5 w-5" : "h-4 w-4"} weight="fill" />
@@ -285,13 +284,13 @@ function RowActionsMenu({
       },
       ...(hasLink
         ? [
-            {
-              key: "link",
-              label: "Buka link",
-              icon: <ArrowSquareOut className="h-4 w-4" />,
-              run: () => window.open(href, "_blank", "noopener,noreferrer"),
-            },
-          ]
+          {
+            key: "link",
+            label: "Buka link",
+            icon: <ArrowSquareOut className="h-4 w-4" />,
+            run: () => window.open(href, "_blank", "noopener,noreferrer"),
+          },
+        ]
         : []),
       {
         key: "delete",
@@ -359,11 +358,10 @@ function RowActionsMenu({
                   setOpen(false);
                   it.run();
                 }}
-                className={`flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 text-left text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#1767b1] ${
-                  it.danger
-                    ? "text-red-600 hover:bg-red-50"
-                    : "text-slate-700 hover:bg-slate-50"
-                }`}
+                className={`flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 text-left text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#1767b1] ${it.danger
+                  ? "text-red-600 hover:bg-red-50"
+                  : "text-slate-700 hover:bg-slate-50"
+                  }`}
               >
                 <span className="shrink-0">{it.icon}</span>
                 <span className="min-w-0 flex-1 truncate">{it.label}</span>
@@ -448,11 +446,10 @@ export function SortableRow({
           ? "Urutan hanya bisa diubah saat menampilkan Semua tanpa pencarian"
           : "Tarik untuk mengubah urutan (atau tekan Space, lalu panah)"
       }
-      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] ${
-        dragDisabled
-          ? "cursor-not-allowed text-slate-300"
-          : "cursor-grab text-slate-400 hover:bg-[#1767b1]/10 hover:text-[#082b59] active:cursor-grabbing"
-      }`}
+      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] ${dragDisabled
+        ? "cursor-not-allowed text-slate-300"
+        : "cursor-grab text-slate-400 hover:bg-[#1767b1]/10 hover:text-[#082b59] active:cursor-grabbing"
+        }`}
     >
       <DotsSixVertical className="h-4 w-4" />
     </button>
@@ -480,11 +477,10 @@ export function SortableRow({
       }
       onClick={(e) => e.stopPropagation()}
       style={{ touchAction: "none" }}
-      className={`-my-2.5 -ml-3 flex w-16 shrink-0 touch-none flex-col items-center justify-center gap-0.5 self-stretch rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] ${
-        dragDisabled
-          ? "cursor-not-allowed text-slate-300"
-          : "cursor-grab text-slate-400 hover:bg-[#1767b1]/10 hover:text-[#082b59] active:cursor-grabbing"
-      }`}
+      className={`-my-2.5 -ml-3 flex w-12 shrink-0 touch-none flex-col items-center justify-center gap-0.5 self-stretch rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] ${dragDisabled
+        ? "cursor-not-allowed text-slate-300"
+        : "cursor-grab text-slate-400 hover:bg-[#1767b1]/10 hover:text-[#082b59] active:cursor-grabbing"
+        }`}
     >
       <DotsSixVertical className="h-4 w-4" />
       <span className="text-[11px] font-semibold leading-none tabular-nums text-slate-400">
@@ -596,9 +592,8 @@ export function SortableRow({
       // `relative` supaya zIndex saat drag benar-benar berlaku (z-index tidak
       // bekerja pada elemen yang tidak berposisi) — baris yang diseret tidak
       // tertutup baris tetangga yang ikut bergeser.
-      className={`group relative transition-colors ${
-        isDragging ? "bg-slate-50 opacity-70" : "hover:bg-slate-50/80"
-      }`}
+      className={`group relative transition-colors ${isDragging ? "bg-slate-50 opacity-70" : "hover:bg-slate-50/80"
+        }`}
     >
       {/* ── Desktop: baris tabel ─────────────────────────────── */}
       <div className={`hidden px-4 py-3.5 md:grid ${PORTAL_GRID} md:items-center md:gap-3`}>
@@ -695,7 +690,7 @@ export function SortableRow({
               terpotong ("Jadwal Pela…"); ganti ke `truncate` bila ingin
               tinggi baris selalu seragam. */}
           <p
-            className="line-clamp-2 break-words text-sm font-medium leading-tight text-slate-700"
+            className="line-clamp-2 break-words text-[13px] font-medium leading-tight text-slate-700 md:text-sm"
             title={item.label}
           >
             {item.label}
@@ -709,9 +704,8 @@ export function SortableRow({
               {warn && (
                 <span
                   title={warn.text}
-                  className={`ml-1 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center align-[-2px] ${
-                    warn.danger ? "text-red-500" : "text-amber-500"
-                  }`}
+                  className={`ml-1 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center align-[-2px] ${warn.danger ? "text-red-500" : "text-amber-500"
+                    }`}
                 >
                   <Warning className="h-3 w-3" />
                   <span className="sr-only">{warn.text}</span>
