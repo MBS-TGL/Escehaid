@@ -44,6 +44,17 @@ import {
   Megaphone,
 } from "@/components/Icons";
 import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
+import {
+  MobileFilterBar,
+  MobileListRow,
+  MobilePagination,
+  MobilePickButton,
+  MobileSelectBar,
+  MobileThumb,
+  QuietBadge,
+  RowActionsMenu,
+  type RowAction,
+} from "@/components/admin/mobile";
 
 const PAGE_SIZE = 10;
 /** Batas unggulan aktif (Tahap 3.6). */
@@ -109,6 +120,8 @@ export default function AdminAchievementsPage() {
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  /** Mode pilih mobile (toolbar "Pilih") — desktop tetap pakai checkbox tabel. */
+  const [pickMode, setPickMode] = useState(false);
 
   // Modals
   const [viewItem, setViewItem] = useState<Achievement | null>(null);
@@ -242,6 +255,16 @@ export default function AdminAchievementsPage() {
     const s = new Set(selectedIds);
     if (s.has(id)) s.delete(id); else s.add(id);
     setSelectedIds(s);
+  }
+
+  function enterPickMode(id?: string) {
+    setPickMode(true);
+    if (id) setSelectedIds((s) => { const n = new Set(s); n.add(id); return n; });
+  }
+
+  function exitPickMode() {
+    setPickMode(false);
+    setSelectedIds(new Set());
   }
 
   function toggleSort(field: SortField) {
@@ -506,49 +529,114 @@ export default function AdminAchievementsPage() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f4d21f]/10">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[#f4d21f]/10">
             <Trophy className="h-5 w-5 text-[#f4d21f]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Kelola Prestasi</h1>
-            <p className="text-sm text-slate-500">Pencapaian siswa dan sekolah</p>
+            <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">Pencapaian siswa dan sekolah</p>
           </div>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1]">
+        <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[#082b59] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1] md:py-2.5">
           <Plus className="h-4 w-4" /> Tambah Prestasi
         </button>
       </div>
 
-      {/* Stats */}
-      <StatCardRow>
+      {/* Stats desktop — mobile: grid 2 kolom tanpa pager titik
+          (kartu memuat metrik unik "Tahun Ini" & "Unggulan"). */}
+      <div className="hidden md:block">
+        <StatCardRow>
+          <StatCard label="Total" value={stats.total} variant="brand" />
+          <StatCard label="Tahun Ini" value={stats.thisYear} variant="success" />
+          <StatCard label="Kategori" value={stats.categories} variant="purple" />
+          <StatCard label="Unggulan" value={stats.featured} variant="warning" />
+        </StatCardRow>
+      </div>
+      <div className="mb-6 grid grid-cols-2 gap-3 md:hidden">
         <StatCard label="Total" value={stats.total} variant="brand" />
         <StatCard label="Tahun Ini" value={stats.thisYear} variant="success" />
         <StatCard label="Kategori" value={stats.categories} variant="purple" />
         <StatCard label="Unggulan" value={stats.featured} variant="warning" />
-      </StatCardRow>
+      </div>
 
-      {/* Bulk actions */}
+      {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5">
+        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5 md:flex">
           <Checks className="h-4 w-4 text-[#082b59]" />
           <span className="text-xs font-semibold text-[#082b59]">{selectedIds.size} dipilih</span>
           <button onClick={() => setBulkDelete(true)} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
-          <button onClick={() => setSelectedIds(new Set())} className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
+          <button onClick={() => setSelectedIds(new Set())} aria-label="Batalkan pilihan" title="Batalkan pilihan" className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
         </div>
       )}
 
-      {/* Filters — gaya Portal: pencarian di kiri, kategori & tahun sebagai
-          pill dropdown berjumlah di kanan. */}
-      <FilterBar
-        placeholder="Cari judul, peraih, penyelenggara, peringkat..."
+      {/* Filters (desktop md+) — gaya Portal: pencarian di kiri, kategori & tahun
+          sebagai pill dropdown berjumlah di kanan. */}
+      <div className="hidden md:block">
+        <FilterBar
+          placeholder="Cari judul, peraih, penyelenggara, peringkat..."
+          searchLabel="Cari judul, peraih, penyelenggara, atau peringkat"
+          query={search}
+          onQueryChange={(v) => { setSearch(v); setPage(1); }}
+          filters={filterGroups}
+        />
+      </div>
+
+      {/* Toolbar mobile (<md): pencarian + filter (kategori & tahun) + urut + Pilih */}
+      <MobileFilterBar
+        placeholder="Cari prestasi…"
         searchLabel="Cari judul, peraih, penyelenggara, atau peringkat"
         query={search}
         onQueryChange={(v) => { setSearch(v); setPage(1); }}
-        filters={filterGroups}
+        filter={{
+          value: filter,
+          options: [
+            { key: "all", label: "Semua Kategori", count: achievements.length },
+            ...categories.map((cat) => ({
+              key: cat,
+              label: catMeta(cat).label,
+              count: achievements.filter((a) => a.category === cat).length,
+            })),
+          ],
+          onChange: (k) => { setFilter(k); setPage(1); setSelectedIds(new Set()); },
+        }}
+        filter2={{
+          value: yearFilter,
+          options: [
+            { key: "all", label: "Semua Tahun", count: achievements.length },
+            ...availableYears.map((y) => ({
+              key: String(y),
+              label: String(y),
+              count: achievements.filter((a) => a.year === y).length,
+            })),
+          ],
+          onChange: (k) => { setYearFilter(k); setPage(1); setSelectedIds(new Set()); },
+        }}
+        sort={{
+          value: `${sortField}:${sortDir}`,
+          options: [
+            { key: "created_at:desc", label: "Terbaru" },
+            { key: "created_at:asc", label: "Terlama" },
+            { key: "title:asc", label: "Judul A–Z" },
+            { key: "title:desc", label: "Judul Z–A" },
+            { key: "year:desc", label: "Tahun terbaru" },
+            { key: "year:asc", label: "Tahun terlama" },
+          ],
+          onChange: (k) => {
+            const [f, d] = k.split(":");
+            setSortField(f as SortField);
+            setSortDir(d as SortDir);
+          },
+        }}
+        action={<MobilePickButton onClick={() => enterPickMode()} />}
+        selectMode={pickMode}
+        selectedCount={selectedIds.size}
+        allSelected={allVisibleSelected}
+        onSelectAllVisible={toggleSelectAll}
+        onCancelSelect={exitPickMode}
       />
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
+      {/* Table desktop (md+) */}
+      <div className="hidden overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:block">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
@@ -692,6 +780,137 @@ export default function AdminAchievementsPage() {
           </div>
         )}
       </div>
+
+      {/* Daftar mobile (<md) — baris berfoto/ikon piala, judul 2 baris,
+          subteks tingkat · tahun, titik status unggulan, aksi via menu ⋯. */}
+      <div
+        role="list"
+        aria-label="Daftar prestasi"
+        className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden"
+      >
+        {loading ? (
+          <div className="space-y-3 px-3 py-4" aria-hidden="true">
+            {Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="h-14 w-14 shrink-0 rounded-xl bg-slate-100" />
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <div className="h-3.5 w-2/3 rounded bg-slate-100" />
+                  <div className="h-3 w-1/2 rounded bg-slate-100" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : paginated.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+              <Trophy className="h-7 w-7 text-slate-300" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
+              <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada prestasi"}</p>
+            </div>
+          </div>
+        ) : (
+          paginated.map((item) => {
+            const actions: RowAction[] = [
+              { key: "view", label: "Lihat", icon: <Eye className="h-4 w-4" />, run: () => setViewItem(item) },
+              { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => openEdit(item) },
+              { key: "duplicate", label: "Duplikat", icon: <Files className="h-4 w-4" />, run: () => openDuplicate(item) },
+              { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => setDeleteItem(item) },
+            ];
+            const meta = catMeta(item.category);
+            const CategoryIcon = meta.icon;
+            return (
+              <div key={item.id} role="listitem">
+                <MobileListRow
+                  lead={
+                    pickMode ? (
+                      <span
+                        data-no-longpress=""
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex h-10 w-10 shrink-0 items-center justify-center"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(item.id)}
+                          onChange={() => toggleSelect(item.id)}
+                          aria-label={`Pilih ${item.title}`}
+                          className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+                        />
+                      </span>
+                    ) : null
+                  }
+                  thumb={
+                    <MobileThumb
+                      src={item.image_url || null}
+                      alt=""
+                      tint="amber"
+                      icon={<Medal className="h-5 w-5" />}
+                      status={item.is_featured ? { tone: "active", label: "Unggulan" } : undefined}
+                    />
+                  }
+                  title={item.title}
+                  badge={
+                    <>
+                      {item.is_featured && <QuietBadge>Unggulan</QuietBadge>}
+                      {!item.is_featured && item.rank_label && <QuietBadge>{item.rank_label}</QuietBadge>}
+                    </>
+                  }
+                  subtitle={
+                    <>
+                      <span className="inline-flex shrink-0 items-center gap-1">
+                        <CategoryIcon className="h-3 w-3" />
+                        {meta.label}
+                      </span>
+                      {(item.rank_label || item.level) && (
+                        <span className="min-w-0 truncate">
+                          {[item.rank_label, levelLabel(item.level)].filter(Boolean).join(" · ")}
+                        </span>
+                      )}
+                      <span className="shrink-0">{item.year}</span>
+                    </>
+                  }
+                  actions={
+                    <RowActionsMenu
+                      label={item.title}
+                      actions={actions}
+                      disabled={pickMode && !selectedIds.has(item.id)}
+                    />
+                  }
+                  selected={selectedIds.has(item.id)}
+                  onClick={() => {
+                    if (pickMode) toggleSelect(item.id);
+                    else setViewItem(item);
+                  }}
+                  onLongPress={() => enterPickMode(item.id)}
+                />
+              </div>
+            );
+          })
+        )}
+        {!loading && filtered.length > 0 && (
+          <MobilePagination
+            page={page}
+            totalPages={totalPages}
+            total={filtered.length}
+            from={(page - 1) * PAGE_SIZE + 1}
+            to={Math.min(page * PAGE_SIZE, filtered.length)}
+            onPageChange={setPage}
+            itemLabel="prestasi"
+          />
+        )}
+        {/* Ruang ekstra agar baris terakhir tidak tertutup bar sticky mode pilih */}
+        {pickMode && <div className="h-24" aria-hidden="true" />}
+      </div>
+
+      {/* Bar aksi massal sticky (mobile, mode pilih) — di atas bottom nav admin */}
+      {pickMode && (
+        <MobileSelectBar
+          count={selectedIds.size}
+          onDelete={() => setBulkDelete(true)}
+          onCancel={exitPickMode}
+        />
+      )}
 
       {/* ── VIEW MODAL ──────────────────────────────── */}
       {viewItem && (
