@@ -109,18 +109,18 @@ export function MobileListRow({
       onPointerUp={cancelPress}
       onPointerCancel={cancelPress}
       onPointerLeave={cancelPress}
-      className={`flex select-none items-center gap-2 px-3 py-2.5 [-webkit-touch-callout:none] ${
+      className={`flex select-none items-center gap-2.5 border-t border-slate-100 py-2 pl-1.5 pr-0.5 [-webkit-touch-callout:none] ${
         onClick ? "cursor-pointer active:bg-slate-50" : ""
       } ${selected ? "bg-[#082b59]/[0.03]" : ""} ${className}`}
     >
       {lead}
       {thumb}
       <div className="min-w-0 flex-1">
-        <div className="line-clamp-2 break-words text-sm font-medium leading-tight text-[#082b59]">
+        <div className="line-clamp-2 break-words text-[15px] font-semibold leading-[1.25] text-[#0f2a4d]">
           {title}
         </div>
         {subtitle && (
-          <div className="mt-0.5 flex min-w-0 items-center gap-1 text-[11px] leading-tight text-slate-400">
+          <div className="mt-0.5 line-clamp-2 break-words text-xs leading-snug text-[#64748b]">
             {subtitle}
           </div>
         )}
