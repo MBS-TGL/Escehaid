@@ -23,6 +23,7 @@ import {
 import { compressImage } from "@/lib/compress-image";
 import { RichContent } from "@/components/RichContent";
 import CoverImage from "@/components/CoverImage";
+import { parseVideoUrl, VIDEO_PROVIDER_LABEL } from "@/lib/video-embed";
 import { StatCard, StatCardRow, Modal, ConfirmModal, SlideOver, RichTextEditor, SkeletonBlock } from "@/components/ui";
 import type { Activity } from "@/lib/supabase";
 import {
@@ -50,6 +51,9 @@ import {
   Star,
   Copy,
   Phone,
+  YoutubeLogo,
+  InstagramLogo,
+  Video,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -76,6 +80,7 @@ interface FormData {
   activity_type: string;
   activity_time: string;
   live_url: string;
+  video_url: string;
   registration_url: string;
   contact_person: string;
   location: string;
@@ -93,6 +98,7 @@ const emptyForm: FormData = {
   activity_type: "umum",
   activity_time: "",
   live_url: "",
+  video_url: "",
   registration_url: "",
   contact_person: "",
   location: "",
@@ -100,6 +106,24 @@ const emptyForm: FormData = {
   is_published: false,
   is_featured: false,
 };
+
+const VIDEO_PROVIDER_ICON = {
+  youtube: YoutubeLogo,
+  instagram: InstagramLogo,
+  tiktok: Video,
+  unknown: Video,
+} as const;
+
+/** Chip penyedia video terdeteksi (ikon + label) — form & modal lihat. */
+function VideoProviderChip({ url, className = "" }: { url: string; className?: string }) {
+  const parsed = parseVideoUrl(url);
+  const Icon = VIDEO_PROVIDER_ICON[parsed.provider];
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-600 ${className}`}>
+      <Icon className="h-3.5 w-3.5" aria-hidden="true" /> {VIDEO_PROVIDER_LABEL[parsed.provider]}
+    </span>
+  );
+}
 
 export default function AdminActivitiesPage() {
   const { toast } = useToast();
@@ -279,6 +303,7 @@ export default function AdminActivitiesPage() {
       activity_type: item.activity_type,
       activity_time: item.activity_time || "",
       live_url: item.live_url || "",
+      video_url: item.video_url || "",
       registration_url: item.registration_url || "",
       contact_person: item.contact_person || "",
       location: item.location || "",
@@ -315,6 +340,7 @@ export default function AdminActivitiesPage() {
     const invalidUrl = (v: string) => !!v.trim() && !/^https?:\/\/\S+/i.test(v.trim());
     if (invalidUrl(form.registration_url)) { setFormError("Tautan pendaftaran harus diawali http:// atau https://"); return; }
     if (invalidUrl(form.live_url)) { setFormError("Tautan siaran harus diawali http:// atau https://"); return; }
+    if (invalidUrl(form.video_url)) { setFormError("Tautan video harus diawali http:// atau https://"); return; }
     setFormSaving(true);
     setFormError("");
 
@@ -409,6 +435,7 @@ export default function AdminActivitiesPage() {
       is_published: false,
       activity_time: item.activity_time || "",
       live_url: item.live_url || "",
+      video_url: item.video_url || "",
       registration_url: item.registration_url || "",
       contact_person: item.contact_person || "",
       is_featured: false,
@@ -859,6 +886,9 @@ export default function AdminActivitiesPage() {
               {viewItem.activity_time && (
                 <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{viewItem.activity_time}</span>
               )}
+              {viewItem.video_url && (
+                <VideoProviderChip url={viewItem.video_url} />
+              )}
               {viewItem.is_featured && (
                 <span className="flex items-center gap-1 font-semibold text-slate-600">
                   <Star className="h-3.5 w-3.5 text-[#f4d21f]" weight="fill" /> Unggulan
@@ -996,6 +1026,18 @@ export default function AdminActivitiesPage() {
                 className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
                 placeholder="https://www.instagram.com/..." />
             </div>
+          </div>
+
+          {/* Link Video (opsional) — rekaman/reel; embed click-to-load di halaman publik */}
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+              Link Video <span className="font-normal text-slate-400">(opsional)</span>
+            </label>
+            <input type="url" value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })}
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+              placeholder="https://www.youtube.com/watch?v=… / https://www.instagram.com/reel/… / https://www.tiktok.com/@…" />
+            <p className="mt-1 text-xs text-slate-400">Video dari YouTube, Instagram, atau TikTok — tidak membebani penyimpanan</p>
+            {form.video_url.trim() && <VideoProviderChip url={form.video_url} className="mt-2" />}
           </div>
 
           {/* Pendaftaran + Kontak Panitia (Fase 6 — kolom opsional) */}

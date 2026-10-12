@@ -136,3 +136,63 @@ Karena uji visual otomatis tidak memungkinkan, verifikasi mobile dilakukan lewat
 10. **Pesan**: buka pesan belum dibaca → otomatis jadi "Dibaca"; tombol Balas Email & WhatsApp membuka aplikasi terkait; hapus per item & massal terkonfirmasi.
 11. **SPMB**: siklus status via pill; menu Telepon membuka dialer; ekspor CSV mengikuti filter aktif; tab Gelombang (kartu + form) nyaman di layar kecil.
 12. **iOS Safari**: fokus input tidak mem-zoom halaman; bar bawah tidak tertutup home indicator.
+
+---
+
+## Video kegiatan (embed ringan) — 12 Okt 2026
+
+Fitur tambahan: kolom baru `video_url` untuk rekaman/reel/video kegiatan, ditampilkan sebagai
+embed **click-to-load** (kartu poster + tombol putar → iframe resmi). Berbeda dari `live_url`
+("Tautan Siaran Langsung" → tombol LIVE hari-H), kolom lama **tidak diubah/digabung**.
+
+### Berkas yang diubah / ditambahkan
+
+| Berkas | Perubahan |
+| --- | --- |
+| `supabase/activities_upgrade.sql` | Bagian **(D)**: `ALTER TABLE public.activities ADD COLUMN IF NOT EXISTS video_url text;` (**belum dijalankan**) |
+| `src/lib/supabase.ts` | Tipe `Activity.video_url?: string \| null` |
+| `src/lib/queries/activities.ts` | `video_url` masuk `LIST_COLUMNS_ALL`, `OPTIONAL_FIELDS` (retry tanpa kolom bila belum ada di tabel), normalisasi URL, dan parameter `createActivity`/`updateActivity` |
+| `src/lib/video-embed.ts` | **Baru** — `parseVideoUrl()` (YouTube watch/youtu.be/shorts, Instagram `/p/` `/reel/` `/tv/`, TikTok `/@user/video/ID` + link pendek `vm.`/`vt.tiktok.com`), `videoEmbedUrl()`, `resolveVideoUrl()` (server: redirect + oEmbed `https://www.tiktok.com/oembed?url=…`, timeout 6 dtk, error aman, cache TTL 24 jam) |
+| `src/components/VideoEmbed.tsx` | **Baru** — kartu poster (gambar kegiatan / thumbnail oEmbed TikTok) + ikon putar + label penyedia, rasio tetap (tanpa layout shift); iframe baru dimuat saat diklik; fallback "Tonton di \<platform\>" (`target="_blank"` `rel="noopener noreferrer"`); `aria-label` + tombol putar bisa difokus; tanpa `CSSFadeIn`/`will-change` |
+| `src/app/activities/[slug]/page.tsx` | `<VideoEmbed>` di antara `<RichContent>` dan blok Share (hanya bila `video_url` terisi); `VideoObject` JSON-LD **hanya untuk YouTube** |
+| `src/app/admin/activities/page.tsx` (CRLF) | `video_url` di `FormData`/`emptyForm`/`openEdit`/`handleDuplicate`; validasi URL → galat **"Tautan video harus diawali http:// atau https://"**; field **"Link Video" (opsional)** tepat sesudah baris "Waktu + Tautan Siaran Langsung" (input `type=url`, `text-base md:text-sm`, placeholder YouTube/IG/TikTok, teks bantu, chip penyedia terdeteksi); modal lihat menampilkan chip ikon + label penyedia (tanpa memuat embed di admin) |
+| `MOBILE_UI_REPORT.md` | Bagian ini |
+
+### SQL yang harus dijalankan MANUAL
+
+Belum dijalankan (situs & admin tetap berjalan sebelumnya — kolom opsional dilepas otomatis dari
+query bila tidak ada di tabel). Jalankan di SQL Editor Supabase, setelah backup:
+
+```sql
+ALTER TABLE public.activities
+  ADD COLUMN IF NOT EXISTS video_url text;
+```
+
+(`supabase/activities_upgrade.sql`, bagian (D).)
+
+### CSP / frame-src
+
+Tidak ada `Content-Security-Policy` di proyek ini (`next.config.ts` hanya header keamanan dasar;
+tidak ada `middleware.*` maupun `vercel.json`) → **tidak ada `frame-src` yang perlu ditambahkan**.
+`X-Frame-Options: DENY` yang sudah ada hanya mencegah halaman ini diframe pihak lain (tidak
+mempengaruhi iframe keluar).
+
+### Cara tes
+
+Pilih kegiatan → edit → isi **Link Video**, simpan, lalu buka `/activities/<slug>`:
+
+1. **YouTube**: `https://www.youtube.com/watch?v=dQw4w9WgXcQ` (atau link `youtu.be/<id>` /
+   `/shorts/<id>`) → kartu poster "YouTube" → klik → iframe `youtube-nocookie.com/embed/<id>`;
+   JSON-LD `VideoObject` muncul di view-source.
+2. **Reel Instagram**: `https://www.instagram.com/reel/<kode>/` → kartu rasio 4:5 berlabel
+   "Instagram" → klik → iframe `instagram.com/reel/<kode>/embed/`.
+3. **TikTok panjang**: `https://www.tiktok.com/@<user>/video/<id>` → rasio 9:16 → iframe
+   `tiktok.com/embed/v2/<id>`; poster memakai thumbnail oEmbed bila kegiatan tanpa gambar.
+4. **TikTok link pendek**: `https://vm.tiktok.com/<kode>/` (atau `vt.tiktok.com/…`) → diselesaikan
+   **di server** (redirect, cadangan oEmbed, timeout 6 dtk) → tampil sebagai kartu TikTok yang
+   bisa diputar; bila jaringan gagal → tombol "Tonton di TikTok".
+5. **Kontrol negatif**: URL tak dikenali (mis. `https://example.com/video`) → tombol
+   "Tonton Video"; URL tanpa `http(s)://` → galat form **"Tautan video harus diawali http:// atau
+   https://"**; `video_url` kosong → blok video & JSON-LD tidak tampil sama sekali.
+6. Sebelum SQL dijalankan: buka form & simpan kegiatan → tidak ada error (kolom dilepas dari
+   payload), kolom video tidak muncul di tabel admin.

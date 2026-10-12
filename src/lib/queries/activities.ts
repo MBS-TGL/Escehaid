@@ -13,17 +13,18 @@ export interface ActivityListOptions {
 }
 
 // Kolom daftar + kolom opsional Fase 5/6 (activity_time, live_url, end_date,
-// registration_url, contact_person, is_featured). Bila migrasi belum dijalankan,
-// PostgREST membalas 42703 → query otomatis diulang TANPA kolom baru
+// registration_url, contact_person, is_featured) + video_url. Bila migrasi belum
+// dijalankan, PostgREST membalas 42703 → query otomatis diulang TANPA kolom baru
 // (degrade gracefully; halaman & simpan data tak pernah rusak).
 const LIST_COLUMNS_BASE =
   "id, title, slug, description, activity_type, activity_date, location, image_url, is_published, created_at";
-const LIST_COLUMNS_ALL = `${LIST_COLUMNS_BASE}, activity_time, live_url, end_date, registration_url, contact_person, is_featured`;
+const LIST_COLUMNS_ALL = `${LIST_COLUMNS_BASE}, activity_time, live_url, video_url, end_date, registration_url, contact_person, is_featured`;
 
-/** Semua kolom opsional Fase 5/6 — dilepas dari payload bila belum ada di DB. */
+/** Semua kolom opsional Fase 5/6 + video_url — dilepas dari payload bila belum ada di DB. */
 const OPTIONAL_FIELDS = [
   "activity_time",
   "live_url",
+  "video_url",
   "end_date",
   "registration_url",
   "contact_person",
@@ -49,7 +50,7 @@ function stripOptionalFields(payload: Record<string, unknown>): Record<string, u
 /**
  * Normalisasi kolom opsional sebelum insert/update:
  * - teks (activity_time, contact_person) kosong → null
- * - URL (live_url, registration_url) trim + tambah https:// bila tanpa skema
+ * - URL (live_url, registration_url, video_url) trim + tambah https:// bila tanpa skema
  * - end_date "" → null
  */
 function normalizeOptionalFields(payload: Record<string, unknown>): Record<string, unknown> {
@@ -57,7 +58,7 @@ function normalizeOptionalFields(payload: Record<string, unknown>): Record<strin
     const value = payload[key];
     if (typeof value === "string") payload[key] = value.trim() || null;
   }
-  for (const key of ["live_url", "registration_url"] as const) {
+  for (const key of ["live_url", "registration_url", "video_url"] as const) {
     const value = payload[key];
     if (typeof value === "string") {
       const trimmed = value.trim();
@@ -187,6 +188,7 @@ export async function createActivity(activity: {
   is_published?: boolean;
   activity_time?: string | null;
   live_url?: string | null;
+  video_url?: string | null;
   registration_url?: string | null;
   contact_person?: string | null;
   is_featured?: boolean | null;
@@ -224,6 +226,7 @@ export async function updateActivity(
     is_published?: boolean;
     activity_time?: string | null;
     live_url?: string | null;
+    video_url?: string | null;
     registration_url?: string | null;
     contact_person?: string | null;
     is_featured?: boolean | null;

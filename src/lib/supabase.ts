@@ -203,8 +203,10 @@ export interface Activity {
   published_at?: string | null;
   /** Fase 5 (opsional, butuh migrasi): jam acara bebas, mis. "19.30 WIB - Selesai". */
   activity_time?: string | null;
-  /** Fase 5 (opsional, butuh migrasi): tautan siaran langsung (mis. Instagram Live). */
+  /** Fase 6 (opsional, butuh migrasi): tautan siaran langsung (mis. Instagram Live). */
   live_url?: string | null;
+  /** Video kegiatan (opsional, butuh migrasi): rekaman/reel YouTube/IG/TikTok → embed click-to-load. */
+  video_url?: string | null;
   /** Fase 6 (opsional, butuh migrasi): tanggal selesai kegiatan multi-hari. */
   end_date?: string | null;
   /** Fase 6 (opsional, butuh migrasi): tautan pendaftaran (mis. Google Form). */

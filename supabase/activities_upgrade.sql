@@ -45,3 +45,17 @@ ALTER TABLE public.activities
   ADD COLUMN IF NOT EXISTS registration_url text,
   ADD COLUMN IF NOT EXISTS contact_person text,
   ADD COLUMN IF NOT EXISTS is_featured boolean NOT NULL DEFAULT false;
+
+
+-- ── (D) Video kegiatan (embed ringan) ───────────────────────────────────────
+-- video_url : rekaman/reel/video kegiatan — YouTube, Instagram (Reel), atau
+--             TikTok (teks, OPSIONAL, boleh kosong). TAMPILAN: klik-untuk-muat
+--             (kartu poster + tombol putar → iframe resmi youtube-nocookie /
+--             instagram / tiktok) sehingga ringan & tanpa layout shift.
+--             BERBEDA dari live_url (tombol LIVE hari-H, sering Instagram Live)
+--             — kedua kolom dipakai terpisah dan tidak digabung.
+--             Kolom ini TIDAK menyimpan file: cukup tautan, storage nol byte.
+-- Situs tetap berjalan sebelum migrasi ini dijalankan (kolom opsional dilepas
+-- otomatis dari query bila belum ada di tabel).
+ALTER TABLE public.activities
+  ADD COLUMN IF NOT EXISTS video_url text;

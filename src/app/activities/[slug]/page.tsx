@@ -4,6 +4,9 @@ import CoverImage from "@/components/CoverImage";
 import { getActivityBySlug, getActivityList } from "@/lib/queries";
 import { RichContent } from "@/components/RichContent";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
+import VideoEmbed from "@/components/VideoEmbed";
+import { resolveVideoUrl } from "@/lib/video-embed";
+import { youtubeThumb } from "@/lib/youtube";
 import {
   activityStatus,
   activityTypeBadge,
@@ -14,10 +17,11 @@ import {
   isActivityLiveActive,
   toJakartaDateKey,
 } from "@/lib/activity-types";
-import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
+import { CSSStagger } from "@/components/CSSAnimations";
 import {
   ArrowLeft,
   ArrowUpRight,
+  BookmarkSimple,
   CalendarBlank,
   CalendarCheck,
   CaretLeft,
@@ -104,6 +108,13 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
     ? { "@type": "VirtualLocation", url: activity.live_url }
     : undefined;
 
+  // Video kegiatan (kolom opsional `video_url`) — embed click-to-load di bawah
+  // konten. Link pendek TikTok (vm.tiktok.com) diselesaikan di SERVER lewat
+  // redirect/oEmbed (timeout + cache) sehingga render tidak bergantung jaringan
+  // klien. Kosong / gagal resolve → bagian video tidak dirender.
+  const video = activity.video_url ? await resolveVideoUrl(activity.video_url) : null;
+  const videoId = video?.parsed.id ?? null;
+
   // Kegiatan multi-hari → sertakan endDate di JSON-LD (bila melewati hari mulai).
   const startKey = toJakartaDateKey(activity.activity_date);
   const endKeyOnly = toJakartaDateKey(activity.end_date);
@@ -133,6 +144,23 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       ? "https://schema.org/MixedEventAttendanceMode"
       : "https://schema.org/OfflineEventAttendanceMode",
   };
+
+  // VideoObject HANYA untuk YouTube (rich results Google mendukungnya);
+  // Instagram/TikTok tidak punya skema embed resmi → cukup tampilan saja.
+  const videoObjectJsonLd =
+    video && video.parsed.provider === "youtube" && videoId
+      ? {
+        "@context": "https://schema.org",
+        "@type": "VideoObject",
+        name: `Video: ${activity.title}`,
+        description: activity.description || activity.title,
+        thumbnailUrl: [youtubeThumb(videoId)],
+        // uploadDate wajib ISO-8601 utk VideoObject — pakai tanggal kegiatan.
+        uploadDate: activity.activity_date || undefined,
+        embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}`,
+        url: activityUrl,
+      }
+      : null;
 
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -215,6 +243,9 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
     <div className="min-h-screen bg-white">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      {videoObjectJsonLd && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(videoObjectJsonLd) }} />
+      )}
 
       {/* Sticky top bar — breadcrumb + share (pola detail Berita) */}
       <div className="sticky top-16 z-40 border-b border-slate-100 bg-white/95 backdrop-blur-md md:top-[72px]">
@@ -284,25 +315,44 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       <div className="mx-auto max-w-7xl px-4 pt-4 pb-8 md:pt-6 md:pb-10">
         <div className="flex flex-col gap-8 lg:flex-row">
           <article className="min-w-0 flex-1">
-            <CSSFadeIn>
-              {/* Poster — rata tengah, ukuran natural TANPA crop dan tanpa latar blur */}
-              {activity.image_url && (
-                <div className="mb-6 md:mb-8">
-                  <CoverImage
-                    src={activity.image_url}
-                    alt={activity.title}
-                    priority
-                  />
+            {/* Poster — rata tengah, ukuran natural TANPA crop dan tanpa latar blur */}
+            {activity.image_url && (
+              <div className="mb-6 md:mb-8">
+                <CoverImage
+                  src={activity.image_url}
+                  alt={activity.title}
+                  priority
+                />
+              </div>
+            )}
+
+            {/* Ringkasan — callout sama seperti detail Berita; tidak tampil bila
+                isinya sama dgn awal konten (anti-dobel, lihat showLead) */}
+            {showLead && (
+              <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+                <div className="flex items-start gap-3">
+                  <BookmarkSimple className="mt-0.5 h-4 w-4 shrink-0 text-[#f4d21f]" />
+                  <p className="text-sm font-medium leading-relaxed text-slate-600">{activity.description}</p>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Lead — deskripsi; tidak tampil bila isinya sama dgn awal konten */}
-              {showLead && (
-                <p className="mb-6 text-lg leading-relaxed text-slate-600">{activity.description}</p>
-              )}
+            <RichContent content={activity.content} />
 
-              <RichContent content={activity.content} />
-            </CSSFadeIn>
+            {/* Video kegiatan (opsional) — embed click-to-load, antara konten & Share */}
+            {video && (
+              <section className="mt-8" aria-labelledby="act-video-heading">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="h-1 w-8 bg-[#f4d21f]" />
+                  <h3 id="act-video-heading" className="text-lg font-bold text-[#082b59]">Video Kegiatan</h3>
+                </div>
+                <VideoEmbed
+                  url={video.parsed.canonicalUrl || activity.video_url || ""}
+                  poster={activity.image_url || video.thumbnailUrl}
+                  title={activity.title}
+                />
+              </section>
+            )}
 
             {/* Share + Back (pola Berita) */}
             <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
@@ -483,11 +533,10 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                     target="_blank"
                     rel="noopener noreferrer"
                     /* Kuning solid bila tak ada tombol Daftar; outline bila sudah ada. */
-                    className={`mt-5 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition-colors ${
-                      activity.registration_url
+                    className={`mt-5 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition-colors ${activity.registration_url
                         ? "border border-[#082b59]/20 bg-white text-[#082b59] hover:border-[#082b59]/40 hover:bg-[#082b59]/5"
                         : "bg-[#f4d21f] text-[#082b59] hover:bg-[#e6c51a]"
-                    }`}
+                      }`}
                   >
                     <CalendarCheck className="h-4 w-4" /> Tambahkan ke Kalender
                   </a>
