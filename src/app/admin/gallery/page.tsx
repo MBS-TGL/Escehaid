@@ -24,7 +24,16 @@ import {
   Warning,
   FloppyDisk,
   Checks,
+  Eye,
 } from "@/components/Icons";
+import {
+  MobileFilterBar,
+  MobilePagination,
+  MobilePickButton,
+  MobileSelectBar,
+  RowActionsMenu,
+  type RowAction,
+} from "@/components/admin/mobile";
 import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
 import { useToast } from "@/components/ui/Toast";
 import { getYoutubeId, youtubeThumb, youtubeEmbedUrl } from "@/lib/youtube";
@@ -72,6 +81,8 @@ export default function AdminGalleryPage() {
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  /** Mode pilih mobile (toolbar "Pilih") — desktop tetap pakai checkbox kartu. */
+  const [pickMode, setPickMode] = useState(false);
 
   // Modals
   const [viewItem, setViewItem] = useState<Gallery | null>(null);
@@ -188,6 +199,22 @@ export default function AdminGalleryPage() {
     else { setSortField(field); setSortDir("asc"); }
   }
 
+  function enterPickMode(id?: string) {
+    setPickMode(true);
+    if (id) {
+      setSelectedIds((s) => {
+        const n = new Set(s);
+        n.add(id);
+        return n;
+      });
+    }
+  }
+
+  function exitPickMode() {
+    setPickMode(false);
+    setSelectedIds(new Set());
+  }
+
   function openCreate() {
     setEditItem(null);
     setForm(emptyForm);
@@ -275,45 +302,106 @@ export default function AdminGalleryPage() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1767b1]/10">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[#1767b1]/10">
             <ImageSquare className="h-5 w-5 text-[#1767b1]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Kelola Galeri</h1>
-            <p className="text-sm text-slate-500">Foto dan video kegiatan sekolah</p>
+            <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">Foto dan video kegiatan sekolah</p>
           </div>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1]">
+        <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[#082b59] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1] md:py-2.5">
           <Plus className="h-4 w-4" /> Tambah Media
         </button>
       </div>
 
-      {/* Stats */}
-      <StatCardRow>
+      {/* Stats desktop — mobile: grid 2 kolom tanpa pager titik
+          (kartu memuat metrik unik "Bulan Ini"). */}
+      <div className="hidden md:block">
+        <StatCardRow>
+          <StatCard label="Total" value={stats.total} variant="brand" />
+          <StatCard label="Foto" value={stats.foto} variant="info" />
+          <StatCard label="Video" value={stats.video} variant="purple" />
+          <StatCard label="Bulan Ini" value={stats.thisMonth} variant="success" />
+        </StatCardRow>
+      </div>
+      <div className="mb-6 grid grid-cols-2 gap-3 md:hidden">
         <StatCard label="Total" value={stats.total} variant="brand" />
         <StatCard label="Foto" value={stats.foto} variant="info" />
         <StatCard label="Video" value={stats.video} variant="purple" />
         <StatCard label="Bulan Ini" value={stats.thisMonth} variant="success" />
-      </StatCardRow>
+      </div>
 
-      {/* Bulk actions */}
+      {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5">
+        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5 md:flex">
           <Checks className="h-4 w-4 text-[#082b59]" />
           <span className="text-xs font-semibold text-[#082b59]">{selectedIds.size} dipilih</span>
           <button onClick={() => setBulkDelete(true)} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
-          <button onClick={() => setSelectedIds(new Set())} className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
+          <button onClick={() => setSelectedIds(new Set())} aria-label="Batalkan pilihan" title="Batalkan pilihan" className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
         </div>
       )}
 
-      {/* Filters — gaya Portal: pencarian di kiri, tipe & kategori sebagai
-          pill dropdown berjumlah di kanan. */}
-      <FilterBar
-        placeholder="Cari gallery..."
+      {/* Filter desktop (md+) — pencarian + tipe + kategori. */}
+      <div className="hidden md:block">
+        <FilterBar
+          placeholder="Cari gallery..."
+          searchLabel="Cari judul atau kategori"
+          query={search}
+          onQueryChange={(v) => { setSearch(v); setPage(1); }}
+          filters={filterGroups}
+        />
+      </div>
+
+      {/* Toolbar mobile (<md): pencarian + filter (tipe & kategori) + urut + Pilih */}
+      <MobileFilterBar
+        placeholder="Cari media…"
         searchLabel="Cari judul atau kategori"
         query={search}
         onQueryChange={(v) => { setSearch(v); setPage(1); }}
-        filters={filterGroups}
+        filter={{
+          value: typeFilter,
+          options: [
+            { key: "all", label: "Semua Tipe", count: gallery.length },
+            { key: "foto", label: "Foto", count: stats.foto },
+            { key: "video", label: "Video", count: stats.video },
+          ],
+          onChange: (k) => { setTypeFilter(k); setPage(1); setSelectedIds(new Set()); },
+        }}
+        filter2={{
+          value: filter,
+          options: [
+            { key: "all", label: "Semua Kategori", count: gallery.length },
+            ...categories.map((cat) => ({
+              key: cat,
+              label: cat,
+              count: gallery.filter((g) => g.category === cat).length,
+            })),
+          ],
+          onChange: (k) => { setFilter(k); setPage(1); setSelectedIds(new Set()); },
+        }}
+        sort={{
+          value: `${sortField}:${sortDir}`,
+          options: [
+            { key: "created_at:desc", label: "Terbaru" },
+            { key: "created_at:asc", label: "Terlama" },
+            { key: "title:asc", label: "Judul A–Z" },
+            { key: "title:desc", label: "Judul Z–A" },
+            { key: "category:asc", label: "Kategori A–Z" },
+            { key: "category:desc", label: "Kategori Z–A" },
+          ],
+          onChange: (k) => {
+            const [f, d] = k.split(":");
+            setSortField(f as SortField);
+            setSortDir(d as SortDir);
+          },
+        }}
+        action={<MobilePickButton onClick={() => enterPickMode()} />}
+        selectMode={pickMode}
+        selectedCount={selectedIds.size}
+        allSelected={allVisibleSelected}
+        onSelectAllVisible={toggleSelectAll}
+        onCancelSelect={exitPickMode}
       />
 
       {/* Grid View */}
@@ -342,25 +430,40 @@ export default function AdminGalleryPage() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {paginated.map((item) => {
               const isSelected = selectedIds.has(item.id);
+              const menuActions: RowAction[] = [
+                { key: "view", label: "Lihat", icon: <Eye className="h-4 w-4" />, run: () => setViewItem(item) },
+                { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => openEdit(item) },
+                { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => setDeleteItem(item) },
+              ];
               return (
                 <div key={item.id}
-                  className={`group relative overflow-hidden rounded-xl border bg-white shadow-sm transition-all hover:shadow-md hover:border-[#1767b1]/30 ${isSelected ? "border-[#082b59] ring-2 ring-[#082b59]/20" : "border-slate-200/80"}`}>
-                  {/* Checkbox */}
-                  <div className="absolute left-2 top-2 z-10" onClick={(e) => e.stopPropagation()}>
+                  className={`group relative overflow-hidden rounded-xl border bg-white shadow-sm transition-all hover:shadow-md hover:border-[#1767b1]/30 ${isSelected ? "border-[#082b59] ring-2 ring-[#082b59]/20" : "border-slate-200/70"}`}>
+                  {/* Checkbox — desktop selalu tampil; mobile hanya di mode Pilih */}
+                  <div className={`absolute left-2 top-2 z-10 ${pickMode ? "" : "hidden md:block"}`} onClick={(e) => e.stopPropagation()}>
                     <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(item.id)}
-                      className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
+                      aria-label={`Pilih ${item.title}`}
+                      className="h-5 w-5 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
                   </div>
-                  {/* Action buttons */}
-                  <div className="absolute right-2 top-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => openEdit(item)} className="rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
+                  {/* Aksi desktop — hover; mobile memakai menu ⋄ di pojok gambar */}
+                  <div className="absolute right-2 top-2 z-10 hidden gap-1 opacity-0 transition-opacity group-hover:opacity-100 md:flex" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => openEdit(item)} aria-label={`Edit ${item.title}`} className="rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
                       <PencilSimple className="h-3.5 w-3.5" />
                     </button>
-                    <button onClick={() => setDeleteItem(item)} className="rounded-lg bg-red-500/80 p-1.5 text-white hover:bg-red-600">
+                    <button onClick={() => setDeleteItem(item)} aria-label={`Hapus ${item.title}`} className="rounded-lg bg-red-500/80 p-1.5 text-white hover:bg-red-600">
                       <Trash className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  <div onClick={() => setViewItem(item)} className="cursor-pointer">
-                    <div className="aspect-square bg-slate-100 flex items-center justify-center">
+                  {/* Menu ⋯ mobile — area sentuh 44px, di pojok kanan-atas gambar */}
+                  <div className="absolute right-1 top-1 z-10 md:hidden" onClick={(e) => e.stopPropagation()}>
+                    <span className="flex h-11 w-9 items-center justify-center rounded-lg bg-black/45">
+                      <RowActionsMenu label={item.title} actions={menuActions} disabled={pickMode && !isSelected} />
+                    </span>
+                  </div>
+                  <div
+                    onClick={() => (pickMode ? toggleSelect(item.id) : setViewItem(item))}
+                    className="cursor-pointer"
+                  >
+                    <div className="aspect-[4/3] bg-slate-100 flex items-center justify-center md:aspect-square">
                       {galleryThumb(item) ? (
                         <img src={galleryThumb(item)} alt={item.title} loading="lazy" className="h-full w-full object-cover" />
                       ) : item.media_type === "video" ? (
@@ -370,14 +473,14 @@ export default function AdminGalleryPage() {
                       )}
                     </div>
                     <div className="p-2.5 sm:p-3">
-                      <p className="text-xs font-medium text-slate-800 line-clamp-1 sm:text-sm">{item.title}</p>
+                      <p className="text-xs font-medium leading-snug text-slate-800 line-clamp-2 md:line-clamp-1 md:text-sm">{item.title}</p>
                       <div className="mt-1 flex items-center gap-2">
                         <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${
                           item.media_type === "foto" ? "bg-blue-50 text-blue-700" : "bg-purple-50 text-purple-700"
                         }`}>
                           {item.media_type === "foto" ? "Foto" : "Video"}
                         </span>
-                        <span className="text-[10px] text-slate-400">{item.category}</span>
+                        <span className="truncate text-[10px] text-[#64748b]">{item.category}</span>
                       </div>
                     </div>
                   </div>
@@ -385,8 +488,8 @@ export default function AdminGalleryPage() {
               );
             })}
           </div>
-          {/* Pagination */}
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          {/* Pagination desktop (md+) */}
+          <div className="mt-4 hidden flex-col gap-3 sm:flex-row sm:items-center sm:justify-between md:flex">
             <p className="text-xs text-slate-400">
               Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} dari {filtered.length} media
             </p>
@@ -407,7 +510,29 @@ export default function AdminGalleryPage() {
               </button>
             </div>
           </div>
+          {/* Pagination mobile (<md) — tombol hanya bila totalPages > 1 */}
+          <MobilePagination
+            page={page}
+            totalPages={totalPages}
+            total={filtered.length}
+            from={(page - 1) * PAGE_SIZE + 1}
+            to={Math.min(page * PAGE_SIZE, filtered.length)}
+            onPageChange={setPage}
+            itemLabel="media"
+            className="mt-4 rounded-2xl border border-slate-200/70"
+          />
+          {/* Ruang ekstra agar konten terakhir tidak tertutup bar sticky mode pilih */}
+          {pickMode && <div className="h-24" aria-hidden="true" />}
         </>
+      )}
+
+      {/* Bar aksi massal sticky (mobile, mode pilih) — di atas bottom nav admin */}
+      {pickMode && (
+        <MobileSelectBar
+          count={selectedIds.size}
+          onDelete={() => setBulkDelete(true)}
+          onCancel={exitPickMode}
+        />
       )}
 
       {/* ── VIEW MODAL ──────────────────────────────── */}
@@ -534,7 +659,7 @@ export default function AdminGalleryPage() {
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Judul <span className="text-red-500">*</span></label>
             <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
               placeholder="Judul media" />
           </div>
 
@@ -557,7 +682,7 @@ export default function AdminGalleryPage() {
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Kategori</label>
             <input type="text" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
               placeholder="Contoh: Kegiatan, Fasilitas, Prestasi" />
           </div>
 
@@ -587,7 +712,7 @@ export default function AdminGalleryPage() {
               </div>
             ) : form.media_type === "video" ? (
               <input type="url" value={form.url} onChange={(e) => { setForm({ ...form, url: e.target.value }); setImagePreview(e.target.value); }}
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
                 placeholder="https://youtube.com/watch?v=..." />
             ) : (
               <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50">
@@ -602,7 +727,7 @@ export default function AdminGalleryPage() {
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Deskripsi</label>
             <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
               rows={4}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-none"
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-none"
               placeholder="Deskripsi singkat (opsional)" />
           </div>
         </div>
