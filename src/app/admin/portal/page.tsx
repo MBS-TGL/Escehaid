@@ -30,7 +30,7 @@ import type { PortalAppAdmin, PortalAppInput } from "@/lib/queries";
 import { StatCard, StatCardRow, ConfirmModal, SlideOver } from "@/components/ui";
 import { useFloatingPanel } from "@/components/ui/useFloatingPanel";
 import { useToast } from "@/components/ui/Toast";
-import { SquaresFour, Plus, FloppyDisk, Info, MagnifyingGlass, ArrowSquareOut, Checks, CheckSquare } from "@/components/Icons";
+import { SquaresFour, Plus, FloppyDisk, Info, MagnifyingGlass, ArrowSquareOut, Checks } from "@/components/Icons";
 import {
   PORTAL_ICONS,
   PORTAL_ICON_LABELS,
@@ -42,6 +42,7 @@ import {
 import { StatusControl, statusOf, flagsOf, STATUS_META, type PortalStatus } from "./StatusControl";
 import { FilterBar, type PortalFilter } from "./FilterBar";
 import { SortableRow, PORTAL_GRID } from "./SortableRow";
+import { MobileFilterBar, MobilePickButton, MobileSelectBar } from "@/components/admin/mobile";
 
 const ICON_NAMES = Object.keys(PORTAL_ICONS);
 const COLOR_KEYS = Object.keys(PORTAL_COLORS);
@@ -1006,6 +1007,15 @@ export default function AdminPortalPage() {
     { key: "inactive", label: "Disembunyikan", value: counts.inactive, variant: "info" },
   ];
 
+  // Opsi filter mobile (MobileFilterBar) — label & jumlah dari sumber yang
+  // sama dengan toolbar desktop agar tak pernah beda.
+  const CHIPS_FILTER: { key: string; label: string; count: number }[] = [
+    { key: "all", label: "Semua", count: counts.all },
+    { key: "active", label: "Tayang", count: counts.active },
+    { key: "soon", label: "Segera hadir", count: counts.soon },
+    { key: "inactive", label: "Disembunyikan", count: counts.inactive },
+  ];
+
   const formStatus = statusOf(form);
 
   return (
@@ -1038,84 +1048,73 @@ export default function AdminPortalPage() {
         </div>
       </div>
 
-      {/* Stats — kartu bisa diklik sebagai filter.
+      {/* Stats desktop — kartu tetap bisa diklik sebagai filter.
           Tanda important di border-[#082b59]! bukan gaya: keduanya sama-sama
           arbitrary value berjenis border-color, sehingga pemenangnya ditentukan
           urutan stylesheet. Tanpa important, border bawaan StatCard
           (border-[#dce3ed]) menang dan border navy kartu aktif tidak pernah
           terpasang — yang tersisa hanya ring-nya. */}
-      <StatCardRow>
-        {statFilters.map((stat) => (
-          <button
-            key={stat.key}
-            type="button"
-            onClick={() => setFilter(stat.key)}
-            aria-pressed={filter === stat.key}
-            title={`Tampilkan: ${stat.label}`}
-            className="w-full rounded-2xl text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
-          >
-            <StatCard
-              label={stat.label}
-              value={stat.value}
-              variant={stat.variant}
-              className={
-                filter === stat.key ? "border-[#082b59]! ring-2 ring-[#082b59]/30" : ""
-              }
-            />
-          </button>
-        ))}
-      </StatCardRow>
+      <div className="hidden md:block">
+        <StatCardRow>
+          {statFilters.map((stat) => (
+            <button
+              key={stat.key}
+              type="button"
+              onClick={() => setFilter(stat.key)}
+              aria-pressed={filter === stat.key}
+              title={`Tampilkan: ${stat.label}`}
+              className="w-full rounded-2xl text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+            >
+              <StatCard
+                label={stat.label}
+                value={stat.value}
+                variant={stat.variant}
+                className={
+                  filter === stat.key ? "border-[#082b59]! ring-2 ring-[#082b59]/30" : ""
+                }
+              />
+            </button>
+          ))}
+        </StatCardRow>
+      </div>
+      {/* Ringkasan satu baris (mobile) — kartu statistik hanya menduplikasi
+          jumlah filter; teks 12px cukup & tidak memakan layar. */}
+      <p className="mb-4 text-xs font-medium text-[#64748b] md:hidden">
+        {counts.all} aplikasi · {counts.active} tayang · {counts.soon} segera ·{" "}
+        {counts.inactive} disembunyikan
+      </p>
 
-      {/* Toolbar — mode pilih (mobile) menggantikan baris pencarian/filter;
-          desktop tetap memakai FilterBar + checkbox tabel seperti semula. */}
-      {pickMode && (
-        <div className="mb-4 flex items-center gap-2 rounded-xl border border-[#1767b1]/30 bg-[#1767b1]/5 px-3 py-2.5 md:hidden">
-          <span
-            aria-live="polite"
-            className="flex items-center gap-1.5 text-sm font-semibold text-[#082b59]"
-          >
-            <Checks className="h-4 w-4" />
-            {selected.size} dipilih
-          </span>
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => toggleAllVisible(true)}
-              disabled={visible.length === 0}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Pilih semua
-            </button>
-            <button
-              type="button"
-              onClick={exitPickMode}
-              className="rounded-lg px-2 text-xs font-semibold text-slate-500 underline-offset-2 transition-colors hover:text-slate-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
-            >
-              Selesai
-            </button>
-          </div>
-        </div>
-      )}
-      <div className={pickMode ? "hidden md:block" : ""}>
+      {/* Toolbar — desktop: FilterBar (md+); mobile: MobileFilterBar di bawah
+          (mode pilih memakai bar pilihan bawaan). */}
+      <div className="hidden md:block">
         <FilterBar
           query={query}
           onQueryChange={setQuery}
           filter={filter}
           onFilterChange={setFilter}
           counts={counts}
-          action={
-            <button
-              type="button"
-              onClick={() => enterPickMode()}
-              aria-label="Masuk mode pilih"
-              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2.5 pl-2.5 pr-3 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] md:hidden"
-            >
-              <CheckSquare className="h-4 w-4 shrink-0 text-[#1767b1]" />
-              Pilih
-            </button>
-          }
         />
       </div>
+
+      {/* Toolbar mobile (<md) — pencarian penuh + Filter (dropdown + jumlah)
+          + Pilih, dua baris; mode pilih memakai bar pilihan bawaan. */}
+      <MobileFilterBar
+        placeholder="Cari aplikasi…"
+        searchLabel="Cari aplikasi"
+        query={query}
+        onQueryChange={setQuery}
+        filter={{
+          value: filter,
+          options: CHIPS_FILTER,
+          onChange: (k) => setFilter(k as PortalFilter),
+        }}
+        action={<MobilePickButton onClick={() => enterPickMode()} />}
+        selectMode={pickMode}
+        selectedCount={selected.size}
+        allSelected={allVisibleSelected}
+        onSelectAllVisible={() => toggleAllVisible(!allVisibleSelected)}
+        onCancelSelect={exitPickMode}
+      />
       {dragDisabled && (
         <p className="-mt-2 mb-3 flex items-start gap-1.5 text-[11px] text-slate-400">
           <Info className="mt-px h-3.5 w-3.5 shrink-0" />
@@ -1169,7 +1168,7 @@ export default function AdminPortalPage() {
           breakpoint md (768px); tanpa ini kolom Aksi terpotong, bukan bisa digeser.
           pb saat mode pilih supaya bar sticky mobile tidak menutup baris terakhir. */}
       <div
-        className={`overflow-x-auto rounded-xl border border-slate-200/80 bg-white shadow-sm ${
+        className={`overflow-x-auto rounded-2xl border border-slate-200/70 bg-white md:rounded-xl md:border-slate-200/80 md:shadow-sm ${
           pickMode ? "pb-20 md:pb-0" : ""
         }`}
       >
@@ -1294,39 +1293,30 @@ export default function AdminPortalPage() {
         </div>
       </div>
 
-      {/* Bar aksi massal sticky (mobile, mode pilih) — safe-area-inset-bottom
-          diperhitungkan; daftar diberi pb-20 supaya baris terakhir tidak
-          tertutup. Aksi nonaktif bila n = 0. */}
+      {/* Bar aksi massal sticky (mobile, mode pilih) — MobileSelectBar:
+          di atas bottom nav admin, safe-area-inset-bottom diperhitungkan;
+          daftar diberi pb-20 supaya baris terakhir tidak tertutup. */}
       {pickMode && (
-        <div
-          className="fixed inset-x-0 bottom-0 z-40 border-t border-[#1767b1]/20 bg-white/95 backdrop-blur-md md:hidden"
-          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        <MobileSelectBar
+          count={selectedItems.length}
+          onDelete={() => setConfirmBulkDelete(true)}
+          onCancel={exitPickMode}
         >
-          <div className="flex items-center gap-2 px-4 py-3">
-            {([
-              { status: "live" as PortalStatus, label: "Tayangkan" },
-              { status: "hidden" as PortalStatus, label: "Sembunyikan" },
-            ]).map((act) => (
-              <button
-                key={act.status}
-                type="button"
-                onClick={() => bulkSetStatus(act.status)}
-                disabled={selectedItems.length === 0}
-                className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {act.label}
-              </button>
-            ))}
+          {([
+            { status: "live" as PortalStatus, label: "Tayangkan" },
+            { status: "hidden" as PortalStatus, label: "Sembunyikan" },
+          ]).map((act) => (
             <button
+              key={act.status}
               type="button"
-              onClick={() => setConfirmBulkDelete(true)}
+              onClick={() => bulkSetStatus(act.status)}
               disabled={selectedItems.length === 0}
-              className="flex-1 rounded-xl border border-red-200 bg-white px-3 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-11 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Hapus
+              {act.label}
             </button>
-          </div>
-        </div>
+          ))}
+        </MobileSelectBar>
       )}
 
       {/* Create/Edit SlideOver */}

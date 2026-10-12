@@ -140,6 +140,23 @@ const PILL_CLASS: Record<PortalStatus, string> = {
   hidden: "border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200/70",
 };
 
+/** Gaya pill TENANG khusus baris mobile (prop `compact`, poin 2 bahasa desain):
+ *  tanpa border, warna pekat redam — Tayang hijau pekat, Segera pekat hangat,
+ *  Disembunyikan abu. Tinggi tampil 28px; area sentuh 44px via pseudo-element
+ *  `before` (belum tentu didukung browser lama → tinggi minimum tetap aman). */
+const PILL_COMPACT_CLASS: Record<PortalStatus, string> = {
+  live: "border-transparent bg-[#e6f6ee] text-[#0b6b3a] hover:bg-[#d8efe2]",
+  soon: "border-transparent bg-[#f7f2e6] text-[#7a5200] hover:bg-[#efe4cd]",
+  hidden: "border-transparent bg-slate-200/70 text-slate-600 hover:bg-slate-200",
+};
+
+/** Titik warna pill compact — mengikuti token titik status (poin 2). */
+const DOT_COMPACT_CLASS: Record<PortalStatus, string> = {
+  live: "bg-[#16a34a]",
+  soon: "bg-[#f59e0b]",
+  hidden: "bg-[#94a3b8]",
+};
+
 /** Perkiraan tinggi menu (3 opsi) sampai tinggi nyata terukur — hanya untuk posisi awal. */
 const MENU_EST_H = 168;
 const MENU_MIN_W = 240;
@@ -292,9 +309,15 @@ export function StatusPill({
         aria-busy={saving}
         title={compact ? `${meta.label} — ${meta.hint}` : undefined}
         onClick={toggle}
-        className={`inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1.5 ${compact ? "text-[11px]" : "text-xs"} font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:opacity-60 ${PILL_CLASS[value]}`}
+        className={`relative inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:opacity-60 ${
+          compact
+            ? // Pill tenang 28px + area sentuh 44px (pseudo melebar vertikal).
+              "h-7 text-[11px] before:absolute before:inset-x-0 before:-top-2 before:-bottom-2 before:content-[''] " +
+              PILL_COMPACT_CLASS[value]
+            : "py-1.5 text-xs " + PILL_CLASS[value]
+        }`}
       >
-        <span className={`h-2 w-2 shrink-0 rounded-full ${meta.dotClass}`} />
+        <span className={`h-2 w-2 shrink-0 rounded-full ${compact ? DOT_COMPACT_CLASS[value] : meta.dotClass}`} />
         <span className="truncate">{compact ? STATUS_SHORT[value] : meta.label}</span>
         {saving ? (
           <span

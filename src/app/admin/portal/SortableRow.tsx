@@ -30,6 +30,7 @@ import {
 } from "@/lib/portal-theme";
 import { useFloatingPanel } from "@/components/ui/useFloatingPanel";
 import { StatusPill, statusOf, type PortalStatus } from "./StatusControl";
+import { RowGrip } from "@/components/admin/mobile";
 
 /**
  * Kolom grid desktop (dipakai header di page.tsx supaya sejajar):
@@ -324,7 +325,7 @@ function RowActionsMenu({
           e.stopPropagation();
           toggle();
         }}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-40"
+        className="flex h-11 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-40"
       >
         <DotsThreeVertical className="h-5 w-5" />
       </button>
@@ -455,38 +456,17 @@ export function SortableRow({
     </button>
   );
 
-  /** Handle mobile — nomor urutan (11px) menempel di dalam handle sehingga
-   *  teks "Urutan N" tidak diperlukan lagi dan tinggi baris tidak bertambah.
-   *  Tombol dibuat setinggi baris penuh (self-stretch + margin negatif
-   *  -my-2.5 -ml-3 yang meniadakan padding py-2.5/px-3 baris) dan selebar
-   *  w-16 (64px; ±52px bersih setelah -ml-3) supaya SELURUH kolom kiri
-   *  menjadi area drag. `touch-action: none` hanya di tombol ini: sentuhan
-   *  di luar kolom kiri (ikon, nama, status) tetap men-scroll halaman. */
+  /** Handle mobile — kolom tampilan 30px (titik 6-dot + nomor urut 11px),
+   *  area sentuh tetap setinggi baris penuh & >= 44px lebar (margin negatif,
+   *  touch-none) — komponen bersama RowGrip. */
   const mobileHandle = (
-    <button
-      type="button"
-      {...attributes}
-      {...(dragDisabled ? {} : listeners)}
+    <RowGrip
+      index={index}
+      label={item.label}
       disabled={dragDisabled}
-      data-no-longpress=""
-      aria-label={`Ubah urutan ${item.label} — posisi ${index + 1}`}
-      title={
-        dragDisabled
-          ? "Hapus filter untuk mengubah urutan"
-          : "Tarik untuk mengubah urutan (tekan Space, lalu panah)"
-      }
-      onClick={(e) => e.stopPropagation()}
-      style={{ touchAction: "none" }}
-      className={`-my-2.5 -ml-3 flex w-12 shrink-0 touch-none flex-col items-center justify-center gap-0.5 self-stretch rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] ${dragDisabled
-        ? "cursor-not-allowed text-slate-300"
-        : "cursor-grab text-slate-400 hover:bg-[#1767b1]/10 hover:text-[#082b59] active:cursor-grabbing"
-        }`}
-    >
-      <DotsSixVertical className="h-4 w-4" />
-      <span className="text-[11px] font-semibold leading-none tabular-nums text-slate-400">
-        {index + 1}
-      </span>
-    </button>
+      attributes={attributes}
+      listeners={dragDisabled ? {} : listeners}
+    />
   );
 
   const actions = (
@@ -657,7 +637,7 @@ export function SortableRow({
           `select-none` + `-webkit-touch-callout:none` mencegah seleksi teks /
           callout bawaan browser saat long-press (bentrok dengan mode pilih). */}
       <div
-        className="flex select-none items-center gap-2 px-3 py-2.5 [-webkit-touch-callout:none] md:hidden"
+        className="flex select-none items-center gap-2.5 py-2 pl-1.5 pr-0.5 [-webkit-touch-callout:none] md:hidden"
         onClick={onRowClick}
         onPointerDown={onPointerDownRow}
         onPointerMove={onPointerMoveRow}
@@ -669,7 +649,7 @@ export function SortableRow({
           <span
             data-no-longpress=""
             onClick={(e) => e.stopPropagation()}
-            className="flex h-10 w-10 shrink-0 items-center justify-center"
+            className="flex h-11 w-11 shrink-0 items-center justify-center"
           >
             <input
               type="checkbox"
@@ -690,13 +670,13 @@ export function SortableRow({
               terpotong ("Jadwal Pela…"); ganti ke `truncate` bila ingin
               tinggi baris selalu seragam. */}
           <p
-            className="line-clamp-2 break-words text-[13px] font-medium leading-tight text-slate-700 md:text-sm"
+            className="line-clamp-2 break-words text-[15px] font-semibold leading-[1.25] text-[#0f2a4d]"
             title={item.label}
           >
             {item.label}
           </p>
           {subtext && (
-            <p className="mt-0.5 truncate text-[11px] leading-tight text-slate-400" title={subtext}>
+            <p className="mt-0.5 line-clamp-2 break-words text-xs leading-snug text-[#64748b]" title={subtext}>
               {subtext}
               {hasLink && item.is_external && (
                 <ArrowSquareOut className="ml-0.5 inline h-3 w-3 align-[-1px]" />

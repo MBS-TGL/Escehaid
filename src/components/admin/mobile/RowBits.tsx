@@ -148,14 +148,17 @@ export function QuietBadge({
  */
 export function RowGrip({
   index,
+  number,
   label,
   disabled = false,
   innerRef,
   attributes,
   listeners,
 }: {
-  /** Posisi tampil 0-based (nomor urut = index + 1). */
+  /** Posisi tampil 0-based — dipakai aria-label; nomor tampil memakai `number`. */
   index: number;
+  /** Angka yang ditampilkan di bawah grip (default index + 1). */
+  number?: number;
   /** Nama item — untuk aria-label/title. */
   label: string;
   disabled?: boolean;
@@ -179,7 +182,7 @@ export function RowGrip({
       }
       onClick={(e) => e.stopPropagation()}
       style={{ touchAction: "none" }}
-      className={`-ml-1.5 flex w-11 shrink-0 touch-none select-none flex-col items-center justify-center self-stretch rounded-lg transition-colors [-webkit-touch-callout:none] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] ${
+      className={`-my-2 -ml-1.5 flex w-11 shrink-0 touch-none select-none flex-col items-center justify-center self-stretch rounded-lg transition-colors [-webkit-touch-callout:none] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] ${
         disabled
           ? "cursor-not-allowed text-slate-300"
           : "cursor-grab text-[#94a3b8] hover:bg-[#1767b1]/10 hover:text-[#082b59] active:cursor-grabbing"
@@ -192,7 +195,7 @@ export function RowGrip({
             disabled ? "text-slate-300" : "text-[#64748b]"
           }`}
         >
-          {index + 1}
+          {number ?? index + 1}
         </span>
       </span>
     </button>
