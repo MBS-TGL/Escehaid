@@ -212,7 +212,7 @@
 
 - [x] Catat: siapa, apa, kapan (create/update/delete pada konten & SPMB)
 - [x] Halaman admin untuk melihat log
-- **Butuh SQL (user jalankan):** tabel `audit_logs` + policy RLS → **`supabase/audit_logs.sql`** (idempoten; belum dijalankan user)
+- **Butuh SQL (user jalankan):** tabel `audit_logs` + policy RLS → migrasi `audit_logs` (idempoten; **sudah dijalankan user 12 Okt 2026** — berkas `supabase/audit_logs.sql` dihapus dari repo setelah dijalankan)
 - **Nilai:** menyelesaikan sengketa "siapa yang mengubah ini?"
 - **Hasil:**
   - **SQL:** tabel + index + RLS SELECT (hanya `developer/admin/publisher` aktif = identik `canAccessAdminPanel`) + GRANT SELECT. **Penulisan lewat trigger SECURITY DEFINER `log_audit()`** di **15 tabel** konten & SPMB (news, articles, activities, achievements, gallery, announcements, agenda_events, facilities, teachers, portal_apps, spmb_registrations, spmb_waves, contact_messages, user_profiles, school_profile) — aktor = `auth.uid()` + snapshot `full_name`, UPDATE hanya mencatat field yang berubah, nilai >600 karakter dipotong menjadi `(nilai terlalu panjang: N karakter)`. Tanpa policy & GRANT tulis → klien tidak bisa memanipulasi jejak audit. **Kenapa trigger, bukan ~50 titik panggil di kode:** lengkap (tak bisa terlewat oleh aksi mendatang), atomik 1 transaksi, aktor otoritatif.

@@ -149,7 +149,7 @@ embed **click-to-load** (kartu poster + tombol putar → iframe resmi). Berbeda 
 
 | Berkas | Perubahan |
 | --- | --- |
-| `supabase/activities_upgrade.sql` | Bagian **(D)**: `ALTER TABLE public.activities ADD COLUMN IF NOT EXISTS video_url text;` (**belum dijalankan**) |
+| ~~`supabase/activities_upgrade.sql`~~ | Bagian **(D)**: `ALTER TABLE public.activities ADD COLUMN IF NOT EXISTS video_url text;` — **sudah dijalankan user (12 Okt 2026); berkas dihapus dari repo** |
 | `src/lib/supabase.ts` | Tipe `Activity.video_url?: string \| null` |
 | `src/lib/queries/activities.ts` | `video_url` masuk `LIST_COLUMNS_ALL`, `OPTIONAL_FIELDS` (retry tanpa kolom bila belum ada di tabel), normalisasi URL, dan parameter `createActivity`/`updateActivity` |
 | `src/lib/video-embed.ts` | **Baru** — `parseVideoUrl()` (YouTube watch/youtu.be/shorts, Instagram `/p/` `/reel/` `/tv/`, TikTok `/@user/video/ID` + link pendek `vm.`/`vt.tiktok.com`), `videoEmbedUrl()`, `resolveVideoUrl()` (server: redirect + oEmbed `https://www.tiktok.com/oembed?url=…`, timeout 6 dtk, error aman, cache TTL 24 jam) |
@@ -158,17 +158,17 @@ embed **click-to-load** (kartu poster + tombol putar → iframe resmi). Berbeda 
 | `src/app/admin/activities/page.tsx` (CRLF) | `video_url` di `FormData`/`emptyForm`/`openEdit`/`handleDuplicate`; validasi URL → galat **"Tautan video harus diawali http:// atau https://"**; field **"Link Video" (opsional)** tepat sesudah baris "Waktu + Tautan Siaran Langsung" (input `type=url`, `text-base md:text-sm`, placeholder YouTube/IG/TikTok, teks bantu, chip penyedia terdeteksi); modal lihat menampilkan chip ikon + label penyedia (tanpa memuat embed di admin) |
 | `MOBILE_UI_REPORT.md` | Bagian ini |
 
-### SQL yang harus dijalankan MANUAL
+### SQL (bagian D) — sudah dijalankan
 
-Belum dijalankan (situs & admin tetap berjalan sebelumnya — kolom opsional dilepas otomatis dari
-query bila tidak ada di tabel). Jalankan di SQL Editor Supabase, setelah backup:
+**Sudah dijalankan user di SQL Editor Supabase (12 Okt 2026)**; setelah dijalankan berkas
+`supabase/activities_upgrade.sql` dihapus dari repo (permintaan user). Sebelum kolom ada, situs
+& admin tetap berjalan — kolom opsional dilepas otomatis dari query bila tidak ada di tabel.
+Isi bagian (D) yang dijalankan:
 
 ```sql
 ALTER TABLE public.activities
   ADD COLUMN IF NOT EXISTS video_url text;
 ```
-
-(`supabase/activities_upgrade.sql`, bagian (D).)
 
 ### CSP / frame-src
 
@@ -194,8 +194,9 @@ Pilih kegiatan → edit → isi **Link Video**, simpan, lalu buka `/activities/<
 5. **Kontrol negatif**: URL tak dikenali (mis. `https://example.com/video`) → tombol
    "Tonton Video"; URL tanpa `http(s)://` → galat form **"Tautan video harus diawali http:// atau
    https://"**; `video_url` kosong → blok video & JSON-LD tidak tampil sama sekali.
-6. Sebelum SQL dijalankan: buka form & simpan kegiatan → tidak ada error (kolom dilepas dari
-   payload), kolom video tidak muncul di tabel admin.
+6. SQL bagian (D) sudah dijalankan (12 Okt 2026) → kolom `video_url` sudah ada: simpan kegiatan
+   dengan **Link Video** → nilai tersimpan & tampil lagi saat diedit. (Degradasi "kolom dilepas
+   dari payload bila belum ada" hanya berlaku di lingkungan yang belum menjalankan migrasi.)
 
 ---
 

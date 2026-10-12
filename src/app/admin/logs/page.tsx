@@ -53,7 +53,7 @@ function formatTime(iso: string): string {
  * Log aktivitas admin (P2.8): siapa, apa, kapan — untuk menyelesaikan
  * sengketa "siapa yang mengubah ini?".
  *
- * Data datang dari trigger `log_audit()` (supabase/audit_logs.sql). Bila tabel
+ * Data datang dari trigger `log_audit()` (migrasi tabel `audit_logs`). Bila tabel
  * belum dibuat, halaman menampilkan panel instruksi SQL (degradasi anggun,
  * tanpa error). Halaman ini hanya-baca.
  */
@@ -150,9 +150,10 @@ export default function AdminLogsPage() {
             ada
           </p>
           <p className="mt-1 max-w-md text-xs text-slate-500">
-            Log aktivitas memerlukan tabel + trigger. Jalankan file{" "}
-            <code className="rounded bg-slate-100 px-1.5 py-0.5">supabase/audit_logs.sql</code>{" "}
-            di Supabase SQL Editor, lalu muat ulang halaman ini.
+            Log aktivitas memerlukan tabel + trigger. Jalankan migrasi SQL{" "}
+            <code className="rounded bg-slate-100 px-1.5 py-0.5">audit_logs</code> (tabel + RLS +
+            trigger <code className="rounded bg-slate-100 px-1.5 py-0.5">log_audit()</code>,
+            idempoten) di Supabase SQL Editor, lalu muat ulang halaman ini.
           </p>
         </div>
       )}

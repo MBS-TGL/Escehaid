@@ -4,8 +4,9 @@ import { sanitizeSearchTerm } from "./shared";
 /**
  * Log aktivitas admin (P2.8) — pembacaan tabel `audit_logs`.
  *
- * Penulisan bukan urusan kode ini: trigger `log_audit()` (lihat
- * `supabase/audit_logs.sql`) mencatat setiap INSERT/UPDATE/DELETE di tabel
+ * Penulisan bukan urusan kode ini: trigger `log_audit()` (migrasi tabel
+ * `audit_logs`, sudah dijalankan 12 Okt 2026 — berkas SQL dihapus dari repo)
+ * mencatat setiap INSERT/UPDATE/DELETE di tabel
  * konten & SPMB dengan `auth.uid()` sebagai aktor. Kode di sini hanya membaca,
  * dengan degradasi anggun: bila tabel belum dibuat (user belum menjalankan
  * SQL), halaman menampilkan panel "jalankan SQL" — tanpa error.
