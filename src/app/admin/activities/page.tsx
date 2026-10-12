@@ -63,6 +63,8 @@ import {
   MobileListRow,
   MobileSelectBar,
   RowActionsMenu,
+  MobileThumb,
+  QuietBadge,
   type RowAction,
 } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
@@ -147,6 +149,8 @@ export default function AdminActivitiesPage() {
   const [viewItem, setViewItem] = useState<Activity | null>(null);
   const [deleteItem, setDeleteItem] = useState<Activity | null>(null);
   const [bulkDelete, setBulkDelete] = useState(false);
+  // Terbitkan ke publik (dari menu ⋯ mobile) selalu lewat konfirmasi singkat.
+  const [publishItem, setPublishItem] = useState<Activity | null>(null);
 
   // Form panel
   const [formOpen, setFormOpen] = useState(false);
@@ -445,6 +449,16 @@ export default function AdminActivitiesPage() {
     revalidateActivities(item.slug).catch(() => {});
   }
 
+  /* Menu ⋯ mobile: Terbitkan = konfirmasi singkat (publikasi ke publik),
+     Jadikan Draft = langsung (menurunkan dari publik tidak berisiko). */
+  function requestPublish(item: Activity) {
+    if (item.is_published) {
+      handleTogglePublish(item).catch(() => {});
+    } else {
+      setPublishItem(item);
+    }
+  }
+
   // Duplikat → salinan DRAFT (tanpa gambar; unggah ulang bila perlu), lalu buka editor.
   async function handleDuplicate(item: Activity) {
     const { data, error } = await createActivity({
@@ -482,27 +496,37 @@ export default function AdminActivitiesPage() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1767b1]/10">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[#1767b1]/10">
             <CalendarBlank className="h-5 w-5 text-[#1767b1]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Kelola Kegiatan</h1>
-            <p className="text-sm text-slate-500">Kegiatan sekolah (kajian, peringatan, lomba, dll)</p>
+            <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">Kegiatan sekolah (kajian, peringatan, lomba, dll)</p>
           </div>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1]">
+        <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[#082b59] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1] md:py-2.5">
           <Plus className="h-4 w-4" /> Buat Baru
         </button>
       </div>
 
-      {/* Stats */}
-      <StatCardRow>
+      {/* Stats — desktop: carousel/grid StatCardRow; mobile: grid 2 kolom
+          tanpa pager titik (kartu memuat metrik unik: Akan Datang, Bulan Ini). */}
+      <div className="hidden md:block">
+        <StatCardRow>
+          <StatCard label="Total" value={stats.total} variant="brand" />
+          <StatCard label="Diterbitkan" value={stats.published} variant="success" />
+          <StatCard label="Draft" value={stats.draft} variant="warning" />
+          <StatCard label="Akan Datang" value={stats.upcoming} variant="purple" />
+          <StatCard label="Bulan Ini" value={stats.thisMonth} variant="info" />
+        </StatCardRow>
+      </div>
+      <div className="mb-6 grid grid-cols-2 gap-3 md:hidden">
         <StatCard label="Total" value={stats.total} variant="brand" />
         <StatCard label="Diterbitkan" value={stats.published} variant="success" />
         <StatCard label="Draft" value={stats.draft} variant="warning" />
         <StatCard label="Akan Datang" value={stats.upcoming} variant="purple" />
         <StatCard label="Bulan Ini" value={stats.thisMonth} variant="info" />
-      </StatCardRow>
+      </div>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
@@ -743,9 +767,9 @@ export default function AdminActivitiesPage() {
 
       {/* Daftar mobile (<md) — baris ringkas tanpa scroll horizontal; semua
           fitur tetap ada: pilih (mode pilih), lihat, edit, duplikat & hapus
-          via menu ⋯, toggle Publish/Draft ketuk pill status. */}
-      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:hidden">
-        <div role="list" aria-label="Daftar kegiatan" className="divide-y divide-slate-100">
+          via menu ⋯, Publish/Draft lewat menu ⋯ (bukan pill sekali ketuk). */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden">
+        <div role="list" aria-label="Daftar kegiatan">
           {loading ? (
             <div className="space-y-3 px-3 py-4" aria-hidden="true">
               {Array.from({ length: 4 }, (_, i) => (
@@ -788,7 +812,7 @@ export default function AdminActivitiesPage() {
                 onEdit={openEdit}
                 onDuplicate={handleDuplicate}
                 onDelete={setDeleteItem}
-                onTogglePublish={handleTogglePublish}
+                onPublish={requestPublish}
               />
             ))
           )}
@@ -920,6 +944,21 @@ export default function AdminActivitiesPage() {
         onConfirm={handleDelete}
         title="Hapus Kegiatan?"
         description={`"${deleteItem?.title}" akan dihapus permanen.`}
+      />
+
+      {/* ── PUBLISH CONFIRM (menu ⋯ mobile) ─────────── */}
+      <ConfirmModal
+        open={!!publishItem}
+        onClose={() => setPublishItem(null)}
+        onConfirm={() => {
+          const it = publishItem;
+          setPublishItem(null);
+          if (it) handleTogglePublish(it).catch(() => {});
+        }}
+        title="Terbitkan Kegiatan?"
+        description={`"${publishItem?.title}" akan tampil di website untuk publik.`}
+        confirmLabel="Ya, Terbitkan"
+        variant="warning"
       />
 
       {/* ── BULK DELETE CONFIRM ─────────────────────── */}
@@ -1170,12 +1209,14 @@ export default function AdminActivitiesPage() {
 }
 
 /**
- * Satu baris kegiatan versi mobile (<md): [thumb 48px] [badge tipe + judul +
- * tanggal·lokasi] [pill Publish/Draft (ketuk = toggle)] [menu ⋯: Lihat,
- * Edit, Duplikat, Hapus]. Tap baris = modal lihat (padanan klik kolom Judul
- * di desktop); long-press = mode pilih; di mode pilih checkbox menggantikan
- * thumb dan tap baris = toggle centang. Tidak ada geser urutan — halaman ini
- * memakai sortir kolom, dipindahkan ke dropdown "Urut" di toolbar mobile.
+ * Satu baris kegiatan versi mobile (<md): [thumb 56px + titik status] [badge
+ * tipe + judul + tanggal·lokasi + badge "Draft"] [menu ⋯: Lihat, Edit,
+ * Terbitkan/Jadikan Draft, Duplikat, Hapus]. Terbitkan minta konfirmasi
+ * singkat; tidak ada pill Publish/Draft sekali ketuk. Tap baris = modal
+ * lihat (padanan klik kolom Judul di desktop); long-press = mode pilih; di
+ * mode pilih checkbox menggantikan thumb dan tap baris = toggle centang.
+ * Tidak ada geser urutan — halaman ini memakai sortir kolom, dipindahkan ke
+ * dropdown "Urut" di toolbar mobile.
  */
 function ActivityMobileRow({
   item,
@@ -1187,7 +1228,7 @@ function ActivityMobileRow({
   onEdit,
   onDuplicate,
   onDelete,
-  onTogglePublish,
+  onPublish,
 }: {
   item: Activity;
   selected: boolean;
@@ -1198,11 +1239,21 @@ function ActivityMobileRow({
   onEdit: (a: Activity) => void;
   onDuplicate: (a: Activity) => void;
   onDelete: (a: Activity) => void;
-  onTogglePublish: (a: Activity) => void;
+  onPublish: (a: Activity) => void;
 }) {
+  const startKey = toJakartaDateKey(item.activity_date);
+  const scheduled =
+    item.is_published && startKey !== null && startKey > todayInJakarta();
+
   const actions: RowAction[] = [
     { key: "view", label: "Lihat", icon: <Eye className="h-4 w-4" />, run: () => onView(item) },
     { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) },
+    {
+      key: "publish",
+      label: item.is_published ? "Jadikan Draft" : "Terbitkan",
+      icon: item.is_published ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
+      run: () => onPublish(item),
+    },
     { key: "duplicate", label: "Duplikat", icon: <Copy className="h-4 w-4" />, run: () => onDuplicate(item) },
     { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) },
   ];
@@ -1228,13 +1279,18 @@ function ActivityMobileRow({
           ) : undefined
         }
         thumb={
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100">
-            {item.image_url ? (
-              <img src={item.image_url} alt="" loading="lazy" className="h-full w-full object-cover" />
-            ) : (
-              <CalendarBlank className="h-6 w-6 text-slate-300" />
-            )}
-          </span>
+          <MobileThumb
+            src={item.image_url}
+            tint="sky"
+            icon={<CalendarBlank className="h-5 w-5" />}
+            status={
+              !item.is_published
+                ? { tone: "off", label: "Draft" }
+                : scheduled
+                  ? { tone: "pending", label: "Terjadwal" }
+                  : { tone: "active", label: "Terbit" }
+            }
+          />
         }
         title={
           item.is_featured ? (
@@ -1246,6 +1302,7 @@ function ActivityMobileRow({
             item.title
           )
         }
+        badge={!item.is_published ? <QuietBadge>Draft</QuietBadge> : undefined}
         subtitle={
           <>
             <span className={`inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${activityTypeBadge(item.activity_type)}`}>
@@ -1256,27 +1313,6 @@ function ActivityMobileRow({
               {item.location ? ` · ${item.location}` : ""}
             </span>
           </>
-        }
-        status={
-          <button
-            type="button"
-            data-no-longpress=""
-            onClick={(e) => {
-              e.stopPropagation();
-              onTogglePublish(item);
-            }}
-            disabled={selectMode}
-            title={item.is_published ? "Klik untuk mengembalikan ke draft" : "Klik untuk menerbitkan"}
-            aria-label={`${item.is_published ? "Kembalikan ke draft" : "Terbitkan"} ${item.title}`}
-            className={`inline-flex min-h-10 items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:opacity-60 ${
-              item.is_published
-                ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                : "border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-            }`}
-          >
-            {item.is_published ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-            {item.is_published ? "Publish" : "Draft"}
-          </button>
         }
         actions={<RowActionsMenu label={item.title} actions={actions} disabled={selectMode} />}
         selected={selected}
