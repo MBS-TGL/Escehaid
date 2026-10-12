@@ -24,6 +24,8 @@ import {
   CaretRight,
   ArrowUp,
   ArrowDown,
+  CheckCircle,
+  Clock,
 } from "@/components/Icons";
 import {
   MobileFilterBar,
@@ -32,6 +34,8 @@ import {
   MobileListRow,
   MobileSelectBar,
   RowActionsMenu,
+  StatusDot,
+  QuietBadge,
   type RowAction,
 } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
@@ -210,26 +214,31 @@ export default function AdminAgendaPage() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1767b1]/10">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[#1767b1]/10">
             <CalendarBlank className="h-5 w-5 text-[#1767b1]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Agenda</h1>
-            <p className="text-sm text-slate-500">Kelola agenda penting yang tampil di countdown homepage</p>
+            <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">Kelola agenda penting yang tampil di countdown homepage</p>
           </div>
         </div>
         <button onClick={openCreate}
-          className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1]">
+          className="flex min-h-11 items-center gap-2 rounded-xl bg-[#082b59] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1] md:py-2.5">
           <Plus className="h-4 w-4" /> Buat Baru
         </button>
       </div>
 
-      {/* Stats */}
-      <StatCardRow>
-        <StatCard label="Total" value={items.length} variant="brand" />
-        <StatCard label="Aktif" value={activeCount} variant="success" />
-        <StatCard label="Nonaktif" value={inactiveCount} variant="warning" />
-      </StatCardRow>
+      {/* Stats desktop — mobile memakai ringkasan satu baris. */}
+      <div className="hidden md:block">
+        <StatCardRow>
+          <StatCard label="Total" value={items.length} variant="brand" />
+          <StatCard label="Aktif" value={activeCount} variant="success" />
+          <StatCard label="Nonaktif" value={inactiveCount} variant="warning" />
+        </StatCardRow>
+      </div>
+      <p className="mb-4 text-xs font-medium text-[#64748b] md:hidden">
+        {items.length} agenda · {activeCount} aktif · {inactiveCount} nonaktif
+      </p>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
@@ -422,8 +431,8 @@ export default function AdminAgendaPage() {
       {/* Daftar mobile (<md) — baris ringkas tanpa scroll horizontal; semua
           fitur tetap ada: pilih (mode pilih), geser urutan (Naik/Turun di
           menu ⋯), edit & hapus via menu ⋯. */}
-      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:hidden">
-        <div role="list" aria-label="Daftar agenda" className="divide-y divide-slate-100">
+      <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden">
+        <div role="list" aria-label="Daftar agenda">
           {loading ? (
             <div className="space-y-3 px-3 py-4" aria-hidden="true">
               {Array.from({ length: 4 }, (_, i) => (
@@ -555,12 +564,13 @@ export default function AdminAgendaPage() {
 }
 
 /**
- * Satu baris agenda versi mobile (<md): [lencana tanggal] [judul + tanggal
- * lengkap] [pill status (ketuk = toggle)] [menu ⋯: Edit, Naik, Turun,
- * Hapus]. Tap baris = Edit (halaman ini tidak punya modal lihat);
- * long-press = mode pilih; di mode pilih checkbox menggantikan lencana dan
- * tap baris = toggle centang. Geser urutan lewat Naik/Turun di menu ⋯ —
- * padanan tombol panah kolom "Urutan" di tabel desktop.
+ * Satu baris agenda versi mobile (<md): [tile tanggal r12 + titik status]
+ * [judul + tanggal lengkap + badge "Nonaktif"] [menu ⋯: Edit,
+ * Nonaktifkan/Aktifkan, Naik, Turun, Hapus]. Tap baris = Edit (halaman ini
+ * tidak punya modal lihat); long-press = mode pilih; di mode pilih checkbox
+ * menggantikan tile dan tap baris = toggle centang. Perubahan status hanya
+ * lewat menu ⋯ (bukan pill sekali ketuk). Geser urutan lewat Naik/Turun di
+ * menu ⋯ — padanan tombol panah kolom "Urutan" di tabel desktop.
  */
 function AgendaMobileRow({
   item,
@@ -596,6 +606,12 @@ function AgendaMobileRow({
 
   const actions: RowAction[] = [
     { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) },
+    {
+      key: "toggle",
+      label: item.is_active ? "Nonaktifkan" : "Aktifkan",
+      icon: item.is_active ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
+      run: () => onToggle(item),
+    },
     ...(canGoUp
       ? [{ key: "up", label: "Naik", icon: <ArrowUp className="h-4 w-4" />, run: () => onReorder(item.id, "up") }]
       : []),
@@ -624,37 +640,20 @@ function AgendaMobileRow({
               />
             </span>
           ) : (
-            <span
-              aria-hidden="true"
-              className="flex h-12 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-[#1767b1]/10 leading-none"
-            >
-              <span className="text-base font-bold tabular-nums text-[#082b59]">{day}</span>
-              <span className="mt-0.5 text-[10px] font-semibold uppercase text-[#1767b1]">{monthShort}</span>
+            <span className="relative flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-[#e4ecf6] leading-none">
+              <span aria-hidden="true" className="text-base font-bold tabular-nums text-[#082b59]">{day}</span>
+              <span aria-hidden="true" className="mt-0.5 text-[10px] font-semibold uppercase text-[#1767b1]">{monthShort}</span>
+              <StatusDot
+                tone={item.is_active ? "active" : "off"}
+                label={item.is_active ? "Aktif" : "Nonaktif"}
+                className="absolute bottom-0 right-0"
+              />
             </span>
           )
         }
         title={item.title}
+        badge={!item.is_active ? <QuietBadge>Nonaktif</QuietBadge> : undefined}
         subtitle={<span className="min-w-0 truncate">{fullDate}</span>}
-        status={
-          <button
-            type="button"
-            data-no-longpress=""
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggle(item);
-            }}
-            disabled={selectMode}
-            title={item.is_active ? "Klik untuk menonaktifkan" : "Klik untuk mengaktifkan"}
-            aria-label={`${item.is_active ? "Nonaktifkan" : "Aktifkan"} ${item.title}`}
-            className={`inline-flex min-h-10 items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:opacity-60 ${
-              item.is_active
-                ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                : "border border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200"
-            }`}
-          >
-            {item.is_active ? "Aktif" : "Nonaktif"}
-          </button>
-        }
         actions={<RowActionsMenu label={item.title} actions={actions} disabled={selectMode} />}
         selected={selected}
         onClick={() => {
