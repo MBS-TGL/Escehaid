@@ -17,14 +17,16 @@ import { DotsSixVertical, ImageSquare } from "@/components/Icons";
  */
 
 /** Warna titik status. Hijau = aktif/terbit, abu = nonaktif/draft,
- *  amber = terjadwal/menunggu, biru = info (mis. belum dibaca). */
-export type StatusTone = "active" | "off" | "pending" | "info";
+ *  amber = terjadwal/menunggu, biru = info (mis. belum dibaca),
+ *  merah = ditolak. */
+export type StatusTone = "active" | "off" | "pending" | "info" | "danger";
 
 const TONE_DOT: Record<StatusTone, string> = {
   active: "bg-[#16a34a]",
   off: "bg-[#94a3b8]",
   pending: "bg-[#f59e0b]",
   info: "bg-[#1767b1]",
+  danger: "bg-[#dc2626]",
 };
 
 /** Titik status 14px + cincin putih 2.5px. Posisi (pojok kanan-bawah thumb)

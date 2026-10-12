@@ -63,7 +63,10 @@ import {
   MobileListRow,
   MobileSelectBar,
   RowActionsMenu,
+  StatusDot,
+  QuietBadge,
   type RowAction,
+  type StatusTone,
 } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
 
@@ -84,6 +87,14 @@ const pathLabels: Record<string, string> = {
   reguler: "Reguler",
   prestasi: "Prestasi",
   beasiswa: "Beasiswa",
+};
+
+/** Warna titik status pada avatar baris mobile: amber = menunggu,
+ *  hijau = diterima, merah = ditolak. */
+const DOT_TONE: Record<SpmbRegistration["status"], StatusTone> = {
+  pending: "pending",
+  accepted: "active",
+  rejected: "danger",
 };
 
 const pathColors: Record<string, string> = {
@@ -748,6 +759,18 @@ export default function AdminSPMBPage() {
     fetchData();
   }
 
+  /** Kembalikan pendaftar ke status Menunggu (tanpa modal — bukan aksi publik). */
+  async function handleSetPending(item: SpmbRegistration) {
+    if (item.status === "pending") return;
+    try {
+      await updateRegistrationStatus(item.id, "pending" as "accepted" | "rejected");
+      toast("Status dikembalikan ke Menunggu", "success");
+    } catch (e) {
+      toast(e instanceof Error && e.message ? e.message : "Gagal mengubah status", "error");
+    }
+    fetchData();
+  }
+
   // ── Gelombang pendaftaran: CRUD ─────────────────────────
 
   function openWaveForm(wave?: SpmbWave) {
@@ -895,7 +918,7 @@ export default function AdminSPMBPage() {
             Atur gelombang pendaftaran yang tampil di halaman Penerimaan Santri Baru.
           </p>
           <button onClick={() => openWaveForm()}
-            className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1767b1]">
+            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#1767b1] md:py-2.5">
             <Plus className="h-4 w-4" />
             Tambah Gelombang
           </button>
@@ -1462,13 +1485,19 @@ export default function AdminSPMBPage() {
       {/* Header + Tab */}
       <PageHeader active={mainTab} onSelect={setMainTab} onExport={handleExportCsv} />
 
-      {/* Stats */}
-      <StatCardRow>
-        <StatCard label="Total" value={stats.total} variant="brand" />
-        <StatCard label="Menunggu" value={stats.pending} variant="warning" />
-        <StatCard label="Diterima" value={stats.accepted} variant="success" />
-        <StatCard label="Ditolak" value={stats.rejected} variant="danger" />
-      </StatCardRow>
+      {/* Stats desktop — mobile memakai ringkasan satu baris (angka sama
+          dengan jumlah pada filter status). */}
+      <div className="hidden md:block">
+        <StatCardRow>
+          <StatCard label="Total" value={stats.total} variant="brand" />
+          <StatCard label="Menunggu" value={stats.pending} variant="warning" />
+          <StatCard label="Diterima" value={stats.accepted} variant="success" />
+          <StatCard label="Ditolak" value={stats.rejected} variant="danger" />
+        </StatCardRow>
+      </div>
+      <p className="mb-4 text-xs font-medium text-[#64748b] md:hidden">
+        {stats.total} pendaftar · {stats.pending} menunggu · {stats.accepted} diterima · {stats.rejected} ditolak
+      </p>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
@@ -1664,11 +1693,12 @@ export default function AdminSPMBPage() {
         )}
       </div>
 
-      {/* Daftar mobile (<md) — baris ringkas: inisial, nama, jalur + tanggal,
-          pill status bisa diketuk (siklus Menunggu → Diterima → Ditolak),
-          aksi via menu ⋯. Tanpa scroll horizontal, semua fitur tabel tetap ada. */}
-      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:hidden">
-        <div role="list" aria-label="Daftar pendaftar SPMB" className="divide-y divide-slate-100">
+      {/* Daftar mobile (<md) — baris ringkas: avatar + titik status, nama,
+          badge jalur + asal sekolah/email + tanggal, status lewat titik di
+          pojok avatar (tanpa ubah status sekali tap), aksi via menu ⋯.
+          Tanpa scroll horizontal, semua fitur tabel tetap ada. */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden">
+        <div role="list" aria-label="Daftar pendaftar SPMB">
           {loading ? (
             <div className="space-y-3 px-3 py-4" aria-hidden="true">
               {Array.from({ length: 4 }, (_, i) => (
@@ -1702,7 +1732,12 @@ export default function AdminSPMBPage() {
                 onToggleSelect={toggleSelect}
                 onDetail={openDetail}
                 onEditNotes={(r) => { setEditItem(r); setEditNotes(r.admin_notes || ""); }}
-                onToggleStatus={handleToggleStatus}
+                onSetStatus={(r, s) => {
+                  // Terima/Tolak lewat modal konfirmasi; "Jadikan Menunggu"
+                  // langsung dijalankan (kembalikan ke antrean review).
+                  if (s === "pending") handleSetPending(r);
+                  else setConfirmAction({ id: r.id, status: s });
+                }}
                 onDelete={setDeleteItem}
               />
             ))
@@ -2074,16 +2109,16 @@ function PageHeader({ active, onSelect, onExport }: { active: MainTab; onSelect:
       {/* Header */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#082b59]/10">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[#082b59]/10">
             <Users className="h-5 w-5 text-[#082b59]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Kelola SPMB</h1>
-            <p className="text-sm text-slate-500">Kelola Pendaftaran Santri Baru</p>
+            <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">Kelola Pendaftaran Santri Baru</p>
           </div>
         </div>
         {active === "registrations" && (
-          <button onClick={onExport} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50">
+          <button onClick={onExport} className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 md:py-2.5">
             <Download className="h-4 w-4" />
             Export CSV
           </button>
@@ -2204,12 +2239,14 @@ function BerkasItem({ label, url, isImage, isPdf }: { label: string; url: string
 }
 
 /**
- * Baris daftar mobile (SPMB): inisial + nama, badge jalur + asal
- * sekolah/email + tanggal, pill status yang bisa diketuk (siklus Menunggu →
- * Diterima → Ditolak, sama seperti kolom Status di desktop), menu ⋯ berisi
- * Detail, Edit Catatan, Telepon (bila ada nomor) & Hapus. Tap baris = buka
- * modal detail; tekan lama = mode pilih. Nomor urut & kolom tanggal tetap
- * desktop-saja, sama seperti tabel lamanya.
+ * Baris daftar mobile (SPMB): avatar inisial + titik status 14px di pojoknya
+ * (amber = Menunggu, hijau = Diterima, merah = Ditolak), nama, badge jalur +
+ * asal sekolah/email + tanggal, QuietBadge "Ditolak" untuk status tidak
+ * biasa. Menu ⋯ berisi Detail, Edit Catatan, pilihan status (Jadikan
+ * Menunggu / Terima / Tolak — Terima & Tolak lewat modal konfirmasi), Telepon
+ * (bila ada nomor) & Hapus. Tap baris = buka modal detail; tekan lama = mode
+ * pilih. Nomor urut & kolom tanggal tetap desktop-saja, sama seperti tabel
+ * lamanya.
  */
 function RegistrationMobileRow({
   item,
@@ -2219,7 +2256,7 @@ function RegistrationMobileRow({
   onToggleSelect,
   onDetail,
   onEditNotes,
-  onToggleStatus,
+  onSetStatus,
   onDelete,
 }: {
   item: SpmbRegistration;
@@ -2229,14 +2266,37 @@ function RegistrationMobileRow({
   onToggleSelect: (id: string) => void;
   onDetail: (r: SpmbRegistration) => void;
   onEditNotes: (r: SpmbRegistration) => void;
-  onToggleStatus: (r: SpmbRegistration) => void;
+  onSetStatus: (r: SpmbRegistration, s: "pending" | "accepted" | "rejected") => void;
   onDelete: (r: SpmbRegistration) => void;
 }) {
   const st = statusConfig[item.status] || statusConfig.pending;
-  const StatusIcon = st.icon;
   const actions: RowAction[] = [
     { key: "detail", label: "Detail", icon: <Eye className="h-4 w-4" />, run: () => onDetail(item) },
     { key: "notes", label: "Edit Catatan", icon: <PencilSimple className="h-4 w-4" />, run: () => onEditNotes(item) },
+    ...(item.status !== "pending"
+      ? [{
+          key: "pending",
+          label: "Jadikan Menunggu",
+          icon: <Clock className="h-4 w-4" />,
+          run: () => onSetStatus(item, "pending"),
+        }]
+      : []),
+    ...(item.status !== "accepted"
+      ? [{
+          key: "accept",
+          label: "Terima",
+          icon: <CheckCircle className="h-4 w-4" />,
+          run: () => onSetStatus(item, "accepted"),
+        }]
+      : []),
+    ...(item.status !== "rejected"
+      ? [{
+          key: "reject",
+          label: "Tolak",
+          icon: <XCircle className="h-4 w-4" />,
+          run: () => onSetStatus(item, "rejected"),
+        }]
+      : []),
     ...(item.phone
       ? [{
           key: "call",
@@ -2267,12 +2327,20 @@ function RegistrationMobileRow({
               />
             </span>
           ) : (
-            <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#082b59]/10 text-[11px] font-bold text-[#082b59]">
-              {item.full_name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center">
+              <span aria-hidden="true" className="flex h-10 w-10 items-center justify-center rounded-full bg-[#082b59]/10 text-[11px] font-bold text-[#082b59]">
+                {item.full_name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+              </span>
+              <StatusDot
+                tone={DOT_TONE[item.status] ?? "pending"}
+                label={st.label}
+                className="absolute bottom-0 right-0"
+              />
             </span>
           )
         }
         title={item.full_name}
+        badge={item.status === "rejected" ? <QuietBadge>Ditolak</QuietBadge> : undefined}
         subtitle={
           <>
             <span className={`inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${pathColors[item.registration_path] || "bg-slate-100 text-slate-600"}`}>
@@ -2285,23 +2353,6 @@ function RegistrationMobileRow({
               {new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
             </span>
           </>
-        }
-        status={
-          <button
-            type="button"
-            data-no-longpress=""
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleStatus(item);
-            }}
-            disabled={selectMode}
-            title="Ubah status (Menunggu → Diterima → Ditolak)"
-            aria-label={`Ubah status ${item.full_name} — saat ini ${st.label}`}
-            className={`inline-flex min-h-10 items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:opacity-60 ${st.bg} ${st.color}`}
-          >
-            <StatusIcon className="h-3 w-3" />
-            {st.label}
-          </button>
         }
         actions={<RowActionsMenu label={item.full_name} actions={actions} disabled={selectMode} />}
         selected={selected}
