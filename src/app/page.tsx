@@ -3,9 +3,9 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock } from "@/components/Icons";
 import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList, registrationHref } from "@/lib/queries";
-import { FadeIn } from "@/components/Animations";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import { faqs } from "./faq-data";
+import HeroCarousel from "./HeroCarousel";
 import {
   SITE,
   capitalizeCategory,
@@ -16,7 +16,9 @@ import type { Achievement } from "@/lib/supabase";
 
 const FAQ = dynamic(() => import("./FAQ"), { loading: () => <div className="h-96" /> });
 const WhatsAppButton = dynamic(() => import("./WhatsAppButton"));
-const HeroCarousel = dynamic(() => import("./HeroCarousel"), { loading: () => <div className="h-[480px] md:h-[600px] rounded-2xl bg-[#082b59]/10" /> });
+// HeroCarousel diimpor statis (bukan dynamic): hero ada tepat di layar pertama,
+// dynamic import membuat hero kosong menunggu chunk JS ekstra → terasa "delay"
+// di HP. Videonya sendiri tetap dimuat malas (preload=none + IntersectionObserver).
 const TeacherCarousel = dynamic(() => import("./TeacherCarousel"), { loading: () => <div className="h-64 rounded-2xl bg-slate-100" /> });
 const CountdownEvent = dynamic(() => import("@/components/CountdownEvent"));
 
@@ -48,6 +50,9 @@ const NEWS_BADGE: Record<string, string> = {
   agenda: "border-purple-200 bg-purple-50 text-purple-700",
 };
 
+/** content-visibility: lewati render section di luar layar; containIntrinsicSize mencegah scroll loncat. */
+const CV = { contentVisibility: "auto", containIntrinsicSize: "auto 720px" } as React.CSSProperties;
+
 const FACILITY_FALLBACKS: Record<string, string> = {
   "Ruang Kelas": "/images/Ruang-Kelas.jpg",
   "Lab Komputer": "/images/Lab-Komputer.jpeg",
@@ -66,18 +71,23 @@ export const revalidate = 300;
 type NewsItem = { id: string | number; slug: string; title: string; summary: string; category: string; image_url?: string | null; image_alt?: string | null; published_at?: string };
 
 export default async function Home() {
+  // Batasi jumlah baris sesuai yang benar-benar dipakai beranda (berita/kegiatan/
+  // artikel 4, fasilitas 3, prestasi 6, guru 12) supaya payload & waktu render
+  // ulang ISR lebih ringan — terutama saat dibuka dari HP.
   const [beritaRaw, dbFacilities, activities, articles, teachers, profile, achievements] = await Promise.all([
     getNewsList(4) as Promise<NewsItem[]>,
-    getFacilityList(),
+    getFacilityList(3),
     getActivityList(4),
     getArticleList(4),
-    getTeacherList(),
+    getTeacherList(12),
     getSchoolProfile(),
-    getAchievementList(),
+    getAchievementList(undefined, { featuredFirst: true, limit: 6 }),
   ]);
 
   // Urutan prestasi di beranda disamakan dengan halaman /achievements:
-  // unggulan dulu, lalu tahun menurun, lalu terbit menurun.
+  // unggulan dulu, lalu tahun menurun, lalu terbit menurun. Urutan yang sama
+  // sudah dipakai di query (`featuredFirst`), jadi 6 baris teratas yang diambil
+  // sudah tepat; sort ulang di sini tetap dipertahankan sebagai pengaman.
   const achievementsSorted = [...achievements].sort(
     (a, b) =>
       Number(b.is_featured || false) - Number(a.is_featured || false) ||
@@ -101,79 +111,73 @@ export default async function Home() {
       {/* ── HERO — only section using Framer Motion ───────── */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a]" />
-        <div className="absolute inset-0 opacity-20">
+        <div
+          className="absolute inset-0 md:hidden"
+          style={{ backgroundImage: "radial-gradient(circle at 0% 0%, rgba(244,210,31,0.14), transparent 45%), radial-gradient(circle at 100% 100%, rgba(23,103,177,0.35), transparent 55%)" }}
+        />
+        <div className="absolute inset-0 hidden opacity-20 md:block">
           <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#f4d21f] blur-[150px]" />
           <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-[#1767b1] blur-[180px]" />
         </div>
-        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
+        <div className="absolute inset-0 hidden opacity-[0.03] md:block" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#f4d21f]/30 to-transparent" />
 
         <div className="relative mx-auto grid max-w-[1296px] gap-12 px-6 pb-20 pt-16 md:px-10 md:pb-28 md:pt-24 lg:grid-cols-[1.1fr_.9fr] lg:items-center">
           <div className="text-white">
-            <FadeIn delay={0.1}>
-              <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-[#f4d21f]/30 bg-[#f4d21f]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[#f4d21f]">
-                Pusat Kaderisasi Da&apos;i &amp; Ulama Hafidz &middot; {SITE.tagline}
-              </div>
-            </FadeIn>
+            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-[#f4d21f]/30 bg-[#f4d21f]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[#f4d21f]">
+              Pusat Kaderisasi Da&apos;i &amp; Ulama Hafidz &middot; {SITE.tagline}
+            </div>
 
-            <FadeIn delay={0.2}>
-              <h1 className="max-w-3xl text-4xl font-bold leading-[1.1] md:text-5xl lg:text-6xl">
-                Pendidikan yang menumbuhkan{" "}
-                <span className="relative inline-block">
-                  <span className="gradient-text">ilmu, iman,</span>
-                  <svg className="absolute -bottom-1 left-0 w-full" viewBox="0 0 200 12" fill="none">
-                    <path d="M2 8C40 2 80 2 100 6C120 10 160 10 198 4" stroke="#f4d21f" strokeWidth="3" strokeLinecap="round" />
-                  </svg>
-                </span>{" "}
-                dan keberanian.
-              </h1>
-            </FadeIn>
+            <h1 className="max-w-3xl text-4xl font-bold leading-[1.1] md:text-5xl lg:text-6xl">
+              Pendidikan yang menumbuhkan{" "}
+              <span className="relative inline-block">
+                <span className="gradient-text">ilmu, iman,</span>
+                <svg className="absolute -bottom-1 left-0 w-full" viewBox="0 0 200 12" fill="none">
+                  <path d="M2 8C40 2 80 2 100 6C120 10 160 10 198 4" stroke="#f4d21f" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+              </span>{" "}
+              dan keberanian.
+            </h1>
 
-            <FadeIn delay={0.35}>
-              <p className="mt-7 max-w-xl text-lg leading-relaxed text-white/70">
-                SMP Muhammadiyah 4 Tanggul memadukan keunggulan akademik dan keislaman secara terintegrasi untuk membentuk kader umat yang berakhlak mulia.
-              </p>
-            </FadeIn>
+            <p className="mt-7 max-w-xl text-lg leading-relaxed text-white/70">
+              SMP Muhammadiyah 4 Tanggul memadukan keunggulan akademik dan keislaman secara terintegrasi untuk membentuk kader umat yang berakhlak mulia.
+            </p>
 
-            <FadeIn delay={0.4}>
-              <div className="mt-9 flex flex-wrap items-center gap-5">
-                <Link
-                  href={registrationHref(profile)}
-                  className="group inline-flex items-center gap-2 rounded-xl bg-[#f4d21f] px-6 py-3.5 text-sm font-bold text-[#082b59] transition-all hover:bg-white hover:shadow-lg hover:shadow-[#f4d21f]/20"
-                >
-                  Daftar
-                  <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                </Link>
-                <Link
-                  href="/profile"
-                  className="group inline-flex items-center gap-1.5 text-sm font-semibold text-white/80 transition-colors hover:text-[#f4d21f]"
-                >
-                  Kenali sekolah
-                  <CaretRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Link>
-              </div>
-            </FadeIn>
+            <div className="mt-9 flex flex-wrap items-center gap-5">
+              <Link
+                href={registrationHref(profile)}
+                className="group inline-flex items-center gap-2 rounded-xl bg-[#f4d21f] px-6 py-3.5 text-sm font-bold text-[#082b59] transition-all hover:bg-white hover:shadow-lg hover:shadow-[#f4d21f]/20"
+              >
+                Daftar
+                <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </Link>
+              <Link
+                href="/profile"
+                className="group inline-flex items-center gap-1.5 text-sm font-semibold text-white/80 transition-colors hover:text-[#f4d21f]"
+              >
+                Kenali sekolah
+                <CaretRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </div>
           </div>
 
-          <FadeIn direction="left" delay={0.3}>
-            <div className="relative">
-              <div className="absolute -inset-4 rounded-3xl bg-gradient-to-br from-[#f4d21f]/20 to-[#1767b1]/20 blur-2xl" />
-              <HeroCarousel />
-            </div>
-          </FadeIn>
+          <div className="relative">
+            <div className="absolute -inset-4 hidden rounded-3xl bg-gradient-to-br from-[#f4d21f]/20 to-[#1767b1]/20 blur-2xl md:block" />
+            <HeroCarousel />
+          </div>
         </div>
       </section>
 
       <CountdownEvent />
 
       {/* ── SAMBUTAN ──────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-[#f4f7fb]" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+      <section className="relative overflow-hidden bg-[#f4f7fb]" style={CV}>
         <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
           <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.3fr] lg:gap-16">
             <CSSFadeIn>
               <div className="flex justify-center lg:justify-end">
                 <div className="relative">
-                  <div className="absolute -inset-4 rounded-full bg-gradient-to-br from-[#f4d21f]/30 to-[#1767b1]/20 blur-xl" />
+                  <div className="absolute -inset-4 hidden rounded-full bg-gradient-to-br from-[#f4d21f]/30 to-[#1767b1]/20 blur-xl md:block" />
                   <div className="relative h-56 w-56 overflow-hidden rounded-full border-4 border-[#f4d21f] md:h-72 md:w-72">
                     <Image
                       src={profile?.principal_photo_url || "/images/Kepala-Sekolah.jpg"}
@@ -181,7 +185,6 @@ export default async function Home() {
                       fill
                       sizes="288px"
                       className="object-cover object-[center_15%]"
-                      priority
                     />
                   </div>
                   <div className="absolute -bottom-2 -right-2 rounded-2xl bg-[#082b59] px-4 py-2 shadow-lg">
@@ -216,7 +219,7 @@ export default async function Home() {
       </section>
 
       {/* ── QUICK NAV (4 kolom) ────────────────────────────── */}
-      <section className="bg-white" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+      <section className="bg-white" style={CV}>
         <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
           <div className="grid gap-x-8 gap-y-10 md:grid-cols-2 lg:grid-cols-4">
             {/* Berita */}
@@ -475,7 +478,7 @@ export default async function Home() {
       </section>
 
       {/* ── PROGRAM UNGGULAN ──────────────────────────────── */}
-      <section className="bg-white" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+      <section className="bg-white" style={CV}>
         <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
           <CSSFadeIn>
             <div className="mb-12">
@@ -510,7 +513,7 @@ export default async function Home() {
       </section>
 
       {/* ── GURU & STAFF ────────────────────────────────── */}
-      <section className="bg-white" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+      <section className="bg-white" style={CV}>
         <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
           <CSSFadeIn>
             <div className="mb-12 text-center">
@@ -526,7 +529,7 @@ export default async function Home() {
       </section>
 
       {/* ── ARTIKEL ──────────────────────────────────────── */}
-      <section className="bg-[#f4f7fb]" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+      <section className="bg-[#f4f7fb]" style={CV}>
         <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
           <CSSFadeIn>
             <div className="mb-12 flex items-end justify-between">
@@ -534,7 +537,7 @@ export default async function Home() {
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Artikel & Tips</p>
                 <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Artikel Sekolah</h2>
               </div>
-               <Link href="/articles" className="text-sm font-semibold text-[#1767b1] transition-colors hover:text-[#082b59]">
+              <Link href="/articles" className="text-sm font-semibold text-[#1767b1] transition-colors hover:text-[#082b59]">
                 Semua artikel <ArrowUpRight className="inline h-4 w-4" />
               </Link>
             </div>
@@ -562,8 +565,8 @@ export default async function Home() {
       </section>
 
       {/* ── WHY MUH4TA ────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] text-white" style={{ contentVisibility: "auto" } as React.CSSProperties}>
-        <div className="absolute inset-0 opacity-10">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] text-white" style={CV}>
+        <div className="absolute inset-0 hidden opacity-10 md:block">
           <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#f4d21f] blur-[120px]" />
         </div>
         <div className="relative mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
@@ -582,7 +585,7 @@ export default async function Home() {
               ["Nilai yang terintegrasi", "Pembelajaran akademik berjalan bersama pembiasaan ibadah dan akhlak.", Checks],
               ["Berani mencoba", "Siswa mendapat ruang untuk bertanya, berkarya, dan mengembangkan potensi.", Star],
             ] as [string, string, React.ElementType][]).map(([title, description, Icon]) => (
-              <div key={title} className="group rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm transition-all duration-300 hover:border-white/20 hover:bg-white/10">
+              <div key={title} className="group rounded-2xl border border-white/10 bg-white/5 p-6 transition-all md:backdrop-blur-sm duration-300 hover:border-white/20 hover:bg-white/10">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f4d21f]/10 text-[#f4d21f]">
                   <Icon className="h-5 w-5" weight="fill" />
                 </div>
@@ -599,7 +602,7 @@ export default async function Home() {
 
       {/* ── FINAL CTA ─────────────────────────────────────── */}
       <section className="relative overflow-hidden border-t-8 border-[#f4d21f] bg-white">
-        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f]/10 blur-[100px]" />
+        <div className="absolute -right-20 -top-20 hidden h-64 w-64 rounded-full bg-[#f4d21f]/10 blur-[100px] md:block" />
         <div className="relative mx-auto flex max-w-[1296px] flex-col gap-7 px-6 py-16 md:flex-row md:items-center md:justify-between md:px-10">
           <CSSFadeIn>
             <div>

@@ -8,15 +8,29 @@ import { deleteStorageFileByUrl, sanitizeSearchTerm, storagePathFromUrl } from "
  * Daftar prestasi (semua baris tayang — tidak ada kolom is_published).
  * `search` (opsional) menyaring judul ATAU deskripsi — dipakai pencarian
  * menyeluruh di /search.
+ * `opts` (opsional):
+ *  - `featuredFirst`: urutkan unggulan dulu, lalu tahun terbaru (sama persis
+ *    dengan urutan yang dipakai beranda) — bukan `sort_order`;
+ *  - `limit`: batasi jumlah baris (hemat transfer; dipakai beranda).
  */
-export async function getAchievementList(search?: string): Promise<Achievement[]> {
+export async function getAchievementList(
+  search?: string,
+  opts?: { featuredFirst?: boolean; limit?: number }
+): Promise<Achievement[]> {
   const term = sanitizeSearchTerm(search ?? "");
-  let query = supabase
-    .from("achievements")
-    .select("*")
-    .order("sort_order", { ascending: true });
+  let query = supabase.from("achievements").select("*");
+
+  if (opts?.featuredFirst) {
+    query = query
+      .order("is_featured", { ascending: false })
+      .order("year", { ascending: false })
+      .order("created_at", { ascending: false });
+  } else {
+    query = query.order("sort_order", { ascending: true });
+  }
 
   if (term) query = query.or(`title.ilike.%${term}%,description.ilike.%${term}%`);
+  if (opts?.limit) query = query.limit(opts.limit);
 
   const { data, error } = await query;
 

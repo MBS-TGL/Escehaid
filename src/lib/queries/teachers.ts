@@ -3,12 +3,21 @@ import type { Teacher } from "../supabase";
 import { tryCompressImage, TEACHER_PHOTO } from "../compress-image";
 import { cleanupOldFiles, deleteStorageFileByUrl } from "./shared";
 
-export async function getTeacherList(): Promise<Teacher[]> {
-  const { data, error } = await supabase
+/**
+ * Daftar guru aktif (urut `sort_order`).
+ * `limit` (opsional) membatasi jumlah baris — dipakai beranda agar transfer
+ * data tidak membawa seluruh daftar guru.
+ */
+export async function getTeacherList(limit?: number): Promise<Teacher[]> {
+  let query = supabase
     .from("teachers")
     .select("*")
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
+
+  if (limit) query = query.limit(limit);
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching teachers:", error);

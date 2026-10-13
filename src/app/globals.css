@@ -388,3 +388,18 @@ h3 {
     scroll-behavior: auto !important;
   }
 }
+
+/* Animasi masuk (CSSFadeIn/CSSStagger, kelas `anim-reveal`) dimatikan di layar
+   < 768px: konten tampil langsung bahkan sebelum hydration, tanpa menunggu
+   IntersectionObserver — menghilangkan rasa "delay" dan komposisi transform
+   saat scroll di HP. `!important` di sini memang sengaja: harus mengalahkan
+   inline style React (opacity/transform/transition) supaya HTML awal pun sudah
+   terlihat di mobile. Desktop (>= 768px) tetap beranimasi seperti biasa. */
+@media (max-width: 767px) {
+  .anim-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    will-change: auto !important;
+  }
+}

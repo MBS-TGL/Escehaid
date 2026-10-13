@@ -3,12 +3,21 @@ import type { Facility } from "../supabase";
 import { tryCompressImage } from "../compress-image";
 import { deleteStorageFileByUrl, storagePathFromUrl } from "./shared";
 
-export async function getFacilityList(): Promise<Facility[]> {
-  const { data, error } = await supabase
+/**
+ * Daftar fasilitas aktif (urut `sort_order`).
+ * `limit` (opsional) membatasi jumlah baris — dipakai beranda (hanya memakai
+ * 3 fasilitas pertama) supaya tidak mengambil seluruh tabel.
+ */
+export async function getFacilityList(limit?: number): Promise<Facility[]> {
+  let query = supabase
     .from("facilities")
     .select("*")
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
+
+  if (limit) query = query.limit(limit);
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching facilities:", error);

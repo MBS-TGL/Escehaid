@@ -79,7 +79,7 @@ export function CSSFadeIn({
   return (
     <div
       ref={ref}
-      className={className}
+      className={`anim-reveal ${className}`}
       style={{
         opacity: visible ? 1 : 0,
         transform: visible ? "none" : "translateY(20px)",
@@ -110,6 +110,7 @@ export function CSSStagger({
         ? children.map((child, i) => (
           <div
             key={i}
+            className="anim-reveal"
             style={{
               opacity: visible ? 1 : 0,
               transform: visible ? "none" : "translateY(15px)",

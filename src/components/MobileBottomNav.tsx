@@ -97,7 +97,7 @@ export default function MobileBottomNav() {
       >
         <div
           aria-hidden
-          className="absolute inset-0 rounded-[24px] bg-white/95 shadow-[0_8px_30px_rgba(8,43,89,0.14)] backdrop-blur-xl [-webkit-mask-image:radial-gradient(circle_30px_at_50%_0,transparent_29px,black_31px)] [mask-image:radial-gradient(circle_30px_at_50%_0,transparent_29px,black_31px)]"
+          className="absolute inset-0 rounded-[24px] bg-white shadow-[0_8px_30px_rgba(8,43,89,0.14)] [-webkit-mask-image:radial-gradient(circle_30px_at_50%_0,transparent_29px,black_31px)] [mask-image:radial-gradient(circle_30px_at_50%_0,transparent_29px,black_31px)]"
         />
         <ul className="relative grid grid-cols-5">
           <BottomLink href="/" label="Beranda" icon={House} active={isActive("/")} />
