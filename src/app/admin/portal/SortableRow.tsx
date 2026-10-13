@@ -637,7 +637,7 @@ export function SortableRow({
           `select-none` + `-webkit-touch-callout:none` mencegah seleksi teks /
           callout bawaan browser saat long-press (bentrok dengan mode pilih). */}
       <div
-        className="flex select-none items-center gap-2.5 py-2 pl-1.5 pr-0.5 [-webkit-touch-callout:none] md:hidden"
+        className="flex select-none items-center gap-3 py-3 pl-2.5 pr-1 [-webkit-touch-callout:none] md:hidden"
         onClick={onRowClick}
         onPointerDown={onPointerDownRow}
         onPointerMove={onPointerMoveRow}
@@ -676,7 +676,7 @@ export function SortableRow({
             {item.label}
           </p>
           {subtext && (
-            <p className="mt-0.5 line-clamp-2 break-words text-xs leading-snug text-[#64748b]" title={subtext}>
+            <p className="mt-1 line-clamp-2 break-words text-xs leading-snug text-[#64748b]" title={subtext}>
               {subtext}
               {hasLink && item.is_external && (
                 <ArrowSquareOut className="ml-0.5 inline h-3 w-3 align-[-1px]" />

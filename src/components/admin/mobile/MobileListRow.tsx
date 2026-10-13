@@ -16,11 +16,11 @@ const LONG_PRESS_SLOP = 10;
  * Baris daftar mobile serbaguna (bahasa desain putaran 2):
  * [grip/lead 30px] [thumb/tile] [judul + badge + subteks] [⋯ 36×44].
  *
- * Kontainer memakai `gap-2.5 py-2 pl-1.5 pr-0.5 border-t border-slate-100`
+ * Kontainer memakai `gap-3 py-3 pl-2.5 pr-1 border-t border-slate-100`
  * (baris pertama punya garis pemisah; bila daftar membungkus `divide-y`,
  * hapus divide-y agar garis tidak dobel). Judul 15px/600 `#0f2a4d`
- * line-clamp-2; subteks 12px `#64748b`. Slot `badge` hanya untuk keadaan
- * tidak biasa (Nonaktif/Draft/Terjadwal).
+ * line-clamp-2; subteks 12px `#64748b` dengan jarak 4px dari judul.
+ * Slot `badge` hanya untuk keadaan tidak biasa (Nonaktif/Draft/Terjadwal).
  *
  * Slot `lead` diisi handle drag atau checkbox (pada mode pilih) sehingga
  * lebar baris tidak berubah antar mode. Semua slot interaktif (handle,
@@ -118,7 +118,7 @@ export function MobileListRow({
       onPointerUp={cancelPress}
       onPointerCancel={cancelPress}
       onPointerLeave={cancelPress}
-      className={`flex select-none items-center gap-2.5 border-t border-slate-100 py-2 pl-1.5 pr-0.5 [-webkit-touch-callout:none] ${
+      className={`flex select-none items-center gap-3 border-t border-slate-100 py-3 pl-2.5 pr-1 [-webkit-touch-callout:none] ${
         onClick ? "cursor-pointer active:bg-slate-50" : ""
       } ${selected ? "bg-[#082b59]/[0.03]" : ""} ${className}`}
     >
@@ -134,7 +134,7 @@ export function MobileListRow({
           </div>
         )}
         {subtitle && (
-          <div className="mt-0.5 line-clamp-2 break-words text-xs leading-snug text-[#64748b]">
+          <div className="mt-1 line-clamp-2 break-words text-xs leading-snug text-[#64748b]">
             {subtitle}
           </div>
         )}
