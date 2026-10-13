@@ -64,9 +64,9 @@ const EMPTY_LIST: MediaFile[] = [];
 
 /**
  * Media library admin: lihat / cari / hapus file Storage per bucket.
- * Hapus hanya diizinkan untuk file YATIM (tidak direferensikan tabel mana pun)
- * DAN setelah pemindaian referensi lengkap — bila ada tabel gagal dipindai,
- * hapus dinonaktifkan sepenuhnya (aman-arah: jangan hapus file yang dipakai).
+ * Hapus hanya diizinkan untuk file TIDAK TERPAKAI (orphan — tidak direferensikan
+ * tabel mana pun) DAN setelah pemindaian referensi lengkap — bila ada tabel gagal
+ * dipindai, hapus dinonaktifkan sepenuhnya (aman-arah: jangan hapus file yang dipakai).
  */
 export default function AdminMediaPage() {
   const { toast } = useToast();
@@ -169,7 +169,7 @@ export default function AdminMediaPage() {
     );
   }
 
-  /** File boleh dihapus hanya setelah pemindaian lengkap dan file yatim. */
+  /** File boleh dihapus hanya setelah pemindaian lengkap dan file tidak terpakai (orphan). */
   function canDeleteFile(file: MediaFile): boolean {
     return scanComplete && refs !== null && !isMediaReferenced(file, refs);
   }
@@ -285,12 +285,12 @@ export default function AdminMediaPage() {
           { label: "Total ukuran", value: formatBytes(totalSize), variant: "info" },
           { label: "Terpakai", value: usedCount ?? "…", variant: "success" },
           {
-            label: "Yatim (tidak direferensikan)",
+            label: "Tidak Terpakai",
             value: orphanCount ?? "…",
             variant: orphanCount ? "warning" : "brand",
           },
         ]}
-        summary={`${files.length} File · ${formatBytes(totalSize)} Total Ukuran · ${usedCount ?? "…"} Terpakai · ${orphanCount ?? "…"} Yatim`}
+        summary={`${files.length} File · ${formatBytes(totalSize)} Total Ukuran · ${usedCount ?? "…"} Terpakai · ${orphanCount ?? "…"} Tidak Terpakai`}
       />
 
       {/* Pemindaian referensi belum lengkap → hapus dinonaktifkan */}
@@ -423,7 +423,7 @@ export default function AdminMediaPage() {
                             : "bg-amber-500/90 text-white"
                         }`}
                       >
-                        {referenced ? "Terpakai" : "Yatim"}
+                        {referenced ? "Terpakai" : "Tidak terpakai"}
                       </span>
                     )}
                   </div>
@@ -478,7 +478,7 @@ export default function AdminMediaPage() {
                                 ? "Pemindaian referensi belum lengkap — hapus dinonaktifkan"
                                 : referenced
                                   ? "File masih dipakai konten — tidak boleh dihapus"
-                                  : "Hapus file yatim ini"
+                                  : "Hapus file yang tidak terpakai ini"
                             }
                             className={`rounded-lg p-1.5 transition-colors ${
                               canDelete
@@ -569,12 +569,12 @@ export default function AdminMediaPage() {
                             ? undefined
                             : referenced
                               ? { tone: "active", label: "Terpakai" }
-                              : { tone: "pending", label: "Yatim" }
+                              : { tone: "pending", label: "Tidak terpakai" }
                         }
                       />
                     }
                     title={file.name}
-                    badge={!referenced && referenced !== null ? <QuietBadge>Yatim</QuietBadge> : undefined}
+                    badge={!referenced && referenced !== null ? <QuietBadge>Tidak terpakai</QuietBadge> : undefined}
                     subtitle={
                       <>
                         <span className="min-w-0 truncate">
