@@ -24,7 +24,8 @@ import { compressImage } from "@/lib/compress-image";
 import { RichContent } from "@/components/RichContent";
 import CoverImage from "@/components/CoverImage";
 import { parseVideoUrl, VIDEO_PROVIDER_LABEL } from "@/lib/video-embed";
-import { StatCard, StatCardRow, Modal, ConfirmModal, SlideOver, RichTextEditor, SkeletonBlock } from "@/components/ui";
+import { Modal, ConfirmModal, SlideOver, RichTextEditor, SkeletonBlock } from "@/components/ui";
+import { StatsSection } from "@/components/admin/StatsSection";
 import type { Activity } from "@/lib/supabase";
 import {
   CalendarBlank,
@@ -509,24 +510,17 @@ export default function AdminActivitiesPage() {
         </button>
       </div>
 
-      {/* Stats — desktop: carousel/grid StatCardRow; mobile: grid 2 kolom
-          tanpa pager titik (kartu memuat metrik unik: Akan Datang, Bulan Ini). */}
-      <div className="hidden md:block">
-        <StatCardRow>
-          <StatCard label="Total" value={stats.total} variant="brand" />
-          <StatCard label="Diterbitkan" value={stats.published} variant="success" />
-          <StatCard label="Draft" value={stats.draft} variant="warning" />
-          <StatCard label="Akan Datang" value={stats.upcoming} variant="purple" />
-          <StatCard label="Bulan Ini" value={stats.thisMonth} variant="info" />
-        </StatCardRow>
-      </div>
-      <div className="mb-6 grid grid-cols-2 gap-3 md:hidden">
-        <StatCard label="Total" value={stats.total} variant="brand" />
-        <StatCard label="Diterbitkan" value={stats.published} variant="success" />
-        <StatCard label="Draft" value={stats.draft} variant="warning" />
-        <StatCard label="Akan Datang" value={stats.upcoming} variant="purple" />
-        <StatCard label="Bulan Ini" value={stats.thisMonth} variant="info" />
-      </div>
+      {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
+          di mobile (metrik unik "Akan Datang"/"Bulan Ini" ikut tampil di teks). */}
+      <StatsSection
+        stats={[
+          { label: "Total", value: stats.total, variant: "brand" },
+          { label: "Diterbitkan", value: stats.published, variant: "success" },
+          { label: "Draft", value: stats.draft, variant: "warning" },
+          { label: "Akan Datang", value: stats.upcoming, variant: "purple" },
+          { label: "Bulan Ini", value: stats.thisMonth, variant: "info" },
+        ]}
+      />
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (

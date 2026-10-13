@@ -9,7 +9,8 @@ import {
   toggleReadContactMessage,
   toggleReadContactMessageBulk,
 } from "@/lib/queries";
-import { SlideOver, StatCard, StatCardRow, SkeletonBlock } from "@/components/ui";
+import { SlideOver, SkeletonBlock } from "@/components/ui";
+import { StatsSection } from "@/components/admin/StatsSection";
 import type { ContactMessage } from "@/lib/supabase";
 import {
   Envelope,
@@ -251,22 +252,16 @@ export default function AdminContactPage() {
         </div>
       </div>
 
-      {/* Stats — desktop: StatCardRow; mobile: grid 2 kolom tanpa pager
-          (kartu memuat metrik unik "Hari Ini"). */}
-      <div className="hidden md:block">
-        <StatCardRow>
-          <StatCard label="Total" value={stats.total} variant="brand" />
-          <StatCard label="Belum Dibaca" value={stats.unread} variant="warning" />
-          <StatCard label="Sudah Dibaca" value={stats.read} variant="success" />
-          <StatCard label="Hari Ini" value={stats.today} variant="info" />
-        </StatCardRow>
-      </div>
-      <div className="mb-6 grid grid-cols-2 gap-3 md:hidden">
-        <StatCard label="Total" value={stats.total} variant="brand" />
-        <StatCard label="Belum Dibaca" value={stats.unread} variant="warning" />
-        <StatCard label="Sudah Dibaca" value={stats.read} variant="success" />
-        <StatCard label="Hari Ini" value={stats.today} variant="info" />
-      </div>
+      {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
+          di mobile (metrik unik "Hari Ini" ikut tampil di teks). */}
+      <StatsSection
+        stats={[
+          { label: "Total", value: stats.total, variant: "brand" },
+          { label: "Belum Dibaca", value: stats.unread, variant: "warning" },
+          { label: "Sudah Dibaca", value: stats.read, variant: "success" },
+          { label: "Hari Ini", value: stats.today, variant: "info" },
+        ]}
+      />
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (

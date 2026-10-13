@@ -9,7 +9,8 @@ import {
   deleteGalleryBulk,
   uploadGalleryImage,
 } from "@/lib/queries";
-import { StatCard, StatCardRow, SlideOver } from "@/components/ui";
+import { SlideOver } from "@/components/ui";
+import { StatsSection } from "@/components/admin/StatsSection";
 import type { Gallery } from "@/lib/supabase";
 import {
   ImageSquare,
@@ -315,22 +316,16 @@ export default function AdminGalleryPage() {
         </button>
       </div>
 
-      {/* Stats desktop — mobile: grid 2 kolom tanpa pager titik
-          (kartu memuat metrik unik "Bulan Ini"). */}
-      <div className="hidden md:block">
-        <StatCardRow>
-          <StatCard label="Total" value={stats.total} variant="brand" />
-          <StatCard label="Foto" value={stats.foto} variant="info" />
-          <StatCard label="Video" value={stats.video} variant="purple" />
-          <StatCard label="Bulan Ini" value={stats.thisMonth} variant="success" />
-        </StatCardRow>
-      </div>
-      <div className="mb-6 grid grid-cols-2 gap-3 md:hidden">
-        <StatCard label="Total" value={stats.total} variant="brand" />
-        <StatCard label="Foto" value={stats.foto} variant="info" />
-        <StatCard label="Video" value={stats.video} variant="purple" />
-        <StatCard label="Bulan Ini" value={stats.thisMonth} variant="success" />
-      </div>
+      {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
+          di mobile (metrik unik "Bulan Ini" ikut tampil di teks). */}
+      <StatsSection
+        stats={[
+          { label: "Total", value: stats.total, variant: "brand" },
+          { label: "Foto", value: stats.foto, variant: "info" },
+          { label: "Video", value: stats.video, variant: "purple" },
+          { label: "Bulan Ini", value: stats.thisMonth, variant: "success" },
+        ]}
+      />
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (

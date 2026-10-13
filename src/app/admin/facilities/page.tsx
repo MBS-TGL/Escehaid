@@ -30,7 +30,8 @@ import {
   revalidateFacilities,
 } from "@/lib/queries";
 import { compressImage } from "@/lib/compress-image";
-import { StatCard, StatCardRow, Modal, ConfirmModal, SlideOver, SkeletonBlock } from "@/components/ui";
+import { Modal, ConfirmModal, SlideOver, SkeletonBlock } from "@/components/ui";
+import { StatsSection } from "@/components/admin/StatsSection";
 import type { Facility } from "@/lib/supabase";
 import {
   ImageSquare,
@@ -485,19 +486,17 @@ export default function AdminFacilitiesPage() {
         </div>
       </div>
 
-      {/* Stats desktop — kartu statistik tetap di desktop; mobile memakai
-          ringkasan satu baris (hanya menduplikasi jumlah filter). */}
-      <div className="hidden md:block">
-        <StatCardRow>
-          <StatCard label="Total" value={stats.total} variant="brand" />
-          <StatCard label="Aktif" value={stats.active} variant="success" />
-          <StatCard label="Nonaktif" value={stats.inactive} variant="warning" />
-          <StatCard label="Bergambar" value={stats.withImage} variant="info" />
-        </StatCardRow>
-      </div>
-      <p className="mb-4 text-xs font-medium text-[#64748b] md:hidden">
-        {stats.total} Fasilitas · {stats.active} Aktif · {stats.inactive} Nonaktif
-      </p>
+      {/* Stats — template StatsSection: kartu desktop (termasuk "Bergambar"),
+          ringkasan satu baris di mobile (angka = jumlah filter status). */}
+      <StatsSection
+        stats={[
+          { label: "Total", value: stats.total, variant: "brand" },
+          { label: "Aktif", value: stats.active, variant: "success" },
+          { label: "Nonaktif", value: stats.inactive, variant: "warning" },
+          { label: "Bergambar", value: stats.withImage, variant: "info" },
+        ]}
+        summary={`${stats.total} Fasilitas · ${stats.active} Aktif · ${stats.inactive} Nonaktif`}
+      />
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (

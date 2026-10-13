@@ -17,7 +17,8 @@ import {
   revalidatePaths,
   type ArticleWithAuthor,
 } from "@/lib/queries";
-import { StatCard, StatCardRow, Modal, SlideOver, RichTextEditor, ConfirmModal, SkeletonBlock } from "@/components/ui";
+import { Modal, SlideOver, RichTextEditor, ConfirmModal, SkeletonBlock } from "@/components/ui";
+import { StatsSection } from "@/components/admin/StatsSection";
 import { sanitize } from "@/lib/sanitize";
 import CoverImage from "@/components/CoverImage";
 import { compressImage } from "@/lib/compress-image";
@@ -808,22 +809,16 @@ export default function AdminArticlesPage() {
         </button>
       </div>
 
-      {/* Stats — desktop: StatCardRow; mobile: grid 2 kolom tanpa pager
-          (kartu memuat metrik unik "Bulan Ini"). */}
-      <div className="hidden md:block">
-        <StatCardRow>
-          <StatCard label="Total" value={stats.total} variant="brand" />
-          <StatCard label="Diterbitkan" value={stats.published} variant="success" />
-          <StatCard label="Draft" value={stats.draft} variant="warning" />
-          <StatCard label="Bulan Ini" value={stats.thisMonth} variant="info" />
-        </StatCardRow>
-      </div>
-      <div className="mb-6 grid grid-cols-2 gap-3 md:hidden">
-        <StatCard label="Total" value={stats.total} variant="brand" />
-        <StatCard label="Diterbitkan" value={stats.published} variant="success" />
-        <StatCard label="Draft" value={stats.draft} variant="warning" />
-        <StatCard label="Bulan Ini" value={stats.thisMonth} variant="info" />
-      </div>
+      {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
+          di mobile (metrik unik "Bulan Ini" ikut tampil di teks). */}
+      <StatsSection
+        stats={[
+          { label: "Total", value: stats.total, variant: "brand" },
+          { label: "Diterbitkan", value: stats.published, variant: "success" },
+          { label: "Draft", value: stats.draft, variant: "warning" },
+          { label: "Bulan Ini", value: stats.thisMonth, variant: "info" },
+        ]}
+      />
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (

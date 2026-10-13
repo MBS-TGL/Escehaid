@@ -10,7 +10,8 @@ import {
   uploadAchievementImage,
   revalidateAchievements,
 } from "@/lib/queries";
-import { StatCard, StatCardRow, SlideOver, ConfirmModal } from "@/components/ui";
+import { SlideOver, ConfirmModal } from "@/components/ui";
+import { StatsSection } from "@/components/admin/StatsSection";
 import type { Achievement } from "@/lib/supabase";
 import { useToast } from "@/components/ui/Toast";
 import { compressImage } from "@/lib/compress-image";
@@ -542,22 +543,16 @@ export default function AdminAchievementsPage() {
         </button>
       </div>
 
-      {/* Stats desktop — mobile: grid 2 kolom tanpa pager titik
-          (kartu memuat metrik unik "Tahun Ini" & "Unggulan"). */}
-      <div className="hidden md:block">
-        <StatCardRow>
-          <StatCard label="Total" value={stats.total} variant="brand" />
-          <StatCard label="Tahun Ini" value={stats.thisYear} variant="success" />
-          <StatCard label="Kategori" value={stats.categories} variant="purple" />
-          <StatCard label="Unggulan" value={stats.featured} variant="warning" />
-        </StatCardRow>
-      </div>
-      <div className="mb-6 grid grid-cols-2 gap-3 md:hidden">
-        <StatCard label="Total" value={stats.total} variant="brand" />
-        <StatCard label="Tahun Ini" value={stats.thisYear} variant="success" />
-        <StatCard label="Kategori" value={stats.categories} variant="purple" />
-        <StatCard label="Unggulan" value={stats.featured} variant="warning" />
-      </div>
+      {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
+          di mobile (metrik unik "Tahun Ini"/"Unggulan" ikut tampil di teks). */}
+      <StatsSection
+        stats={[
+          { label: "Total", value: stats.total, variant: "brand" },
+          { label: "Tahun Ini", value: stats.thisYear, variant: "success" },
+          { label: "Kategori", value: stats.categories, variant: "purple" },
+          { label: "Unggulan", value: stats.featured, variant: "warning" },
+        ]}
+      />
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (

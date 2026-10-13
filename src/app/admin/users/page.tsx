@@ -8,7 +8,8 @@ import {
   deleteProfile,
   deleteProfileBulk,
 } from "@/lib/queries";
-import { StatCard, StatCardRow, SlideOver } from "@/components/ui";
+import { SlideOver } from "@/components/ui";
+import { StatsSection } from "@/components/admin/StatsSection";
 import type { UserProfile } from "@/lib/auth";
 import {
   User,
@@ -227,13 +228,18 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <StatCardRow>
-        <StatCard label="Total" value={stats.total} variant="brand" />
-        <StatCard label="Aktif" value={stats.active} variant="success" />
-        <StatCard label="Tidak Aktif" value={stats.inactive} variant="danger" />
-        <StatCard label="Admin" value={stats.admins} variant="purple" />
-      </StatCardRow>
+      {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
+          di mobile (sebelumnya StatCardRow tampil sebagai carousel di
+          mobile karena tanpa wrapper hidden md:block). */}
+      <StatsSection
+        stats={[
+          { label: "Total", value: stats.total, variant: "brand" },
+          { label: "Aktif", value: stats.active, variant: "success" },
+          { label: "Tidak Aktif", value: stats.inactive, variant: "danger" },
+          { label: "Admin", value: stats.admins, variant: "purple" },
+        ]}
+        summary={`${stats.total} Pengguna · ${stats.active} Aktif · ${stats.inactive} Tidak Aktif · ${stats.admins} Admin`}
+      />
 
       {/* Bulk actions */}
       {selectedIds.size > 0 && (

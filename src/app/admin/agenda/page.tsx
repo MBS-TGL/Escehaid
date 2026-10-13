@@ -9,7 +9,8 @@ import {
   deleteAgendaEventBulk,
 } from "@/lib/queries";
 import type { AgendaEvent } from "@/lib/queries";
-import { StatCard, StatCardRow, ConfirmModal, SlideOver, SkeletonBlock } from "@/components/ui";
+import { ConfirmModal, SlideOver, SkeletonBlock } from "@/components/ui";
+import { StatsSection } from "@/components/admin/StatsSection";
 import { useToast } from "@/components/ui/Toast";
 import {
   CalendarBlank,
@@ -228,17 +229,16 @@ export default function AdminAgendaPage() {
         </button>
       </div>
 
-      {/* Stats desktop — mobile memakai ringkasan satu baris. */}
-      <div className="hidden md:block">
-        <StatCardRow>
-          <StatCard label="Total" value={items.length} variant="brand" />
-          <StatCard label="Aktif" value={activeCount} variant="success" />
-          <StatCard label="Nonaktif" value={inactiveCount} variant="warning" />
-        </StatCardRow>
-      </div>
-      <p className="mb-4 text-xs font-medium text-[#64748b] md:hidden">
-        {items.length} Agenda · {activeCount} Aktif · {inactiveCount} Nonaktif
-      </p>
+      {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
+          di mobile (angka = jumlah filter status). */}
+      <StatsSection
+        stats={[
+          { label: "Total", value: items.length, variant: "brand" },
+          { label: "Aktif", value: activeCount, variant: "success" },
+          { label: "Nonaktif", value: inactiveCount, variant: "warning" },
+        ]}
+        summary={`${items.length} Agenda · ${activeCount} Aktif · ${inactiveCount} Nonaktif`}
+      />
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (

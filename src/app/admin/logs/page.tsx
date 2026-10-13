@@ -8,7 +8,7 @@ import {
   getAuditStats,
 } from "@/lib/queries";
 import type { AuditAction, AuditLogResult } from "@/lib/queries";
-import { StatCard, StatCardRow } from "@/components/ui";
+import { StatsSection } from "@/components/admin/StatsSection";
 import {
   CaretDown,
   CaretLeft,
@@ -162,26 +162,16 @@ export default function AdminLogsPage() {
         </div>
       )}
 
-      {/* Statistik — desktop: kartu baris; mobile: ringkas 2 metrik unik. */}
+      {/* Statistik — template StatsSection: kartu desktop, ringkasan satu
+          baris di mobile. */}
       {available && stats && (
-        <>
-          <div className="hidden md:block">
-            <StatCardRow>
-              <StatCard label="Total aktivitas" value={stats.total} variant="brand" />
-              <StatCard label="Hari ini" value={stats.today} variant="info" />
-            </StatCardRow>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3 md:hidden">
-            <div className="rounded-2xl border border-slate-200/70 bg-white p-3">
-              <p className="text-xs text-[#64748b]">Total aktivitas</p>
-              <p className="mt-0.5 text-xl font-bold text-[#0f2a4d] tabular-nums">{stats.total}</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200/70 bg-white p-3">
-              <p className="text-xs text-[#64748b]">Hari ini</p>
-              <p className="mt-0.5 text-xl font-bold text-[#0f2a4d] tabular-nums">{stats.today}</p>
-            </div>
-          </div>
-        </>
+        <StatsSection
+          stats={[
+            { label: "Total Aktivitas", value: stats.total, variant: "brand" },
+            { label: "Hari Ini", value: stats.today, variant: "info" },
+          ]}
+          summary={`${stats.total} Aktivitas · ${stats.today} Hari Ini`}
+        />
       )}
 
       {/* Filter — mobile: toolbar dua baris (cari + pill aksi/objek);

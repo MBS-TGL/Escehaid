@@ -12,7 +12,7 @@ import {
   mediaSignedUrl,
 } from "@/lib/queries";
 import type { MediaBucket, MediaFile, MediaReferenceScan } from "@/lib/queries";
-import { StatCard, StatCardRow } from "@/components/ui";
+import { StatsSection } from "@/components/admin/StatsSection";
 import { useToast } from "@/components/ui/Toast";
 import {
   ArrowSquareOut,
@@ -277,34 +277,21 @@ export default function AdminMediaPage() {
         </div>
       </div>
 
-      {/* Stats desktop — mobile: grid 2 kolom tanpa pager titik
-          (kartu memuat metrik unik "Total ukuran" & "Yatim"). */}
-      <div className="hidden md:block">
-        <StatCardRow>
-          <StatCard label="File (bucket ini)" value={files.length} variant="brand" />
-          <StatCard label="Total ukuran" value={formatBytes(totalSize)} variant="info" />
-          <StatCard
-            label="Terpakai"
-            value={usedCount ?? "…"}
-            variant="success"
-          />
-          <StatCard
-            label="Yatim (tidak direferensikan)"
-            value={orphanCount ?? "…"}
-            variant={orphanCount ? "warning" : "brand"}
-          />
-        </StatCardRow>
-      </div>
-      <div className="mb-6 grid grid-cols-2 gap-3 md:hidden">
-        <StatCard label="File (bucket ini)" value={files.length} variant="brand" />
-        <StatCard label="Total ukuran" value={formatBytes(totalSize)} variant="info" />
-        <StatCard label="Terpakai" value={usedCount ?? "…"} variant="success" />
-        <StatCard
-          label="Yatim (tidak direferensikan)"
-          value={orphanCount ?? "…"}
-          variant={orphanCount ? "warning" : "brand"}
-        />
-      </div>
+      {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
+          di mobile (label dipendekkan supaya teks mobile tidak bertele-tele). */}
+      <StatsSection
+        stats={[
+          { label: "File (bucket ini)", value: files.length, variant: "brand" },
+          { label: "Total ukuran", value: formatBytes(totalSize), variant: "info" },
+          { label: "Terpakai", value: usedCount ?? "…", variant: "success" },
+          {
+            label: "Yatim (tidak direferensikan)",
+            value: orphanCount ?? "…",
+            variant: orphanCount ? "warning" : "brand",
+          },
+        ]}
+        summary={`${files.length} File · ${formatBytes(totalSize)} Total Ukuran · ${usedCount ?? "…"} Terpakai · ${orphanCount ?? "…"} Yatim`}
+      />
 
       {/* Pemindaian referensi belum lengkap → hapus dinonaktifkan */}
       {scan && !scanComplete && (
