@@ -76,6 +76,44 @@ const REFERENCE_TABLES = [
 
 const MAX_FOLDER_DEPTH = 4;
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Gangguan SEMENTARA yang layak dicoba ulang — Supabase Storage kadang
+ * melempar 503 "Service Unavailable" sesaat (instance sibuk/muat ulang),
+ * terutama saat walk memanggil banyak folder, dan koneksi bisa gagal total.
+ */
+function isTransientStorageError(
+  error: { status?: number; statusCode?: string; message?: string } | null | undefined
+): boolean {
+  if (!error) return false;
+  const status = error.status ?? Number(error.statusCode ?? 0);
+  if (status === 429 || (status >= 500 && status < 600)) return true;
+  return /fetch failed|network|timeout|ECONNRESET|Service Unavailable/i.test(
+    error.message ?? ""
+  );
+}
+
+/**
+ * `list()` folder dengan retry — maks. 3 percobaan, jeda 400ms × nomor
+ * percobaan. Error permanen (403 RLS, 404, dst.) langsung dikembalikan.
+ */
+async function listWithRetry(bucket: MediaBucket, prefix: string, attempts = 3) {
+  for (let attempt = 1; ; attempt += 1) {
+    const { data, error } = await supabase.storage.from(bucket).list(prefix, {
+      limit: 1000,
+      sortBy: { column: "created_at", order: "desc" },
+    });
+    if (!error || attempt >= attempts || !isTransientStorageError(error)) {
+      return { data, error };
+    }
+    console.warn(
+      `Retry list ${bucket}/${prefix} setelah "${error.message}" (percobaan ${attempt}/${attempts - 1} ulang)`
+    );
+    await sleep(400 * attempt);
+  }
+}
+
 /**
  * Daftar semua file di sebuah bucket (rekursif per folder).
  * Membuang error per-folder (folder dilewati + dicatat), tetapi error di root
@@ -85,13 +123,16 @@ export async function getMediaFiles(bucket: MediaBucket): Promise<MediaFile[]> {
   const files: MediaFile[] = [];
 
   const walk = async (prefix: string, depth: number, isRoot: boolean): Promise<void> => {
-    const { data, error } = await supabase.storage.from(bucket).list(prefix, {
-      limit: 1000,
-      sortBy: { column: "created_at", order: "desc" },
-    });
+    const { data, error } = await listWithRetry(bucket, prefix);
     if (error) {
       console.error(`Error listing ${bucket}/${prefix}:`, JSON.stringify(error), error.message);
-      if (isRoot) throw new Error(error.message || "Gagal memuat daftar file");
+      if (isRoot) {
+        throw new Error(
+          isTransientStorageError(error)
+            ? "Storage sedang sibuk/tidak tersedia — coba muat ulang halaman."
+            : error.message || "Gagal memuat daftar file"
+        );
+      }
       return; // folder bawah: lewati, jangan gagalkan seluruh halaman
     }
     if (depth >= MAX_FOLDER_DEPTH) return;
