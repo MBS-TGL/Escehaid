@@ -16,6 +16,7 @@ interface UserProfile {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const isLogin = pathname === "/admin/login";
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -29,7 +30,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     // Halaman login tidak perlu fetch profil. Tidak perlu setLoading(false) di sini:
     // render sudah early-return utk /admin/login sebelum memeriksa `loading`.
-    if (pathname === "/admin/login") {
+    if (isLogin) {
       return;
     }
 
@@ -57,7 +58,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     };
 
     fetchProfile();
-  }, [pathname]);
+    // Bergantung pada `isLogin`, BUKAN `pathname`: layout ini tetap terpasang saat
+    // pindah antar halaman admin. Dengan [pathname], setiap klik menu mengulang
+    // getUser() + query user_profiles dari browser (dua panggilan jaringan yang
+    // sia-sia, karena proxy.ts sudah memeriksa sesi di server).
+  }, [isLogin]);
 
   useEffect(() => {
     if (searchParams.get("success") === "login") {

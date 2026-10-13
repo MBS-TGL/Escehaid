@@ -31,22 +31,25 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims() memverifikasi JWT secara LOKAL (tanpa round-trip ke server Auth
+  // Supabase) bila project memakai JWT signing keys asimetris; bila tidak, ia
+  // otomatis jatuh ke pemeriksaan jaringan seperti getUser(). Tanpa ini, setiap
+  // pindah halaman admin menambah satu panggilan jaringan berurutan.
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const userId = claimsData?.claims?.sub ?? null;
 
   // Protect /admin routes
   if (request.nextUrl.pathname.startsWith("/admin")) {
     // Allow login page
     if (request.nextUrl.pathname === "/admin/login") {
-      if (user) {
+      if (userId) {
         return NextResponse.redirect(new URL("/admin", request.url));
       }
       return supabaseResponse;
     }
 
     // Redirect to login if not authenticated
-    if (!user) {
+    if (!userId) {
       return NextResponse.redirect(new URL("/admin/login", request.url));
     }
 
@@ -54,7 +57,7 @@ export async function proxy(request: NextRequest) {
     const { data: profile } = await supabase
       .from("user_profiles")
       .select("is_active, role")
-      .eq("id", user.id)
+      .eq("id", userId)
       .single();
 
     // Redirect if profile not found (user needs to be set up)
@@ -83,8 +86,9 @@ export async function proxy(request: NextRequest) {
   return supabaseResponse;
 }
 
+// Hanya rute admin yang butuh pengecekan sesi. Matcher lama menjalankan proxy
+// di SEMUA halaman publik juga (berita, kegiatan, dst.), padahal tidak ada
+// logika yang dipakai di sana.
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|images|api).*)",
-  ],
+  matcher: ["/admin/:path*"],
 };

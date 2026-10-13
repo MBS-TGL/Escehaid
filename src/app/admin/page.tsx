@@ -37,24 +37,16 @@ const roleLabel: Record<string, string> = {
 export default async function AdminPage() {
   const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/admin/login");
+  // getClaims(): verifikasi JWT lokal (tanpa panggilan Auth). proxy.ts sudah
+  // memeriksa sesi, jadi di sini cukup mengambil id user.
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const userId = claimsData?.claims?.sub;
+  if (!userId) redirect("/admin/login");
 
-  const { data: profile } = await supabase
-    .from("user_profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || !profile.is_active) {
-    await supabase.auth.signOut();
-    redirect("/admin/login?error=inactive");
-  }
-
-  const visibleMenu = menuItems.filter((item) => item.roles.includes(profile.role));
-
-  // Fetch stats + recent data in parallel
-  const [newsCount, articlesCount, galleryCount, spmbCount, achievementsCount, contactCount, recentNews, recentSpmb, recentMessages] = await Promise.all([
+  // Profil diambil BERSAMAAN dengan data dashboard (sebelumnya berurutan:
+  // getUser → profil → 9 query = 3 round-trip; kini 1).
+  const [profileRes, newsCount, articlesCount, galleryCount, spmbCount, achievementsCount, contactCount, recentNews, recentSpmb, recentMessages] = await Promise.all([
+    supabase.from("user_profiles").select("*").eq("id", userId).single(),
     supabase.from("news").select("id", { count: "exact", head: true }),
     supabase.from("articles").select("id", { count: "exact", head: true }),
     supabase.from("gallery").select("id", { count: "exact", head: true }),
@@ -65,6 +57,14 @@ export default async function AdminPage() {
     supabase.from("spmb_registrations").select("id, full_name, status, created_at").order("created_at", { ascending: false }).limit(5),
     supabase.from("contact_messages").select("id, name, subject, is_read, created_at").order("created_at", { ascending: false }).limit(5),
   ]);
+
+  const profile = profileRes.data;
+  if (!profile || !profile.is_active) {
+    await supabase.auth.signOut();
+    redirect("/admin/login?error=inactive");
+  }
+
+  const visibleMenu = menuItems.filter((item) => item.roles.includes(profile.role));
 
   const stats = [
     { label: "Total Berita", value: newsCount.count || 0, icon: <Megaphone className="h-5 w-5 text-blue-600" />, variant: "info" as const },
