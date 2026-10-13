@@ -415,3 +415,42 @@ belum tersentuh), tanpa mengubah tampilan desktop (≥768px) dan tanpa menyentuh
    mode pilih; kartu rasio 4:3.
 6. SPMB: status Ditolak menampilkan titik merah + badge "Ditolak"; ubah status lewat menu ⋯.
 7. Input 16px di iOS (tidak zoom otomatis saat fokus).
+
+## Optimasi navigasi — 13 Okt 2026
+
+Mempercepat pindah halaman admin tanpa mengubah tampilan/desain apa pun
+(detail di `SPEED.md`, commit `perf(admin): percepat navigasi (getClaims, matcher, layout, loading)`):
+
+- **`src/proxy.ts`** — `supabase.auth.getUser()` (1 round-trip jaringan ke Auth per
+  navigasi) diganti `supabase.auth.getClaims()`, yang memverifikasi JWT secara lokal
+  bila project memakai JWT signing keys asimetris (fallback otomatis ke pemeriksaan
+  jaringan). Semua logika dipertahankan: query `user_profiles` (`is_active, role`),
+  redirect `no_profile`/`inactive` + `signOut()`, `adminOnlyRoutes`,
+  `setDefaultResultOrder("ipv4first")`. Matcher kini hanya `["/admin/:path*"]` —
+  proxy tidak lagi dijalankan di halaman publik (berita, kegiatan, dll.) yang tidak
+  memakai logikanya.
+- **`src/app/admin/DashboardLayout.tsx`** — efek `fetchProfile` berdependensi
+  `[isLogin]` (bukan `[pathname]`), sehingga `getUser()` + query `user_profiles` dari
+  browser hanya berjalan sekali (saat masuk/keluar halaman login), bukan di setiap
+  klik menu; layout tetap terpasang saat pindah antar halaman admin.
+- **`src/app/admin/page.tsx`** — dashboard: `getClaims()` menggantikan `getUser()`,
+  dan query profil digabung ke dalam `Promise.all` bersama 9 query data lain
+  (3 langkah jaringan berurutan → 1); JSX/tampilan tidak berubah.
+- **`src/app/admin/loading.tsx`** (baru) — skeleton halaman admin (header, 6 kartu
+  statistik, 5 baris daftar) tampil seketika saat berpindah halaman sehingga klik menu
+  tidak terasa "diam" dan Next bisa memprefetch kerangka halaman.
+
+### Verifikasi
+
+- `grep "getUser" src/proxy.ts` — hanya muncul di dalam komentar penjelasan
+  `getClaims()` yang wajib menurut spesifikasi; tidak ada pemanggilan kode.
+- `grep "getClaims"` ada di `src/proxy.ts` dan `src/app/admin/page.tsx`;
+  matcher persis `["/admin/:path*"]`; efek `fetchProfile` memakai `[isLogin]`.
+- `@supabase/supabase-js` di lockfile: **2.114.0** (tidak diubah), `getClaims` dikenali TypeScript.
+- `npx tsc --noEmit` — bersih, 0 error.
+- `npm run lint` — 0 error, 57 warning; tak ada warning baru dari perubahan ini
+  (semua berasal dari pola lama: unused import, `<img>`, `exhaustive-deps` —
+  3 warning `DashboardLayout.tsx` sudah ada sejak sebelumnya, hanya barisnya bergeser).
+- `npm run build` — sukses (Next 16, 37 route + `ƒ Proxy (Middleware)`).
+- EOL tiap berkas dipertahankan (`proxy.ts`/`page.tsx` LF, `DashboardLayout.tsx` CRLF);
+  tidak ada `.env*`/skema DB yang disentuh.
