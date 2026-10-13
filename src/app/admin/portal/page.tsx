@@ -1012,7 +1012,7 @@ export default function AdminPortalPage() {
   const CHIPS_FILTER: { key: string; label: string; count: number }[] = [
     { key: "all", label: "Semua", count: counts.all },
     { key: "active", label: "Tayang", count: counts.active },
-    { key: "soon", label: "Segera hadir", count: counts.soon },
+    { key: "soon", label: "Segera Hadir", count: counts.soon },
     { key: "inactive", label: "Disembunyikan", count: counts.inactive },
   ];
 
@@ -1080,8 +1080,8 @@ export default function AdminPortalPage() {
       {/* Ringkasan satu baris (mobile) — kartu statistik hanya menduplikasi
           jumlah filter; teks 12px cukup & tidak memakan layar. */}
       <p className="mb-4 text-xs font-medium text-[#64748b] md:hidden">
-        {counts.all} aplikasi · {counts.active} tayang · {counts.soon} segera ·{" "}
-        {counts.inactive} disembunyikan
+        {counts.all} Aplikasi · {counts.active} Tayang · {counts.soon} Segera ·{" "}
+        {counts.inactive} Disembunyikan
       </p>
 
       {/* Toolbar — desktop: FilterBar (md+); mobile: MobileFilterBar di bawah

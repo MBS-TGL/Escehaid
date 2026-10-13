@@ -261,6 +261,49 @@ P1.1 (verifikasi bloker)
 - [ ] Deploy
 - [ ] Setelah live: login ulang ke `/admin/portal`, uji geser baris + toggle Aktif + filter
 
+## 📅 TUGAS TERJADWAL — 13 Okt 2026: Kapitalisasi teks ringkasan statistik mobile
+
+**Status:** `SELESAI` — dieksekusi 13 Okt 2026 · gerbang **tsc 0 · lint 0 error/57 warning (baseline lama) · build 0** · 8 edit masuk
+**Permintaan:** ubah pola `6 aplikasi · 1 tayang · 5 segera · 0 disembunyikan` → **CapitalEachWord** (`6 Aplikasi · 1 Tayang · 5 Segera · 0 Disembunyikan`), berlaku juga di halaman admin lain dengan teks serupa.
+**Ya — teks ini memang "statistik"**: ringkasan satu baris yang menggantikan carousel `StatCardRow` di mobile (PROMPT_REDESIGN poin 5), hanya mengulang jumlah yang sudah ada di kartu filter. Murni **string literal**, tanpa SQL, tanpa dependensi, risiko rendah.
+
+### Cakupan (tepat 6 file — sudah discan menyeluruh, halaman admin lain memakai StatCard grid/bukan teks satu baris)
+
+| # | File : baris | Sebelum | Sesudah |
+|---|---|---|---|
+| 1 | `src/app/admin/portal/page.tsx:1083-1084` | `{counts.all} aplikasi · {counts.active} tayang · {counts.soon} segera · {counts.inactive} disembunyikan` | `… Aplikasi · … Tayang · … Segera · … Disembunyikan` |
+| 2 | `src/app/admin/teachers/page.tsx:292` | `{items.length} guru · {activeCount} aktif · {inactiveCount} nonaktif` | `… Guru · … Aktif · … Nonaktif` |
+| 3 | `src/app/admin/agenda/page.tsx:240` | `{items.length} agenda · {activeCount} aktif · {inactiveCount} nonaktif` | `… Agenda · … Aktif · … Nonaktif` |
+| 4 | `src/app/admin/facilities/page.tsx:494` | `{stats.total} fasilitas · {stats.active} aktif · {stats.inactive} nonaktif` | `… Fasilitas · … Aktif · … Nonaktif` |
+| 5 | `src/app/admin/announcements/page.tsx:229` | `{items.length} pengumuman · {activeCount} aktif · {inactiveCount} nonaktif` | `… Pengumuman · … Aktif · … Nonaktif` |
+| 6 | `src/app/admin/admission/page.tsx:1499` | `{stats.total} pendaftar · {stats.pending} menunggu · {stats.accepted} diterima · {stats.rejected} ditolak` | `… Pendaftar · … Menunggu · … Diterima · … Ditolak` |
+
+Kelas `<p className="mb-4 text-xs font-medium text-[#64748b] md:hidden">` **tidak diubah** — hanya isi teksnya.
+
+### Item konsistensi lanjutan (sekaligus dalam commit yang sama)
+
+1. **Portal — label dropdown filter mobile** (`portal/page.tsx:1015`, `CHIPS_FILTER`): `"Segera hadir"` → `"Segera Hadir"` agar cocok dengan label StatCard desktop (`:1006` "Segera Hadir"). Label lain ("Semua", "Tayang", "Disembunyikan") sudah benar.
+2. **Artikel — footer editor** (`articles/page.tsx:1547`): `{wordCount} kata · {readMinutes} menit baca` → `{wordCount} Kata · {readMinutes} Menit Baca` (pola segmen serupa, ikut dirapikan).
+
+### Yang TIDAK diubah (keputusan — kalimat, bukan segmen statistik)
+
+- `Menampilkan 1–20 dari 33 guru` (paginasi semua halaman) & `Halaman 2 dari 3 · 12 kegiatan` (berita/kegiatan publik) — sentence case sudah benar untuk kalimat.
+- Label StatCard, chips filter, badge status, toast — sudah Capitalized.
+- Halaman `dashboard, gallery, media, logs, users, contact, achievements, activities, news, articles` — tidak punya teks ringkasan satu baris; dilewati.
+
+### Langkah eksekusi (besok)
+
+1. Edit 6 baris ringkasan + 2 item konsistensi di atas (edit kecil per file, komentar JSDoc tetap utuh).
+2. Gerbang wajib (aturan main #6): `npx tsc --noEmit` = 0 · `npm run lint` tanpa masalah baru · `npm run build` = 0.
+3. Verifikasi visual: `npm run dev` → cek 6 halaman di viewport **390px** (teks tampil "6 Aplikasi · 1 Tayang · …") + pastikan desktop ≥md tidak berubah (elemen `md:hidden`).
+4. Commit satu batch: `ui(admin): kapitalisasi ringkasan statistik mobile (CapitalEachWord)` — commit/push oleh user.
+
+### Open question (konfirmasi saat eksekusi)
+
+Bila ternyata ingin lebih luas: teks publik "Halaman 2 dari 3 · 12 kegiatan" bisa ikut menjadi "Halaman 2 Dari 3 · 12 Kegiatan", **tetapi tidak direkomendasikan** — di situ `·` memisahkan anak kalimat, bukan label statistik.
+
+---
+
 ## ➡ Fokus berikutnya: **commit batch admin → deploy → live-verify Portal**
 
 Dua task admin selesai (kode beres, belum masuk git):

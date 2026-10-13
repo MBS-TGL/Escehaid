@@ -237,7 +237,7 @@ export default function AdminAgendaPage() {
         </StatCardRow>
       </div>
       <p className="mb-4 text-xs font-medium text-[#64748b] md:hidden">
-        {items.length} agenda · {activeCount} aktif · {inactiveCount} nonaktif
+        {items.length} Agenda · {activeCount} Aktif · {inactiveCount} Nonaktif
       </p>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}

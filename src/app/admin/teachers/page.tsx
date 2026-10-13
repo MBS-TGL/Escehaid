@@ -289,7 +289,7 @@ export default function AdminTeachersPage() {
         </StatCardRow>
       </div>
       <p className="mb-4 text-xs font-medium text-[#64748b] md:hidden">
-        {items.length} guru · {activeCount} aktif · {inactiveCount} nonaktif
+        {items.length} Guru · {activeCount} Aktif · {inactiveCount} Nonaktif
       </p>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}

@@ -491,7 +491,7 @@ export default function AdminFacilitiesPage() {
         </StatCardRow>
       </div>
       <p className="mb-4 text-xs font-medium text-[#64748b] md:hidden">
-        {stats.total} fasilitas · {stats.active} aktif · {stats.inactive} nonaktif
+        {stats.total} Fasilitas · {stats.active} Aktif · {stats.inactive} Nonaktif
       </p>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}

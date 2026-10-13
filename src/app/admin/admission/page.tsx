@@ -1496,7 +1496,7 @@ export default function AdminSPMBPage() {
         </StatCardRow>
       </div>
       <p className="mb-4 text-xs font-medium text-[#64748b] md:hidden">
-        {stats.total} pendaftar · {stats.pending} menunggu · {stats.accepted} diterima · {stats.rejected} ditolak
+        {stats.total} Pendaftar · {stats.pending} Menunggu · {stats.accepted} Diterima · {stats.rejected} Ditolak
       </p>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}

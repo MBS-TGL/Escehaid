@@ -1544,7 +1544,7 @@ export default function AdminArticlesPage() {
               onChange={(val) => setForm((f) => ({ ...f, content: val }))}
             />
             <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-slate-400">
-              <span>{wordCount} kata · {readMinutes} menit baca</span>
+              <span>{wordCount} Kata · {readMinutes} Menit Baca</span>
             </div>
           </div>
 
