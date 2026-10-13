@@ -100,11 +100,18 @@ function Dropdown({
 }
 
 /**
- * Toolbar mobile (< md) — **dua baris**:
+ * Toolbar mobile (< md):
  *   baris 1 — pencarian penuh (44px, r12);
- *   baris 2 — `Filter (dropdown + jumlah)` · `Urut` · aksi (mis. "Pilih"),
- *   semuanya 44px, SATU baris tanpa wrap — pill filter/urut membagi sisa
- *   ruang (flex-1, label terpotang bila perlu), aksi `shrink-0` di kanan.
+ *   baris kontrol berikutnya — `Filter (dropdown + jumlah)` · `Urut` · aksi
+ *   (mis. "Pilih"), semuanya 44px; pill filter/urut membagi sisa ruang
+ *   (flex-1, label terpotong bila perlu), aksi `shrink-0` di kanan.
+ *
+ * Dua layout baris kontrol:
+ *   • ≤3 kontrol (mis. Filter · Urut · Pilih) — SATU baris, seperti sebelumnya;
+ *   • 4 kontrol (ada `filter2`, mis. Kategori · Tahun · Urut · Pilih di
+ *     halaman Prestasi/Galeri/Kegiatan) — DUA baris: [filter · filter2] lalu
+ *     [urut · aksi]. Tanpa ini, di layar 360px keempat pill terdesak sampai
+ *     labelnya tinggal huruf pertama ("S… 3", "Terb…").
  *
  * Saat `selectMode`, kedua baris digantikan bar mode pilih (jumlah dipilih +
  * Pilih semua + Selesai) — desktop tetap memakai toolbar lamanya (tab +
@@ -161,6 +168,43 @@ export function MobileFilterBar({
   const currentFilter = filter?.options.find((o) => o.key === filter.value);
   const currentFilter2 = filter2?.options.find((o) => o.key === filter2.value);
   const currentSort = sort?.options.find((o) => o.key === sort.value);
+
+  /** Ada `filter2` + (urut/aksi) = 4 kontrol → baris kontrol dipecah jadi dua. */
+  const stackedControls = !!(filter && filter2 && (sort || action));
+
+  const filterDropdown = filter && (
+    <Dropdown
+      triggerLabel={currentFilter?.label ?? "Filter"}
+      menuLabel="Filter status"
+      currentKey={filter.value}
+      options={filter.options}
+      onChoose={filter.onChange}
+      badge={currentFilter?.count}
+    />
+  );
+  const filter2Dropdown = filter2 && (
+    <Dropdown
+      triggerLabel={currentFilter2?.label ?? "Filter"}
+      menuLabel="Filter tambahan"
+      currentKey={filter2.value}
+      options={filter2.options}
+      onChoose={filter2.onChange}
+      icon={filter2.icon}
+      badge={currentFilter2?.count}
+    />
+  );
+  const sortDropdown = sort && (
+    <Dropdown
+      triggerLabel={currentSort?.label ?? "Urut"}
+      menuLabel="Urutkan"
+      currentKey={sort.value}
+      options={sort.options}
+      onChoose={sort.onChange}
+    />
+  );
+  const actionGroup = action && (
+    <div className={`flex shrink-0 items-center gap-2${stackedControls ? " ml-auto" : ""}`}>{action}</div>
+  );
 
   if (selectMode) {
     return (
@@ -220,42 +264,28 @@ export function MobileFilterBar({
         </div>
       </div>
 
-      {/* Baris 2 — Filter (dropdown + jumlah) · [filter2] · Urut · aksi:
-          SATU baris tanpa wrap; pill membagi sisa ruang (flex-1, truncate),
-          aksi (mis. "Pilih") shrink-0 di kanan. */}
-      <div className="flex items-center gap-2">
-        {filter && (
-          <Dropdown
-            triggerLabel={currentFilter?.label ?? "Filter"}
-            menuLabel="Filter status"
-            currentKey={filter.value}
-            options={filter.options}
-            onChoose={filter.onChange}
-            badge={currentFilter?.count}
-          />
-        )}
-        {filter2 && (
-          <Dropdown
-            triggerLabel={currentFilter2?.label ?? "Filter"}
-            menuLabel="Filter tambahan"
-            currentKey={filter2.value}
-            options={filter2.options}
-            onChoose={filter2.onChange}
-            icon={filter2.icon}
-            badge={currentFilter2?.count}
-          />
-        )}
-        {sort && (
-          <Dropdown
-            triggerLabel={currentSort?.label ?? "Urut"}
-            menuLabel="Urutkan"
-            currentKey={sort.value}
-            options={sort.options}
-            onChoose={sort.onChange}
-          />
-        )}
-        {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
-      </div>
+      {/* Baris kontrol — ≤3 kontrol: satu baris [filter · urut · aksi].
+          4 kontrol (ada filter2): DUA baris [filter · filter2] / [urut · aksi],
+          supaya tidak padat di layar 360px (aksi ml-auto menempel kanan). */}
+      {stackedControls ? (
+        <>
+          <div className="flex items-center gap-2">
+            {filterDropdown}
+            {filter2Dropdown}
+          </div>
+          <div className="flex items-center gap-2">
+            {sortDropdown}
+            {actionGroup}
+          </div>
+        </>
+      ) : (
+        <div className="flex items-center gap-2">
+          {filterDropdown}
+          {filter2Dropdown}
+          {sortDropdown}
+          {actionGroup}
+        </div>
+      )}
     </div>
   );
 }
