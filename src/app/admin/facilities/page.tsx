@@ -465,17 +465,22 @@ export default function AdminFacilitiesPage() {
             <p className="text-sm text-slate-500">Fasilitas sekolah (ruang kelas, lab, masjid, dll)</p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Tombol header — SATU baris di semua ukuran layar: mobile keduanya
+            berbagi lebar baris (flex-1, auto-fit), ≥sm lebar mengikuti konten. */}
+        <div className="flex gap-2 sm:items-center">
           <a
             href="/profile#fasilitas"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59]"
+            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] sm:flex-none sm:px-4 md:py-2.5"
           >
-            <ArrowSquareOut className="h-4 w-4" /> Lihat di website
+            <ArrowSquareOut className="h-4 w-4 shrink-0" />
+            <span className="truncate">Lihat di website</span>
           </a>
-          <button onClick={openCreate} className="flex items-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1]">
-            <Plus className="h-4 w-4" /> Buat Baru
+          <button onClick={openCreate}
+            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#082b59] px-3 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1] sm:flex-none sm:px-4 md:py-2.5">
+            <Plus className="h-4 w-4 shrink-0" />
+            <span className="truncate">Buat Baru</span>
           </button>
         </div>
       </div>
