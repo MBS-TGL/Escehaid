@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
+import { Play } from "@/components/Icons";
 
 /**
  * Video hero.
@@ -12,30 +13,61 @@ import Image from "next/image";
  * di Vercel/.env.local — halaman otomatis memakai embed YouTube (egress Supabase nol).
  * NEXT_PUBLIC_HERO_VIDEO_URL dipakai kalau mau menunjuk URL video lain
  * (mis. /videos/Profile.mp4 setelah dipindah ke /public).
+ *
+ * Di HP (< 768px) video TIDAK autoplay: yang tampil poster + tombol play, dan
+ * file video baru diunduh setelah diklik — menghemat kuota serta menghindari
+ * decode/streaming 52 MB di device kelas menengah. Desktop tetap autoplay malas
+ * (src dipasang via IntersectionObserver, preload="none").
  */
 const YT_ID = process.env.NEXT_PUBLIC_HERO_VIDEO_YT || "";
 const VIDEO_URL =
   process.env.NEXT_PUBLIC_HERO_VIDEO_URL ||
   "https://ljobjrlhaifafvroapeq.supabase.co/storage/v1/object/public/videos/Profile.mp4";
+/** Poster saat video belum berjalan (HP: sampai tombol play ditekan). */
+const POSTER_URL = "/images/Ruang-Kelas.jpg";
 const SEGMENTS = [
   { start: 0, end: 66 },
   { start: 66, end: 133 },
 ];
 
+const MOBILE_QUERY = "(max-width: 767px)";
+
+/** Langganan perubahan lebar layar (pola sama dengan CSSAnimations.tsx). */
+function subscribeMobileChange(onChange: () => void) {
+  const mq = window.matchMedia(MOBILE_QUERY);
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
+
+/** true di klien bila lebar < 768px; selalu false saat render server. */
+function useIsMobile(): boolean {
+  return useSyncExternalStore(
+    subscribeMobileChange,
+    () => window.matchMedia(MOBILE_QUERY).matches,
+    () => false
+  );
+}
+
 export default function HeroCarousel() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [current, setCurrent] = useState(0);
-  const [loaded, setLoaded] = useState(false);
+  const [started, setStarted] = useState(false); // HP: sudah tekan tombol play?
+  const [loaded, setLoaded] = useState(false); // src video sudah dipasang?
+  const [playing, setPlaying] = useState(false); // video sedang berjalan?
+
+  const isMobile = useIsMobile();
+  // Desktop: autoplay malas. HP: hanya setelah tombol play ditekan.
+  const autoplay = !isMobile || started;
 
   useEffect(() => {
     const container = containerRef.current;
     const video = videoRef.current;
-    if (!container || !video) return;
+    if (!container || !video || !autoplay || loaded) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !loaded) {
+        if (entry.isIntersecting) {
           video.src = VIDEO_URL;
           video.load();
           setLoaded(true);
@@ -46,7 +78,7 @@ export default function HeroCarousel() {
 
     observer.observe(container);
     return () => observer.disconnect();
-  }, [loaded]);
+  }, [autoplay, loaded]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -69,30 +101,67 @@ export default function HeroCarousel() {
   }, [current, loaded]);
 
   return (
-    <div ref={containerRef} className="relative h-[480px] w-full overflow-hidden rounded-2xl border border-white/10 md:h-[600px]">
-      {YT_ID ? (
-        <iframe
-          src={`https://www.youtube-nocookie.com/embed/${YT_ID}?autoplay=1&mute=1&controls=0&loop=1&playlist=${YT_ID}&playsinline=1&rel=0&modestbranding=1`}
-          title="Video profil SMP Muhammadiyah 4 Tanggul"
-          className="absolute inset-0 h-full w-full border-0"
-          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-        />
-      ) : (
-        <video
-          ref={videoRef}
-          muted
-          loop
-          playsInline
-          preload="none"
-          className="h-full w-full object-cover"
+    <div
+      ref={containerRef}
+      className="relative h-[480px] w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] md:h-[600px]"
+    >
+      {/* Poster: tampil selama video belum berjalan — di HP sampai tombol play
+          ditekan, di desktop selama buffer awal. `priority` karena ini yang
+          jadi LCP di HP (video tidak lagi diunduh otomatis). */}
+      {!playing && (
+        <Image
+          src={POSTER_URL}
+          alt="Suasana ruang kelas SMP Muhammadiyah 4 Tanggul"
+          fill
+          sizes="(max-width: 767px) 100vw, 800px"
+          priority
+          className="object-cover"
         />
       )}
+
+      {/* Video/iframe hanya dirender saat autoplay diizinkan — di HP sebelum
+          ditekan play, tidak ada elemen video sama sekali (nol byte). */}
+      {autoplay ? (
+        YT_ID ? (
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${YT_ID}?autoplay=1&mute=1&controls=0&loop=1&playlist=${YT_ID}&playsinline=1&rel=0&modestbranding=1`}
+            title="Video profil SMP Muhammadiyah 4 Tanggul"
+            className="absolute inset-0 h-full w-full border-0"
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+          />
+        ) : (
+          <video
+            ref={videoRef}
+            muted
+            loop
+            playsInline
+            preload="none"
+            onPlaying={() => setPlaying(true)}
+            className="relative h-full w-full object-cover"
+          />
+        )
+      ) : null}
 
       {/* overlay gradient */}
       <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#082b59]/60 via-transparent to-transparent pointer-events-none" />
 
-      {/* dots (hanya mode segment MP4) — tombol bisa diklik lompat ke segmen */}
-      {!YT_ID && (
+      {/* Tombol play (khusus HP sebelum mulai) — seluruh area hero bisa diklik */}
+      {!autoplay && (
+        <button
+          type="button"
+          onClick={() => setStarted(true)}
+          aria-label="Putar video profil sekolah"
+          className="absolute inset-0 z-20 flex cursor-pointer items-center justify-center"
+        >
+          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-white/90 shadow-[0_8px_30px_rgba(8,43,89,0.45)] transition-transform duration-200 active:scale-95">
+            <Play weight="fill" className="h-9 w-9 translate-x-0.5 text-[#082b59]" />
+          </span>
+        </button>
+      )}
+
+      {/* dots (hanya mode segment MP4, tampil setelah video berjalan) —
+          tombol bisa diklik lompat ke segmen */}
+      {!YT_ID && autoplay && (
         <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 gap-2">
           {SEGMENTS.map((_, i) => (
             <button
@@ -112,7 +181,7 @@ export default function HeroCarousel() {
       {/* bottom label */}
       <div className="absolute bottom-0 left-0 right-0 z-20 p-8 pointer-events-none">
         <div className="flex items-center gap-3">
-          <Image src="/images/Logo-Sekolah.png" alt="Logo SMP Muhammadiyah 4 Tanggul" width={40} height={52} sizes="40px" priority className="h-10 w-auto" />
+          <Image src="/images/Logo-Sekolah.png" alt="Logo SMP Muhammadiyah 4 Tanggul" width={40} height={52} sizes="40px" className="h-10 w-auto" />
           <div>
             <p className="text-sm font-bold text-white">SMP Muhammadiyah 4 Tanggul</p>
             <p className="text-xs text-white/60">Sejak 2016 &middot; Tanggul, Jember</p>

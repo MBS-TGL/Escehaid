@@ -45,6 +45,7 @@ export {
   EyeSlash,
   Plus,
   Video,
+  Play,
   Image,
   Bell,
   PencilSimple,
