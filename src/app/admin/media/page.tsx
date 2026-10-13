@@ -133,8 +133,8 @@ export default function AdminMediaPage() {
     const q = search.trim().toLowerCase();
     const filtered = q
       ? files.filter(
-          (f) => f.name.toLowerCase().includes(q) || f.folder.toLowerCase().includes(q)
-        )
+        (f) => f.name.toLowerCase().includes(q) || f.folder.toLowerCase().includes(q)
+      )
       : files;
     return [...filtered].sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
   }, [files, search]);
@@ -271,7 +271,7 @@ export default function AdminMediaPage() {
           <div>
             <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Media Library</h1>
             <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">
-              Lihat, cari, dan hapus file Storage — hapus hanya untuk file yang tidak dipakai
+              Kelola file yang ada di Storage
             </p>
           </div>
         </div>
@@ -417,11 +417,10 @@ export default function AdminMediaPage() {
                     {/* Badge status referensi */}
                     {referenced !== null && (
                       <span
-                        className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                          referenced
-                            ? "bg-emerald-500/90 text-white"
-                            : "bg-amber-500/90 text-white"
-                        }`}
+                        className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${referenced
+                          ? "bg-emerald-500/90 text-white"
+                          : "bg-amber-500/90 text-white"
+                          }`}
                       >
                         {referenced ? "Terpakai" : "Tidak terpakai"}
                       </span>
@@ -480,11 +479,10 @@ export default function AdminMediaPage() {
                                   ? "File masih dipakai konten — tidak boleh dihapus"
                                   : "Hapus file yang tidak terpakai ini"
                             }
-                            className={`rounded-lg p-1.5 transition-colors ${
-                              canDelete
-                                ? "text-slate-400 hover:bg-red-50 hover:text-red-600"
-                                : "cursor-not-allowed text-slate-300"
-                            }`}
+                            className={`rounded-lg p-1.5 transition-colors ${canDelete
+                              ? "text-slate-400 hover:bg-red-50 hover:text-red-600"
+                              : "cursor-not-allowed text-slate-300"
+                              }`}
                           >
                             <Trash className="h-3.5 w-3.5" />
                           </button>
