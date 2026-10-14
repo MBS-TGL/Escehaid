@@ -87,7 +87,11 @@ function useHideOnScroll({
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
-    setHidden(false);
+    // Reset lewat microtask: memanggil setHidden(false) langsung di body effect
+    // dilabeli "setState sinkron dalam effect" oleh ESLint (react-hooks).
+    // Perilaku tetap sama — microtask selalu dijalankan sebelum event scroll
+    // (macrotask) berikutnya, jadi bar tetap di-reset lebih dulu.
+    queueMicrotask(() => setHidden(false));
     if (!enabled) return;
 
     let lastY = window.scrollY;

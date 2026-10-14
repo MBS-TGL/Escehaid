@@ -13,6 +13,7 @@ export * from "./queries/news";
 export * from "./queries/news-media";
 export * from "./queries/portal";
 export * from "./queries/profile";
+export * from "./queries/rbac";
 export * from "./queries/registrations";
 export * from "./queries/revalidate";
 export * from "./queries/search";

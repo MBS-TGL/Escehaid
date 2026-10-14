@@ -30,6 +30,7 @@ import {
   markAllNotificationsAsRead,
 } from "@/lib/queries";
 import type { Notification } from "@/lib/queries";
+import { usePermissions } from "./PermissionsProvider";
 
 interface UserProfile {
   full_name: string;
@@ -39,15 +40,15 @@ interface UserProfile {
 
 const navSearchItems = [
   { label: "Dashboard", href: "/admin", icon: House },
-  { label: "Kelola SPMB", href: "/admin/admission", icon: Users },
-  { label: "Kelola Berita", href: "/admin/news", icon: Megaphone },
-  { label: "Kelola Fasilitas", href: "/admin/facilities", icon: ImageSquare },
-  { label: "Kelola Artikel", href: "/admin/articles", icon: Note },
-  { label: "Kelola Galeri", href: "/admin/gallery", icon: ImageSquare },
-  { label: "Media Library", href: "/admin/media", icon: FolderOpen },
-  { label: "Log Aktivitas", href: "/admin/logs", icon: Scroll },
-  { label: "Kelola Prestasi", href: "/admin/achievements", icon: Trophy },
-  { label: "Pesan Masuk", href: "/admin/contact", icon: Envelope },
+  { label: "Kelola SPMB", href: "/admin/admission", icon: Users, perm: "spmb:read" },
+  { label: "Kelola Berita", href: "/admin/news", icon: Megaphone, perm: "berita:read" },
+  { label: "Kelola Fasilitas", href: "/admin/facilities", icon: ImageSquare, perm: "fasilitas:read" },
+  { label: "Kelola Artikel", href: "/admin/articles", icon: Note, perm: "artikel:read" },
+  { label: "Kelola Galeri", href: "/admin/gallery", icon: ImageSquare, perm: "galeri:read" },
+  { label: "Media Library", href: "/admin/media", icon: FolderOpen, perm: "media:read" },
+  { label: "Log Aktivitas", href: "/admin/logs", icon: Scroll, perm: "logs:read" },
+  { label: "Kelola Prestasi", href: "/admin/achievements", icon: Trophy, perm: "prestasi:read" },
+  { label: "Pesan Masuk", href: "/admin/contact", icon: Envelope, perm: "kontak:read" },
 ];
 
 const roleBadge: Record<string, string> = {
@@ -73,6 +74,7 @@ export default function AdminTopbar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { can: canFn } = usePermissions();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -100,8 +102,10 @@ export default function AdminTopbar({
   );
 
   const filteredNav = searchQuery
-    ? navSearchItems.filter((item) =>
-      item.label.toLowerCase().includes(searchQuery.toLowerCase())
+    ? navSearchItems.filter(
+      (item) =>
+        (!item.perm || canFn(item.perm)) &&
+        item.label.toLowerCase().includes(searchQuery.toLowerCase())
     )
     : [];
 

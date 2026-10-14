@@ -265,7 +265,7 @@ P1.1 (verifikasi bloker)
 
 **Status:** `SELESAI` — dieksekusi 13 Okt 2026 · gerbang **tsc 0 · lint 0 error/57 warning (baseline lama) · build 0** · 8 edit masuk
 **Permintaan:** ubah pola `6 aplikasi · 1 tayang · 5 segera · 0 disembunyikan` → **CapitalEachWord** (`6 Aplikasi · 1 Tayang · 5 Segera · 0 Disembunyikan`), berlaku juga di halaman admin lain dengan teks serupa.
-**Ya — teks ini memang "statistik"**: ringkasan satu baris yang menggantikan carousel `StatCardRow` di mobile (PROMPT_REDESIGN poin 5), hanya mengulang jumlah yang sudah ada di kartu filter. Murni **string literal**, tanpa SQL, tanpa dependensi, risiko rendah.
+**Ya — teks ini memang "statistik"**: ringkasan satu baris yang menggantikan carousel `StatCardRow` di mobile (docs/PROMPT_REDESIGN poin 5), hanya mengulang jumlah yang sudah ada di kartu filter. Murni **string literal**, tanpa SQL, tanpa dependensi, risiko rendah.
 
 ### Cakupan (tepat 6 file — sudah discan menyeluruh, halaman admin lain memakai StatCard grid/bukan teks satu baris)
 

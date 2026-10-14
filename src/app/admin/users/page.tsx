@@ -1,497 +1,82 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
-import {
-  getProfileList,
-  updateProfileRole,
-  updateProfileStatus,
-  deleteProfile,
-  deleteProfileBulk,
-} from "@/lib/queries";
-import { SlideOver } from "@/components/ui";
-import { StatsSection } from "@/components/admin/StatsSection";
-import type { UserProfile } from "@/lib/auth";
-import {
-  User,
-  CheckCircle,
-  XCircle,
-  Users,
-  CaretLeft,
-  CaretRight,
-  X,
-  Warning,
-  FloppyDisk,
-  ArrowUp,
-  ArrowDown,
-  SortAscending,
-  Checks,
-  Trash,
-  PencilSimple,
-} from "@/components/Icons";
-import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
-import { useToast } from "@/components/ui/Toast";
+/**
+ * Halaman Pengguna & Peran — dua tab:
+ *   • Pengguna: daftar akun, undang, ubah peran, aktif/nonaktif, reset password.
+ *   • Peran:    editor matriks izin (peran × aksi), reset ke default.
+ *
+ * Guard server-side (requirePermission + trigger DB) adalah penegakan
+ * sebenarnya; tab ini hanya menyaring kenyamanan (mis. tombol "ubah peran"
+ * nonaktif untuk akun sendiri).
+ */
+import { useEffect, useState } from "react";
+import { createBrowserClient } from "@supabase/ssr";
+import { UsersTab } from "./UsersTab";
+import { RolesTab } from "./RolesTab";
+import { UsersThree, ShieldCheck } from "@/components/Icons";
 
-const PAGE_SIZE = 10;
+const TABS = [
+  { key: "users", label: "Pengguna", icon: UsersThree },
+  { key: "roles", label: "Peran", icon: ShieldCheck },
+] as const;
 
-const roleConfig: Record<string, { label: string; color: string; bg: string }> = {
-  developer: { label: "Developer", color: "text-purple-700", bg: "bg-purple-50 border-purple-200" },
-  admin: { label: "Administrator", color: "text-blue-700", bg: "bg-blue-50 border-blue-200" },
-  publisher: { label: "Publisher", color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200" },
-  teacher: { label: "Guru", color: "text-teal-700", bg: "bg-teal-50 border-teal-200" },
-  student: { label: "Siswa", color: "text-amber-700", bg: "bg-amber-50 border-amber-200" },
-};
-
-type SortField = "full_name" | "role" | "is_active" | "created_at";
-type SortDir = "asc" | "desc";
+type TabKey = (typeof TABS)[number]["key"];
 
 export default function AdminUsersPage() {
-  const { toast } = useToast();
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
-  const [page, setPage] = useState(1);
-  const [sortField, setSortField] = useState<SortField>("full_name");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
-
-  // Selection
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
-  // Modals
-  const [deleteItem, setDeleteItem] = useState<UserProfile | null>(null);
-  const [bulkDelete, setBulkDelete] = useState(false);
-
-  // Edit panel
-  const [editItem, setEditItem] = useState<UserProfile | null>(null);
-  const [editRole, setEditRole] = useState("");
-  const [editSaving, setEditSaving] = useState(false);
-
-  const fetchUsers = useCallback(async () => {
-    const data = await getProfileList();
-    setUsers(data);
-    setLoading(false);
-  }, []);
+  const [tab, setTab] = useState<TabKey>("users");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    (async () => {
-      await fetchUsers();
-    })().catch(() => {});
-  }, [fetchUsers]);
-
-  const roles = useMemo(() => [...new Set(users.map((u) => u.role))], [users]);
-
-  // Grup dropdown filter role — berjumlah, dipakai toolbar (tak punya MobileFilterBar).
-  const roleFilterGroup: FilterGroup = {
-    value: filter,
-    options: [
-      { key: "all", label: "Semua Role", count: users.length },
-      ...roles.map((role) => ({
-        key: role,
-        label: roleConfig[role]?.label || role,
-        count: users.filter((u) => u.role === role).length,
-      })),
-    ],
-    onChange: (k) => { setFilter(k); setPage(1); setSelectedIds(new Set()); },
-    menuLabel: "Filter role",
-  };
-
-  const filtered = useMemo(() => {
-    const result = users.filter((item) => {
-      const matchSearch = item.full_name.toLowerCase().includes(search.toLowerCase());
-      const matchRole = filter === "all" || item.role === filter;
-      return matchSearch && matchRole;
-    });
-
-    result.sort((a, b) => {
-      let cmp = 0;
-      if (sortField === "full_name") cmp = a.full_name.localeCompare(b.full_name);
-      else if (sortField === "role") cmp = (a.role || "").localeCompare(b.role || "");
-      else if (sortField === "is_active") cmp = (a.is_active ? 1 : 0) - (b.is_active ? 1 : 0);
-      else if (sortField === "created_at") cmp = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
-      return sortDir === "asc" ? cmp : -cmp;
-    });
-
-    return result;
-  }, [users, search, filter, sortField, sortDir]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  const stats = {
-    total: users.length,
-    active: users.filter((u) => u.is_active).length,
-    inactive: users.filter((u) => !u.is_active).length,
-    admins: users.filter((u) => u.role === "admin" || u.role === "developer").length,
-  };
-
-  const allVisibleSelected = paginated.length > 0 && paginated.every((item) => selectedIds.has(item.id));
-
-  function toggleSelectAll() {
-    if (allVisibleSelected) {
-      const s = new Set(selectedIds);
-      paginated.forEach((item) => s.delete(item.id));
-      setSelectedIds(s);
-    } else {
-      const s = new Set(selectedIds);
-      paginated.forEach((item) => s.add(item.id));
-      setSelectedIds(s);
-    }
-  }
-
-  function toggleSelect(id: string) {
-    const s = new Set(selectedIds);
-    if (s.has(id)) s.delete(id); else s.add(id);
-    setSelectedIds(s);
-  }
-
-  function toggleSort(field: SortField) {
-    if (sortField === field) setSortDir((d) => d === "asc" ? "desc" : "asc");
-    else { setSortField(field); setSortDir("asc"); }
-  }
-
-  function openEdit(item: UserProfile) {
-    setEditItem(item);
-    setEditRole(item.role);
-    setEditSaving(false);
-  }
-
-  async function handleSaveRole() {
-    if (!editItem) return;
-    setEditSaving(true);
-    try {
-      await updateProfileRole(editItem.id, editRole);
-      toast("Role berhasil diubah", "success");
-    } catch {
-      toast("Gagal mengubah role", "error");
-    }
-    setEditSaving(false);
-    setEditItem(null);
-    fetchUsers();
-  }
-
-  async function handleDelete() {
-    if (!deleteItem) return;
-    try {
-      await deleteProfile(deleteItem.id);
-      toast("User berhasil dihapus", "success");
-    } catch {
-      toast("Gagal menghapus user", "error");
-    }
-    setDeleteItem(null);
-    setSelectedIds((s) => { const n = new Set(s); n.delete(deleteItem.id); return n; });
-    fetchUsers();
-  }
-
-  async function handleBulkDelete() {
-    const ids = Array.from(selectedIds);
-    if (ids.length === 0) return;
-    try {
-      await deleteProfileBulk(ids);
-      toast(`${ids.length} user berhasil dihapus`, "success");
-    } catch {
-      toast("Gagal menghapus user", "error");
-    }
-    setSelectedIds(new Set());
-    setBulkDelete(false);
-    fetchUsers();
-  }
-
-  async function handleToggleActive(item: UserProfile) {
-    try {
-      await updateProfileStatus(item.id, !item.is_active);
-      toast("Status berhasil diubah", "success");
-    } catch {
-      toast("Gagal mengubah status", "error");
-    }
-    fetchUsers();
-  }
-
-  const sortIcon = (field: SortField) => {
-    if (sortField !== field) return <SortAscending className="h-3 w-3 text-slate-300" />;
-    return sortDir === "asc"
-      ? <ArrowUp className="h-3 w-3 text-[#1767b1]" />
-      : <ArrowDown className="h-3 w-3 text-[#1767b1]" />;
-  };
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    supabase.auth
+      .getUser()
+      .then(({ data }) => setCurrentUserId(data.user?.id ?? null))
+      .catch(() => setCurrentUserId(null));
+  }, []);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Header */}
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#082b59]/10">
-            <User className="h-5 w-5 text-[#082b59]" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Kelola Pengguna</h1>
-            <p className="text-sm text-slate-500">Manajemen akun dan role pengguna</p>
-          </div>
+      <div className="mb-5 flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#082b59]/10">
+          <UsersThree className="h-5 w-5 text-[#082b59]" />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Pengguna &amp; Peran</h1>
+          <p className="text-sm text-slate-500">
+            Kelola akun, peran, dan izin akses modul panel admin
+          </p>
         </div>
       </div>
 
-      {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
-          di mobile (sebelumnya StatCardRow tampil sebagai carousel di
-          mobile karena tanpa wrapper hidden md:block). */}
-      <StatsSection
-        stats={[
-          { label: "Total", value: stats.total, variant: "brand" },
-          { label: "Aktif", value: stats.active, variant: "success" },
-          { label: "Tidak Aktif", value: stats.inactive, variant: "danger" },
-          { label: "Admin", value: stats.admins, variant: "purple" },
-        ]}
-        summary={`${stats.total} Pengguna · ${stats.active} Aktif · ${stats.inactive} Tidak Aktif · ${stats.admins} Admin`}
-      />
-
-      {/* Bulk actions */}
-      {selectedIds.size > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5">
-          <Checks className="h-4 w-4 text-[#082b59]" />
-          <span className="text-xs font-semibold text-[#082b59]">{selectedIds.size} dipilih</span>
-          <button onClick={() => setBulkDelete(true)} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
-          <button onClick={() => setSelectedIds(new Set())} className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
-        </div>
-      )}
-
-      {/* Filters — gaya Portal: pencarian di kiri, role sebagai pill dropdown
-          berjumlah di kanan. */}
-      <FilterBar
-        placeholder="Cari pengguna..."
-        searchLabel="Cari nama pengguna"
-        query={search}
-        onQueryChange={(v) => { setSearch(v); setPage(1); }}
-        filters={[roleFilterGroup]}
-      />
-
-      {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b border-slate-200/80 bg-slate-50/80">
-              <tr>
-                {/* hidden sm:table-cell — checkbox & No adalah afordansi desktop
-                    (seleksi massal & penomoran baris). Sisanya Pengguna · Role ·
-                    Status · Aksi; "Dibuat" memang sudah hidden sm:table-cell. */}
-                <th className="hidden w-10 px-4 py-3 sm:table-cell">
-                  <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
-                    className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
-                </th>
-                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">No</th>
-                <th className="cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("full_name")}>
-                  <span className="flex items-center gap-1">Pengguna {sortIcon("full_name")}</span>
-                </th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 cursor-pointer select-none" onClick={() => toggleSort("role")}>
-                  <span className="flex items-center gap-1">Role {sortIcon("role")}</span>
-                </th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 cursor-pointer select-none" onClick={() => toggleSort("is_active")}>
-                  <span className="flex items-center gap-1">Status {sortIcon("is_active")}</span>
-                </th>
-                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none" onClick={() => toggleSort("created_at")}>
-                  <span className="flex items-center gap-1">Dibuat {sortIcon("created_at")}</span>
-                </th>
-                <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading ? (
-                <tr><td colSpan={7} className="px-4 py-16 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
-                    <p className="text-sm text-slate-500">Memuat data pengguna...</p>
-                  </div>
-                </td></tr>
-              ) : paginated.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-16 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-                      <Users className="h-8 w-8 text-slate-300" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
-                      <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada pengguna"}</p>
-                    </div>
-                  </div>
-                </td></tr>
-              ) : (
-                paginated.map((item, index) => (
-                  <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[#082b59]/[0.03]" : ""}`}>
-                    {/* hidden sm:table-cell — pasangan dari <th> di atas */}
-                    <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
-                      <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
-                        className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
-                    </td>
-                    <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#082b59]/10">
-                          <User className="h-5 w-5 text-[#082b59]" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-slate-800">{item.full_name}</p>
-                          {/* hidden sm:table-cell — prefiks UUID hanya berguna
-                              untuk debug; di layar kecil ia membuang satu baris
-                              tinggi setiap row tanpa memberi informasi apa pun. */}
-                          <p className="hidden text-xs text-slate-400 sm:block">{item.id.slice(0, 8)}...</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold ${roleConfig[item.role]?.bg || "bg-slate-100 text-slate-600 border-slate-200"} ${roleConfig[item.role]?.color || ""}`}>
-                        {roleConfig[item.role]?.label || item.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => handleToggleActive(item)}
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-                          item.is_active
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                            : "bg-red-50 text-red-700 border border-red-200 hover:bg-red-100"
-                        }`}>
-                        {item.is_active ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                        {item.is_active ? "Aktif" : "Tidak Aktif"}
-                      </button>
-                    </td>
-                    <td className="hidden px-4 py-3.5 text-sm text-slate-500 sm:table-cell">
-                      {item.created_at ? new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-"}
-                    </td>
-                    <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => openEdit(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit Role">
-                          <PencilSimple className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => setDeleteItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
-                          <Trash className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        {!loading && filtered.length > 0 && (
-          <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-slate-400">
-              Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} dari {filtered.length} pengguna
-            </p>
-            <div className="flex items-center gap-1">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
-                <CaretLeft className="h-4 w-4" />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button key={p} onClick={() => setPage(p)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === page ? "bg-[#082b59] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
-                  {p}
-                </button>
-              ))}
-              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
-                <CaretRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── EDIT ROLE SLIDE-OVER ──────────────────── */}
-      <SlideOver
-        open={!!editItem}
-        onClose={() => setEditItem(null)}
-        title="Edit Role"
-        description={editItem?.full_name}
-
-        footer={
-          <div className="flex w-full items-center justify-between">
-            <button onClick={() => setEditItem(null)} disabled={editSaving}
-              className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
-              Batal
-            </button>
-            <button onClick={handleSaveRole} disabled={editSaving}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
-              {editSaving ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              ) : (
-                <>
-                  <FloppyDisk className="h-4 w-4" />
-                  Simpan Role
-                </>
-              )}
-            </button>
-          </div>
-        }
+      {/* Tabs */}
+      <div
+        role="tablist"
+        aria-label="Pengguna dan Peran"
+        className="mb-6 inline-flex w-full max-w-xs rounded-xl border border-slate-200 bg-white p-1"
       >
-        {editItem && (
-          <div className="space-y-5">
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Role Pengguna</label>
-              <div className="space-y-2">
-                {Object.entries(roleConfig).map(([key, cfg]) => (
-                  <button key={key} type="button" onClick={() => setEditRole(key)}
-                    className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
-                      editRole === key
-                        ? "border-[#1767b1] bg-[#1767b1]/10 ring-2 ring-[#1767b1]/20"
-                        : "border-slate-200 hover:border-slate-300"
-                    }`}>
-                    <div className={`flex h-8 w-8 items-center justify-center rounded-full ${cfg.bg}`}>
-                      <User className={`h-4 w-4 ${cfg.color}`} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800">{cfg.label}</p>
-                      <p className="text-xs text-slate-400">{key}</p>
-                    </div>
-                    {editRole === key && (
-                      <CheckCircle className="ml-auto h-5 w-5 text-[#1767b1]" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            role="tab"
+            aria-selected={tab === t.key}
+            onClick={() => setTab(t.key)}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+              tab === t.key
+                ? "bg-[#082b59] text-white shadow-sm"
+                : "text-slate-500 hover:bg-slate-50"
+            }`}
+          >
+            <t.icon className="h-4 w-4" />
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-            <div className="rounded-xl border border-slate-200 p-4 space-y-3">
-              <p className="text-xs font-semibold text-slate-400">Info Pengguna</p>
-              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-                <div><span className="text-slate-500">Nama:</span> <span className="font-medium text-slate-800">{editItem.full_name}</span></div>
-                <div><span className="text-slate-500">Status:</span> <span className={`font-medium ${editItem.is_active ? "text-emerald-600" : "text-red-600"}`}>{editItem.is_active ? "Aktif" : "Tidak Aktif"}</span></div>
-                <div className="col-span-2"><span className="text-slate-500">ID:</span> <span className="font-medium text-slate-800 font-mono text-xs">{editItem.id}</span></div>
-              </div>
-            </div>
-          </div>
-        )}
-      </SlideOver>
-
-      {/* ── DELETE CONFIRM ──────────────────────────── */}
-      {deleteItem && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setDeleteItem(null)}>
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto">
-              <Warning className="h-6 w-6 text-red-600" />
-            </div>
-            <h3 className="text-center text-lg font-bold text-slate-800">Hapus Pengguna?</h3>
-            <p className="mt-2 text-center text-sm text-slate-500">&ldquo;{deleteItem.full_name}&rdquo; akan dihapus permanen.</p>
-            <div className="mt-6 flex gap-3">
-              <button onClick={() => setDeleteItem(null)} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Batal</button>
-              <button onClick={handleDelete} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700">Ya, Hapus</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── BULK DELETE CONFIRM ─────────────────────── */}
-      {bulkDelete && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setBulkDelete(false)}>
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto">
-              <Warning className="h-6 w-6 text-red-600" />
-            </div>
-            <h3 className="text-center text-lg font-bold text-slate-800">Hapus {selectedIds.size} Pengguna?</h3>
-            <p className="mt-2 text-center text-sm text-slate-500">Semua pengguna yang dipilih akan dihapus permanen.</p>
-            <div className="mt-6 flex gap-3">
-              <button onClick={() => setBulkDelete(false)} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Batal</button>
-              <button onClick={handleBulkDelete} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700">Ya, Hapus</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {tab === "users" ? <UsersTab currentUserId={currentUserId} /> : <RolesTab />}
     </div>
   );
 }

@@ -22,12 +22,18 @@ import {
   ArrowSquareOut,
   FolderOpen,
   Scroll,
+  Gear,
+  Flag,
+  UsersThree,
 } from "@/components/Icons";
+import { usePermissions } from "./PermissionsProvider";
 
 type NavItem = {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  /** Izin yang dibutuhkan agar item tampil (penyaringan UI saja). */
+  perm?: string;
 };
 
 type NavGroup = {
@@ -47,34 +53,39 @@ export const navGroups: NavGroup[] = [
   {
     title: "Pendaftaran & Pesan",
     items: [
-      { label: "SPMB", href: "/admin/admission", icon: UserPlus },
-      { label: "Pesan", href: "/admin/contact", icon: Envelope },
+      { label: "SPMB", href: "/admin/admission", icon: UserPlus, perm: "spmb:read" },
+      { label: "Pesan", href: "/admin/contact", icon: Envelope, perm: "kontak:read" },
     ],
   },
   {
     title: "Konten",
     items: [
-      { label: "Berita", href: "/admin/news", icon: Newspaper },
-      { label: "Artikel", href: "/admin/articles", icon: Note },
-      { label: "Pengumuman", href: "/admin/announcements", icon: Bell },
-      { label: "Kegiatan", href: "/admin/activities", icon: CalendarBlank },
-      { label: "Agenda", href: "/admin/agenda", icon: CalendarCheck },
-      { label: "Galeri", href: "/admin/gallery", icon: ImageSquare },
-      { label: "Media", href: "/admin/media", icon: FolderOpen },
-      { label: "Prestasi", href: "/admin/achievements", icon: Trophy },
+      { label: "Berita", href: "/admin/news", icon: Newspaper, perm: "berita:read" },
+      { label: "Artikel", href: "/admin/articles", icon: Note, perm: "artikel:read" },
+      { label: "Pengumuman", href: "/admin/announcements", icon: Bell, perm: "pengumuman:read" },
+      { label: "Kegiatan", href: "/admin/activities", icon: CalendarBlank, perm: "kegiatan:read" },
+      { label: "Agenda", href: "/admin/agenda", icon: CalendarCheck, perm: "agenda:read" },
+      { label: "Galeri", href: "/admin/gallery", icon: ImageSquare, perm: "galeri:read" },
+      { label: "Media", href: "/admin/media", icon: FolderOpen, perm: "media:read" },
+      { label: "Prestasi", href: "/admin/achievements", icon: Trophy, perm: "prestasi:read" },
     ],
   },
   {
     title: "Profil Sekolah",
     items: [
-      { label: "Guru", href: "/admin/teachers", icon: GraduationCap },
-      { label: "Fasilitas", href: "/admin/facilities", icon: Buildings },
-      { label: "Portal", href: "/admin/portal", icon: SquaresFour },
+      { label: "Guru", href: "/admin/teachers", icon: GraduationCap, perm: "guru:read" },
+      { label: "Fasilitas", href: "/admin/facilities", icon: Buildings, perm: "fasilitas:read" },
+      { label: "Portal", href: "/admin/portal", icon: SquaresFour, perm: "portal:read" },
     ],
   },
   {
     title: "Sistem",
-    items: [{ label: "Log Aktivitas", href: "/admin/logs", icon: Scroll }],
+    items: [
+      { label: "Pengaturan Situs", href: "/admin/settings", icon: Gear, perm: "settings:manage" },
+      { label: "Feature Flags", href: "/admin/flags", icon: Flag, perm: "flags:manage" },
+      { label: "Pengguna & Peran", href: "/admin/users", icon: UsersThree, perm: "users:manage" },
+      { label: "Log Aktivitas", href: "/admin/logs", icon: Scroll, perm: "logs:read" },
+    ],
   },
 ];
 
@@ -84,6 +95,25 @@ export const navGroups: NavGroup[] = [
  */
 export function isNavActive(href: string, pathname: string): boolean {
   return href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
+}
+
+/**
+ * Saring navGroups agar hanya menampilkan item yang izinnya dimiliki.
+ *
+ * PENYARINGAN UI SAJA — penegakan server ada di proxy.ts & server action.
+ * Item tanpa `perm` selalu tampil. Grup yang kosong setelah disaring ikut
+ * disembunyikan (termasuk judulnya).
+ */
+export function filterNavGroups(
+  groups: NavGroup[],
+  canFn: (perm: string) => boolean
+): NavGroup[] {
+  return groups
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((it) => !it.perm || canFn(it.perm)),
+    }))
+    .filter((g) => g.items.length > 0);
 }
 
 /**
@@ -102,6 +132,8 @@ export default function AdminSidebar({
 }) {
   const pathname = usePathname() ?? "";
   const navRef = useRef<HTMLElement | null>(null);
+  const { can: canFn } = usePermissions();
+  const groups = filterNavGroups(navGroups, canFn);
 
   // Pada layar pendek (mis. 800×382) tinggi area menu hanya ±254px sementara
   // daftarnya ±1250px — dan bar scrollbar sengaja disembunyikan oleh
@@ -145,7 +177,7 @@ export default function AdminSidebar({
           aria-label="Menu admin"
           className="min-h-0 flex-1 space-y-5 overflow-y-auto scrollbar-hide px-3 pb-6 pt-4"
         >
-          {navGroups.map((group, i) => (
+          {groups.map((group, i) => (
             <div key={group.title ?? i}>
               {group.title && (
                 <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">

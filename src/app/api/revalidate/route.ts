@@ -2,6 +2,8 @@ import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { canAccessAdminPanel } from "@/lib/auth";
+import { canAny } from "@/lib/rbac";
+import { ALL_PERMISSIONS } from "@/lib/rbac/permissions";
 
 const ALLOWED_PATHS = new Set([
   "/",
@@ -64,7 +66,7 @@ export async function POST(req: NextRequest) {
   // ── Cek role memakai helper bersama (satu daftar role untuk semua) ──
   const { data: profile, error: profileError } = await supabase
     .from("user_profiles")
-    .select("role, is_active")
+    .select("role, is_active, system_role")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -77,6 +79,29 @@ export async function POST(req: NextRequest) {
   }
   if (!canAccessAdminPanel(profile)) {
     return errorResponse(profile.is_active ? "role_not_allowed" : "inactive", 403);
+  }
+
+  // ── Cek izin RBAC (requirePermission setara, jalur API) ──
+  // Revalidate hanya dipanggil setelah menyunting konten/SPMB publik. Wajib
+  // punya minimal SATU izin modul (super admin otomatis lolos; teacher/student
+  // tanpa peran terbawa → 403). Tanpa tabel role_permissions (migrasi belum
+  // jalan) → fallback pemetaan legacy di can() tetap menjaga kelangsungan.
+  let permissions: string[] = [];
+  if (profile.system_role) {
+    const { data: rows } = await supabase
+      .from("role_permissions")
+      .select("permission")
+      .eq("role_key", profile.system_role);
+    permissions = (rows ?? []).map((r) => r.permission as string);
+  }
+  const subject = {
+    system_role: profile.system_role,
+    role: profile.role,
+    is_active: profile.is_active,
+    permissions,
+  };
+  if (!canAny(subject, ALL_PERMISSIONS)) {
+    return errorResponse("forbidden", 403);
   }
 
   // ── 2. Validasi body ──────────────────────────────────────

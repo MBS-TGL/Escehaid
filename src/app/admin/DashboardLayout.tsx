@@ -6,6 +6,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import AdminSidebar from "./Sidebar";
 import AdminTopbar from "./Topbar";
 import AdminMobileNav from "./MobileNav";
+import { PermissionsProvider } from "./PermissionsProvider";
 import { useToast } from "@/components/ui/Toast";
 
 interface UserProfile {
@@ -21,6 +22,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -53,6 +55,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         return;
       }
 
+      setUserId(user.id);
       setProfile(data);
       setLoading(false);
     };
@@ -104,18 +107,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <AdminSidebar />
+    <PermissionsProvider userId={userId}>
+      <div className="min-h-screen bg-slate-50">
+        <AdminSidebar />
 
-      {/* Main content area */}
-      <div className="min-h-screen transition-all duration-300 lg:ml-[270px]">
-        <AdminTopbar profile={profile} />
-        {/* pb-24 lg:pb-0 — bottom nav setinggi ±54px + safe-area; tanpa padding
-            ini baris terakhir tabel/pagination tertutup bar navigasi. */}
-        <main className="pb-24 lg:pb-0">{children}</main>
+        {/* Main content area */}
+        <div className="min-h-screen transition-all duration-300 lg:ml-[270px]">
+          <AdminTopbar profile={profile} />
+          {/* pb-24 lg:pb-0 — bottom nav setinggi ±54px + safe-area; tanpa padding
+              ini baris terakhir tabel/pagination tertutup bar navigasi. */}
+          <main className="pb-24 lg:pb-0">{children}</main>
+        </div>
+
+        <AdminMobileNav />
       </div>
-
-      <AdminMobileNav />
-    </div>
+    </PermissionsProvider>
   );
 }

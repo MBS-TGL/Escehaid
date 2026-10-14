@@ -13,12 +13,15 @@ import {
   X,
   ArrowSquareOut,
 } from "@/components/Icons";
-import { navGroups, isNavActive } from "./Sidebar";
+import { navGroups, isNavActive, filterNavGroups } from "./Sidebar";
+import { usePermissions } from "./PermissionsProvider";
 
 type NavItem = {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string; weight?: "regular" | "fill" }>;
+  /** Izin yang dibutuhkan agar item tampil (penyaringan UI saja). */
+  perm?: string;
 };
 
 /**
@@ -33,9 +36,9 @@ type NavItem = {
  */
 const primaryItems: NavItem[] = [
   { label: "Dashboard", href: "/admin", icon: House },
-  { label: "SPMB", href: "/admin/admission", icon: UserPlus },
-  { label: "Pesan", href: "/admin/contact", icon: Envelope },
-  { label: "Berita", href: "/admin/news", icon: Newspaper },
+  { label: "SPMB", href: "/admin/admission", icon: UserPlus, perm: "spmb:read" },
+  { label: "Pesan", href: "/admin/contact", icon: Envelope, perm: "kontak:read" },
+  { label: "Berita", href: "/admin/news", icon: Newspaper, perm: "berita:read" },
 ];
 
 /**
@@ -45,6 +48,9 @@ const primaryItems: NavItem[] = [
 export default function AdminMobileNav({ badges = {} }: { badges?: Record<string, number> }) {
   const pathname = usePathname() ?? "";
   const [sheetOpen, setSheetOpen] = useState(false);
+  const { can: canFn } = usePermissions();
+  const visiblePrimary = primaryItems.filter((it) => !it.perm || canFn(it.perm));
+  const groups = filterNavGroups(navGroups, canFn);
 
   // Esc menutup + kunci scroll body selama sheet terbuka. `visibility` pada
   // transisi panel (lihat di bawah) membuat anaknya keluar dari tab order
@@ -69,8 +75,12 @@ export default function AdminMobileNav({ badges = {} }: { badges?: Record<string
         aria-label="Navigasi admin"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white pb-[max(env(safe-area-inset-bottom),12px)] lg:hidden"
       >
-        <ul className="grid grid-cols-5">
-          {primaryItems.map((item) => {
+        {/* grid dinamis: jumlah item terlihat + tombol "Lainnya". */}
+        <ul
+          className="grid"
+          style={{ gridTemplateColumns: `repeat(${visiblePrimary.length + 1}, minmax(0, 1fr))` }}
+        >
+          {visiblePrimary.map((item) => {
             const isActive = isNavActive(item.href, pathname);
             const badge = badges[item.href] ?? 0;
             return (
@@ -184,7 +194,7 @@ export default function AdminMobileNav({ badges = {} }: { badges?: Record<string
             aria-label="Menu admin lengkap"
             className="min-h-0 flex-1 space-y-5 overflow-y-auto scrollbar-hide px-4 pb-4 pt-4"
           >
-            {navGroups.map((group, i) => (
+            {groups.map((group, i) => (
               <div key={group.title ?? i}>
                 {group.title && (
                   <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">

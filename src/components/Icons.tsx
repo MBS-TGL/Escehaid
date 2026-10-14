@@ -171,5 +171,6 @@ export {
   DotsSixVertical,
   DotsThreeVertical,
   CheckSquare,
-  Copy
+  Copy,
+  Upload
 } from "@phosphor-icons/react/dist/ssr";

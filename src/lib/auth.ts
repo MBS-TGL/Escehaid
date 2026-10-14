@@ -12,6 +12,14 @@ export interface UserProfile {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  /** Peran halus RBAC (kolom `system_role`). Null bila belum di-set. */
+  system_role?: string | null;
+  /** Email dari auth.users (di-backfill migrasi). */
+  email?: string | null;
+  /** true bila user wajib mengganti password pada login berikutnya. */
+  must_change_password?: boolean;
+  /** Waktu login terakhir (untuk UI pengguna). */
+  last_login_at?: string | null;
 }
 
 export async function getUser(): Promise<User | null> {

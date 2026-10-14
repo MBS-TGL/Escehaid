@@ -56,6 +56,7 @@ import {
   SortAscending,
   Checks,
   CalendarBlank,
+  Upload,
 } from "@/components/Icons";
 import {
   MobileFilterBar,
@@ -71,6 +72,7 @@ import {
 } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
 import { AddRegistrationSlideOver } from "@/components/admin/AddRegistrationSlideOver";
+import { ImportRegistrationsModal } from "@/components/admin/ImportRegistrationsModal";
 
 const PAGE_SIZE = 10;
 
@@ -178,6 +180,8 @@ export default function AdminSPMBPage() {
   const [confirmAction, setConfirmAction] = useState<{ id: string; status: "accepted" | "rejected" } | null>(null);
   /** Panel "Tambah Pendaftar" (input manual admin) — mount ulang tiap dibuka. */
   const [addOpen, setAddOpen] = useState(false);
+  /** Modal "Import Pendaftar" (massal dari ekspor Google Form). */
+  const [importOpen, setImportOpen] = useState(false);
 
   // Edit panel
   const [editItem, setEditItem] = useState<SpmbRegistration | null>(null);
@@ -544,7 +548,11 @@ export default function AdminSPMBPage() {
     // di dalam callback async, sehingga tidak ada setState sinkron dalam effect.
     (async () => {
       const urls: Record<string, string> = {};
-      await Promise.all(paths.map(async ({ key, path }) => {
+      // Nilai http(s) (mis. unggahan Google Form saat import) adalah URL final
+      // — langsung dipakai, tanpa createSignedUrl.
+      const needSign = paths.filter((p) => !/^https?:\/\//i.test(p.path));
+      paths.filter((p) => /^https?:\/\//i.test(p.path)).forEach(({ key, path }) => { urls[key] = path; });
+      await Promise.all(needSign.map(async ({ key, path }) => {
         const { data } = await supabase.storage.from("spmb-documents").createSignedUrl(path, 3600);
         if (data?.signedUrl) urls[key] = data.signedUrl;
       }));
@@ -874,7 +882,7 @@ export default function AdminSPMBPage() {
     return (
       <div className="p-4 sm:p-6 lg:p-8">
         {/* Header + Tab */}
-        <PageHeader active={mainTab} onSelect={setMainTab} onExport={handleExportCsv} onAdd={() => setAddOpen(true)} />
+        <PageHeader active={mainTab} onSelect={setMainTab} onExport={handleExportCsv} onAdd={() => setAddOpen(true)} onImport={() => setImportOpen(true)} />
 
         {/* ── MODAL LINK GOOGLE FORM ─────────────────────── */}
         {googleModal && (
@@ -1487,7 +1495,7 @@ export default function AdminSPMBPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Header + Tab */}
-      <PageHeader active={mainTab} onSelect={setMainTab} onExport={handleExportCsv} onAdd={() => setAddOpen(true)} />
+      <PageHeader active={mainTab} onSelect={setMainTab} onExport={handleExportCsv} onAdd={() => setAddOpen(true)} onImport={() => setImportOpen(true)} />
 
       {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
           di mobile (angka = jumlah filter status). */}
@@ -1636,6 +1644,11 @@ export default function AdminSPMBPage() {
                           {item.documents?.input_source === "admin" && (
                             <span className="ml-1.5 inline-block rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-500" title="Ditambahkan manual oleh admin">
                               Manual
+                            </span>
+                          )}
+                          {item.documents?.input_source === "import" && (
+                            <span className="ml-1.5 inline-block rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-500" title="Diimpor massal dari ekspor Google Form">
+                              Impor
                             </span>
                           )}
                         </p>
@@ -2047,6 +2060,16 @@ export default function AdminSPMBPage() {
         />
       )}
 
+      {/* ── IMPORT PENDAFTAR (MASSAL DARI GOOGLE FORM) ──── */}
+      {importOpen && (
+        <ImportRegistrationsModal
+          open
+          onClose={() => setImportOpen(false)}
+          existing={data}
+          onImported={fetchData}
+        />
+      )}
+
       {/* ── DELETE CONFIRM ──────────────────────────── */}
       {deleteItem && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setDeleteItem(null)}>
@@ -2124,7 +2147,7 @@ export default function AdminSPMBPage() {
 }
 
 /** Header halaman + tab "Pendaftar" / "Gelombang Pendaftaran". */
-function PageHeader({ active, onSelect, onExport, onAdd }: { active: MainTab; onSelect: (tab: MainTab) => void; onExport: () => void; onAdd: () => void }) {
+function PageHeader({ active, onSelect, onExport, onAdd, onImport }: { active: MainTab; onSelect: (tab: MainTab) => void; onExport: () => void; onAdd: () => void; onImport: () => void }) {
   const tabs: { key: MainTab; label: string; icon: React.ElementType }[] = [
     { key: "registrations", label: "Pendaftar", icon: Users },
     { key: "waves", label: "Gelombang & Pengaturan", icon: CalendarBlank },
@@ -2147,6 +2170,10 @@ function PageHeader({ active, onSelect, onExport, onAdd }: { active: MainTab; on
             <button onClick={onAdd} className="flex min-h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#082b59] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1] sm:flex-none md:py-2.5">
               <Plus className="h-4 w-4" />
               Tambah Pendaftar
+            </button>
+            <button onClick={onImport} className="flex min-h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:flex-none md:py-2.5">
+              <Upload className="h-4 w-4" />
+              Import
             </button>
             <button onClick={onExport} className="flex min-h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:flex-none md:py-2.5">
               <Download className="h-4 w-4" />
@@ -2372,9 +2399,10 @@ function RegistrationMobileRow({
         }
         title={item.full_name}
         badge={
-          item.status === "rejected" || item.documents?.input_source === "admin" ? (
+          item.status === "rejected" || item.documents?.input_source === "admin" || item.documents?.input_source === "import" ? (
             <>
               {item.documents?.input_source === "admin" && <QuietBadge>Manual</QuietBadge>}
+              {item.documents?.input_source === "import" && <QuietBadge>Impor</QuietBadge>}
               {item.status === "rejected" && <QuietBadge>Ditolak</QuietBadge>}
             </>
           ) : undefined

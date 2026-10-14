@@ -14,7 +14,7 @@ export type AdminStat = {
  * Dashboard karena kartu = konten utama, bukan ringkasan):
  *
  *   desktop (≥md) — kartu `StatCardRow` (carousel di <sm, grid ≥sm);
- *   mobile  (<md) — ringkasan SATU baris teks 12px `#64748b` (PROMPT_REDESIGN
+ *   mobile  (<md) — ringkasan SATU baris teks 12px `#64748b` (docs/PROMPT_REDESIGN
  *     poin 5: hemat layar; angka metrik unik — Bulan Ini, Kategori, dst. —
  *     ikut tampil sebagai segmen teks, jadi tidak ada informasi yang hilang).
  *
