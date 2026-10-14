@@ -25,6 +25,12 @@ type SlideOverProps = {
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
+  /**
+   * Konten yang dirender DI LUAR area scroll (di bawah header, di atas
+   * konten) — mis. bar tab yang harus selalu terlihat pada form panjang.
+   * Opsional; default undefined → tampilan panel lain tidak berubah.
+   */
+  toolbar?: ReactNode;
   className?: string;
   /** Kelas pembungkus panel — untuk lebar per-halaman (mis. "md:max-w-4xl"). */
   wrapperClassName?: string;
@@ -39,6 +45,7 @@ export const SlideOver = memo(function SlideOver({
   description,
   children,
   footer,
+  toolbar,
   className = "",
   wrapperClassName = "",
   maxHeight,
@@ -142,6 +149,12 @@ export const SlideOver = memo(function SlideOver({
               <button onClick={onClose} className="w-8 h-8 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors flex items-center justify-center shrink-0">
                 <X className="w-4 h-4" />
               </button>
+            </div>
+          )}
+
+          {toolbar && (
+            <div className="shrink-0 border-b border-slate-200/70 bg-white px-5 pb-3 md:px-6">
+              {toolbar}
             </div>
           )}
 

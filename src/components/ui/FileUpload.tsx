@@ -11,6 +11,12 @@ interface FileUploadProps {
   maxSize?: number; // in MB
   value: File | null;
   onChange: (file: File | null) => void;
+  /**
+   * Dropzone ringkas satu baris (±64px) untuk panel padat seperti
+   * "Tambah Pendaftar". Opsional & default false — form publik tetap
+   * memakai tampilan penuh yang sama seperti sebelumnya.
+   */
+  compact?: boolean;
 }
 
 const ALLOWED_TYPES: Record<string, string[]> = {
@@ -23,7 +29,7 @@ const ALLOWED_TYPES: Record<string, string[]> = {
   ".heif": ["image/heif"],
 };
 
-export function FileUpload({ label, required, error, accept = ".pdf,.jpg,.jpeg,.png,.webp", maxSize = 10, value, onChange }: FileUploadProps) {
+export function FileUpload({ label, required, error, accept = ".pdf,.jpg,.jpeg,.png,.webp", maxSize = 10, value, onChange, compact = false }: FileUploadProps) {
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -68,7 +74,7 @@ export function FileUpload({ label, required, error, accept = ".pdf,.jpg,.jpeg,.
       </label>
 
       {value ? (
-        <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+        <div className={`flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 ${compact ? "min-h-16 py-2.5" : ""}`}>
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
             <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -80,6 +86,7 @@ export function FileUpload({ label, required, error, accept = ".pdf,.jpg,.jpeg,.
           </div>
           <button
             type="button"
+            aria-label={`Hapus ${label}`}
             onClick={() => onChange(null)}
             className="shrink-0 rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-100"
           >
@@ -87,6 +94,32 @@ export function FileUpload({ label, required, error, accept = ".pdf,.jpg,.jpeg,.
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
+        </div>
+      ) : compact ? (
+        /* Dropzone ringkas satu baris (±64px) — dipakai panel admin. */
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+          onClick={() => inputRef.current?.click()}
+          className={`flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed px-3 py-2.5 transition-colors ${
+            dragOver
+              ? "border-[#1767b1] bg-[#1767b1]/5"
+              : error
+              ? "border-red-400 bg-red-50"
+              : "border-[#dce3ed] bg-[#f4f7fb] hover:border-[#1767b1]/50 hover:bg-[#1767b1]/5"
+          }`}
+        >
+          <svg className={`h-5 w-5 shrink-0 ${dragOver ? "text-[#1767b1]" : "text-slate-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+          </svg>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-[#082b59]">Klik atau drag file ke sini</p>
+            <p className="truncate text-xs text-slate-400">PDF, JPG, PNG, WebP (maks. {maxSize} MB)</p>
+          </div>
+          <span className="shrink-0 rounded-lg border border-[#dce3ed] bg-white px-3 py-1.5 text-xs font-semibold text-[#1767b1]">
+            Pilih file
+          </span>
         </div>
       ) : (
         <div

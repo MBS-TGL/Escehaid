@@ -20,6 +20,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const viewport: Viewport = {
   themeColor: "#082b59",
+  viewportFit: "cover",
 };
 
 // Judul dinamis dari database: default = nama sekolah, halaman lain otomatis

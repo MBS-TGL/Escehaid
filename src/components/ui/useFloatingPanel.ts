@@ -33,6 +33,20 @@ interface UseFloatingPanelOptions {
   pad?: number;
 }
 
+/** Cari wadah scroll terdekat (mis. area `overflow-y-auto` SlideOver/Modal,
+ *  tabel, sidebar) — dipakai sebagai BATAS panel supaya tidak melayang keluar
+ *  wadahnya: dropdown tampil "di dalam modal", bukan di atas footer/tepi panel.
+ *  Dipakai juga oleh DatePicker untuk membatasi & membalik kalendernya. */
+export function nearestScroller(el: HTMLElement): HTMLElement | null {
+  let p = el.parentElement;
+  while (p && p !== document.body && p !== document.documentElement) {
+    const oy = getComputedStyle(p).overflowY;
+    if (oy === "auto" || oy === "scroll") return p;
+    p = p.parentElement;
+  }
+  return null;
+}
+
 /* ── Geometri panel floating ─────────────────────────────────────────────
  * Panel di-portal ke document.body dengan position:fixed sehingga:
  *  1) tidak ter-clipping oleh wadah overflow mana pun (Modal/SlideOver punya
@@ -44,7 +58,12 @@ interface UseFloatingPanelOptions {
  *  3) re-posisi saat scroll (capture — menangkap scroll container mana pun,
  *     termasuk di dalam modal) dan resize, lalu tutup bila trigger hilang;
  *  4) maxHeight dikunci ke ruang tersedia (min 80px, maks opsi maxHeight)
- *     agar tidak keluar viewport.
+ *     agar tidak keluar viewport;
+ *  5) ruang dihitung dari wadah scroll terdekat bila ada (lihat
+ *     nearestScroller) → di dalam SlideOver/Modal panel flip & terbatas di
+ *     area scroll yang sama seperti DatePicker inline: tidak menutupi footer
+ *     dan tidak keluar tepi panel ("di dalam modal"). Di luar wadah scroll,
+ *     batas = viewport → perilaku lama tidak berubah.
  *
  * Tinggi viewport memakai documentElement.clientHeight = ICB, yaitu viewport
  * MINUS scrollbar horizontal; window.innerHeight menyertakan scrollbar
@@ -83,8 +102,13 @@ export function useFloatingPanel({
     }
     const rect = el.getBoundingClientRect();
     const vh = document.documentElement.clientHeight;
-    const spaceBelow = vh - rect.bottom - pad;
-    const spaceAbove = rect.top - pad;
+    // Batas ruang: wadah scroll terdekat bila ada, selalu dipotong viewport
+    // supaya panel tidak pernah keluar layar maupun menutupi footer wadahnya.
+    const scRect = nearestScroller(el)?.getBoundingClientRect() ?? null;
+    const boundTop = Math.max(pad, scRect ? scRect.top + pad : pad);
+    const boundBottom = Math.min(vh - pad, scRect ? scRect.bottom - pad : vh - pad);
+    const spaceBelow = boundBottom - rect.bottom - pad;
+    const spaceAbove = rect.top - boundTop - gap;
     // Turun bila ruang bawah lega; kalau sempit, naik — kecuali ruang atas
     // justru lebih sempit (maka sisi paling lapang yang dipakai).
     const useBottom = spaceBelow >= minFit || spaceBelow >= spaceAbove;

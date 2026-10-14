@@ -39,6 +39,12 @@ yarn-error.log*
 # opencode: konfigurasi izin lokal (jangan di-commit)
 opencode.json
 
+# backup config lokal (jangan di-commit)
+*.bak-*
+
+# codegraph: indeks lokal (jangan di-commit)
+.codegraph/
+
 # opencode plugin credentials — token Telegram, jangan sampai ikut ter-commit
 .opencode/**/secrets.json
 

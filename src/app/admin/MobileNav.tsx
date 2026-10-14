@@ -18,7 +18,7 @@ import { navGroups, isNavActive } from "./Sidebar";
 type NavItem = {
   label: string;
   href: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; weight?: "regular" | "fill" }>;
 };
 
 /**
@@ -38,7 +38,11 @@ const primaryItems: NavItem[] = [
   { label: "Berita", href: "/admin/news", icon: Newspaper },
 ];
 
-export default function AdminMobileNav() {
+/**
+ * `badges`: jumlah yang perlu perhatian per href, mis.
+ * { "/admin/admission": 3, "/admin/contact": 1 }. Dihitung di layout (server).
+ */
+export default function AdminMobileNav({ badges = {} }: { badges?: Record<string, number> }) {
   const pathname = usePathname() ?? "";
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -63,26 +67,46 @@ export default function AdminMobileNav() {
       {/* Bar bawah — hanya di bawah lg. Di atas lg sidebar tampil (Sidebar.tsx). */}
       <nav
         aria-label="Navigasi admin"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white pb-[max(env(safe-area-inset-bottom),12px)] lg:hidden"
       >
         <ul className="grid grid-cols-5">
           {primaryItems.map((item) => {
             const isActive = isNavActive(item.href, pathname);
+            const badge = badges[item.href] ?? 0;
             return (
               <li key={item.href}>
                 <Link
                   href={item.href}
                   aria-current={isActive ? "page" : undefined}
-                  className={`flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] leading-none transition-colors active:bg-[#082b59]/5 ${
-                    isActive
-                      ? "font-semibold text-[#082b59]"
-                      : "font-medium text-slate-500"
-                  }`}
+                  className={`relative flex flex-col items-center justify-center gap-1 py-2 text-[11px] leading-none transition-colors active:bg-[#082b59]/5 ${isActive ? "font-semibold text-[#082b59]" : "font-medium text-slate-500"
+                    }`}
                 >
-                  <item.icon
-                    className={`h-5 w-5 ${isActive ? "text-[#082b59]" : "text-slate-400"}`}
-                  />
-                  <span>{item.label}</span>
+                  {isActive && (
+                    <span
+                      aria-hidden
+                      className="absolute left-1/2 top-0 h-[3px] w-8 -translate-x-1/2 rounded-b-full bg-[#082b59]"
+                    />
+                  )}
+                  <span className="relative">
+                    <span className="flex h-7 w-12 items-center justify-center">
+                      <item.icon
+                        className={`h-5 w-5 ${isActive ? "text-[#082b59]" : "text-slate-500"}`}
+                        weight={isActive ? "fill" : "regular"}
+                      />
+                    </span>
+                    {badge > 0 && (
+                      <span
+                        aria-hidden
+                        className="absolute right-0.5 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white"
+                      >
+                        {badge > 99 ? "99+" : badge}
+                      </span>
+                    )}
+                  </span>
+                  <span>
+                    {item.label}
+                    {badge > 0 && <span className="sr-only">, {badge} perlu perhatian</span>}
+                  </span>
                 </Link>
               </li>
             );
@@ -95,9 +119,11 @@ export default function AdminMobileNav() {
               onClick={() => setSheetOpen((v) => !v)}
               aria-expanded={sheetOpen}
               aria-controls="admin-nav-sheet"
-              className="flex w-full flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-medium leading-none text-slate-500 transition-colors active:bg-[#082b59]/5"
+              className="flex w-full flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium leading-none text-slate-500 transition-colors active:bg-[#082b59]/5"
             >
-              <List className="h-5 w-5 text-slate-400" />
+              <span className="flex h-7 w-12 items-center justify-center">
+                <List className="h-5 w-5 text-slate-500" />
+              </span>
               <span>Lainnya</span>
             </button>
           </li>
@@ -113,9 +139,8 @@ export default function AdminMobileNav() {
       >
         <div
           onClick={() => setSheetOpen(false)}
-          className={`absolute inset-0 bg-[#082b59]/40 transition-opacity duration-300 motion-reduce:transition-none ${
-            sheetOpen ? "opacity-100" : "opacity-0"
-          }`}
+          className={`absolute inset-0 bg-[#082b59]/40 transition-opacity duration-300 motion-reduce:transition-none ${sheetOpen ? "opacity-100" : "opacity-0"
+            }`}
         />
 
         <div
@@ -123,9 +148,8 @@ export default function AdminMobileNav() {
           role="dialog"
           aria-modal="true"
           aria-label="Menu admin lengkap"
-          className={`absolute inset-x-0 bottom-0 flex max-h-[85vh] flex-col rounded-t-3xl border-t border-[#dce3ed] bg-white pb-[env(safe-area-inset-bottom)] transition-[transform,visibility] duration-300 ease-out motion-reduce:transition-none ${
-            sheetOpen ? "visible translate-y-0" : "invisible translate-y-full"
-          }`}
+          className={`absolute inset-x-0 bottom-0 flex max-h-[85vh] flex-col rounded-t-3xl border-t border-[#dce3ed] bg-white pb-[max(env(safe-area-inset-bottom),8px)] transition-[transform,visibility] duration-300 ease-out motion-reduce:transition-none ${sheetOpen ? "visible translate-y-0" : "invisible translate-y-full"
+            }`}
         >
           {/* Handle */}
           <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-slate-200" />
@@ -163,7 +187,7 @@ export default function AdminMobileNav() {
             {navGroups.map((group, i) => (
               <div key={group.title ?? i}>
                 {group.title && (
-                  <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                     {group.title}
                   </p>
                 )}
@@ -176,16 +200,14 @@ export default function AdminMobileNav() {
                           href={item.href}
                           onClick={() => setSheetOpen(false)}
                           aria-current={isActive ? "page" : undefined}
-                          className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#082b59] focus-visible:ring-offset-1 ${
-                            isActive
-                              ? "bg-[#082b59] text-white shadow-md shadow-[#082b59]/20"
-                              : "text-slate-600 hover:bg-slate-50 hover:text-[#082b59]"
-                          }`}
+                          className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#082b59] focus-visible:ring-offset-1 ${isActive
+                            ? "bg-[#082b59] text-white shadow-md shadow-[#082b59]/20"
+                            : "text-slate-600 hover:bg-slate-50 hover:text-[#082b59]"
+                            }`}
                         >
                           <item.icon
-                            className={`h-[18px] w-[18px] flex-shrink-0 ${
-                              isActive ? "text-white" : "text-slate-400 group-hover:text-[#082b59]"
-                            }`}
+                            className={`h-[18px] w-[18px] flex-shrink-0 ${isActive ? "text-white" : "text-slate-400 group-hover:text-[#082b59]"
+                              }`}
                           />
                           <span className="truncate">{item.label}</span>
                           {isActive && (

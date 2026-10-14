@@ -197,4 +197,132 @@ export async function deleteRegistrationBulk(ids: string[]): Promise<{ error?: s
   return {};
 }
 
+// ============ ADMIN: TAMBAH PENDAFTAR (INPUT MANUAL) ============
+
+/** Input "Tambah Pendaftar" oleh admin — bentuk data sama dengan form publik. */
+export type AdminCreateRegistrationInput = {
+  full_name: string;
+  birth_place?: string;
+  /** "YYYY-MM-DD"; "" / null → null (kolom date tidak menerima ""). */
+  birth_date?: string | null;
+  gender: "L" | "P";
+  address?: string;
+  phone?: string;
+  email?: string;
+  parent_name?: string;
+  parent_occupation?: string;
+  previous_school?: string;
+  registration_path: "reguler" | "prestasi" | "beasiswa";
+  /** Default "pending" (hanya "pending" | "accepted" yang bisa dipilih admin). */
+  status?: "pending" | "accepted";
+  /** Pilihan admin; null = tanpa gelombang (TIDAK otomatis seperti submitRegistration). */
+  wave_id?: string | null;
+  admin_notes?: string;
+  documents?: Record<string, string | null>;
+};
+
+/**
+ * Insert pendaftar oleh admin (panel /admin/admission — "Tambah Pendaftar").
+ * Tanpa notifyAllAdmins: admin yang mengetik datanya sendiri, bukan pendaftaran
+ * publik baru. Butuh policy INSERT authenticated (lihat
+ * supabase/spmb_admin_insert.sql) karena policy anon hanya menerima insert
+ * default (status pending / tanpa gelombang).
+ */
+export async function adminCreateRegistration(
+  input: AdminCreateRegistrationInput
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const birthDate = input.birth_date?.trim() || "";
+    const { error } = await supabase.from("spmb_registrations").insert({
+      full_name: input.full_name.trim(),
+      birth_place: input.birth_place?.trim() || "",
+      birth_date: birthDate || null,
+      gender: input.gender,
+      address: input.address?.trim() || "",
+      phone: input.phone?.trim() || "",
+      email: input.email?.trim() || "",
+      parent_name: input.parent_name ?? "",
+      parent_occupation: input.parent_occupation ?? "",
+      previous_school: input.previous_school?.trim() || "",
+      registration_path: input.registration_path,
+      status: input.status ?? "pending",
+      admin_notes: input.admin_notes?.trim() || "",
+      documents: input.documents || {},
+      wave_id: input.wave_id ?? null,
+    });
+
+    if (error) {
+      console.error("Error creating registration (admin):", error);
+      // RLS menolak → pesan yang menunjuk ke migrasi, bukan pesan mentah membingungkan.
+      if (error.code === "42501" || /row-level security/i.test(error.message || "")) {
+        return {
+          success: false,
+          error:
+            "Database menolak penyimpanan (policy RLS insert admin belum aktif) — jalankan supabase/spmb_admin_insert.sql di Supabase SQL Editor.",
+        };
+      }
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("Error creating registration (admin):", e);
+    return { success: false, error: message };
+  }
+}
+
+/** Baris pendaftar yang NISN/NIK-nya sama dengan input yang sedang disusun. */
+export type SpmbRegistrationDuplicate = {
+  id: string;
+  full_name: string;
+  /** Field identik yang cocok dengan data input. */
+  matched: ("nisn" | "nik")[];
+};
+
+/**
+ * Cari pendaftar dengan NISN/NIK sama (via documents->>nisn / documents->>nik).
+ * Best-effort: hanya dipakai untuk peringatan "kemungkinan duplikat" di panel
+ * admin — kegagalan query diam-diam dianggap [] dan TIDAK memblokir simpan.
+ */
+export async function findDuplicateRegistrations({
+  nisn,
+  nik,
+}: {
+  nisn?: string;
+  nik?: string;
+}): Promise<SpmbRegistrationDuplicate[]> {
+  const n = nisn?.trim() || "";
+  const k = nik?.trim() || "";
+  if (!n && !k) return [];
+
+  const byId = new Map<string, SpmbRegistrationDuplicate>();
+  async function findBy(column: "nisn" | "nik", value: string): Promise<void> {
+    if (!value) return;
+    try {
+      const { data, error } = await supabase
+        .from("spmb_registrations")
+        .select("id, full_name, documents")
+        .filter(`documents->>${column}`, "eq", value);
+      if (error) {
+        console.warn("findDuplicateRegistrations:", error.message);
+        return;
+      }
+      for (const row of data || []) {
+        const existing = byId.get(row.id);
+        if (existing) {
+          if (!existing.matched.includes(column)) existing.matched.push(column);
+        } else {
+          byId.set(row.id, { id: row.id, full_name: row.full_name, matched: [column] });
+        }
+      }
+    } catch (e) {
+      console.warn("findDuplicateRegistrations:", e);
+    }
+  }
+
+  await findBy("nisn", n);
+  await findBy("nik", k);
+  return Array.from(byId.values());
+}
+
 // ============ TEACHERS ============

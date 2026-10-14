@@ -70,6 +70,7 @@ import {
   type StatusTone,
 } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
+import { AddRegistrationSlideOver } from "@/components/admin/AddRegistrationSlideOver";
 
 const PAGE_SIZE = 10;
 
@@ -175,6 +176,8 @@ export default function AdminSPMBPage() {
   const [deleteItem, setDeleteItem] = useState<SpmbRegistration | null>(null);
   const [bulkDelete, setBulkDelete] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ id: string; status: "accepted" | "rejected" } | null>(null);
+  /** Panel "Tambah Pendaftar" (input manual admin) — mount ulang tiap dibuka. */
+  const [addOpen, setAddOpen] = useState(false);
 
   // Edit panel
   const [editItem, setEditItem] = useState<SpmbRegistration | null>(null);
@@ -871,7 +874,7 @@ export default function AdminSPMBPage() {
     return (
       <div className="p-4 sm:p-6 lg:p-8">
         {/* Header + Tab */}
-        <PageHeader active={mainTab} onSelect={setMainTab} onExport={handleExportCsv} />
+        <PageHeader active={mainTab} onSelect={setMainTab} onExport={handleExportCsv} onAdd={() => setAddOpen(true)} />
 
         {/* ── MODAL LINK GOOGLE FORM ─────────────────────── */}
         {googleModal && (
@@ -1484,7 +1487,7 @@ export default function AdminSPMBPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Header + Tab */}
-      <PageHeader active={mainTab} onSelect={setMainTab} onExport={handleExportCsv} />
+      <PageHeader active={mainTab} onSelect={setMainTab} onExport={handleExportCsv} onAdd={() => setAddOpen(true)} />
 
       {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
           di mobile (angka = jumlah filter status). */}
@@ -1628,7 +1631,14 @@ export default function AdminSPMBPage() {
                       </td>
                       <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
                       <td className="px-4 py-3.5 cursor-pointer" onClick={() => openDetail(item)}>
-                        <p className="text-sm font-medium text-slate-800">{item.full_name}</p>
+                        <p className="text-sm font-medium text-slate-800">
+                          {item.full_name}
+                          {item.documents?.input_source === "admin" && (
+                            <span className="ml-1.5 inline-block rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-500" title="Ditambahkan manual oleh admin">
+                              Manual
+                            </span>
+                          )}
+                        </p>
                         {item.email && <p className="mt-0.5 text-xs text-slate-400">{item.email}</p>}
                       </td>
                       <td className="hidden px-4 py-3.5 text-sm text-slate-600 md:table-cell">{item.previous_school || "-"}</td>
@@ -1862,6 +1872,7 @@ export default function AdminSPMBPage() {
                     <InfoRow icon={MapPin} label="Tempat Lahir" value={viewItem.birth_place || "-"} />
                     <InfoRow icon={CalendarIcon} label="Tanggal Lahir" value={viewItem.birth_date ? new Date(viewItem.birth_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"} />
                     <InfoRow icon={Users} label="Jenis Kelamin" value={viewItem.gender === "L" ? "Laki-laki" : "Perempuan"} />
+                    <InfoRow icon={GraduationCap} label="Program" value={viewItem.documents?.program || "-"} />
                     <InfoRow icon={GraduationCap} label="Jalur" value={pathLabels[viewItem.registration_path] || viewItem.registration_path} />
                   </div>
                   <div className="my-3 h-px bg-slate-100" />
@@ -2021,6 +2032,21 @@ export default function AdminSPMBPage() {
         </SlideOver>
       )}
 
+      {/* ── TAMBAH PENDAFTAR (SLIDE-OVER) ────────────── */}
+      {addOpen && (
+        <AddRegistrationSlideOver
+          open
+          onClose={() => setAddOpen(false)}
+          onCreated={() => {
+            setAddOpen(false);
+            fetchData();
+            toast("Pendaftar berhasil ditambahkan", "success");
+          }}
+          waves={waves}
+          formFields={formFields}
+        />
+      )}
+
       {/* ── DELETE CONFIRM ──────────────────────────── */}
       {deleteItem && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setDeleteItem(null)}>
@@ -2098,7 +2124,7 @@ export default function AdminSPMBPage() {
 }
 
 /** Header halaman + tab "Pendaftar" / "Gelombang Pendaftaran". */
-function PageHeader({ active, onSelect, onExport }: { active: MainTab; onSelect: (tab: MainTab) => void; onExport: () => void }) {
+function PageHeader({ active, onSelect, onExport, onAdd }: { active: MainTab; onSelect: (tab: MainTab) => void; onExport: () => void; onAdd: () => void }) {
   const tabs: { key: MainTab; label: string; icon: React.ElementType }[] = [
     { key: "registrations", label: "Pendaftar", icon: Users },
     { key: "waves", label: "Gelombang & Pengaturan", icon: CalendarBlank },
@@ -2117,10 +2143,16 @@ function PageHeader({ active, onSelect, onExport }: { active: MainTab; onSelect:
           </div>
         </div>
         {active === "registrations" && (
-          <button onClick={onExport} className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 md:py-2.5">
-            <Download className="h-4 w-4" />
-            Export CSV
-          </button>
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <button onClick={onAdd} className="flex min-h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#082b59] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1] sm:flex-none md:py-2.5">
+              <Plus className="h-4 w-4" />
+              Tambah Pendaftar
+            </button>
+            <button onClick={onExport} className="flex min-h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:flex-none md:py-2.5">
+              <Download className="h-4 w-4" />
+              Export CSV
+            </button>
+          </div>
         )}
       </div>
 
@@ -2339,7 +2371,14 @@ function RegistrationMobileRow({
           )
         }
         title={item.full_name}
-        badge={item.status === "rejected" ? <QuietBadge>Ditolak</QuietBadge> : undefined}
+        badge={
+          item.status === "rejected" || item.documents?.input_source === "admin" ? (
+            <>
+              {item.documents?.input_source === "admin" && <QuietBadge>Manual</QuietBadge>}
+              {item.status === "rejected" && <QuietBadge>Ditolak</QuietBadge>}
+            </>
+          ) : undefined
+        }
         subtitle={
           <>
             <span className={`inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${pathColors[item.registration_path] || "bg-slate-100 text-slate-600"}`}>

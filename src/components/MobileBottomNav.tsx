@@ -55,9 +55,8 @@ function BottomLink({
       <Link
         href={href}
         aria-current={active ? "page" : undefined}
-        className={`flex h-full flex-col items-center justify-center gap-1 rounded-[24px] px-1 py-2.5 text-[11px] leading-none transition-colors active:bg-[#082b59]/5 ${
-          active ? "font-semibold text-[#082b59]" : "font-medium text-slate-500"
-        }`}
+        className={`flex h-full flex-col items-center justify-center gap-1 rounded-[24px] px-1 py-2.5 text-[11px] leading-none transition-colors active:bg-[#082b59]/5 ${active ? "font-semibold text-[#082b59]" : "font-medium text-slate-500"
+          }`}
       >
         <Icon className="h-6 w-6" weight={active ? "fill" : "regular"} />
         <span>{label}</span>
@@ -66,9 +65,88 @@ function BottomLink({
   );
 }
 
+/**
+ * Sembunyi saat scroll turun, muncul lagi saat scroll naik.
+ * - Selalu tampil di dekat atas halaman & di dasar halaman.
+ * - Ambang gerak (threshold) mencegah kedip karena getaran jari.
+ * - Posisi scroll dijepit ke [0, maks] agar rubber-band iOS tidak memicu
+ *   "scroll naik" palsu.
+ * - `resetKey` (pathname) mengembalikan bar ke tampil saat pindah halaman.
+ */
+function useHideOnScroll({
+  enabled,
+  resetKey,
+  threshold = 12,
+  topOffset = 80,
+}: {
+  enabled: boolean;
+  resetKey: string;
+  threshold?: number;
+  topOffset?: number;
+}) {
+  const [hidden, setHidden] = useState(false);
+
+  useEffect(() => {
+    setHidden(false);
+    if (!enabled) return;
+
+    let lastY = window.scrollY;
+    let ticking = false;
+
+    const update = () => {
+      ticking = false;
+      const maxY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      const y = Math.min(Math.max(0, window.scrollY), maxY);
+      const delta = y - lastY;
+
+      if (y < topOffset || y >= maxY - 2) {
+        setHidden(false);
+        lastY = y;
+        return;
+      }
+      if (delta > threshold) {
+        setHidden(true);
+        lastY = y;
+      } else if (delta < -threshold) {
+        setHidden(false);
+        lastY = y;
+      }
+    };
+
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(update);
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [enabled, resetKey, threshold, topOffset]);
+
+  return hidden;
+}
+
 export default function MobileBottomNav() {
   const pathname = usePathname();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [kbFocus, setKbFocus] = useState(false);
+
+  // Auto-hide: nonaktif di /admission (di sana nav ini adalah CTA pengganti
+  // sticky "Daftar Sekarang"), saat sheet terbuka, atau saat fokus keyboard
+  // ada di dalam bar.
+  const autoHideEnabled = !(pathname ?? "").startsWith("/admission");
+  const scrollHidden = useHideOnScroll({ enabled: autoHideEnabled, resetKey: pathname ?? "" });
+  const hidden = scrollHidden && autoHideEnabled && !sheetOpen && !kbFocus;
+
+  // Sinyal untuk elemen lain (mis. FAB WhatsApp): <html data-nav-hidden="true">
+  useEffect(() => {
+    const root = document.documentElement;
+    if (hidden) root.dataset.navHidden = "true";
+    else delete root.dataset.navHidden;
+    return () => {
+      delete root.dataset.navHidden;
+    };
+  }, [hidden]);
 
   // Esc menutup + kunci scroll body saat sheet terbuka
   useEffect(() => {
@@ -93,7 +171,16 @@ export default function MobileBottomNav() {
           tepi atas tengah tempat bola SPMB duduk (mask memotong bar+shadow). */}
       <nav
         aria-label="Navigasi utama"
-        className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)_+_10px)] z-40 md:hidden"
+        onFocusCapture={(e) => {
+          try {
+            if ((e.target as HTMLElement).matches(":focus-visible")) setKbFocus(true);
+          } catch {
+            /* browser lama tanpa :focus-visible: abaikan */
+          }
+        }}
+        onBlurCapture={() => setKbFocus(false)}
+        className={`fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)_+_10px)] z-40 transition-transform duration-300 ease-out motion-reduce:transition-none md:hidden ${hidden ? "translate-y-[calc(100%_+_env(safe-area-inset-bottom)_+_44px)]" : ""
+          }`}
       >
         <div
           aria-hidden
@@ -115,9 +202,8 @@ export default function MobileBottomNav() {
               <span aria-hidden className="h-6 w-6" />
               <span>SPMB</span>
               <span
-                className={`absolute left-1/2 top-0 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#f4d21f] shadow-[0_6px_18px_rgba(244,210,31,0.5),0_2px_6px_rgba(8,43,89,0.12)] transition-transform active:scale-95 motion-reduce:transition-none ${
-                  isActive("/admission") ? "ring-4 ring-[#082b59]/15" : ""
-                }`}
+                className={`absolute left-1/2 top-0 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#f4d21f] shadow-[0_6px_18px_rgba(244,210,31,0.5),0_2px_6px_rgba(8,43,89,0.12)] transition-transform active:scale-95 motion-reduce:transition-none ${isActive("/admission") ? "ring-4 ring-[#082b59]/15" : ""
+                  }`}
               >
                 <FileText className="h-5 w-5" weight="fill" />
               </span>
@@ -150,9 +236,8 @@ export default function MobileBottomNav() {
         {/* Backdrop */}
         <div
           onClick={() => setSheetOpen(false)}
-          className={`absolute inset-0 bg-[#082b59]/40 transition-opacity duration-300 motion-reduce:transition-none ${
-            sheetOpen ? "opacity-100" : "opacity-0"
-          }`}
+          className={`absolute inset-0 bg-[#082b59]/40 transition-opacity duration-300 motion-reduce:transition-none ${sheetOpen ? "opacity-100" : "opacity-0"
+            }`}
         />
         {/* Panel */}
         <div
@@ -160,9 +245,8 @@ export default function MobileBottomNav() {
           role="dialog"
           aria-modal="true"
           aria-label="Menu lainnya"
-          className={`absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-[#dce3ed] bg-white pb-[env(safe-area-inset-bottom)] transition-[transform,visibility] duration-300 ease-out motion-reduce:transition-none ${
-            sheetOpen ? "visible translate-y-0" : "invisible translate-y-full"
-          }`}
+          className={`absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-[#dce3ed] bg-white pb-[env(safe-area-inset-bottom)] transition-[transform,visibility] duration-300 ease-out motion-reduce:transition-none ${sheetOpen ? "visible translate-y-0" : "invisible translate-y-full"
+            }`}
         >
           <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-slate-200" />
           <div className="flex items-center justify-between px-4 pb-1 pt-3">
@@ -185,11 +269,10 @@ export default function MobileBottomNav() {
                     href={href}
                     onClick={() => setSheetOpen(false)}
                     aria-current={active ? "page" : undefined}
-                    className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${
-                      active
+                    className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${active
                         ? "bg-[#082b59]/5 text-[#082b59]"
                         : "text-slate-500 hover:bg-slate-50 hover:text-[#082b59]"
-                    }`}
+                      }`}
                   >
                     <Icon className="h-5 w-5" weight={active ? "fill" : "regular"} />
                     {label}

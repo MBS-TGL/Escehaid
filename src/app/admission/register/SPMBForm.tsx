@@ -6,119 +6,25 @@ import { supabase } from "@/lib/supabase";
 import type { SpmbFormField } from "@/lib/supabase";
 import { submitRegistration, spmbAnswerKey } from "@/lib/queries";
 import { Input, InputRupiah, Select, DatePicker, FileUpload } from "@/components/ui";
+import { SpmbCustomField, validateSpmbCustomAnswers } from "@/components/SpmbCustomField";
+import {
+  KOTA_KABUPATEN,
+  SPMB_PROGRAMS,
+  buildSpmbDocuments,
+  createEmptySpmbRegistrationData,
+  spmbParentName,
+  SPMB_EMPTY_DOCUMENT_FILES,
+  type SpmbRegistrationData,
+  type SpmbDocumentFiles,
+} from "@/lib/spmb-registration";
 
-const KOTA_KABUPATEN = [
-  "Jember","Surabaya","Malang","Sidoarjo","Gresik","Banyuwangi","Probolinggo","Lumajang",
-  "Situbondo","Bondowoso","Ponorogo","Pasuruan","Lamongan","Tuban","Bojonegoro","Nganjuk",
-  "Kediri","Blitar","Tulungagung","Trenggalek","Ngawi","Magetan","Pacitan","Madiun",
-  "Solo","Sukoharjo","Klaten","Boyolali","Sragen","Karanganyar","Wonogiri","Purbalingga",
-  "Banyumas","Cilacap","Banjarnegara","Kebumen","Purworejo","Wonosobo",
-  "Magelang","Temanggung","Semarang","Demak","Kudus","Jepara","Pati","Rembang","Blora",
-  "Grobogan","Tegal","Pemalang","Batang","Kendal","Brebes","Pekalongan",
-  "Bandung","Cimahi","Garut","Tasikmalaya","Ciamis","Kuningan","Cirebon","Majalengka",
-  "Sumedang","Indramayu","Subang","Purwakarta","Karawang","Bekasi","Bogor","Sukabumi",
-  "Cianjur","Tangerang","Serang","Cilegon","Pandeglang","Lebak","Jakarta",
-  "Yogyakarta","Bantul","Sleman","Gunung Kidul","Kulon Progo",
-  "Bandar Lampung","Metro","Lampung Selatan","Lampung Timur","Lampung Barat",
-  "Palembang","Banyuasin","Ogan Komering Ilir","Musi Banyuasin","Lahat","Muara Enim",
-  "Prabumulih","Lubuklinggau","Pali","Empat Lawang",
-  "Bangkalan","Sampang","Pamekasan","Sumenep","Batu",
-].filter((v, i, a) => a.indexOf(v) === i).sort();
-
-type FormData = {
-  program: string;
-  full_name: string;
-  nickname: string;
-  gender: string;
-  birth_place: string;
-  birth_date: string;
-  nisn: string;
-  nik: string;
-  height: string;
-  weight: string;
-  language: string;
-  hobby: string;
-  ambition: string;
-  child_order: string;
-  siblings: string;
-  blood_type: string;
-  orphan_status: string;
-  previous_school: string;
-  address: string;
-  phone: string;
-  email: string;
-  father_name: string;
-  father_birth_place: string;
-  father_birth_date: string;
-  father_education: string;
-  father_job: string;
-  father_income: string;
-  mother_name: string;
-  mother_birth_place: string;
-  mother_birth_date: string;
-  mother_education: string;
-  mother_job: string;
-  mother_income: string;
-};
-
-const initialData: FormData = {
-  program: "",
-  full_name: "",
-  nickname: "",
-  gender: "L",
-  birth_place: "",
-  birth_date: "",
-  nisn: "",
-  nik: "",
-  height: "",
-  weight: "",
-  language: "",
-  hobby: "",
-  ambition: "",
-  child_order: "",
-  siblings: "",
-  blood_type: "",
-  orphan_status: "tidak",
-  previous_school: "",
-  address: "",
-  phone: "",
-  email: "",
-  father_name: "",
-  father_birth_place: "",
-  father_birth_date: "",
-  father_education: "",
-  father_job: "",
-  father_income: "",
-  mother_name: "",
-  mother_birth_place: "",
-  mother_birth_date: "",
-  mother_education: "",
-  mother_job: "",
-  mother_income: "",
-};
-
-type Documents = {
-  kk: File | null;
-  akta: File | null;
-  surat_sekolah: File | null;
-  ktp_ortu: File | null;
-  bukti_transfer: File | null;
-};
-
-const initialDocs: Documents = {
-  kk: null,
-  akta: null,
-  surat_sekolah: null,
-  ktp_ortu: null,
-  bukti_transfer: null,
-};
+/** Data siswa/ortu — tipe & nilai awal dari modul bersama (form publik + admin). */
+type FormData = SpmbRegistrationData;
+type Documents = SpmbDocumentFiles;
 
 const STORAGE_KEY = "spmb_form_data";
 const STORAGE_STEP_KEY = "spmb_form_step";
 const STORAGE_CUSTOM_KEY = "spmb_form_custom";
-
-/** Pemisah pilihan checkbox — disimpan sebagai teks agar aman di jsonb & ekspor CSV. */
-const CHECK_SEP = " | ";
 
 const DEBUG_DATA: FormData = {
   program: "SMP Boarding",
@@ -158,8 +64,8 @@ const DEBUG_DATA: FormData = {
 
 export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) {
   const [step, setStep] = useState(0);
-  const [data, setData] = useState<FormData>(initialData);
-  const [docs, setDocs] = useState<Documents>(initialDocs);
+  const [data, setData] = useState<FormData>(createEmptySpmbRegistrationData);
+  const [docs, setDocs] = useState<Documents>(SPMB_EMPTY_DOCUMENT_FILES);
   /** Jawaban pertanyaan tambahan — kunci spmbAnswerKey(field.id), nilai teks. */
   const [custom, setCustom] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -266,27 +172,7 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
 
   /** Validasi pertanyaan tambahan: wajib isi + pola per tipe jawaban. */
   function validateCustomFields(): Record<string, string> {
-    const e: Record<string, string> = {};
-    for (const f of customFields) {
-      const key = spmbAnswerKey(f.id);
-      const val = (custom[key] || "").trim();
-      if (!val) {
-        if (f.required) e[key] = `${f.label} wajib diisi`;
-        continue;
-      }
-      if (f.type === "number" && !/^-?\d{1,10}(\.\d{1,4})?$/.test(val)) {
-        e[key] = `${f.label} harus berupa angka`;
-      } else if (f.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
-        e[key] = `${f.label} tidak valid`;
-      } else if (f.type === "tel" && !/^[\d\s+()-]{6,20}$/.test(val)) {
-        e[key] = `${f.label} tidak valid (6–20 karakter angka)`;
-      } else if (f.type === "date" && Number.isNaN(Date.parse(val))) {
-        e[key] = `${f.label} tidak valid`;
-      } else if ((f.type === "select" || f.type === "radio") && f.options?.length && !f.options.includes(val)) {
-        e[key] = `${f.label} tidak valid`;
-      }
-    }
-    return e;
+    return validateSpmbCustomAnswers(customFields, custom);
   }
 
   // DEBUG: auto-fill semua field
@@ -404,33 +290,15 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
       docs.bukti_transfer ? uploadFile(docs.bukti_transfer, `${folder}/transfer.${docs.bukti_transfer.name.split(".").pop()}`) : Promise.resolve(null),
     ]);
 
-    const documents: Record<string, string | null> = {
+    // Satu-satunya penyusun jsonb documents (modul bersama) — termasuk
+    // program, father_education & father_income yang dibaca modal detail admin.
+    const documents = buildSpmbDocuments(data, {
       kk: kkUrl,
       akta: aktaUrl,
       surat_sekolah: suratUrl,
       ktp_ortu: ktpUrl,
       bukti_transfer: transferUrl,
-      nickname: data.nickname,
-      nisn: data.nisn,
-      nik: data.nik,
-      height: data.height,
-      weight: data.weight,
-      language: data.language,
-      hobby: data.hobby,
-      ambition: data.ambition,
-      child_order: data.child_order,
-      siblings: data.siblings,
-      blood_type: data.blood_type,
-      orphan_status: data.orphan_status,
-      father_birth_place: data.father_birth_place,
-      father_birth_date: data.father_birth_date,
-      mother_name: data.mother_name,
-      mother_birth_place: data.mother_birth_place,
-      mother_birth_date: data.mother_birth_date,
-      mother_education: data.mother_education,
-      mother_job: data.mother_job,
-      mother_income: data.mother_income,
-    };
+    });
     // Jawaban pertanyaan tambahan (kunci cf_<id>) — hanya nilai non-kosong.
     for (const f of customFields) {
       const val = (custom[spmbAnswerKey(f.id)] || "").trim();
@@ -447,7 +315,7 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
       address: data.address,
       phone: data.phone,
       email: data.email,
-      parent_name: `${data.father_name} / ${data.mother_name}`,
+      parent_name: spmbParentName(data),
       parent_occupation: data.father_job,
       previous_school: data.previous_school,
       registration_path: registrationPath,
@@ -461,114 +329,6 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
     }
     clearStorage();
     setSuccess(true);
-  }
-
-  /** Render satu pertanyaan tambahan sesuai tipenya (gaya konsisten dengan langkah bawaan). */
-  function renderCustomField(f: SpmbFormField) {
-    const key = spmbAnswerKey(f.id);
-    const value = custom[key] || "";
-    const error = errors[key];
-    const help = f.help ? <p className="mt-1 text-xs text-slate-400">{f.help}</p> : null;
-    const err = error ? <p className="mt-1 text-sm text-red-500">{error}</p> : null;
-    const labelReq = (
-      <span className="text-sm font-semibold text-slate-700">
-        {f.label} {f.required && <span className="text-red-500">*</span>}
-      </span>
-    );
-
-    switch (f.type) {
-      case "textarea":
-        return (
-          <div>
-            <label htmlFor={key} className="mb-1.5 block">{labelReq}</label>
-            <textarea
-              id={key}
-              rows={4}
-              value={value}
-              placeholder={f.placeholder || ""}
-              onChange={(e) => updateCustom(key, e.target.value)}
-              aria-invalid={!!error}
-              className={`w-full resize-y rounded-xl border px-4 py-3 text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 ${error ? "border-red-300" : "border-slate-200"}`}
-            />
-            {help}
-            {err}
-          </div>
-        );
-      case "date":
-        return (
-          <div>
-            <DatePicker label={f.label} required={f.required} value={value}
-              onChange={(val) => updateCustom(key, val)} error={error} />
-            {help}
-          </div>
-        );
-      case "select":
-        return (
-          <div>
-            <Select label={f.label} required={f.required} options={f.options || []} value={value}
-              onChange={(val) => updateCustom(key, val)} placeholder={f.placeholder || "Pilih jawaban"} error={error} />
-            {help}
-          </div>
-        );
-      case "radio":
-        return (
-          <div>
-            <p className="mb-1.5">{labelReq}</p>
-            <div className="space-y-2">
-              {(f.options || []).map((opt) => (
-                <label key={opt} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-all ${value === opt ? "border-[#1767b1] bg-[#1767b1]/5" : "border-[#dce3ed] hover:border-[#1767b1]/30"}`}>
-                  <input type="radio" name={key} value={opt} checked={value === opt}
-                    onChange={() => updateCustom(key, opt)} className="accent-[#1767b1]" />
-                  <span className="text-sm font-medium text-[#082b59]">{opt}</span>
-                </label>
-              ))}
-            </div>
-            {help}
-            {err}
-          </div>
-        );
-      case "checkbox": {
-        const selected = value ? value.split(CHECK_SEP) : [];
-        return (
-          <div>
-            <p className="mb-1.5">{labelReq}</p>
-            <div className="space-y-2">
-              {(f.options || []).map((opt) => {
-                const checked = selected.includes(opt);
-                return (
-                  <label key={opt} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-all ${checked ? "border-[#1767b1] bg-[#1767b1]/5" : "border-[#dce3ed] hover:border-[#1767b1]/30"}`}>
-                    <input type="checkbox" checked={checked}
-                      onChange={() => {
-                        const next = checked ? selected.filter((s) => s !== opt) : [...selected, opt];
-                        updateCustom(key, next.join(CHECK_SEP));
-                      }}
-                      className="h-4 w-4 rounded border-slate-300 accent-[#1767b1]" />
-                    <span className="text-sm font-medium text-[#082b59]">{opt}</span>
-                  </label>
-                );
-              })}
-            </div>
-            {help}
-            {err}
-          </div>
-        );
-      }
-      default:
-        return (
-          <div>
-            <Input
-              label={f.label}
-              required={f.required}
-              type={f.type === "number" ? "number" : f.type === "email" ? "email" : f.type === "tel" ? "tel" : "text"}
-              placeholder={f.placeholder || ""}
-              value={value}
-              onChange={(e) => updateCustom(key, e.target.value)}
-              error={error}
-            />
-            {help}
-          </div>
-        );
-    }
   }
 
   return (
@@ -619,7 +379,7 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
               <h3 className="text-lg font-bold text-[#082b59]">Pilihan Program</h3>
               {errors.program && <p className="text-sm text-red-500">{errors.program}</p>}
               <div className="space-y-3">
-                {["SMP Boarding", "SMP Full Day (Non Boarding)", "SMA Boarding"].map((prog) => (
+                {SPMB_PROGRAMS.map((prog) => (
                   <label key={prog} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition-all ${
                     data.program === prog ? "border-[#1767b1] bg-[#1767b1]/5" : "border-[#dce3ed] hover:border-[#1767b1]/30"
                   }`}>
@@ -728,7 +488,12 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
               </div>
               {customFields.map((f) => (
                 <div key={f.id} data-field={spmbAnswerKey(f.id)} className="rounded-xl border border-[#dce3ed] bg-[#f4f7fb]/60 p-4">
-                  {renderCustomField(f)}
+                  <SpmbCustomField
+                    field={f}
+                    value={custom[spmbAnswerKey(f.id)] || ""}
+                    error={errors[spmbAnswerKey(f.id)]}
+                    onChange={(val) => updateCustom(spmbAnswerKey(f.id), val)}
+                  />
                 </div>
               ))}
             </div>

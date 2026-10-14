@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { nearestScroller } from "@/components/ui/useFloatingPanel";
 
 interface DatePickerProps {
   label: string;
@@ -39,9 +40,51 @@ function formatDate(day: number, month: number, year: number): string {
   return `${String(day).padStart(2, "0")}/${String(month + 1).padStart(2, "0")}/${year}`;
 }
 
+/** Perkiraan tinggi kalender penuh (header + grid + tombol "Hari Ini"), px. */
+const CAL_H = 336;
+/** Ruang minimum agar flip ke atas/bawah tetap memakai sisi itu (px). */
+const CAL_MIN = 160;
+
 export function DatePicker({ label, required, error, value, onChange, placeholder }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  /** `up` = buka ke atas; `maxH` dikunci ke ruang tersedia (lihat computePlace). */
+  const [place, setPlace] = useState<{ up: boolean; maxH: number }>({ up: false, maxH: CAL_H });
+
+  /**
+   * Tentukan arah buka & tinggi maks kalender dari ruang yang benar-benar
+   * tersedia — memakai wadah scroll terdekat (nearestScroller) sebagai batas,
+   * persis seperti useFloatingPanel untuk Select: kalender tidak pernah
+   * keluar area scroll modal / menutupi footer, dan tidak kepotong di tepi.
+   */
+  const computePlace = () => {
+    const el = btnRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const vh = document.documentElement.clientHeight;
+    const scRect = nearestScroller(el)?.getBoundingClientRect() ?? null;
+    const boundTop = Math.max(12, scRect ? scRect.top + 12 : 12);
+    const boundBottom = Math.min(vh - 12, scRect ? scRect.bottom - 12 : vh - 12);
+    const spaceBelow = boundBottom - rect.bottom - 6;
+    const spaceAbove = rect.top - boundTop - 6;
+    const up = spaceBelow < CAL_H && spaceBelow < spaceAbove;
+    const space = up ? spaceAbove : spaceBelow;
+    setPlace({ up, maxH: Math.max(CAL_MIN, Math.min(CAL_H, space)) });
+  };
+
+  // Re-posisi saat scroll (capture — menangkap scroll container mana pun,
+  // termasuk di dalam modal) dan resize, selama kalender terbuka.
+  useEffect(() => {
+    if (!open) return;
+    const onMove = () => computePlace();
+    window.addEventListener("scroll", onMove, true);
+    window.addEventListener("resize", onMove);
+    return () => {
+      window.removeEventListener("scroll", onMove, true);
+      window.removeEventListener("resize", onMove);
+    };
+  }, [open]);
 
   const parsed = parseDate(value);
   const now = new Date();
@@ -83,8 +126,10 @@ export function DatePicker({ label, required, error, value, onChange, placeholde
       <label className="mb-1.5 block text-sm font-medium text-[#082b59]">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
+      <div className="relative">
       <button
         type="button"
+        ref={btnRef}
         onClick={() => {
           if (!open) {
             // Reset tampilan ke nilai yang sudah dipilih (atau hari ini) dan kembali
@@ -92,6 +137,9 @@ export function DatePicker({ label, required, error, value, onChange, placeholde
             setViewMonth(parsed ? parsed.month : now.getMonth());
             setViewYear(parsed ? parsed.year : now.getFullYear());
             setSelecting("day");
+            // Hitung arah & tinggi SEBELUM render terbuka (satu render, tanpa
+            // frame kalender terpotong dulu).
+            computePlace();
           }
           setOpen(!open);
         }}
@@ -111,7 +159,15 @@ export function DatePicker({ label, required, error, value, onChange, placeholde
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-72 rounded-xl border border-[#dce3ed] bg-white p-3 shadow-lg">
+        <div
+          /* `up` = buka ke atas: jangkar `bottom` 6px di atas tinggi tombol
+             (wrapper kini hanya memuat tombol); selain itu ikut alur (di bawah
+             tombol, seperti sebelumnya). */
+          style={place.up ? { bottom: "calc(100% + 6px)", maxHeight: place.maxH } : { maxHeight: place.maxH }}
+          className={`absolute left-0 z-50 w-72 overflow-y-auto rounded-xl border border-[#dce3ed] bg-white p-3 shadow-lg ${
+            place.up ? "" : "mt-1"
+          }`}
+        >
           {/* Header */}
           <div className="mb-3 flex items-center justify-between">
             <button
@@ -268,6 +324,7 @@ export function DatePicker({ label, required, error, value, onChange, placeholde
           </div>
         </div>
       )}
+      </div>
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
     </div>
   );
