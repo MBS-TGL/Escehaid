@@ -23,7 +23,7 @@ import { compressImage } from "@/lib/compress-image";
 import { RichContent } from "@/components/RichContent";
 import CoverImage from "@/components/CoverImage";
 import { Modal, ConfirmModal, SlideOver, RichTextEditor, SkeletonBlock } from "@/components/ui";
-import { StatsSection } from "@/components/admin/StatsSection";
+import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import type { News } from "@/lib/supabase";
 import {
   Megaphone,
@@ -53,6 +53,8 @@ import {
   Files,
   Desktop,
   DeviceMobile,
+  Users,
+  CalendarBlank,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -757,16 +759,13 @@ export default function AdminBeritaPage() {
         </button>
       </div>
 
-      {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
-          di mobile (metrik unik "Bulan Ini" ikut tampil di teks). */}
-      <StatsSection
-        stats={[
-          { label: "Total", value: stats.total, variant: "brand" },
-          { label: "Diterbitkan", value: stats.published, variant: "success" },
-          { label: "Draft", value: stats.draft, variant: "warning" },
-          { label: "Bulan Ini", value: stats.thisMonth, variant: "info" },
-        ]}
-      />
+      {/* Stats — StatPillGroup: pill kompak satu baris */}
+      <StatPillGroup>
+        <StatPill icon={Users} label="Total" value={stats.total} tone="neutral" />
+        <StatPill icon={CheckCircle} label="Diterbitkan" value={stats.published} tone="success" />
+        <StatPill icon={Warning} label="Draft" value={stats.draft} tone="warning" />
+        <StatPill icon={CalendarBlank} label="Bulan Ini" value={stats.thisMonth} tone="info" />
+      </StatPillGroup>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (

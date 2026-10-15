@@ -28,9 +28,10 @@ import {
 } from "@/lib/queries";
 import type { PortalAppAdmin, PortalAppInput } from "@/lib/queries";
 import { StatCard, StatCardRow, ConfirmModal, SlideOver } from "@/components/ui";
+import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useFloatingPanel } from "@/components/ui/useFloatingPanel";
 import { useToast } from "@/components/ui/Toast";
-import { SquaresFour, Plus, FloppyDisk, Info, MagnifyingGlass, ArrowSquareOut, Checks } from "@/components/Icons";
+import { SquaresFour, Plus, FloppyDisk, Info, MagnifyingGlass, ArrowSquareOut, Checks, CheckCircle, Clock, EyeSlash } from "@/components/Icons";
 import {
   PORTAL_ICONS,
   PORTAL_ICON_LABELS,
@@ -1000,11 +1001,11 @@ export default function AdminPortalPage() {
     fetchItems();
   }
 
-  const statFilters: { key: PortalFilter; label: string; value: number; variant: "brand" | "success" | "warning" | "info" }[] = [
-    { key: "all", label: "Total", value: counts.all, variant: "brand" },
-    { key: "active", label: "Tayang", value: counts.active, variant: "success" },
-    { key: "soon", label: "Segera Hadir", value: counts.soon, variant: "warning" },
-    { key: "inactive", label: "Disembunyikan", value: counts.inactive, variant: "info" },
+  const statFilters: { key: PortalFilter; label: string; value: number; tone: "neutral" | "success" | "warning" | "info"; icon: typeof SquaresFour }[] = [
+    { key: "all", label: "Total", value: counts.all, tone: "neutral", icon: SquaresFour },
+    { key: "active", label: "Tayang", value: counts.active, tone: "success", icon: CheckCircle },
+    { key: "soon", label: "Segera Hadir", value: counts.soon, tone: "warning", icon: Clock },
+    { key: "inactive", label: "Disembunyikan", value: counts.inactive, tone: "info", icon: EyeSlash },
   ];
 
   // Opsi filter mobile (MobileFilterBar) — label & jumlah dari sumber yang
@@ -1052,41 +1053,21 @@ export default function AdminPortalPage() {
         </div>
       </div>
 
-      {/* Stats desktop — kartu tetap bisa diklik sebagai filter.
-          Tanda important di border-[var(--brand-primary)]! bukan gaya: keduanya sama-sama
-          arbitrary value berjenis border-color, sehingga pemenangnya ditentukan
-          urutan stylesheet. Tanpa important, border bawaan StatCard
-          (border-[#dce3ed]) menang dan border navy kartu aktif tidak pernah
-          terpasang — yang tersisa hanya ring-nya. */}
-      <div className="hidden md:block">
-        <StatCardRow>
-          {statFilters.map((stat) => (
-            <button
-              key={stat.key}
-              type="button"
-              onClick={() => setFilter(stat.key)}
-              aria-pressed={filter === stat.key}
-              title={`Tampilkan: ${stat.label}`}
-              className="w-full rounded-2xl text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-            >
-              <StatCard
-                label={stat.label}
-                value={stat.value}
-                variant={stat.variant}
-                className={
-                  filter === stat.key ? "border-[var(--brand-primary)]! ring-2 ring-[var(--brand-primary)]/30" : ""
-                }
-              />
-            </button>
-          ))}
-        </StatCardRow>
-      </div>
-      {/* Ringkasan satu baris (mobile) — kartu statistik hanya menduplikasi
-          jumlah filter; teks 12px cukup & tidak memakan layar. */}
-      <p className="mb-4 text-xs font-medium text-[#64748b] md:hidden">
-        {counts.all} Aplikasi · {counts.active} Tayang · {counts.soon} Segera ·{" "}
-        {counts.inactive} Disembunyikan
-      </p>
+      {/* Stats — StatPillGroup: pill kompak, bisa diklik sebagai filter */}
+      <StatPillGroup>
+        {statFilters.map((stat) => (
+          <StatPill
+            key={stat.key}
+            icon={stat.icon}
+            label={stat.label}
+            value={stat.value}
+            tone={stat.tone}
+            active={filter === stat.key}
+            onClick={() => setFilter(stat.key)}
+            aria-pressed={filter === stat.key}
+          />
+        ))}
+      </StatPillGroup>
 
       {/* Toolbar — desktop: FilterBar (md+); mobile: MobileFilterBar di bawah
           (mode pilih memakai bar pilihan bawaan). */}

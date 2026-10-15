@@ -1,298 +1,542 @@
-# Database Schema — SMP Muhammadiyah 4 Tanggul
+## Table `user_profiles`
 
-## Overview
+### Columns
 
-Database Supabase (PostgreSQL) dengan RBAC auth system. Total **12 tables**.
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `full_name` | `text` |  |
+| `role` | `user_role` |  |
+| `avatar_url` | `text` |  Nullable |
+| `phone` | `text` |  Nullable |
+| `is_active` | `bool` |  |
+| `created_at` | `timestamptz` |  Nullable |
+| `updated_at` | `timestamptz` |  Nullable |
+| `system_role` | `text` |  Nullable |
+| `email` | `text` |  Nullable |
+| `must_change_password` | `bool` |  |
+| `last_login_at` | `timestamptz` |  Nullable |
 
-- 9 content tables
-- 2 auth tables (`user_profiles`, `user_audit_log`)
-- 3 storage buckets (`spmb-documents`, `images`, `videos`)
-- Full row-level security with role-based policies
-- Auto slug generation with collision handling
-- Anti-privilege escalation trigger
+## Table `user_audit_log`
 
-## Auth System
+### Columns
 
-### Roles
-| Role | Description |
-|------|-------------|
-| `developer` | Full access (creator) |
-| `admin` | Full access |
-| `publisher` | Content management |
-| `teacher` | Article submission |
-| `student` | Read-only, submit articles |
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `user_id` | `uuid` |  Nullable |
+| `action` | `text` |  |
+| `details` | `jsonb` |  Nullable |
+| `created_at` | `timestamptz` |  Nullable |
 
-### Tables
-- `auth.users` — managed by Supabase Auth
-- `user_profiles` — syncs automatically via `on_auth_user_created` trigger
-- `user_audit_log` — tracks all user actions
+## Table `school_profile`
 
-### Signup Flow
-1. User signs up via Supabase Auth
-2. Trigger `on_auth_user_created` auto-creates `user_profiles` with role `student`
-3. Admin promotes role via SQL or admin panel
+### Columns
 
-### Login Credentials
-- **Developer**: `dev@mbs.id` / `dev`
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `school_name` | `text` |  |
+| `address` | `text` |  |
+| `phone` | `text` |  |
+| `email` | `text` |  |
+| `website` | `text` |  Nullable |
+| `vision` | `text` |  |
+| `mission` | `text` |  |
+| `history` | `text` |  Nullable |
+| `logo_url` | `text` |  Nullable |
+| `banner_url` | `text` |  Nullable |
+| `principal_name` | `text` |  Nullable |
+| `principal_photo_url` | `text` |  Nullable |
+| `principal_quote` | `text` |  Nullable |
+| `total_teachers` | `int4` |  Nullable |
+| `total_students` | `int4` |  Nullable |
+| `total_classes` | `int4` |  Nullable |
+| `accreditation` | `text` |  Nullable |
+| `created_at` | `timestamptz` |  Nullable |
+| `updated_at` | `timestamptz` |  Nullable |
+| `registration_mode` | `text` |  |
+| `google_form_url` | `text` |  Nullable |
+| `spmb_brochure_url` | `text` |  Nullable |
+| `spmb_offline_form_url` | `text` |  Nullable |
+| `spmb_contact_phone` | `text` |  Nullable |
+| `spmb_highlight_text` | `text` |  Nullable |
+| `npsn` | `text` |  Nullable |
+| `spmb_form_schema` | `jsonb` |  Nullable |
 
-## Content Tables
+## Table `news`
 
-### 1. `school_profile`
-Single row — school identity.
+### Columns
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | uuid (PK) | Auto-generated |
-| `school_name` | text | Nama sekolah |
-| `address` | text | Alamat lengkap |
-| `phone` | text | Nomor telepon |
-| `email` | text | Email sekolah |
-| `website` | text | URL website |
-| `vision` | text | Visi |
-| `mission` | text | Misi |
-| `history` | text | Sejarah |
-| `logo_url` | text | URL logo |
-| `banner_url` | text | URL banner |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `title` | `text` |  |
+| `slug` | `text` |  Unique |
+| `summary` | `text` |  |
+| `content` | `text` |  |
+| `category` | `text` |  |
+| `image_url` | `text` |  Nullable |
+| `author_id` | `uuid` |  Nullable |
+| `is_published` | `bool` |  Nullable |
+| `published_at` | `timestamptz` |  Nullable |
+| `created_at` | `timestamptz` |  Nullable |
+| `updated_at` | `timestamptz` |  Nullable |
+| `writer_name` | `text` |  Nullable |
+| `editor_name` | `text` |  Nullable |
+| `cover_image_position` | `text` |  Nullable |
+| `attachment_url` | `text` |  Nullable |
+| `attachment_name` | `text` |  Nullable |
+| `image_alt` | `text` |  Nullable |
+| `is_pinned` | `bool` |  |
+| `expires_at` | `timestamptz` |  Nullable |
 
-### 2. `news`
-Berita, pengumuman, agenda. **Author FK** → `user_profiles`.
+## Table `gallery`
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | uuid (PK) | |
-| `title` | text | |
-| `slug` | text (UNIQUE) | Auto-generated, collision-safe |
-| `summary` | text | |
-| `content` | text | |
-| `category` | text | `berita` \| `pengumuman` \| `agenda` |
-| `image_url` | text | |
-| `author_id` | uuid → user_profiles | |
-| `is_published` | boolean | |
-| `published_at` | timestamptz | |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
+### Columns
 
-### 3. `gallery`
-Foto & video galeri.
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `title` | `text` |  |
+| `description` | `text` |  Nullable |
+| `media_type` | `text` |  |
+| `url` | `text` |  |
+| `thumbnail_url` | `text` |  Nullable |
+| `category` | `text` |  |
+| `created_at` | `timestamptz` |  Nullable |
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | uuid (PK) | |
-| `title` | text | |
-| `description` | text | |
-| `media_type` | text | `foto` \| `video` |
-| `url` | text | |
-| `thumbnail_url` | text | |
-| `category` | text | |
-| `created_at` | timestamptz | |
+## Table `spmb_registrations`
 
-### 4. `spmb_registrations`
-Pendaftaran SPMB. Dikunci: public insert → status `pending` saja.
+### Columns
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | uuid (PK) | |
-| `full_name` | text | |
-| `birth_place` | text | |
-| `birth_date` | date | |
-| `gender` | text | `L` \| `P` |
-| `address` | text | |
-| `phone` | text | |
-| `email` | text | |
-| `parent_name` | text | |
-| `parent_occupation` | text | |
-| `previous_school` | text | |
-| `registration_path` | text | `reguler` \| `prestasi` \| `beasiswa` |
-| `status` | text | `pending` \| `accepted` \| `rejected` |
-| `documents` | jsonb | |
-| `admin_notes` | text | |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `full_name` | `text` |  |
+| `birth_place` | `text` |  Nullable |
+| `birth_date` | `date` |  Nullable |
+| `gender` | `text` |  |
+| `address` | `text` |  Nullable |
+| `phone` | `text` |  Nullable |
+| `email` | `text` |  Nullable |
+| `parent_name` | `text` |  Nullable |
+| `parent_occupation` | `text` |  Nullable |
+| `previous_school` | `text` |  Nullable |
+| `registration_path` | `text` |  |
+| `status` | `text` |  |
+| `documents` | `jsonb` |  Nullable |
+| `admin_notes` | `text` |  Nullable |
+| `created_at` | `timestamptz` |  Nullable |
+| `updated_at` | `timestamptz` |  Nullable |
+| `wave_id` | `uuid` |  Nullable |
 
-### 5. `teachers`
-Guru & staff. Kolom `categories jsonb` untuk multi-kategori.
+## Table `teachers`
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | uuid (PK) | |
-| `name` | text | |
-| `subject` | text | |
-| `position` | text | |
-| `categories` | jsonb | `[\"Guru Mapel\"]` dsb |
-| `photo_url` | text | |
-| `bio` | text | |
-| `sort_order` | int | |
-| `is_active` | boolean | |
-| `created_at` | timestamptz | |
+### Columns
 
-### 6. `facilities`
-Fasilitas sekolah.
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `name` | `text` |  |
+| `position` | `text` |  Nullable |
+| `photo_url` | `text` |  Nullable |
+| `sort_order` | `int4` |  Nullable |
+| `is_active` | `bool` |  Nullable |
+| `created_at` | `timestamptz` |  Nullable |
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | uuid (PK) | |
-| `name` | text | |
-| `description` | text | |
-| `image_url` | text | |
-| `sort_order` | int | |
-| `is_active` | boolean | |
-| `created_at` | timestamptz | |
+## Table `facilities`
 
-### 7. `articles`
-Artikel & tips. **Author FK** → `user_profiles`.
+### Columns
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | uuid (PK) | |
-| `title` | text | |
-| `slug` | text (UNIQUE) | Auto-generated |
-| `excerpt` | text | |
-| `content` | text | |
-| `author_id` | uuid → user_profiles | |
-| `category` | text | `umum` dll |
-| `image_url` | text | |
-| `is_published` | boolean | |
-| `published_at` | timestamptz | |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `name` | `text` |  |
+| `description` | `text` |  Nullable |
+| `image_url` | `text` |  Nullable |
+| `sort_order` | `int4` |  Nullable |
+| `is_active` | `bool` |  Nullable |
+| `created_at` | `timestamptz` |  Nullable |
 
-### 8. `achievements`
-Prestasi sekolah & siswa.
+## Table `articles`
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | uuid (PK) | |
-| `title` | text | |
-| `description` | text | |
-| `category` | text | `akademik` dll |
-| `year` | int | |
-| `image_url` | text | |
-| `sort_order` | int | |
-| `created_at` | timestamptz | |
+### Columns
 
-### 9. `contact_messages`
-Pesan dari formulir kontak.
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `title` | `text` |  |
+| `slug` | `text` |  Unique |
+| `excerpt` | `text` |  Nullable |
+| `content` | `text` |  |
+| `author_id` | `uuid` |  Nullable |
+| `category` | `text` |  Nullable |
+| `image_url` | `text` |  Nullable |
+| `is_published` | `bool` |  Nullable |
+| `published_at` | `timestamptz` |  Nullable |
+| `created_at` | `timestamptz` |  Nullable |
+| `updated_at` | `timestamptz` |  Nullable |
+| `author_name` | `text` |  Nullable |
+| `editor_name` | `text` |  Nullable |
+| `attachment_url` | `text` |  Nullable |
+| `attachment_name` | `text` |  Nullable |
+| `image_alt` | `text` |  Nullable |
+| `is_pinned` | `bool` |  |
+| `expires_at` | `timestamptz` |  Nullable |
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | uuid (PK) | |
-| `name` | text | |
-| `email` | text | |
-| `phone` | text | |
-| `subject` | text | |
-| `message` | text | |
-| `is_read` | boolean | |
-| `created_at` | timestamptz | |
+## Table `achievements`
 
-### 10. `user_profiles`
-Profil pengguna — auto-synced dari `auth.users`.
+### Columns
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | uuid (PK) → auth.users | |
-| `full_name` | text | |
-| `role` | user_role | `student` (default) |
-| `avatar_url` | text | |
-| `phone` | text | |
-| `is_active` | boolean | |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `title` | `text` |  |
+| `description` | `text` |  Nullable |
+| `category` | `text` |  Nullable |
+| `year` | `int4` |  Nullable |
+| `image_url` | `text` |  Nullable |
+| `sort_order` | `int4` |  Nullable |
+| `created_at` | `timestamptz` |  Nullable |
+| `rank_label` | `text` |  Nullable |
+| `level` | `text` |  Nullable |
+| `participants` | `text` |  Nullable |
+| `organizer` | `text` |  Nullable |
+| `is_featured` | `bool` |  |
+| `image_alt` | `text` |  Nullable |
+| `results` | `jsonb` |  |
+| `event_name` | `text` |  Nullable |
+| `location` | `text` |  Nullable |
+| `event_start` | `date` |  Nullable |
+| `event_end` | `date` |  Nullable |
+| `team_name` | `text` |  Nullable |
 
-### 11. `user_audit_log`
-Log audit trail semua aksi pengguna.
+## Table `contact_messages`
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | uuid (PK) | |
-| `user_id` | uuid → auth.users | |
-| `action` | text | |
-| `details` | jsonb | |
-| `created_at` | timestamptz | |
+### Columns
 
-## Storage Buckets
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `name` | `text` |  |
+| `email` | `text` |  |
+| `phone` | `text` |  Nullable |
+| `subject` | `text` |  Nullable |
+| `message` | `text` |  |
+| `is_read` | `bool` |  Nullable |
+| `created_at` | `timestamptz` |  Nullable |
 
-| Bucket | Public Read | Public Insert | Staff Manage | Size Limit |
-|--------|:-----------:|:-------------:|:------------:|:----------:|
-| `spmb-documents` | ✅ | ✅ | developer, admin | 2 MB |
-| `images` | ✅ | ❌ | developer, admin, publisher | 5 MB |
-| `videos` | ✅ | ❌ | developer, admin, publisher | 50 MB |
+## Table `announcements`
 
-## Setup (2026-09-01 update)
+### Columns
 
-### Supabase Project Settings
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `text` | `text` |  |
+| `is_active` | `bool` |  Nullable |
+| `sort_order` | `int4` |  Nullable |
+| `created_at` | `timestamptz` |  Nullable |
+| `updated_at` | `timestamptz` |  Nullable |
 
-Di Dashboard → **Database** → **API**, pastikan:
-- **Automatically expose new tables** = OFF
-- **Enable automatic RLS** = OFF
+## Table `agenda_events`
 
-Script `database.sql` menangani semua manual (GRANT + RLS).
+### Columns
 
-### Jalankan
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `title` | `text` |  |
+| `event_date` | `timestamptz` |  |
+| `is_active` | `bool` |  Nullable |
+| `sort_order` | `int4` |  Nullable |
+| `created_at` | `timestamptz` |  Nullable |
+| `updated_at` | `timestamptz` |  Nullable |
 
-1. Buka **Supabase Dashboard** → **SQL Editor**
-2. Copy seluruh isi `database.sql`
-3. Paste dan klik **Run** (ini akan me-reset database — drop semua tabel lalu buat ulang)
-4. Script otomatis:
-   - Membuat semua tabel + RLS + policies
-   - Grant privileges ke `anon` (public read) dan `authenticated` (full CRUD)
-   - Auto-insert developer profile untuk `dev@mbs.id` (kalau belum ada)
-5. Coba login: `dev@mbs.id` / `dev`
+## Table `activities`
 
-> Kalau user `dev@mbs.id` belum ada di `auth.users`, buat manual dulu via Dashboard → Authentication → Users → Add user (Email: `dev@mbs.id`, Password: `dev`, Auto Confirm: ✅).
+### Columns
 
-> Catatan: `database.sql` sudah termasuk Phase 0 cleanup (aman dijalankan berkali-kali).
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `title` | `text` |  |
+| `slug` | `text` |  Unique |
+| `description` | `text` |  Nullable |
+| `content` | `text` |  Nullable |
+| `activity_date` | `timestamptz` |  Nullable |
+| `activity_type` | `text` |  Nullable |
+| `location` | `text` |  Nullable |
+| `image_url` | `text` |  Nullable |
+| `is_published` | `bool` |  Nullable |
+| `author_id` | `uuid` |  Nullable |
+| `created_at` | `timestamptz` |  Nullable |
+| `updated_at` | `timestamptz` |  Nullable |
+| `activity_time` | `text` |  Nullable |
+| `live_url` | `text` |  Nullable |
+| `end_date` | `timestamptz` |  Nullable |
+| `registration_url` | `text` |  Nullable |
+| `contact_person` | `text` |  Nullable |
+| `is_featured` | `bool` |  |
+| `video_url` | `text` |  Nullable |
 
-### Migrasi modul SISTEM (RBAC + Pengaturan Situs)
+## Table `spmb_waves`
 
-Dua script tambahan, **dijalankan berurutan** di SQL Editor (keduanya idempotent —
-`create table if not exists`, `create or replace function`, `drop policy if exists`):
+### Columns
 
-1. `supabase/rbac_foundation.sql` — tabel `roles` + `role_permissions`, kolom
-   `user_profiles.system_role`, fungsi `has_permission()` & `log_activity()`,
-   RLS, trigger guard `rbac_guard_privilege`, dan seed peran default.
-   Menjadikan semua admin lama `SUPER_ADMIN` (backfill).
-2. `supabase/site_settings.sql` — tabel `site_settings` (override pengaturan
-   situs per kunci) + RLS (baca publik, tulis hanya pemegang `settings:manage`).
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `name` | `text` |  |
+| `start_date` | `date` |  |
+| `end_date` | `date` |  |
+| `note` | `text` |  Nullable |
+| `is_published` | `bool` |  |
+| `sort_order` | `int4` |  |
+| `created_at` | `timestamptz` |  Nullable |
 
-**Kode aman dijalankan sebelum migrasi** (degradasi anggun):
+## Table `notifications`
 
-- Tanpa (1): izin jatuh ke pemetaan peran legacy — admin lama tetap masuk.
-- Tanpa (2): pembacaan `site_settings` gagal → seluruh nilai jatuh ke
-  `school_profile` lalu ke default registry, jadi situs tampil normal;
-  menyimpan pengaturan menampilkan pesan ramah yang meminta migrasi dijalankan.
+### Columns
 
-> Registry skema + default pengaturan ada di kode
-> (`src/lib/settings/registry.ts`), bukan di tabel — itulah sebabnya menambah
-> kunci pengaturan tidak butuh migrasi SQL.
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `user_id` | `uuid` |  |
+| `title` | `text` |  |
+| `message` | `text` |  |
+| `type` | `text` |  |
+| `link` | `text` |  Nullable |
+| `is_read` | `bool` |  |
+| `created_at` | `timestamptz` |  |
 
-### Migrasi Feature Flags (Phase C)
+## Table `portal_apps`
 
-Script ketiga, dijalankan **setelah** `site_settings.sql`:
+### Columns
 
-3. `supabase/feature_flags.sql` — tabel `feature_flags` (flag fitur dengan
-   penjadwalan opsional) + RLS (baca publik, tulis hanya pemegang
-   `flags:manage`) + seed 4 flag default:
-   - `maintenance_mode` — mode pemeliharaan situs publik
-   - `spmb_registration_open` — buka/tutup pendaftaran SPMB
-   - `announcement_banner` — tampilkan banner pengumuman
-   - `module_beta` — fitur eksperimental (placeholder)
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `label` | `text` |  |
+| `description` | `text` |  |
+| `href` | `text` |  |
+| `icon` | `text` |  |
+| `color` | `text` |  |
+| `is_external` | `bool` |  |
+| `is_coming_soon` | `bool` |  |
+| `is_active` | `bool` |  |
+| `sort_order` | `int4` |  |
+| `created_at` | `timestamptz` |  |
 
-**Kode aman dijalankan sebelum migrasi** (degradasi anggun):
+## Table `categories`
 
-- Tanpa (3): pembacaan `feature_flags` gagal → seluruh flag memakai
-  default registry (mis. SPMB terbuka, maintenance mati), sehingga
-  perilaku situs normal; menyimpan flag menampilkan pesan ramah.
+### Columns
 
-> Registry definisi flag ada di `src/lib/flags/registry.ts` — menambah
-> flag baru tidak butuh migrasi SQL (cuma tambah di kode + seed manual
-> opsional via SQL).
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `name` | `text` |  |
+| `slug` | `text` |  Nullable Unique |
+| `type` | `text` |  Nullable |
+| `sort_order` | `int4` |  |
+| `created_at` | `timestamptz` |  Nullable |
 
-## Key Features
+## Table `audit_logs`
 
-- **Auto slug** — `generate_unique_slug()` handle collision otomatis (appends `-2`, `-3`, dst)
-- **Anti-escalation** — trigger `prevent_privilege_escalation()` blok user biasa dari mengubah role/is_active
-- **RLS berbasis role** — bukan sekadar `auth.role() = 'authenticated'`, pakai `current_user_role()`
-- **Auto `updated_at`** — `set_updated_at()` trigger di semua tabel
-- **Hardcoded role** — signup trigger selalu set role `student`, gak peduli apa yang dikirim client
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `actor_id` | `uuid` |  Nullable |
+| `actor_name` | `text` |  Nullable |
+| `action` | `text` |  |
+| `entity_type` | `text` |  |
+| `entity_id` | `text` |  Nullable |
+| `detail` | `jsonb` |  |
+| `created_at` | `timestamptz` |  |
+
+## Table `roles`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `key` | `text` | Primary |
+| `name` | `text` |  |
+| `description` | `text` |  |
+| `is_system` | `bool` |  |
+| `created_at` | `timestamptz` |  |
+| `updated_at` | `timestamptz` |  |
+
+## Table `role_permissions`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `role_key` | `text` | Primary |
+| `permission` | `text` | Primary |
+| `created_at` | `timestamptz` |  |
+
+## Custom Types / Enums
+
+### `user_role`
+
+`developer` | `admin` | `publisher` | `teacher` | `student`
+
+## RLS Policies
+
+### `contact_messages`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Public can send contact messages` | INSERT | public | PERMISSIVE | — | `(is_read = false)` |
+| `Admins can manage contact messages` | ALL | public | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` |
+
+### `facilities`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Public can read active facilities` | SELECT | public | PERMISSIVE | `(is_active = true)` | — |
+| `Admins can manage facilities` | ALL | public | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` |
+
+### `school_profile`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Public can read school profile` | SELECT | public | PERMISSIVE | `true` | — |
+| `Admins can manage school profile` | ALL | public | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` |
+
+### `agenda_events`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Admins can manage agenda events` | ALL | public | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` |
+| `Public can read active agenda events` | SELECT | public | PERMISSIVE | `(is_active = true)` | — |
+
+### `achievements`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Public can read achievements` | SELECT | public | PERMISSIVE | `true` | — |
+| `Admins can manage achievements` | ALL | public | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` |
+| `Publishers can manage achievements` | ALL | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM user_profiles   WHERE ((user_profiles.id = auth.uid()) AND (user_profiles.role = 'publisher'::user_role) AND (user_profiles.is_active = true))))` | `(EXISTS ( SELECT 1    FROM user_profiles   WHERE ((user_profiles.id = auth.uid()) AND (user_profiles.role = 'publisher'::user_role) AND (user_profiles.is_active = true))))` |
+| `achievements public read` | SELECT | public | PERMISSIVE | `true` | — |
+| `Panel roles manage achievements` | ALL | authenticated | PERMISSIVE | `(EXISTS ( SELECT 1    FROM user_profiles up   WHERE ((up.id = auth.uid()) AND (up.role = ANY (ARRAY['developer'::user_role, 'admin'::user_role, 'publisher'::user_role])) AND (up.is_active = true))))` | `(EXISTS ( SELECT 1    FROM user_profiles up   WHERE ((up.id = auth.uid()) AND (up.role = ANY (ARRAY['developer'::user_role, 'admin'::user_role, 'publisher'::user_role])) AND (up.is_active = true))))` |
+
+### `spmb_waves`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Public can read published SPMB waves` | SELECT | public | PERMISSIVE | `(is_published = true)` | — |
+| `Admins can manage SPMB waves` | ALL | authenticated | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` |
+
+### `announcements`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Public can read active announcements` | SELECT | public | PERMISSIVE | `(is_active = true)` | — |
+| `Admins can manage announcements` | ALL | public | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` |
+
+### `spmb_registrations`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Public can submit pending registrations` | INSERT | public | PERMISSIVE | — | `(status = 'pending'::text)` |
+| `Admins can manage registrations` | ALL | public | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` |
+| `spmb_registrations admin insert` | INSERT | authenticated | PERMISSIVE | — | `(EXISTS ( SELECT 1    FROM user_profiles   WHERE ((user_profiles.id = auth.uid()) AND (user_profiles.is_active = true) AND (user_profiles.role = ANY (ARRAY['developer'::user_role, 'admin'::user_role, 'publisher'::user_role])))))` |
+
+### `teachers`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Public can read active teachers` | SELECT | public | PERMISSIVE | `(is_active = true)` | — |
+| `Admins can manage teachers` | ALL | public | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` |
+
+### `user_audit_log`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Admins can access audit log` | ALL | public | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` | — |
+
+### `user_profiles`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Admins can manage profiles` | ALL | public | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` |
+| `Users can read own profile` | SELECT | public | PERMISSIVE | `(id = auth.uid())` | — |
+| `Users can update own profile` | UPDATE | public | PERMISSIVE | `(id = auth.uid())` | `(id = auth.uid())` |
+
+### `activities`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Public can read published activities` | SELECT | public | PERMISSIVE | `(is_published = true)` | — |
+| `Editors can manage activities` | ALL | public | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role, 'publisher'::user_role]))` | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role, 'publisher'::user_role]))` |
+
+### `articles`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Public can read published articles` | SELECT | public | PERMISSIVE | `(is_published = true)` | — |
+| `Editors can manage articles` | ALL | public | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role, 'publisher'::user_role]))` | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role, 'publisher'::user_role]))` |
+
+### `gallery`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Public can read gallery` | SELECT | public | PERMISSIVE | `true` | — |
+| `Editors can manage gallery` | ALL | public | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role, 'publisher'::user_role]))` | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role, 'publisher'::user_role]))` |
+
+### `news`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Public can read published news` | SELECT | public | PERMISSIVE | `(is_published = true)` | — |
+| `Editors can manage news` | ALL | public | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role, 'publisher'::user_role]))` | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role, 'publisher'::user_role]))` |
+
+### `notifications`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Users can read own notifications` | SELECT | public | PERMISSIVE | `(auth.uid() = user_id)` | — |
+| `Admins can create notifications` | INSERT | public | PERMISSIVE | — | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` |
+| `Users can update own notifications` | UPDATE | public | PERMISSIVE | `(auth.uid() = user_id)` | — |
+| `Users can delete own notifications` | DELETE | public | PERMISSIVE | `(auth.uid() = user_id)` | — |
+
+### `portal_apps`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `portal_apps public read` | SELECT | public | PERMISSIVE | `(is_active = true)` | — |
+| `portal_apps_admin_write` | ALL | authenticated | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` |
+
+### `categories`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Public can read categories` | SELECT | public | PERMISSIVE | `true` | — |
+| `Authenticated can manage categories` | ALL | authenticated | PERMISSIVE | `true` | `true` |
+
+### `audit_logs`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `audit_logs admin read` | SELECT | public | PERMISSIVE | `(EXISTS ( SELECT 1    FROM user_profiles   WHERE ((user_profiles.id = auth.uid()) AND (user_profiles.is_active = true) AND (user_profiles.role = ANY (ARRAY['developer'::user_role, 'admin'::user_role, 'publisher'::user_role])))))` | — |
+
+### `roles`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `roles select` | SELECT | authenticated | PERMISSIVE | `true` | — |
+| `roles write superadmin` | ALL | authenticated | PERMISSIVE | `has_permission(auth.uid(), 'users:manage'::text)` | `has_permission(auth.uid(), 'users:manage'::text)` |
+
+### `role_permissions`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `role_permissions select` | SELECT | authenticated | PERMISSIVE | `true` | — |
+| `role_permissions write superadmin` | ALL | authenticated | PERMISSIVE | `has_permission(auth.uid(), 'users:manage'::text)` | `has_permission(auth.uid(), 'users:manage'::text)` |
+

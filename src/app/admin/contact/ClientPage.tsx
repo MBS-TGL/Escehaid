@@ -10,10 +10,11 @@ import {
   toggleReadContactMessageBulk,
 } from "@/lib/queries";
 import { SlideOver, SkeletonBlock } from "@/components/ui";
-import { StatsSection } from "@/components/admin/StatsSection";
+import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import type { ContactMessage } from "@/lib/supabase";
 import {
   Envelope,
+  EnvelopeSimple,
   X,
   Eye,
   CheckCircle,
@@ -30,6 +31,7 @@ import {
   SortAscending,
   Checks,
   PencilSimple,
+  CalendarBlank,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -252,16 +254,13 @@ export default function AdminContactPage() {
         </div>
       </div>
 
-      {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
-          di mobile (metrik unik "Hari Ini" ikut tampil di teks). */}
-      <StatsSection
-        stats={[
-          { label: "Total", value: stats.total, variant: "brand" },
-          { label: "Belum Dibaca", value: stats.unread, variant: "warning" },
-          { label: "Sudah Dibaca", value: stats.read, variant: "success" },
-          { label: "Hari Ini", value: stats.today, variant: "info" },
-        ]}
-      />
+      {/* Stats — StatPillGroup: pill kompak satu baris */}
+      <StatPillGroup>
+        <StatPill icon={EnvelopeSimple} label="Total" value={stats.total} tone="neutral" />
+        <StatPill icon={Warning} label="Belum Dibaca" value={stats.unread} tone="warning" />
+        <StatPill icon={CheckCircle} label="Sudah Dibaca" value={stats.read} tone="success" />
+        <StatPill icon={CalendarBlank} label="Hari Ini" value={stats.today} tone="info" />
+      </StatPillGroup>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (

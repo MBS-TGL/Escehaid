@@ -11,7 +11,7 @@ import {
   revalidateAchievements,
 } from "@/lib/queries";
 import { SlideOver, ConfirmModal } from "@/components/ui";
-import { StatsSection } from "@/components/admin/StatsSection";
+import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import type { Achievement } from "@/lib/supabase";
 import { useToast } from "@/components/ui/Toast";
 import { compressImage } from "@/lib/compress-image";
@@ -43,6 +43,8 @@ import {
   Files,
   Users,
   Megaphone,
+  CalendarBlank,
+  BookOpen,
 } from "@/components/Icons";
 import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
 import {
@@ -543,16 +545,13 @@ export default function AdminAchievementsPage() {
         </button>
       </div>
 
-      {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
-          di mobile (metrik unik "Tahun Ini"/"Unggulan" ikut tampil di teks). */}
-      <StatsSection
-        stats={[
-          { label: "Total", value: stats.total, variant: "brand" },
-          { label: "Tahun Ini", value: stats.thisYear, variant: "success" },
-          { label: "Kategori", value: stats.categories, variant: "purple" },
-          { label: "Unggulan", value: stats.featured, variant: "warning" },
-        ]}
-      />
+      {/* Stats — StatPillGroup: pill kompak satu baris */}
+      <StatPillGroup>
+        <StatPill icon={Users} label="Total" value={stats.total} tone="neutral" />
+        <StatPill icon={CalendarBlank} label="Tahun Ini" value={stats.thisYear} tone="success" />
+        <StatPill icon={BookOpen} label="Kategori" value={stats.categories} tone="purple" />
+        <StatPill icon={Star} label="Unggulan" value={stats.featured} tone="warning" />
+      </StatPillGroup>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (

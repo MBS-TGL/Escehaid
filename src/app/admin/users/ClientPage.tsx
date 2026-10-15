@@ -52,11 +52,11 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs — sticky di bawah topbar (h-16 = 64px) + gap 16px */}
       <div
         role="tablist"
         aria-label="Pengguna dan Peran"
-        className="mb-6 inline-flex w-full max-w-xs rounded-xl border border-slate-200 bg-white p-1"
+        className="mb-6 sticky top-20 z-20 inline-flex w-full max-w-xs rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
       >
         {TABS.map((t) => (
           <button

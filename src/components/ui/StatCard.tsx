@@ -49,9 +49,11 @@ export function StatCard({
             <p className="text-2xl font-bold tracking-tight tabular-nums text-slate-800 sm:text-3xl">
               {value}
             </p>
-            <span className={`inline-block h-1.5 w-1.5 rounded-full ${v.dot}`} />
           </div>
-          <p className="mt-1.5 text-[13px] font-medium text-slate-400">{label}</p>
+          <p className="mt-1.5 flex items-center gap-1.5 text-[13px] font-medium text-slate-400">
+            <span className={`inline-block h-1.5 w-1.5 rounded-full ${v.dot}`} />
+            {label}
+          </p>
         </div>
 
         {icon && (

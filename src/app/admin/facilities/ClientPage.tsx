@@ -31,7 +31,7 @@ import {
 } from "@/lib/queries";
 import { compressImage } from "@/lib/compress-image";
 import { Modal, ConfirmModal, SlideOver, SkeletonBlock } from "@/components/ui";
-import { StatsSection } from "@/components/admin/StatsSection";
+import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import type { Facility } from "@/lib/supabase";
 import {
   ImageSquare,
@@ -57,6 +57,9 @@ import {
   Copy,
   ArrowSquareOut,
   Info,
+  Users,
+  Building,
+  XCircle,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -486,17 +489,13 @@ export default function AdminFacilitiesPage() {
         </div>
       </div>
 
-      {/* Stats — template StatsSection: kartu desktop (termasuk "Bergambar"),
-          ringkasan satu baris di mobile (angka = jumlah filter status). */}
-      <StatsSection
-        stats={[
-          { label: "Total", value: stats.total, variant: "brand" },
-          { label: "Aktif", value: stats.active, variant: "success" },
-          { label: "Nonaktif", value: stats.inactive, variant: "warning" },
-          { label: "Bergambar", value: stats.withImage, variant: "info" },
-        ]}
-        summary={`${stats.total} Fasilitas · ${stats.active} Aktif · ${stats.inactive} Nonaktif`}
-      />
+      {/* Stats — StatPillGroup: pill kompak satu baris */}
+      <StatPillGroup>
+        <StatPill icon={Users} label="Total" value={stats.total} tone="neutral" />
+        <StatPill icon={CheckCircle} label="Aktif" value={stats.active} tone="success" />
+        <StatPill icon={XCircle} label="Nonaktif" value={stats.inactive} tone="danger" />
+        <StatPill icon={Building} label="Bergambar" value={stats.withImage} tone="info" />
+      </StatPillGroup>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (

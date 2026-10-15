@@ -12,6 +12,7 @@ import { useToast } from "@/components/ui/Toast";
 interface UserProfile {
   full_name: string;
   role: string;
+  system_role?: string | null;
   is_active: boolean;
 }
 
@@ -48,7 +49,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       const { data } = await supabase
         .from("user_profiles")
-        .select("full_name, role, is_active")
+        .select("full_name, role, system_role, is_active")
         .eq("id", user.id)
         .single();
 

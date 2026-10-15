@@ -10,8 +10,13 @@ CREATE TABLE public.user_profiles (
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  system_role text,
+  email text,
+  must_change_password boolean NOT NULL DEFAULT false,
+  last_login_at timestamp with time zone,
   CONSTRAINT user_profiles_pkey PRIMARY KEY (id),
-  CONSTRAINT user_profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+  CONSTRAINT user_profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id),
+  CONSTRAINT user_profiles_system_role_fkey FOREIGN KEY (system_role) REFERENCES public.roles(key)
 );
 CREATE TABLE public.user_audit_log (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -49,6 +54,8 @@ CREATE TABLE public.school_profile (
   spmb_offline_form_url text CHECK (spmb_offline_form_url IS NULL OR spmb_offline_form_url ~ '^https://'::text),
   spmb_contact_phone text,
   spmb_highlight_text text,
+  npsn text,
+  spmb_form_schema jsonb,
   CONSTRAINT school_profile_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.news (
@@ -69,6 +76,9 @@ CREATE TABLE public.news (
   cover_image_position text DEFAULT 'center'::text,
   attachment_url text DEFAULT ''::text,
   attachment_name text DEFAULT ''::text,
+  image_alt text,
+  is_pinned boolean NOT NULL DEFAULT false,
+  expires_at timestamp with time zone,
   CONSTRAINT news_pkey PRIMARY KEY (id),
   CONSTRAINT news_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.user_profiles(id)
 );
@@ -138,6 +148,13 @@ CREATE TABLE public.articles (
   published_at timestamp with time zone DEFAULT now(),
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  author_name text,
+  editor_name text,
+  attachment_url text,
+  attachment_name text,
+  image_alt text,
+  is_pinned boolean NOT NULL DEFAULT false,
+  expires_at timestamp with time zone,
   CONSTRAINT articles_pkey PRIMARY KEY (id),
   CONSTRAINT articles_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.user_profiles(id)
 );
@@ -150,6 +167,18 @@ CREATE TABLE public.achievements (
   image_url text DEFAULT ''::text,
   sort_order integer DEFAULT 0,
   created_at timestamp with time zone DEFAULT now(),
+  rank_label text,
+  level text,
+  participants text,
+  organizer text,
+  is_featured boolean NOT NULL DEFAULT false,
+  image_alt text,
+  results jsonb NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(results) = 'array'::text),
+  event_name text,
+  location text,
+  event_start date,
+  event_end date,
+  team_name text,
   CONSTRAINT achievements_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.contact_messages (
@@ -189,13 +218,20 @@ CREATE TABLE public.activities (
   description text DEFAULT ''::text,
   content text DEFAULT ''::text,
   activity_date timestamp with time zone DEFAULT now(),
-  activity_type text DEFAULT 'umum'::text CHECK (activity_type = ANY (ARRAY['kajian'::text, 'peringatan'::text, 'lomba'::text, 'upacara'::text, 'ekskul'::text, 'umum'::text])),
+  activity_type text DEFAULT 'umum'::text CHECK (activity_type = ANY (ARRAY['kajian'::text, 'peringatan'::text, 'lomba'::text, 'upacara'::text, 'ekskul'::text, 'umum'::text, 'penampilan'::text])),
   location text DEFAULT ''::text,
   image_url text DEFAULT ''::text,
   is_published boolean DEFAULT false,
   author_id uuid,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  activity_time text,
+  live_url text,
+  end_date timestamp with time zone,
+  registration_url text,
+  contact_person text,
+  is_featured boolean NOT NULL DEFAULT false,
+  video_url text,
   CONSTRAINT activities_pkey PRIMARY KEY (id),
   CONSTRAINT activities_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.user_profiles(id)
 );
@@ -221,4 +257,54 @@ CREATE TABLE public.notifications (
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT notifications_pkey PRIMARY KEY (id),
   CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.portal_apps (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  label text NOT NULL,
+  description text NOT NULL DEFAULT ''::text,
+  href text NOT NULL,
+  icon text NOT NULL DEFAULT 'SquaresFour'::text,
+  color text NOT NULL DEFAULT 'navy'::text,
+  is_external boolean NOT NULL DEFAULT true,
+  is_coming_soon boolean NOT NULL DEFAULT false,
+  is_active boolean NOT NULL DEFAULT true,
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT portal_apps_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.categories (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  slug text UNIQUE,
+  type text,
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT categories_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.audit_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  actor_id uuid,
+  actor_name text,
+  action text NOT NULL CHECK (action = ANY (ARRAY['create'::text, 'update'::text, 'delete'::text])),
+  entity_type text NOT NULL,
+  entity_id text,
+  detail jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT audit_logs_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.roles (
+  key text NOT NULL,
+  name text NOT NULL,
+  description text NOT NULL DEFAULT ''::text,
+  is_system boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT roles_pkey PRIMARY KEY (key)
+);
+CREATE TABLE public.role_permissions (
+  role_key text NOT NULL,
+  permission text NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT role_permissions_pkey PRIMARY KEY (role_key, permission),
+  CONSTRAINT role_permissions_role_key_fkey FOREIGN KEY (role_key) REFERENCES public.roles(key)
 );

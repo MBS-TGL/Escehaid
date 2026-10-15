@@ -8,13 +8,15 @@ import {
   getAuditStats,
 } from "@/lib/queries";
 import type { AuditAction, AuditLogResult } from "@/lib/queries";
-import { StatsSection } from "@/components/admin/StatsSection";
+import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import {
   CaretDown,
   CaretLeft,
   CaretRight,
   Scroll,
   Warning,
+  Users,
+  CalendarBlank,
 } from "@/components/Icons";
 import { FilterBar } from "@/components/admin/FilterBar";
 import { MobileFilterBar, MobileListRow, MobilePagination } from "@/components/admin/mobile";
@@ -162,16 +164,12 @@ export default function AdminLogsPage() {
         </div>
       )}
 
-      {/* Statistik — template StatsSection: kartu desktop, ringkasan satu
-          baris di mobile. */}
+      {/* Statistik — StatPillGroup: pill kompak satu baris. */}
       {available && stats && (
-        <StatsSection
-          stats={[
-            { label: "Total Aktivitas", value: stats.total, variant: "brand" },
-            { label: "Hari Ini", value: stats.today, variant: "info" },
-          ]}
-          summary={`${stats.total} Aktivitas · ${stats.today} Hari Ini`}
-        />
+        <StatPillGroup>
+          <StatPill icon={Users} label="Total Aktivitas" value={stats.total} tone="neutral" />
+          <StatPill icon={CalendarBlank} label="Hari Ini" value={stats.today} tone="info" />
+        </StatPillGroup>
       )}
 
       {/* Filter — mobile: toolbar dua baris (cari + pill aksi/objek);

@@ -51,6 +51,28 @@ const navSearchItems = [
   { label: "Pesan Masuk", href: "/admin/contact", icon: Envelope, perm: "kontak:read" },
 ];
 
+const ROLE_TO_SYSTEM: Record<string, string> = {
+  developer: "SUPER_ADMIN",
+  admin: "ADMIN_SEKOLAH",
+  publisher: "OPERATOR_KONTEN",
+  teacher: "PANITIA_SPMB",
+  student: "OPERATOR_KONTEN",
+};
+
+const SYSTEM_TO_LABEL: Record<string, string> = {
+  SUPER_ADMIN: "Super Admin",
+  ADMIN_SEKOLAH: "Admin Sekolah",
+  OPERATOR_KONTEN: "Operator Konten",
+  PANITIA_SPMB: "Panitia SPMB",
+};
+
+const SYSTEM_TO_BADGE: Record<string, string> = {
+  SUPER_ADMIN: "bg-purple-500/10 text-purple-600",
+  ADMIN_SEKOLAH: "bg-blue-500/10 text-blue-600",
+  OPERATOR_KONTEN: "bg-emerald-500/10 text-emerald-600",
+  PANITIA_SPMB: "bg-amber-500/10 text-amber-600",
+};
+
 const roleBadge: Record<string, string> = {
   developer: "bg-purple-500/10 text-purple-600",
   admin: "bg-blue-500/10 text-blue-600",
@@ -412,9 +434,16 @@ export default function AdminTopbar({
             </div>
             <div className="hidden max-w-[9rem] text-left sm:block">
               <p className="truncate text-xs font-semibold text-slate-800 leading-tight">{profile.full_name}</p>
-              <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase leading-none ${roleBadge[profile.role] || "bg-slate-100 text-slate-500"}`}>
-                {roleLabel[profile.role] || profile.role}
-              </span>
+              {(() => {
+                const sys = (profile as { system_role?: string | null }).system_role ?? ROLE_TO_SYSTEM[profile.role] ?? profile.role;
+                const badgeCls = SYSTEM_TO_BADGE[sys] ?? roleBadge[profile.role] ?? "bg-slate-100 text-slate-500";
+                const labelTxt = SYSTEM_TO_LABEL[sys] ?? roleLabel[profile.role] ?? profile.role;
+                return (
+                  <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase leading-none ${badgeCls}`}>
+                    {labelTxt}
+                  </span>
+                );
+              })()}
             </div>
             <CaretDown className={`h-3.5 w-3.5 text-slate-400 transition-transform hidden sm:block ${dropdownOpen ? "rotate-180" : ""}`} />
           </button>
@@ -423,9 +452,16 @@ export default function AdminTopbar({
             <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-slate-200 bg-white py-1.5 shadow-xl">
               <div className="px-4 py-2.5 border-b border-slate-100">
                 <p className="text-sm font-semibold text-slate-800">{profile.full_name}</p>
-                <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase mt-1 ${roleBadge[profile.role] || "bg-slate-100 text-slate-500"}`}>
-                  {roleLabel[profile.role] || profile.role}
-                </span>
+                {(() => {
+                  const sys = (profile as { system_role?: string | null }).system_role ?? ROLE_TO_SYSTEM[profile.role] ?? profile.role;
+                  const badgeCls = SYSTEM_TO_BADGE[sys] ?? roleBadge[profile.role] ?? "bg-slate-100 text-slate-500";
+                  const labelTxt = SYSTEM_TO_LABEL[sys] ?? roleLabel[profile.role] ?? profile.role;
+                  return (
+                    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase mt-1 ${badgeCls}`}>
+                      {labelTxt}
+                    </span>
+                  );
+                })()}
               </div>
               <button
                 onClick={handleLogout}

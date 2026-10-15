@@ -25,7 +25,7 @@ import {
 } from "./actions";
 import { RbacSqlNotice } from "./RolesTab";
 import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
-import { StatsSection } from "@/components/admin/StatsSection";
+import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useToast } from "@/components/ui/Toast";
 import { Input } from "@/components/ui/Input";
 import {
@@ -34,6 +34,7 @@ import {
   CheckCircle,
   XCircle,
   Users,
+  UsersThree,
   CaretLeft,
   CaretRight,
   X,
@@ -174,11 +175,14 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  const noRoleCount = users.filter((u) => !u.system_role).length;
+
   const stats = {
     total: users.length,
     active: users.filter((u) => u.is_active).length,
     inactive: users.filter((u) => !u.is_active).length,
     superAdmins: users.filter((u) => u.system_role === "SUPER_ADMIN" && u.is_active).length,
+    noRole: noRoleCount,
   };
 
   function toggleSort(field: SortField) {
@@ -284,28 +288,25 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
 
   return (
     <div className="space-y-5">
-      {/* Header + tombol undang */}
+      {/* Header + statistik */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <StatsSection
-          stats={[
-            { label: "Total", value: stats.total, variant: "brand" },
-            { label: "Aktif", value: stats.active, variant: "success" },
-            { label: "Tidak Aktif", value: stats.inactive, variant: "danger" },
-            { label: "Super Admin", value: stats.superAdmins, variant: "purple" },
-          ]}
-          summary={`${stats.total} Pengguna · ${stats.active} Aktif · ${stats.inactive} Tidak Aktif · ${stats.superAdmins} Super Admin`}
-        />
-        <button
-          type="button"
-          onClick={() => setInviteOpen(true)}
-          className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]"
-        >
-          <UserPlus className="h-4 w-4" />
-          Undang Pengguna
-        </button>
+        <StatPillGroup>
+          <StatPill icon={UsersThree} label="Total" value={stats.total} tone="neutral" />
+          <StatPill icon={CheckCircle} label="Aktif" value={stats.active} tone="success" />
+          <StatPill icon={XCircle} label="Tidak Aktif" value={stats.inactive} tone="danger" />
+          <StatPill icon={Crown} label="Super Admin" value={stats.superAdmins} tone="purple" />
+        </StatPillGroup>
       </div>
 
-      {/* Filter */}
+      {/* Peringatan akun tanpa peran */}
+      {stats.noRole > 0 && (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <Warning className="h-4 w-4 shrink-0" />
+          <span>{stats.noRole} akun belum memiliki peran</span>
+        </div>
+      )}
+
+      {/* Filter + tombol undang */}
       <FilterBar
         placeholder="Cari nama atau email..."
         searchLabel="Cari pengguna"
@@ -315,6 +316,16 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
           setPage(1);
         }}
         filters={[roleFilterGroup, statusFilterGroup]}
+        action={
+          <button
+            type="button"
+            onClick={() => setInviteOpen(true)}
+            className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]"
+          >
+            <UserPlus className="h-4 w-4" />
+            Undang Pengguna
+          </button>
+        }
       />
 
       {/* Tabel */}
@@ -409,9 +420,23 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                             {badge.label}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">
-                            Belum diatur
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                              <Warning className="h-3 w-3" />
+                              Belum diatur
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditRoleItem(item);
+                                setEditRoleKey("");
+                              }}
+                              className="rounded-lg px-2 py-1 text-[11px] font-semibold text-amber-600 hover:bg-amber-50 transition-colors"
+                              aria-label={`Atur peran untuk ${item.full_name}`}
+                            >
+                              Atur peran
+                            </button>
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-3.5">
@@ -456,6 +481,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                               setEditRoleKey(item.system_role ?? "");
                             }}
                             title={isSelf ? "Tidak bisa mengubah peran diri sendiri" : "Ubah Peran"}
+                            aria-label={isSelf ? "Tidak bisa mengubah peran diri sendiri" : "Ubah Peran"}
                             className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 disabled:opacity-40 disabled:hover:bg-transparent"
                           >
                             <ShieldCheck className="h-4 w-4" />
@@ -465,6 +491,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                             disabled={!item.email || busyId === item.id}
                             onClick={() => handleResetPassword(item)}
                             title={item.email ? "Reset Password" : "Pengguna belum punya email"}
+                            aria-label={item.email ? "Reset Password" : "Pengguna belum punya email"}
                             className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-600 disabled:opacity-40 disabled:hover:bg-transparent"
                           >
                             <Key className="h-4 w-4" />
@@ -473,8 +500,9 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                             type="button"
                             disabled={isSelf || busyId === item.id}
                             onClick={() => setDeleteItem(item)}
-                            title={isSelf ? "Tidak bisa menghapus diri sendiri" : "Hapus"}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-40 disabled:hover:bg-transparent"
+                            title={isSelf ? "Tidak bisa menghapus diri sendiri" : "Hapus Pengguna"}
+                            aria-label={isSelf ? "Tidak bisa menghapus diri sendiri" : "Hapus Pengguna"}
+                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-40 disabled:hover:bg-transparent ml-1"
                           >
                             <Trash className="h-4 w-4" />
                           </button>

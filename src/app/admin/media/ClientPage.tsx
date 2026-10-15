@@ -12,7 +12,7 @@ import {
   mediaSignedUrl,
 } from "@/lib/queries";
 import type { MediaBucket, MediaFile, MediaReferenceScan } from "@/lib/queries";
-import { StatsSection } from "@/components/admin/StatsSection";
+import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useToast } from "@/components/ui/Toast";
 import {
   ArrowSquareOut,
@@ -21,6 +21,9 @@ import {
   FolderOpen,
   Trash,
   Warning,
+  Users,
+  Database,
+  CheckCircle,
 } from "@/components/Icons";
 import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
 import {
@@ -277,21 +280,13 @@ export default function AdminMediaPage() {
         </div>
       </div>
 
-      {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
-          di mobile (label dipendekkan supaya teks mobile tidak bertele-tele). */}
-      <StatsSection
-        stats={[
-          { label: "File (bucket ini)", value: files.length, variant: "brand" },
-          { label: "Total ukuran", value: formatBytes(totalSize), variant: "info" },
-          { label: "Terpakai", value: usedCount ?? "…", variant: "success" },
-          {
-            label: "Tidak Terpakai",
-            value: orphanCount ?? "…",
-            variant: orphanCount ? "warning" : "brand",
-          },
-        ]}
-        summary={`${files.length} File · ${formatBytes(totalSize)} Total Ukuran · ${usedCount ?? "…"} Terpakai · ${orphanCount ?? "…"} Tidak Terpakai`}
-      />
+      {/* Stats — StatPillGroup: pill kompak satu baris */}
+      <StatPillGroup>
+        <StatPill icon={Users} label="File" value={files.length} tone="neutral" />
+        <StatPill icon={Database} label="Total Ukuran" value={formatBytes(totalSize)} tone="info" />
+        <StatPill icon={CheckCircle} label="Terpakai" value={usedCount ?? "…"} tone="success" />
+        <StatPill icon={Warning} label="Tidak Terpakai" value={orphanCount ?? "…"} tone={orphanCount ? "warning" : "neutral"} />
+      </StatPillGroup>
 
       {/* Pemindaian referensi belum lengkap → hapus dinonaktifkan */}
       {scan && !scanComplete && (

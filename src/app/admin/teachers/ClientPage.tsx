@@ -12,7 +12,7 @@ import {
 import { compressImage, TEACHER_PHOTO } from "@/lib/compress-image";
 import type { Teacher } from "@/lib/supabase";
 import { ConfirmModal, SlideOver, SkeletonBlock } from "@/components/ui";
-import { StatsSection } from "@/components/admin/StatsSection";
+import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useToast } from "@/components/ui/Toast";
 import {
   Users,
@@ -28,6 +28,7 @@ import {
   ArrowUp,
   ArrowDown,
   CheckCircle,
+  XCircle,
   Clock,
 } from "@/components/Icons";
 import {
@@ -281,16 +282,12 @@ export default function AdminTeachersPage() {
         </button>
       </div>
 
-      {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
-          di mobile (angka = jumlah filter status). */}
-      <StatsSection
-        stats={[
-          { label: "Total", value: items.length, variant: "brand" },
-          { label: "Aktif", value: activeCount, variant: "success" },
-          { label: "Nonaktif", value: inactiveCount, variant: "warning" },
-        ]}
-        summary={`${items.length} Guru · ${activeCount} Aktif · ${inactiveCount} Nonaktif`}
-      />
+      {/* Stats — StatPillGroup: pill kompak satu baris */}
+      <StatPillGroup>
+        <StatPill icon={Users} label="Total" value={items.length} tone="neutral" />
+        <StatPill icon={CheckCircle} label="Aktif" value={activeCount} tone="success" />
+        <StatPill icon={XCircle} label="Nonaktif" value={inactiveCount} tone="danger" />
+      </StatPillGroup>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (

@@ -25,7 +25,7 @@ import { RichContent } from "@/components/RichContent";
 import CoverImage from "@/components/CoverImage";
 import { parseVideoUrl, VIDEO_PROVIDER_LABEL } from "@/lib/video-embed";
 import { Modal, ConfirmModal, SlideOver, RichTextEditor, SkeletonBlock } from "@/components/ui";
-import { StatsSection } from "@/components/admin/StatsSection";
+import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import type { Activity } from "@/lib/supabase";
 import {
   CalendarBlank,
@@ -55,6 +55,7 @@ import {
   InstagramLogo,
   Video,
   Tag,
+  Users,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -510,17 +511,14 @@ export default function AdminActivitiesPage() {
         </button>
       </div>
 
-      {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
-          di mobile (metrik unik "Akan Datang"/"Bulan Ini" ikut tampil di teks). */}
-      <StatsSection
-        stats={[
-          { label: "Total", value: stats.total, variant: "brand" },
-          { label: "Diterbitkan", value: stats.published, variant: "success" },
-          { label: "Draft", value: stats.draft, variant: "warning" },
-          { label: "Akan Datang", value: stats.upcoming, variant: "purple" },
-          { label: "Bulan Ini", value: stats.thisMonth, variant: "info" },
-        ]}
-      />
+      {/* Stats — StatPillGroup: pill kompak satu baris */}
+      <StatPillGroup>
+        <StatPill icon={Users} label="Total" value={stats.total} tone="neutral" />
+        <StatPill icon={CheckCircle} label="Diterbitkan" value={stats.published} tone="success" />
+        <StatPill icon={Warning} label="Draft" value={stats.draft} tone="warning" />
+        <StatPill icon={Star} label="Akan Datang" value={stats.upcoming} tone="purple" />
+        <StatPill icon={CalendarBlank} label="Bulan Ini" value={stats.thisMonth} tone="info" />
+      </StatPillGroup>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (

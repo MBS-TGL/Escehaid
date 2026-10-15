@@ -10,7 +10,7 @@ import {
 } from "@/lib/queries";
 import type { Announcement } from "@/lib/queries";
 import { ConfirmModal, SlideOver, SkeletonBlock } from "@/components/ui";
-import { StatsSection } from "@/components/admin/StatsSection";
+import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useToast } from "@/components/ui/Toast";
 import {
   Megaphone,
@@ -26,7 +26,9 @@ import {
   ArrowUp,
   ArrowDown,
   CheckCircle,
+  XCircle,
   Clock,
+  Users,
 } from "@/components/Icons";
 import {
   MobileFilterBar,
@@ -218,16 +220,12 @@ export default function AdminAnnouncementsPage() {
         </button>
       </div>
 
-      {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
-          di mobile (angka = jumlah filter status). */}
-      <StatsSection
-        stats={[
-          { label: "Total", value: items.length, variant: "brand" },
-          { label: "Aktif", value: activeCount, variant: "success" },
-          { label: "Nonaktif", value: inactiveCount, variant: "warning" },
-        ]}
-        summary={`${items.length} Pengumuman · ${activeCount} Aktif · ${inactiveCount} Nonaktif`}
-      />
+      {/* Stats — StatPillGroup: pill kompak satu baris */}
+      <StatPillGroup>
+        <StatPill icon={Users} label="Total" value={items.length} tone="neutral" />
+        <StatPill icon={CheckCircle} label="Aktif" value={activeCount} tone="success" />
+        <StatPill icon={XCircle} label="Nonaktif" value={inactiveCount} tone="danger" />
+      </StatPillGroup>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (

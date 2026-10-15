@@ -25,7 +25,7 @@ import {
   revalidatePaths,
 } from "@/lib/queries";
 import { SlideOver, SkeletonBlock } from "@/components/ui";
-import { StatsSection } from "@/components/admin/StatsSection";
+import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import type { SpmbRegistration, SpmbWave, SpmbFormField, SpmbFieldType } from "@/lib/supabase";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/Toast";
@@ -1497,17 +1497,13 @@ export default function AdminSPMBPage() {
       {/* Header + Tab */}
       <PageHeader active={mainTab} onSelect={setMainTab} onExport={handleExportCsv} onAdd={() => setAddOpen(true)} onImport={() => setImportOpen(true)} />
 
-      {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
-          di mobile (angka = jumlah filter status). */}
-      <StatsSection
-        stats={[
-          { label: "Total", value: stats.total, variant: "brand" },
-          { label: "Menunggu", value: stats.pending, variant: "warning" },
-          { label: "Diterima", value: stats.accepted, variant: "success" },
-          { label: "Ditolak", value: stats.rejected, variant: "danger" },
-        ]}
-        summary={`${stats.total} Pendaftar · ${stats.pending} Menunggu · ${stats.accepted} Diterima · ${stats.rejected} Ditolak`}
-      />
+      {/* Stats — StatPillGroup: pill kompak satu baris */}
+      <StatPillGroup>
+        <StatPill icon={Users} label="Total" value={stats.total} tone="neutral" />
+        <StatPill icon={Clock} label="Menunggu" value={stats.pending} tone="warning" />
+        <StatPill icon={CheckCircle} label="Diterima" value={stats.accepted} tone="success" />
+        <StatPill icon={XCircle} label="Ditolak" value={stats.rejected} tone="danger" />
+      </StatPillGroup>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (

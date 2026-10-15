@@ -85,3 +85,22 @@ export async function rbacTablesReady(): Promise<boolean> {
   const { error } = await supabase.from("roles").select("key").limit(1);
   return !error;
 }
+
+/** Hitung pengguna per system_role (untuk ditampilkan di daftar peran). */
+export async function getUserCountByRole(): Promise<Record<string, number>> {
+  const { data, error } = await supabase
+    .from("user_profiles")
+    .select("system_role");
+  
+  if (error) {
+    console.error("Error fetching user count by role:", error);
+    return {};
+  }
+  
+  const counts: Record<string, number> = {};
+  for (const row of data ?? []) {
+    const key = (row.system_role ?? "—") as string;
+    counts[key] = (counts[key] ?? 0) + 1;
+  }
+  return counts;
+}

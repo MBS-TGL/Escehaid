@@ -10,7 +10,7 @@ import {
   uploadGalleryImage,
 } from "@/lib/queries";
 import { SlideOver } from "@/components/ui";
-import { StatsSection } from "@/components/admin/StatsSection";
+import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import type { Gallery } from "@/lib/supabase";
 import {
   ImageSquare,
@@ -26,6 +26,8 @@ import {
   FloppyDisk,
   Checks,
   Eye,
+  Users,
+  CalendarBlank,
 } from "@/components/Icons";
 import {
   MobileFilterBar,
@@ -316,16 +318,13 @@ export default function AdminGalleryPage() {
         </button>
       </div>
 
-      {/* Stats — template StatsSection: kartu desktop, ringkasan satu baris
-          di mobile (metrik unik "Bulan Ini" ikut tampil di teks). */}
-      <StatsSection
-        stats={[
-          { label: "Total", value: stats.total, variant: "brand" },
-          { label: "Foto", value: stats.foto, variant: "info" },
-          { label: "Video", value: stats.video, variant: "purple" },
-          { label: "Bulan Ini", value: stats.thisMonth, variant: "success" },
-        ]}
-      />
+      {/* Stats — StatPillGroup: pill kompak satu baris */}
+      <StatPillGroup>
+        <StatPill icon={Users} label="Total" value={stats.total} tone="neutral" />
+        <StatPill icon={ImageSquare} label="Foto" value={stats.foto} tone="info" />
+        <StatPill icon={Video} label="Video" value={stats.video} tone="purple" />
+        <StatPill icon={CalendarBlank} label="Bulan Ini" value={stats.thisMonth} tone="success" />
+      </StatPillGroup>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (

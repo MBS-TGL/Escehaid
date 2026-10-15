@@ -218,6 +218,10 @@ export function legacyRoleShimFor(systemRole: string): LegacyRole {
       return "developer";
     case "ADMIN_SEKOLAH":
       return "admin";
+    case "PANITIA_SPMB":
+      return "admin";
+    case "OPERATOR_KONTEN":
+      return "publisher";
     default:
       return "publisher";
   }
