@@ -194,8 +194,8 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
 
       {/* Isian */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
-        <div className={tab === "tema" ? "grid gap-5 lg:grid-cols-[1fr_340px]" : "grid gap-5"}>
-          <div className="space-y-5">
+        <div className={tab === "tema" ? "grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]" : "grid gap-5"}>
+          <div className="min-w-0 space-y-5">
             {fieldsForGroup(tab).map((field) => (
               <Field
                 key={field.key}
@@ -208,16 +208,23 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
                 onChange={(v) => setDraft(field.key, v)}
               />
             ))}
+
+            {tab === "tema" && (
+              <ThemePresets
+                primary={drafts.theme_primary ?? ""}
+                accent={drafts.theme_accent ?? ""}
+                onApply={(primary, accent) => {
+                  setDraft("theme_primary", primary);
+                  setDraft("theme_accent", accent);
+                }}
+              />
+            )}
           </div>
 
           {tab === "tema" && (
             <ThemePreview
               primary={drafts.theme_primary ?? ""}
               accent={drafts.theme_accent ?? ""}
-              onApply={(primary, accent) => {
-                setDraft("theme_primary", primary);
-                setDraft("theme_accent", accent);
-              }}
             />
           )}
         </div>
@@ -384,19 +391,16 @@ function Field({
 function ThemePreview({
   primary,
   accent,
-  onApply,
 }: {
   primary: string;
   accent: string;
-  onApply: (primary: string, accent: string) => void;
 }) {
   const verdict = validateThemePair(primary, accent);
-  const activePreset = findThemePreset(primary, accent);
   const safePrimary = normalizeHex(primary) ?? "#082b59";
   const safeAccent = normalizeHex(accent) ?? "#1767b1";
 
   return (
-    <aside className="space-y-4">
+    <aside className="min-w-0 lg:sticky lg:top-20 lg:self-start">
       {/* Pratinjau langsung */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4">
         <h3 className="mb-3 text-sm font-semibold text-slate-700">Pratinjau langsung</h3>
@@ -432,40 +436,54 @@ function ThemePreview({
           </div>
         )}
       </div>
-
-      {/* Preset */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <h3 className="mb-3 text-sm font-semibold text-slate-700">Preset warna</h3>
-        <div className="grid gap-2">
-          {THEME_PRESETS.map((preset) => {
-            const active = activePreset?.id === preset.id;
-            return (
-              <button
-                key={preset.id}
-                type="button"
-                onClick={() => onApply(preset.primary, preset.accent)}
-                className={`flex items-center gap-3 rounded-xl border px-3 py-2 text-left transition-colors ${
-                  active ? "border-[var(--brand-accent)] bg-[var(--brand-accent)]/5" : "border-slate-200 hover:border-slate-300"
-                }`}
-              >
-                <span className="flex shrink-0 gap-1">
-                  <span className="h-6 w-6 rounded-md border border-black/5" style={{ backgroundColor: preset.primary }} />
-                  <span className="h-6 w-6 rounded-md border border-black/5" style={{ backgroundColor: preset.accent }} />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium text-slate-700">{preset.label}</span>
-                  <span className="block truncate text-xs text-slate-500">{preset.description}</span>
-                </span>
-                {active && <CheckCircle className="ml-auto h-4 w-4 shrink-0 text-[var(--brand-accent)]" />}
-              </button>
-            );
-          })}
-        </div>
-        <p className="mt-3 text-xs text-slate-500">
-          Warna diterapkan lewat variabel CSS — perubahan langsung terlihat di situs publik setelah disimpan.
-        </p>
-      </div>
     </aside>
+  );
+}
+
+function ThemePresets({
+  primary,
+  accent,
+  onApply,
+}: {
+  primary: string;
+  accent: string;
+  onApply: (primary: string, accent: string) => void;
+}) {
+  const activePreset = findThemePreset(primary, accent);
+
+  return (
+    <section aria-label="Preset warna" className="min-w-0">
+      <h3 className="mb-3 text-sm font-semibold text-slate-700">Preset warna</h3>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {THEME_PRESETS.map((preset) => {
+          const active = activePreset?.id === preset.id;
+          return (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => onApply(preset.primary, preset.accent)}
+              aria-pressed={active}
+              className={`flex min-w-0 items-center gap-3 rounded-xl border px-3 py-2 text-left transition-colors ${
+                active ? "border-[var(--brand-accent)] bg-[var(--brand-accent)]/5" : "border-slate-200 hover:border-slate-300"
+              }`}
+            >
+              <span className="flex shrink-0 gap-1">
+                <span className="h-6 w-6 rounded-md border border-black/5" style={{ backgroundColor: preset.primary }} />
+                <span className="h-6 w-6 rounded-md border border-black/5" style={{ backgroundColor: preset.accent }} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium text-slate-700">{preset.label}</span>
+                <span className="block truncate text-xs text-slate-500">{preset.description}</span>
+              </span>
+              {active && <CheckCircle className="ml-auto h-4 w-4 shrink-0 text-[var(--brand-accent)]" />}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-3 text-xs text-slate-500">
+        Warna diterapkan lewat variabel CSS — perubahan langsung terlihat di situs publik setelah disimpan.
+      </p>
+    </section>
   );
 }
 
