@@ -3,11 +3,11 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock } from "@/components/Icons";
 import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList, registrationHref } from "@/lib/queries";
+import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import { faqs } from "./faq-data";
 import HeroCarousel from "./HeroCarousel";
 import {
-  SITE,
   capitalizeCategory,
   achievementCategoryMeta,
   achievementLevelLabel,
@@ -74,15 +74,20 @@ export default async function Home() {
   // Batasi jumlah baris sesuai yang benar-benar dipakai beranda (berita/kegiatan/
   // artikel 4, fasilitas 3, prestasi 6, guru 12) supaya payload & waktu render
   // ulang ISR lebih ringan — terutama saat dibuka dari HP.
-  const [beritaRaw, dbFacilities, activities, articles, teachers, profile, achievements] = await Promise.all([
-    getNewsList(4) as Promise<NewsItem[]>,
-    getFacilityList(3),
-    getActivityList(4),
-    getArticleList(4),
-    getTeacherList(12),
-    getSchoolProfile(),
-    getAchievementList(undefined, { featuredFirst: true, limit: 6 }),
-  ]);
+  const [beritaRaw, dbFacilities, activities, articles, teachers, profile, achievements, settings] =
+    await Promise.all([
+      getNewsList(4) as Promise<NewsItem[]>,
+      getFacilityList(3),
+      getActivityList(4),
+      getArticleList(4),
+      getTeacherList(12),
+      getSchoolProfile(),
+      getAchievementList(undefined, { featuredFirst: true, limit: 6 }),
+      getSiteSettings(),
+    ]);
+
+  // Tagline & identitas dari Pengaturan Situs (bukan lagi konstanta kode).
+  const brand = toPublicBrand(settings);
 
   // Urutan prestasi di beranda disamakan dengan halaman /achievements:
   // unggulan dulu, lalu tahun menurun, lalu terbit menurun. Urutan yang sama
@@ -110,14 +115,14 @@ export default async function Home() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       {/* ── HERO — only section using Framer Motion ───────── */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)]" />
         <div
           className="absolute inset-0 md:hidden"
           style={{ backgroundImage: "radial-gradient(circle at 0% 0%, rgba(244,210,31,0.14), transparent 45%), radial-gradient(circle at 100% 100%, rgba(23,103,177,0.35), transparent 55%)" }}
         />
         <div className="absolute inset-0 hidden opacity-20 md:block">
           <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#f4d21f] blur-[150px]" />
-          <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-[#1767b1] blur-[180px]" />
+          <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-[var(--brand-accent)] blur-[180px]" />
         </div>
         <div className="absolute inset-0 hidden opacity-[0.03] md:block" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#f4d21f]/30 to-transparent" />
@@ -125,7 +130,7 @@ export default async function Home() {
         <div className="relative mx-auto grid max-w-[1296px] gap-12 px-6 pb-20 pt-16 md:px-10 md:pb-28 md:pt-24 lg:grid-cols-[1.1fr_.9fr] lg:items-center">
           <div className="text-white">
             <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-[#f4d21f]/30 bg-[#f4d21f]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[#f4d21f]">
-              Pusat Kaderisasi Da&apos;i &amp; Ulama Hafidz &middot; {SITE.tagline}
+              Pusat Kaderisasi Da&apos;i &amp; Ulama Hafidz &middot; {brand.tagline}
             </div>
 
             <h1 className="max-w-3xl text-4xl font-bold leading-[1.1] md:text-5xl lg:text-6xl">
@@ -146,7 +151,7 @@ export default async function Home() {
             <div className="mt-9 flex flex-wrap items-center gap-5">
               <Link
                 href={registrationHref(profile)}
-                className="group inline-flex items-center gap-2 rounded-xl bg-[#f4d21f] px-6 py-3.5 text-sm font-bold text-[#082b59] transition-all hover:bg-white hover:shadow-lg hover:shadow-[#f4d21f]/20"
+                className="group inline-flex items-center gap-2 rounded-xl bg-[#f4d21f] px-6 py-3.5 text-sm font-bold text-[var(--brand-primary)] transition-all hover:bg-white hover:shadow-lg hover:shadow-[#f4d21f]/20"
               >
                 Daftar
                 <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
@@ -162,7 +167,7 @@ export default async function Home() {
           </div>
 
           <div className="relative">
-            <div className="absolute -inset-4 hidden rounded-3xl bg-gradient-to-br from-[#f4d21f]/20 to-[#1767b1]/20 blur-2xl md:block" />
+            <div className="absolute -inset-4 hidden rounded-3xl bg-gradient-to-br from-[#f4d21f]/20 to-[var(--brand-accent)]/20 blur-2xl md:block" />
             <HeroCarousel />
           </div>
         </div>
@@ -177,7 +182,7 @@ export default async function Home() {
             <CSSFadeIn>
               <div className="flex justify-center lg:justify-end">
                 <div className="relative">
-                  <div className="absolute -inset-4 hidden rounded-full bg-gradient-to-br from-[#f4d21f]/30 to-[#1767b1]/20 blur-xl md:block" />
+                  <div className="absolute -inset-4 hidden rounded-full bg-gradient-to-br from-[#f4d21f]/30 to-[var(--brand-accent)]/20 blur-xl md:block" />
                   <div className="relative h-56 w-56 overflow-hidden rounded-full border-4 border-[#f4d21f] md:h-72 md:w-72">
                     <Image
                       src={profile?.principal_photo_url || "/images/Kepala-Sekolah.jpg"}
@@ -187,7 +192,7 @@ export default async function Home() {
                       className="object-cover object-[center_15%]"
                     />
                   </div>
-                  <div className="absolute -bottom-2 -right-2 rounded-2xl bg-[#082b59] px-4 py-2 shadow-lg">
+                  <div className="absolute -bottom-2 -right-2 rounded-2xl bg-[var(--brand-primary)] px-4 py-2 shadow-lg">
                     <p className="text-xs font-bold text-white">Kepala Sekolah</p>
                   </div>
                 </div>
@@ -196,8 +201,8 @@ export default async function Home() {
 
             <CSSFadeIn delay={0.1}>
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Sambutan Kepala Sekolah</p>
-                <h2 className="mt-4 text-3xl font-semibold leading-tight tracking-tight text-[#082b59] md:text-4xl">
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Sambutan Kepala Sekolah</p>
+                <h2 className="mt-4 text-3xl font-semibold leading-tight tracking-tight text-[var(--brand-primary)] md:text-4xl">
                   Belajar dengan arah, tumbuh dengan nilai.
                 </h2>
                 <blockquote className="relative mt-6 border-l-2 border-[#f4d21f] pl-6">
@@ -208,7 +213,7 @@ export default async function Home() {
                 </blockquote>
                 <footer className="mt-6 flex items-center gap-3 pl-6">
                   <div>
-                    <p className="text-sm font-semibold text-[#082b59]">{profile?.principal_name || "Khoirul Anwar, S.Pd"}</p>
+                    <p className="text-sm font-semibold text-[var(--brand-primary)]">{profile?.principal_name || "Khoirul Anwar, S.Pd"}</p>
                     <p className="text-xs text-slate-500">Kepala Sekolah</p>
                   </div>
                 </footer>
@@ -226,7 +231,7 @@ export default async function Home() {
             <CSSFadeIn>
               <div className="flex h-full flex-col">
                 <div className="mb-4">
-                  <h3 className="text-lg font-bold text-[#082b59]">Berita</h3>
+                  <h3 className="text-lg font-bold text-[var(--brand-primary)]">Berita</h3>
                   <div className="mt-1.5 h-1 w-10 rounded-full bg-[#f4d21f]" />
                 </div>
                 {/* Tanpa flex-1: sisa ruang kolom jatuh SETELAH tombol, bukan
@@ -234,7 +239,7 @@ export default async function Home() {
                 <div className="flex flex-col">
                   {beritaRaw.length === 0 ? (
                     <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-[#dce3ed] bg-[#f4f7fb] py-10 text-center">
-                      <Megaphone className="h-9 w-9 text-[#082b59]/15" />
+                      <Megaphone className="h-9 w-9 text-[var(--brand-primary)]/15" />
                       <p className="mt-2.5 text-sm font-medium text-slate-500">Belum ada berita</p>
                       <p className="mt-0.5 text-xs text-slate-400">Nantikan informasi terbaru dari sekolah</p>
                     </div>
@@ -242,7 +247,7 @@ export default async function Home() {
                     <>
                       <Link
                         href={`/news/${beritaRaw[0].slug}`}
-                        className="group block overflow-hidden rounded-xl border border-[#dce3ed] bg-white transition-all hover:border-[#1767b1]/30 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+                        className="group block overflow-hidden rounded-xl border border-[#dce3ed] bg-white transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
                       >
                         <div className="relative aspect-[4/3] overflow-hidden bg-[#f4f7fb]">
                           {beritaRaw[0]?.image_url ? (
@@ -255,7 +260,7 @@ export default async function Home() {
                             />
                           ) : (
                             <div className="flex h-full w-full items-center justify-center">
-                              <Megaphone className="h-12 w-12 text-[#082b59]/10" />
+                              <Megaphone className="h-12 w-12 text-[var(--brand-primary)]/10" />
                             </div>
                           )}
                         </div>
@@ -263,7 +268,7 @@ export default async function Home() {
                           <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${NEWS_BADGE[beritaRaw[0]?.category] ?? "border-slate-200 bg-slate-50 text-slate-600"}`}>
                             {beritaRaw[0]?.category || "Berita"}
                           </span>
-                          <h4 className="mt-2 line-clamp-2 text-sm font-bold text-[#082b59] transition-colors group-hover:text-[#1767b1]">
+                          <h4 className="mt-2 line-clamp-2 text-sm font-bold text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)]">
                             {beritaRaw[0]?.title || "Berita terbaru sekolah"}
                           </h4>
                           {beritaRaw[0]?.summary && (
@@ -283,13 +288,13 @@ export default async function Home() {
                                 <Image src={item.image_url} alt={item.image_alt || item.title} width={56} height={56} sizes="56px" className="h-full w-full object-cover" />
                               ) : (
                                 <div className="flex h-full w-full items-center justify-center">
-                                  <Megaphone className="h-5 w-5 text-[#082b59]/15" />
+                                  <Megaphone className="h-5 w-5 text-[var(--brand-primary)]/15" />
                                 </div>
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-[10px] text-slate-400">Terbit: {item.published_at ? new Date(item.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"}</p>
-                              <h5 className="mt-0.5 line-clamp-2 text-xs font-medium text-[#082b59] transition-colors group-hover:text-[#1767b1]">{item.title}</h5>
+                              <h5 className="mt-0.5 line-clamp-2 text-xs font-medium text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)]">{item.title}</h5>
                             </div>
                           </Link>
                         ))}
@@ -297,7 +302,7 @@ export default async function Home() {
                     </>
                   )}
                 </div>
-                <Link href="/news" className="mt-4 inline-flex items-center justify-center rounded-lg bg-[#082b59] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[#1767b1]">
+                <Link href="/news" className="mt-4 inline-flex items-center justify-center rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[var(--brand-accent)]">
                   Selengkapnya
                 </Link>
               </div>
@@ -307,13 +312,13 @@ export default async function Home() {
             <CSSFadeIn delay={0.05}>
               <div className="flex h-full flex-col">
                 <div className="mb-4">
-                  <h3 className="text-lg font-bold text-[#082b59]">Kegiatan Sekolah</h3>
+                  <h3 className="text-lg font-bold text-[var(--brand-primary)]">Kegiatan Sekolah</h3>
                   <div className="mt-1.5 h-1 w-10 rounded-full bg-[#f4d21f]" />
                 </div>
                 <div className="flex flex-1 flex-col">
                   {activities.length === 0 ? (
                     <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-[#dce3ed] bg-[#f4f7fb] py-10 text-center">
-                      <CalendarBlank className="h-9 w-9 text-[#082b59]/15" />
+                      <CalendarBlank className="h-9 w-9 text-[var(--brand-primary)]/15" />
                       <p className="mt-2.5 text-sm font-medium text-slate-500">Belum ada kegiatan</p>
                       <p className="mt-0.5 text-xs text-slate-400">Nantikan info kegiatan dari sekolah kami</p>
                     </div>
@@ -325,10 +330,10 @@ export default async function Home() {
                             <Image src={activities[0].image_url} alt={activities[0].title} fill sizes="(max-width: 768px) 100vw, 320px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
                           ) : (
                             <div className="flex h-full w-full items-center justify-center">
-                              <CalendarBlank className="h-12 w-12 text-[#082b59]/10" />
+                              <CalendarBlank className="h-12 w-12 text-[var(--brand-primary)]/10" />
                             </div>
                           )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#082b59]/80 via-[#082b59]/20 to-transparent" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/80 via-[var(--brand-primary)]/20 to-transparent" />
                           <div className="absolute bottom-0 left-0 right-0 p-3.5">
                             <p className="text-[10px] font-bold text-white/70">Kegiatan</p>
                             <h4 className="mt-0.5 line-clamp-2 text-sm font-semibold text-white">{activities[0]?.title || "Kegiatan sekolah terbaru"}</h4>
@@ -343,13 +348,13 @@ export default async function Home() {
                                 <Image src={item.image_url} alt={item.title} width={56} height={56} sizes="56px" className="h-full w-full object-cover" />
                               ) : (
                                 <div className="flex h-full w-full items-center justify-center">
-                                  <CalendarBlank className="h-5 w-5 text-[#082b59]/15" />
+                                  <CalendarBlank className="h-5 w-5 text-[var(--brand-primary)]/15" />
                                 </div>
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-[10px] text-slate-400">{item.activity_type}</p>
-                              <h5 className="mt-0.5 line-clamp-2 text-xs font-medium text-[#082b59] transition-colors group-hover:text-[#1767b1]">{item.title}</h5>
+                              <h5 className="mt-0.5 line-clamp-2 text-xs font-medium text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)]">{item.title}</h5>
                             </div>
                           </Link>
                         ))}
@@ -357,7 +362,7 @@ export default async function Home() {
                     </>
                   )}
                 </div>
-                <Link href="/activities" className="mt-4 inline-flex items-center justify-center rounded-lg bg-[#082b59] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[#1767b1]">
+                <Link href="/activities" className="mt-4 inline-flex items-center justify-center rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[var(--brand-accent)]">
                   Selengkapnya
                 </Link>
               </div>
@@ -367,13 +372,13 @@ export default async function Home() {
             <CSSFadeIn delay={0.1}>
               <div className="flex h-full flex-col">
                 <div className="mb-4">
-                  <h3 className="text-lg font-bold text-[#082b59]">Fasilitas</h3>
+                  <h3 className="text-lg font-bold text-[var(--brand-primary)]">Fasilitas</h3>
                   <div className="mt-1.5 h-1 w-10 rounded-full bg-[#f4d21f]" />
                 </div>
                 <div className="flex flex-1 flex-col">
                   {dbFacilities.length === 0 ? (
                     <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-[#dce3ed] bg-[#f4f7fb] py-10 text-center">
-                      <ImageSquare className="h-9 w-9 text-[#082b59]/15" />
+                      <ImageSquare className="h-9 w-9 text-[var(--brand-primary)]/15" />
                       <p className="mt-2.5 text-sm font-medium text-slate-500">Belum ada fasilitas</p>
                       <p className="mt-0.5 text-xs text-slate-400">Fasilitas sekolah akan segera ditambahkan</p>
                     </div>
@@ -386,7 +391,7 @@ export default async function Home() {
                           ) : (
                             <Image src={FACILITY_FALLBACKS[dbFacilities[0]?.name] || "/images/Ruang-Kelas.jpg"} alt={dbFacilities[0]?.name || "Fasilitas"} fill sizes="(max-width: 768px) 100vw, 320px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
                           )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#082b59]/80 via-[#082b59]/20 to-transparent" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/80 via-[var(--brand-primary)]/20 to-transparent" />
                           <div className="absolute bottom-0 left-0 right-0 p-3.5">
                             <p className="text-[10px] font-bold text-white/70">Fasilitas</p>
                             <h4 className="mt-0.5 line-clamp-2 text-sm font-semibold text-white">{dbFacilities[0]?.name || "Fasilitas sekolah"}</h4>
@@ -405,7 +410,7 @@ export default async function Home() {
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-[10px] text-slate-400">Fasilitas</p>
-                              <h5 className="mt-0.5 line-clamp-2 text-xs font-medium text-[#082b59] transition-colors group-hover:text-[#1767b1]">{f.name}</h5>
+                              <h5 className="mt-0.5 line-clamp-2 text-xs font-medium text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)]">{f.name}</h5>
                             </div>
                           </Link>
                         ))}
@@ -413,7 +418,7 @@ export default async function Home() {
                     </>
                   )}
                 </div>
-                <Link href="/profile#fasilitas" className="mt-4 inline-flex items-center justify-center rounded-lg bg-[#082b59] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[#1767b1]">
+                <Link href="/profile#fasilitas" className="mt-4 inline-flex items-center justify-center rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[var(--brand-accent)]">
                   Selengkapnya
                 </Link>
               </div>
@@ -423,13 +428,13 @@ export default async function Home() {
             <CSSFadeIn delay={0.15}>
               <div className="flex h-full flex-col">
                 <div className="mb-4">
-                  <h3 className="text-lg font-bold text-[#082b59]">Prestasi</h3>
+                  <h3 className="text-lg font-bold text-[var(--brand-primary)]">Prestasi</h3>
                   <div className="mt-1.5 h-1 w-10 rounded-full bg-[#f4d21f]" />
                 </div>
                 <div className="flex flex-1 flex-col">
                   {achievementsSorted.length === 0 ? (
                     <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-[#dce3ed] bg-[#f4f7fb] py-10 text-center">
-                      <Trophy className="h-9 w-9 text-[#082b59]/15" />
+                      <Trophy className="h-9 w-9 text-[var(--brand-primary)]/15" />
                       <p className="mt-2.5 text-sm font-medium text-slate-500">Belum ada prestasi</p>
                       <p className="mt-0.5 text-xs text-slate-400">Prestasi siswa akan segera ditampilkan</p>
                     </div>
@@ -441,10 +446,10 @@ export default async function Home() {
                             <Image src={achievementsSorted[0].image_url} alt={achievementsSorted[0].image_alt || achievementsSorted[0].title} fill sizes="(max-width: 768px) 100vw, 320px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
                           ) : (
                             <div className="flex h-full w-full items-center justify-center">
-                              <PrestasiIcon category={achievementsSorted[0]?.category} className="h-12 w-12 text-[#082b59]/10" />
+                              <PrestasiIcon category={achievementsSorted[0]?.category} className="h-12 w-12 text-[var(--brand-primary)]/10" />
                             </div>
                           )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#082b59]/80 via-[#082b59]/20 to-transparent" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/80 via-[var(--brand-primary)]/20 to-transparent" />
                           <div className="absolute bottom-0 left-0 right-0 p-3.5">
                             <p className="text-[10px] font-bold text-white/70">{prestasiMeta(achievementsSorted[0])}</p>
                             <h4 className="mt-0.5 line-clamp-2 text-sm font-semibold text-white">{achievementsSorted[0]?.title || "Prestasi sekolah"}</h4>
@@ -459,13 +464,13 @@ export default async function Home() {
                                 <Image src={a.image_url} alt={a.image_alt || a.title} width={56} height={56} sizes="56px" className="h-full w-full object-cover" />
                               ) : (
                                 <div className="flex h-full w-full items-center justify-center">
-                                  <PrestasiIcon category={a.category} className="h-5 w-5 text-[#082b59]/15" />
+                                  <PrestasiIcon category={a.category} className="h-5 w-5 text-[var(--brand-primary)]/15" />
                                 </div>
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-[10px] text-slate-400">{prestasiMeta(a)}</p>
-                              <h5 className="mt-0.5 line-clamp-2 text-xs font-medium text-[#082b59] transition-colors group-hover:text-[#1767b1]">{a.title}</h5>
+                              <h5 className="mt-0.5 line-clamp-2 text-xs font-medium text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)]">{a.title}</h5>
                             </div>
                           </Link>
                         ))}
@@ -473,7 +478,7 @@ export default async function Home() {
                     </>
                   )}
                 </div>
-                <Link href="/achievements" className="mt-4 inline-flex items-center justify-center rounded-lg bg-[#082b59] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[#1767b1]">
+                <Link href="/achievements" className="mt-4 inline-flex items-center justify-center rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[var(--brand-accent)]">
                   Selengkapnya
                 </Link>
               </div>
@@ -487,7 +492,7 @@ export default async function Home() {
         <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
           <CSSFadeIn>
             <div className="mb-12">
-              <h2 className="text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Program unggulan</h2>
+              <h2 className="text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Program unggulan</h2>
             </div>
           </CSSFadeIn>
 
@@ -500,14 +505,14 @@ export default async function Home() {
               ["Program Akademik", "Bimbingan Belajar Semua Mapel Ujian Sekolah Dan Klinik Akademik Untuk Olimpiade IPA & Matematika.", ChartBar],
               ["7 Golden Habits", "Pembiasaan Harian: Muraja'ah, Mufrodhat, Shalat Jama'ah Lima Waktu, Shalat Rawatib, Dhuha, Tahajjud, Dan Puasa Senin-Kamis.", Star],
             ] as [string, string, typeof Star][]).map(([title, description, Icon]) => (
-              <div key={title} className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white p-5 transition-all hover:border-[#1767b1]/30 hover:shadow-xl hover:shadow-[#082b59]/5">
-                <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-[#f4d21f] to-[#1767b1] opacity-0 transition-opacity group-hover:opacity-100" />
+              <div key={title} className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white p-5 transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-xl hover:shadow-[var(--brand-primary)]/5">
+                <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-[#f4d21f] to-[var(--brand-accent)] opacity-0 transition-opacity group-hover:opacity-100" />
                 <div className="flex gap-4">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#082b59] to-[#0d4a8a] text-white shadow-lg shadow-[#082b59]/20 transition-transform group-hover:scale-110">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-light)] text-white shadow-lg shadow-[var(--brand-primary)]/20 transition-transform group-hover:scale-110">
                     <Icon weight="fill" className="h-5 w-5" />
                   </div>
                   <div className="flex flex-col">
-                    <h3 className="text-base font-semibold text-[#082b59]">{title}</h3>
+                    <h3 className="text-base font-semibold text-[var(--brand-primary)]">{title}</h3>
                     <p className="mt-1.5 line-clamp-3 text-[13px] leading-relaxed text-slate-500">{description}</p>
                   </div>
                 </div>
@@ -522,8 +527,8 @@ export default async function Home() {
         <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
           <CSSFadeIn>
             <div className="mb-12 text-center">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Tim Pengajar</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Guru & Staff</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Tim Pengajar</p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Guru & Staff</h2>
             </div>
           </CSSFadeIn>
 
@@ -539,10 +544,10 @@ export default async function Home() {
           <CSSFadeIn>
             <div className="mb-12 flex items-end justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Artikel & Tips</p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Artikel Sekolah</h2>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Artikel & Tips</p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Artikel Sekolah</h2>
               </div>
-              <Link href="/articles" className="text-sm font-semibold text-[#1767b1] transition-colors hover:text-[#082b59]">
+              <Link href="/articles" className="text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)]">
                 Semua artikel <ArrowUpRight className="inline h-4 w-4" />
               </Link>
             </div>
@@ -551,16 +556,16 @@ export default async function Home() {
           <CSSStagger stagger={100} className="grid gap-6 md:grid-cols-2">
             {articles.length === 0 ? (
               <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white py-16 text-center">
-                <BookOpen className="h-12 w-12 text-[#082b59]/20" />
+                <BookOpen className="h-12 w-12 text-[var(--brand-primary)]/20" />
                 <p className="mt-4 text-sm text-slate-500">Artikel masih kosong.</p>
                 <p className="mt-1 text-xs text-slate-400">Nantikan tulisan dan tips dari guru kami.</p>
               </div>
             ) : articles.map((item) => (
-              <Link key={item.slug} href={`/articles/${item.slug}`} className="group block rounded-2xl border border-[#dce3ed] bg-white p-6 transition-all hover:shadow-lg hover:shadow-[#082b59]/5">
+              <Link key={item.slug} href={`/articles/${item.slug}`} className="group block rounded-2xl border border-[#dce3ed] bg-white p-6 transition-all hover:shadow-lg hover:shadow-[var(--brand-primary)]/5">
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-[#1767b1]/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#1767b1]">{capitalizeCategory(item.category)}</span>
+                  <span className="rounded-full bg-[var(--brand-accent)]/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-accent)]">{capitalizeCategory(item.category)}</span>
                 </div>
-                <h3 className="mt-3 text-lg font-semibold text-[#082b59] transition-colors group-hover:text-[#1767b1]">{item.title}</h3>
+                <h3 className="mt-3 text-lg font-semibold text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)]">{item.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-slate-500 line-clamp-2">{item.excerpt}</p>
                 <p className="mt-3 text-xs text-slate-400">oleh {item.author_name ?? "Tim MBS"}</p>
               </Link>
@@ -570,7 +575,7 @@ export default async function Home() {
       </section>
 
       {/* ── WHY MUH4TA ────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] text-white" style={CV}>
+      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] text-white" style={CV}>
         <div className="absolute inset-0 hidden opacity-10 md:block">
           <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#f4d21f] blur-[120px]" />
         </div>
@@ -611,11 +616,11 @@ export default async function Home() {
         <div className="relative mx-auto flex max-w-[1296px] flex-col gap-7 px-6 py-16 md:flex-row md:items-center md:justify-between md:px-10">
           <CSSFadeIn>
             <div>
-              <h2 className="text-3xl font-semibold tracking-tight text-[#082b59]">Mulai langkah baru bersama kami.</h2>
+              <h2 className="text-3xl font-semibold tracking-tight text-[var(--brand-primary)]">Mulai langkah baru bersama kami.</h2>
             </div>
           </CSSFadeIn>
           <CSSFadeIn delay={0.1}>
-            <Link href={registrationHref(profile)} className="inline-flex w-fit items-center gap-2 rounded-xl bg-[#082b59] px-6 py-3.5 text-sm font-bold text-white transition-all hover:bg-[#1767b1] hover:shadow-lg">
+            <Link href={registrationHref(profile)} className="inline-flex w-fit items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-6 py-3.5 text-sm font-bold text-white transition-all hover:bg-[var(--brand-accent)] hover:shadow-lg">
               Daftar sekarang <ArrowUpRight className="h-4 w-4" />
             </Link>
           </CSSFadeIn>

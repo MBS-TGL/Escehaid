@@ -124,9 +124,9 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
       <div className="sticky top-16 z-40 border-b border-slate-100 bg-white/95 backdrop-blur-md md:top-[72px]">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5">
           <nav className="flex items-center gap-1.5 text-xs text-slate-400">
-            <Link href="/" className="transition-colors hover:text-[#1767b1]">Beranda</Link>
+            <Link href="/" className="transition-colors hover:text-[var(--brand-accent)]">Beranda</Link>
             <span>/</span>
-            <Link href="/news" className="transition-colors hover:text-[#1767b1]">Berita</Link>
+            <Link href="/news" className="transition-colors hover:text-[var(--brand-accent)]">Berita</Link>
             <span>/</span>
             <span className="max-w-[200px] truncate text-slate-600">{berita.title}</span>
           </nav>
@@ -151,7 +151,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
       </div>
 
       {/* Hero — judul & metadata saja, tanpa gambar */}
-      <section className="bg-[#082b59]">
+      <section className="bg-[var(--brand-primary)]">
         <div className="mx-auto max-w-7xl px-4 pt-8 pb-3 md:pt-10 md:pb-4">
           <div className="max-w-4xl">
             {/* Category + Meta */}
@@ -235,7 +235,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
 
             {/* Share + Back */}
             <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
-              <Link href="/news" className="inline-flex items-center gap-2 text-sm font-semibold text-[#1767b1] hover:text-[#082b59]">
+              <Link href="/news" className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-accent)] hover:text-[var(--brand-primary)]">
                 <ArrowLeft className="h-4 w-4" /> Semua Berita
               </Link>
               <div className="flex items-center gap-2">
@@ -265,14 +265,14 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
               <div className="mt-10">
                 <div className="mb-5 flex items-center gap-3">
                   <div className="h-1 w-8 bg-[#f4d21f]" />
-                  <h3 className="text-lg font-bold text-[#082b59]">Berita Terkait</h3>
+                  <h3 className="text-lg font-bold text-[var(--brand-primary)]">Berita Terkait</h3>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   {relatedNews.map((item) => {
                     const rc = categoryConfig[item.category] || { label: item.category, color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" };
                     return (
                       <Link key={item.id} href={`/news/${item.slug}`}
-                        className="group flex gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-[#1767b1]/30 hover:shadow-md">
+                        className="group flex gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-md">
                         {item.image_url ? (
                           <Image src={item.image_url} alt={item.image_alt || item.title} width={80} height={80} sizes="80px" className="h-20 w-20 flex-shrink-0 rounded-lg object-cover" />
                         ) : (
@@ -282,7 +282,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
                         )}
                         <div className="min-w-0">
                           <span className={`text-[10px] font-semibold uppercase ${rc.color}`}>{rc.label}</span>
-                          <h4 className="mt-0.5 text-sm font-semibold text-slate-800 line-clamp-2 group-hover:text-[#1767b1]">{item.title}</h4>
+                          <h4 className="mt-0.5 text-sm font-semibold text-slate-800 line-clamp-2 group-hover:text-[var(--brand-accent)]">{item.title}</h4>
                           <p className="mt-1 text-xs text-slate-400">
                             {new Date(item.published_at || item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
                           </p>
@@ -306,7 +306,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
                     type="text"
                     name="search"
                     placeholder="Ketik kata kunci..."
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-[#1767b1] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
                   />
                 </form>
               </div>
@@ -320,11 +320,11 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
                   <div className="space-y-3.5">
                     {filteredRecent.map((item, i) => (
                       <Link key={item.id} href={`/news/${item.slug}`} className="group flex gap-3">
-                        <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-[#082b59] text-[10px] font-bold text-white">
+                        <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-[var(--brand-primary)] text-[10px] font-bold text-white">
                           {String(i + 1).padStart(2, "0")}
                         </span>
                         <div className="min-w-0">
-                          <h4 className="text-sm font-semibold text-slate-700 line-clamp-2 group-hover:text-[#1767b1] leading-snug">{item.title}</h4>
+                          <h4 className="text-sm font-semibold text-slate-700 line-clamp-2 group-hover:text-[var(--brand-accent)] leading-snug">{item.title}</h4>
                           <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-400">
                             <Clock className="h-3 w-3" />
                             {new Date(item.published_at || item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
@@ -352,11 +352,11 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-xl border border-[#082b59]/10 bg-gradient-to-br from-[#082b59] to-[#0d4a8a] p-5 text-white">
+              <div className="overflow-hidden rounded-xl border border-[var(--brand-primary)]/10 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-light)] p-5 text-white">
                 <h3 className="text-sm font-bold">SMP Muhammadiyah 4 Tanggul</h3>
                 <p className="mt-1.5 text-xs text-white/60 leading-relaxed">Mari bergabung bersama kami untuk masa depan yang lebih cerah.</p>
                 <Link href="/admission"
-                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[#f4d21f] px-4 py-2.5 text-xs font-bold text-[#082b59] transition-colors hover:bg-[#e6c51a]">
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[#f4d21f] px-4 py-2.5 text-xs font-bold text-[var(--brand-primary)] transition-colors hover:bg-[#e6c51a]">
                   Daftar Sekarang
                 </Link>
               </div>

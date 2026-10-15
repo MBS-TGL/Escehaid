@@ -176,7 +176,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const status = activityStatus(activity.activity_date, activity.end_date);
   const statusPill =
     status === "today"
-      ? { label: "Hari Ini", cls: "bg-[#f4d21f] text-[#082b59]" }
+      ? { label: "Hari Ini", cls: "bg-[#f4d21f] text-[var(--brand-primary)]" }
       : status === "upcoming"
         ? { label: "Akan Datang", cls: "bg-emerald-100 text-emerald-700" }
         : status === "ongoing"
@@ -237,7 +237,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
     "flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors";
   const waBtnClass = `${iconBtnBase} hover:border-emerald-200 hover:text-emerald-600`;
   const fbBtnClass = `${iconBtnBase} hover:border-blue-200 hover:text-blue-600`;
-  const copyBtnClass = `${iconBtnBase} hover:border-[#1767b1]/30 hover:text-[#1767b1]`;
+  const copyBtnClass = `${iconBtnBase} hover:border-[var(--brand-accent)]/30 hover:text-[var(--brand-accent)]`;
 
   return (
     <div className="min-h-screen bg-white">
@@ -251,9 +251,9 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       <div className="sticky top-16 z-40 border-b border-slate-100 bg-white/95 backdrop-blur-md md:top-[72px]">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5">
           <nav className="flex items-center gap-1.5 text-xs text-slate-400" aria-label="Breadcrumb">
-            <Link href="/" className="transition-colors hover:text-[#1767b1]">Beranda</Link>
+            <Link href="/" className="transition-colors hover:text-[var(--brand-accent)]">Beranda</Link>
             <span>/</span>
-            <Link href="/activities" className="transition-colors hover:text-[#1767b1]">Kegiatan</Link>
+            <Link href="/activities" className="transition-colors hover:text-[var(--brand-accent)]">Kegiatan</Link>
             <span>/</span>
             <span className="max-w-[200px] truncate text-slate-600">{activity.title}</span>
           </nav>
@@ -278,7 +278,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       </div>
 
       {/* Hero — gaya sama detail Berita (badge + meta + judul, navy solid) */}
-      <section className="bg-[#082b59]">
+      <section className="bg-[var(--brand-primary)]">
         <div className="mx-auto max-w-7xl px-4 pt-8 pb-4 md:pt-10 md:pb-5">
           <div className="max-w-4xl">
             <div className="flex flex-wrap items-center gap-2.5">
@@ -344,7 +344,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               <section className="mt-8" aria-labelledby="act-video-heading">
                 <div className="mb-4 flex items-center gap-3">
                   <div className="h-1 w-8 bg-[#f4d21f]" />
-                  <h3 id="act-video-heading" className="text-lg font-bold text-[#082b59]">Video Kegiatan</h3>
+                  <h3 id="act-video-heading" className="text-lg font-bold text-[var(--brand-primary)]">Video Kegiatan</h3>
                 </div>
                 <VideoEmbed
                   url={video.parsed.canonicalUrl || activity.video_url || ""}
@@ -356,7 +356,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
             {/* Share + Back (pola Berita) */}
             <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
-              <Link href="/activities" className="inline-flex items-center gap-2 text-sm font-semibold text-[#1767b1] hover:text-[#082b59]">
+              <Link href="/activities" className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-accent)] hover:text-[var(--brand-primary)]">
                 <ArrowLeft className="h-4 w-4" /> Semua Kegiatan
               </Link>
               <div className="flex items-center gap-2">
@@ -381,12 +381,12 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                 {older ? (
                   <Link
                     href={`/activities/${older.slug}`}
-                    className="group flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 transition-colors hover:border-[#1767b1]/30 hover:bg-slate-50"
+                    className="group flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 transition-colors hover:border-[var(--brand-accent)]/30 hover:bg-slate-50"
                   >
-                    <CaretLeft className="h-4 w-4 shrink-0 text-slate-400 transition-colors group-hover:text-[#1767b1]" />
+                    <CaretLeft className="h-4 w-4 shrink-0 text-slate-400 transition-colors group-hover:text-[var(--brand-accent)]" />
                     <span className="min-w-0 text-left">
                       <span className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">Sebelumnya</span>
-                      <span className="block truncate text-sm font-semibold text-slate-700 group-hover:text-[#1767b1]">{older.title}</span>
+                      <span className="block truncate text-sm font-semibold text-slate-700 group-hover:text-[var(--brand-accent)]">{older.title}</span>
                     </span>
                   </Link>
                 ) : (
@@ -395,12 +395,12 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                 {newer && (
                   <Link
                     href={`/activities/${newer.slug}`}
-                    className="group flex min-w-0 flex-1 flex-row-reverse items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 transition-colors hover:border-[#1767b1]/30 hover:bg-slate-50"
+                    className="group flex min-w-0 flex-1 flex-row-reverse items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 transition-colors hover:border-[var(--brand-accent)]/30 hover:bg-slate-50"
                   >
-                    <CaretRight className="h-4 w-4 shrink-0 text-slate-400 transition-colors group-hover:text-[#1767b1]" />
+                    <CaretRight className="h-4 w-4 shrink-0 text-slate-400 transition-colors group-hover:text-[var(--brand-accent)]" />
                     <span className="min-w-0 text-right">
                       <span className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">Berikutnya</span>
-                      <span className="block truncate text-sm font-semibold text-slate-700 group-hover:text-[#1767b1]">{newer.title}</span>
+                      <span className="block truncate text-sm font-semibold text-slate-700 group-hover:text-[var(--brand-accent)]">{newer.title}</span>
                     </span>
                   </Link>
                 )}
@@ -412,12 +412,12 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               <div className="mt-10">
                 <div className="mb-5 flex items-center gap-3">
                   <div className="h-1 w-8 bg-[#f4d21f]" />
-                  <h3 className="text-lg font-bold text-[#082b59]">Kegiatan Lainnya</h3>
+                  <h3 className="text-lg font-bold text-[var(--brand-primary)]">Kegiatan Lainnya</h3>
                 </div>
                 <CSSStagger stagger={60} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {related.map((item) => (
                     <Link key={item.id} href={`/activities/${item.slug}`}
-                      className="group flex gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-[#1767b1]/30 hover:shadow-md">
+                      className="group flex gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-md">
                       {item.image_url ? (
                         <Image src={item.image_url} alt={item.title} width={80} height={80} sizes="80px"
                           className="h-20 w-20 flex-shrink-0 rounded-lg object-cover" />
@@ -430,7 +430,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                         <span className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${activityTypeBadge(item.activity_type)}`}>
                           {activityTypeLabel(item.activity_type)}
                         </span>
-                        <h4 className="mt-1 text-sm font-semibold text-slate-800 line-clamp-2 group-hover:text-[#1767b1]">{item.title}</h4>
+                        <h4 className="mt-1 text-sm font-semibold text-slate-800 line-clamp-2 group-hover:text-[var(--brand-accent)]">{item.title}</h4>
                         <p className="mt-1 text-xs text-slate-400">
                           {item.activity_date ? formatActivityDateRange(item.activity_date, item.end_date) : ""}
                         </p>
@@ -453,7 +453,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
                 <dl className="space-y-3.5">
                   <div className="flex items-start gap-3">
-                    <CalendarBlank className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#1767b1]" />
+                    <CalendarBlank className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--brand-accent)]" />
                     <div className="min-w-0">
                       <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tanggal</dt>
                       <dd className="text-sm font-medium text-slate-700">
@@ -465,7 +465,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                   </div>
                   {activity.activity_time && (
                     <div className="flex items-start gap-3">
-                      <Clock className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#1767b1]" />
+                      <Clock className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--brand-accent)]" />
                       <div className="min-w-0">
                         <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Waktu</dt>
                         <dd className="text-sm font-medium text-slate-700">{activity.activity_time}</dd>
@@ -473,7 +473,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                     </div>
                   )}
                   <div className="flex items-start gap-3">
-                    <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#1767b1]" />
+                    <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--brand-accent)]" />
                     <div className="min-w-0">
                       <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Lokasi</dt>
                       <dd className="text-sm font-medium text-slate-700">{activity.location || "-"}</dd>
@@ -481,7 +481,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                   </div>
                   {activity.contact_person && (
                     <div className="flex items-start gap-3">
-                      <Phone className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#1767b1]" />
+                      <Phone className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--brand-accent)]" />
                       <div className="min-w-0">
                         <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Kontak Panitia</dt>
                         <dd className="break-words text-sm font-medium text-slate-700">{activity.contact_person}</dd>
@@ -489,7 +489,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                     </div>
                   )}
                   <div className="flex items-start gap-3">
-                    <span className={`mt-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full ${status === "today" || status === "ongoing" ? "bg-[#f4d21f]" : "bg-[#1767b1]"}`} aria-hidden="true" />
+                    <span className={`mt-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full ${status === "today" || status === "ongoing" ? "bg-[#f4d21f]" : "bg-[var(--brand-accent)]"}`} aria-hidden="true" />
                     <div className="min-w-0">
                       <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tipe &amp; Status</dt>
                       <dd className="mt-0.5 flex flex-wrap items-center gap-1.5">
@@ -509,7 +509,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                     href={activity.registration_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-[#f4d21f] px-4 py-2.5 text-sm font-bold text-[#082b59] transition-colors hover:bg-[#e6c51a]"
+                    className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-[#f4d21f] px-4 py-2.5 text-sm font-bold text-[var(--brand-primary)] transition-colors hover:bg-[#e6c51a]"
                   >
                     <ArrowUpRight className="h-4 w-4" /> Daftar Sekarang
                   </a>
@@ -520,7 +520,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                     href={activity.live_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-[#082b59] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1767b1]"
+                    className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)]"
                   >
                     <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" aria-hidden="true" />
                     Tonton Siaran Langsung
@@ -534,8 +534,8 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                     rel="noopener noreferrer"
                     /* Kuning solid bila tak ada tombol Daftar; outline bila sudah ada. */
                     className={`mt-5 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition-colors ${activity.registration_url
-                        ? "border border-[#082b59]/20 bg-white text-[#082b59] hover:border-[#082b59]/40 hover:bg-[#082b59]/5"
-                        : "bg-[#f4d21f] text-[#082b59] hover:bg-[#e6c51a]"
+                        ? "border border-[var(--brand-primary)]/20 bg-white text-[var(--brand-primary)] hover:border-[var(--brand-primary)]/40 hover:bg-[var(--brand-primary)]/5"
+                        : "bg-[#f4d21f] text-[var(--brand-primary)] hover:bg-[#e6c51a]"
                       }`}
                   >
                     <CalendarCheck className="h-4 w-4" /> Tambahkan ke Kalender

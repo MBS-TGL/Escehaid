@@ -68,18 +68,18 @@ export default function GalleryLightbox({
                     loading="lazy"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-[#082b59]">
+                  <div className="flex h-full w-full items-center justify-center bg-[var(--brand-primary)]">
                     <span className="text-4xl text-white/80">&#9654;</span>
                   </div>
                 )}
                 {item.media_type === "video" && (
                   <span className="absolute inset-0 flex items-center justify-center bg-black/25 transition-colors group-hover:bg-black/40">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/85 text-lg text-[#082b59] shadow-lg">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/85 text-lg text-[var(--brand-primary)] shadow-lg">
                       &#9654;
                     </span>
                   </span>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#082b59]/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                 <div className="absolute bottom-0 left-0 right-0 p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                   <p className="text-sm font-semibold text-white">{item.title}</p>
                   {item.category && (
@@ -96,7 +96,7 @@ export default function GalleryLightbox({
         <div className="mt-10 text-center">
           <button
             onClick={() => router.push(`/gallery?page=${page + 1}`, { scroll: false })}
-            className="rounded-xl bg-[#082b59] px-8 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#1767b1]"
+            className="rounded-xl bg-[var(--brand-primary)] px-8 py-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]"
           >
             Muat Lebih Banyak
           </button>
@@ -107,7 +107,7 @@ export default function GalleryLightbox({
         <div className="mt-4 text-center">
           <button
             onClick={() => router.push(page === 1 ? "/gallery" : `/gallery?page=${page - 1}`, { scroll: false })}
-            className="rounded-xl border border-[#dce3ed] bg-white px-8 py-3 text-sm font-semibold text-[#082b59] transition-colors hover:bg-[#f4f7fb]"
+            className="rounded-xl border border-[#dce3ed] bg-white px-8 py-3 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:bg-[#f4f7fb]"
           >
             Kembali
           </button>

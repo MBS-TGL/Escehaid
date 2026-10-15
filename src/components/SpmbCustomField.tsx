@@ -43,7 +43,7 @@ export function SpmbCustomField({
             placeholder={f.placeholder || ""}
             onChange={(e) => onChange(e.target.value)}
             aria-invalid={!!error}
-            className={`w-full resize-y rounded-xl border px-4 py-3 text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 ${error ? "border-red-300" : "border-slate-200"}`}
+            className={`w-full resize-y rounded-xl border px-4 py-3 text-sm leading-relaxed focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 ${error ? "border-red-300" : "border-slate-200"}`}
           />
           {help}
           {err}
@@ -71,10 +71,10 @@ export function SpmbCustomField({
           <p className="mb-1.5">{labelReq}</p>
           <div className="space-y-2">
             {(f.options || []).map((opt) => (
-              <label key={opt} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-all ${value === opt ? "border-[#1767b1] bg-[#1767b1]/5" : "border-[#dce3ed] hover:border-[#1767b1]/30"}`}>
+              <label key={opt} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-all ${value === opt ? "border-[var(--brand-accent)] bg-[var(--brand-accent)]/5" : "border-[#dce3ed] hover:border-[var(--brand-accent)]/30"}`}>
                 <input type="radio" name={key} value={opt} checked={value === opt}
-                  onChange={() => onChange(opt)} className="accent-[#1767b1]" />
-                <span className="text-sm font-medium text-[#082b59]">{opt}</span>
+                  onChange={() => onChange(opt)} className="accent-[var(--brand-accent)]" />
+                <span className="text-sm font-medium text-[var(--brand-primary)]">{opt}</span>
               </label>
             ))}
           </div>
@@ -91,14 +91,14 @@ export function SpmbCustomField({
             {(f.options || []).map((opt) => {
               const checked = selected.includes(opt);
               return (
-                <label key={opt} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-all ${checked ? "border-[#1767b1] bg-[#1767b1]/5" : "border-[#dce3ed] hover:border-[#1767b1]/30"}`}>
+                <label key={opt} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-all ${checked ? "border-[var(--brand-accent)] bg-[var(--brand-accent)]/5" : "border-[#dce3ed] hover:border-[var(--brand-accent)]/30"}`}>
                   <input type="checkbox" checked={checked}
                     onChange={() => {
                       const next = checked ? selected.filter((s) => s !== opt) : [...selected, opt];
                       onChange(next.join(SPMB_CHECK_SEP));
                     }}
-                    className="h-4 w-4 rounded border-slate-300 accent-[#1767b1]" />
-                  <span className="text-sm font-medium text-[#082b59]">{opt}</span>
+                    className="h-4 w-4 rounded border-slate-300 accent-[var(--brand-accent)]" />
+                  <span className="text-sm font-medium text-[var(--brand-primary)]">{opt}</span>
                 </label>
               );
             })}

@@ -13,7 +13,7 @@ function FAQItem({ q, a, index }: { q: string; a: string; index: number }) {
     <div
       className={`group rounded-xl border transition-all duration-300 ${
         isOpen
-          ? "border-[#1767b1]/30 bg-white shadow-lg shadow-[#082b59]/5"
+          ? "border-[var(--brand-accent)]/30 bg-white shadow-lg shadow-[var(--brand-primary)]/5"
           : "border-transparent hover:border-[#dce3ed] hover:bg-white/60"
       }`}
     >
@@ -27,22 +27,22 @@ function FAQItem({ q, a, index }: { q: string; a: string; index: number }) {
         <span
           className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-colors duration-300 ${
             isOpen
-              ? "bg-[#1767b1] text-white"
-              : "bg-[#082b59]/5 text-[#082b59]/40 group-hover:bg-[#1767b1]/10 group-hover:text-[#1767b1]"
+              ? "bg-[var(--brand-accent)] text-white"
+              : "bg-[var(--brand-primary)]/5 text-[var(--brand-primary)]/40 group-hover:bg-[var(--brand-accent)]/10 group-hover:text-[var(--brand-accent)]"
           }`}
         >
           {String(index + 1).padStart(2, "0")}
         </span>
         <span
           className={`flex-1 text-[15px] font-semibold transition-colors duration-300 ${
-            isOpen ? "text-[#1767b1]" : "text-[#082b59] group-hover:text-[#1767b1]"
+            isOpen ? "text-[var(--brand-accent)]" : "text-[var(--brand-primary)] group-hover:text-[var(--brand-accent)]"
           }`}
         >
           {q}
         </span>
         <div
           className={`shrink-0 transition-colors duration-300 ${
-            isOpen ? "text-[#1767b1]" : "text-[#082b59]/30 group-hover:text-[#1767b1]"
+            isOpen ? "text-[var(--brand-accent)]" : "text-[var(--brand-primary)]/30 group-hover:text-[var(--brand-accent)]"
           }`}
           style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.3s ease" }}
         >
@@ -78,13 +78,13 @@ export default function FAQ() {
       <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
         <CSSFadeIn>
           <div className="mb-14 text-center">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">FAQ</p>
-            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">FAQ</p>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">
               Pertanyaan yang sering diajukan
             </h2>
             <p className="mt-4 text-sm text-slate-500">
               Belum menemukan jawaban?{" "}
-              <Link href="/contact" className="font-semibold text-[#1767b1] hover:text-[#082b59] transition-colors">
+              <Link href="/contact" className="font-semibold text-[var(--brand-accent)] hover:text-[var(--brand-primary)] transition-colors">
                 Hubungi kami
               </Link>
             </p>

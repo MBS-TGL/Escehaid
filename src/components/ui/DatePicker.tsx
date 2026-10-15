@@ -123,7 +123,7 @@ export function DatePicker({ label, required, error, value, onChange, placeholde
 
   return (
     <div ref={ref} className="relative">
-      <label className="mb-1.5 block text-sm font-medium text-[#082b59]">
+      <label className="mb-1.5 block text-sm font-medium text-[var(--brand-primary)]">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <div className="relative">
@@ -147,7 +147,7 @@ export function DatePicker({ label, required, error, value, onChange, placeholde
         className={`flex w-full cursor-pointer items-center justify-between rounded-xl border bg-white px-4 py-2.5 text-left text-sm transition-colors focus:ring-2 ${
           error
             ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
-            : "border-[#dce3ed] focus:border-[#1767b1] focus:ring-[#1767b1]/10"
+            : "border-[#dce3ed] focus:border-[var(--brand-accent)] focus:ring-[var(--brand-accent)]/10"
         }`}
       >
         <span className={value ? "text-[#172033]" : "text-slate-400"}>
@@ -181,7 +181,7 @@ export function DatePicker({ label, required, error, value, onChange, placeholde
                   setViewYear((y) => y - 12);
                 }
               }}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-[#f4f7fb] hover:text-[#082b59]"
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-[#f4f7fb] hover:text-[var(--brand-primary)]"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -193,7 +193,7 @@ export function DatePicker({ label, required, error, value, onChange, placeholde
                 type="button"
                 onClick={() => setSelecting("month")}
                 className={`rounded-lg px-2 py-1 text-sm font-semibold transition-colors ${
-                  selecting === "month" ? "bg-[#082b59] text-white" : "text-[#082b59] hover:bg-[#f4f7fb]"
+                  selecting === "month" ? "bg-[var(--brand-primary)] text-white" : "text-[var(--brand-primary)] hover:bg-[#f4f7fb]"
                 }`}
               >
                 {MONTHS[viewMonth]}
@@ -202,7 +202,7 @@ export function DatePicker({ label, required, error, value, onChange, placeholde
                 type="button"
                 onClick={() => setSelecting("year")}
                 className={`rounded-lg px-2 py-1 text-sm font-semibold transition-colors ${
-                  selecting === "year" ? "bg-[#082b59] text-white" : "text-[#082b59] hover:bg-[#f4f7fb]"
+                  selecting === "year" ? "bg-[var(--brand-primary)] text-white" : "text-[var(--brand-primary)] hover:bg-[#f4f7fb]"
                 }`}
               >
                 {viewYear}
@@ -220,7 +220,7 @@ export function DatePicker({ label, required, error, value, onChange, placeholde
                   setViewYear((y) => y + 12);
                 }
               }}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-[#f4f7fb] hover:text-[#082b59]"
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-[#f4f7fb] hover:text-[var(--brand-primary)]"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -251,9 +251,9 @@ export function DatePicker({ label, required, error, value, onChange, placeholde
                       onClick={() => selectDay(day)}
                       className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm transition-colors ${
                         isSelected
-                          ? "bg-[#1767b1] font-bold text-white"
+                          ? "bg-[var(--brand-accent)] font-bold text-white"
                           : isToday
-                          ? "font-semibold text-[#1767b1]"
+                          ? "font-semibold text-[var(--brand-accent)]"
                           : "text-[#172033] hover:bg-[#f4f7fb]"
                       }`}
                     >
@@ -275,7 +275,7 @@ export function DatePicker({ label, required, error, value, onChange, placeholde
                   onClick={() => selectMonth(i)}
                   className={`rounded-lg py-2 text-sm transition-colors ${
                     viewMonth === i
-                      ? "bg-[#1767b1] font-bold text-white"
+                      ? "bg-[var(--brand-accent)] font-bold text-white"
                       : "text-[#172033] hover:bg-[#f4f7fb]"
                   }`}
                 >
@@ -297,7 +297,7 @@ export function DatePicker({ label, required, error, value, onChange, placeholde
                     onClick={() => selectYear(y)}
                     className={`rounded-lg py-2 text-sm transition-colors ${
                       viewYear === y
-                        ? "bg-[#1767b1] font-bold text-white"
+                        ? "bg-[var(--brand-accent)] font-bold text-white"
                         : "text-[#172033] hover:bg-[#f4f7fb]"
                     }`}
                   >
@@ -317,7 +317,7 @@ export function DatePicker({ label, required, error, value, onChange, placeholde
                 onChange(formatDate(t.getDate(), t.getMonth(), t.getFullYear()));
                 setOpen(false);
               }}
-              className="w-full rounded-lg py-1.5 text-center text-sm font-medium text-[#1767b1] hover:bg-[#f4f7fb]"
+              className="w-full rounded-lg py-1.5 text-center text-sm font-medium text-[var(--brand-accent)] hover:bg-[#f4f7fb]"
             >
               Hari Ini
             </button>

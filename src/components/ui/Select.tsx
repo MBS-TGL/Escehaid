@@ -30,12 +30,12 @@ const chevron = (open: boolean) => (
 );
 
 const baseInputClass = "w-full rounded-xl border bg-white px-4 py-2.5 text-sm text-[#172033] outline-none transition-colors focus:ring-2";
-const normalClass = `${baseInputClass} border-[#dce3ed] focus:border-[#1767b1] focus:ring-[#1767b1]/10`;
+const normalClass = `${baseInputClass} border-[#dce3ed] focus:border-[var(--brand-accent)] focus:ring-[var(--brand-accent)]/10`;
 const errorClass = `${baseInputClass} border-red-400 focus:border-red-500 focus:ring-red-500/10`;
 
 function Label({ label, required }: { label: string; required?: boolean }) {
   return (
-    <label className="mb-1.5 block text-sm font-medium text-[#082b59]">
+    <label className="mb-1.5 block text-sm font-medium text-[var(--brand-primary)]">
       {label} {required && <span className="text-red-500">*</span>}
     </label>
   );
@@ -130,7 +130,7 @@ function CustomSelect({ label, required, error, options, value, onChange, placeh
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Ketik untuk mencari..."
-                className="w-full rounded-lg border border-[#dce3ed] bg-[#f4f7fb] px-3 py-2 text-sm outline-none focus:border-[#1767b1]"
+                className="w-full rounded-lg border border-[#dce3ed] bg-[#f4f7fb] px-3 py-2 text-sm outline-none focus:border-[var(--brand-accent)]"
               />
             </div>
           )}
@@ -140,7 +140,7 @@ function CustomSelect({ label, required, error, options, value, onChange, placeh
                 key={opt.value}
                 type="button"
                 onClick={() => { onChange(opt.value); setOpen(false); setQuery(""); }}
-                className={`w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-[#f4f7fb] ${value === opt.value ? "bg-[#1767b1]/10 font-medium text-[#082b59]" : "text-[#172033]"}`}
+                className={`w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-[#f4f7fb] ${value === opt.value ? "bg-[var(--brand-accent)]/10 font-medium text-[var(--brand-primary)]" : "text-[#172033]"}`}
               >
                 {opt.label}
               </button>

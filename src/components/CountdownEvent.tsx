@@ -68,11 +68,11 @@ export default function CountdownEvent() {
   if (events.length === 0) return null;
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0b3a7a] to-[#0d4a8a] py-14 md:py-20">
+    <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-14 md:py-20">
       {/* Decorative elements */}
       <div className="absolute inset-0">
         <div className="absolute -left-32 -top-32 hidden h-80 w-80 rounded-full bg-[#f4d21f]/8 blur-[100px] md:block" />
-        <div className="absolute -bottom-20 -right-20 hidden h-60 w-60 rounded-full bg-[#1767b1]/20 blur-[80px] md:block" />
+        <div className="absolute -bottom-20 -right-20 hidden h-60 w-60 rounded-full bg-[var(--brand-accent)]/20 blur-[80px] md:block" />
         <div className="absolute left-1/2 top-0 h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         <div className="absolute bottom-0 left-1/2 h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         <CalendarBlank className="absolute -right-8 -top-8 h-48 w-48 rotate-12 text-white/[0.03]" weight="fill" />

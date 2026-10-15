@@ -20,10 +20,10 @@ export default function AttachmentPanel({
   if (!url) return null;
 
   return (
-    <div className="mt-6 overflow-hidden rounded-xl border border-[#1767b1]/20 bg-white shadow-sm">
+    <div className="mt-6 overflow-hidden rounded-xl border border-[var(--brand-accent)]/20 bg-white shadow-sm">
       <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#082b59]/10 text-[11px] font-black text-[#082b59]">
+          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--brand-primary)]/10 text-[11px] font-black text-[var(--brand-primary)]">
             {attachmentKind(name)}
           </span>
           <div className="min-w-0">
@@ -56,7 +56,7 @@ export default function AttachmentPanel({
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#082b59] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[#1767b1]"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[var(--brand-accent)]"
           >
             <Download className="h-4 w-4" /> Unduh
           </a>

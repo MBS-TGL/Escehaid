@@ -9,7 +9,7 @@ const variantStyles: Record<StatVariant, {
   iconBg: string;
   iconColor: string;
 }> = {
-  brand:    { dot: "bg-[#082b59]", iconBg: "bg-[#082b59]/8",  iconColor: "text-[#082b59]" },
+  brand:    { dot: "bg-[var(--brand-primary)]", iconBg: "bg-[var(--brand-primary)]/8",  iconColor: "text-[var(--brand-primary)]" },
   success:  { dot: "bg-emerald-500", iconBg: "bg-emerald-50",   iconColor: "text-emerald-600" },
   warning:  { dot: "bg-amber-500", iconBg: "bg-amber-50",     iconColor: "text-amber-600" },
   danger:   { dot: "bg-red-500", iconBg: "bg-red-50",       iconColor: "text-red-500" },
@@ -41,7 +41,7 @@ export function StatCard({
      dan tidak merata di setiap sisi. */
   return (
     <div
-      className={`group rounded-2xl border border-[#dce3ed] bg-white p-4 sm:p-5 transition-all duration-200 hover:border-[#1767b1]/30 hover:shadow-[0_2px_12px_-2px_rgba(0,0,0,0.08)] snap-start ${className}`}
+      className={`group rounded-2xl border border-[#dce3ed] bg-white p-4 sm:p-5 transition-all duration-200 hover:border-[var(--brand-accent)]/30 hover:shadow-[0_2px_12px_-2px_rgba(0,0,0,0.08)] snap-start ${className}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">

@@ -55,7 +55,7 @@ function BottomLink({
       <Link
         href={href}
         aria-current={active ? "page" : undefined}
-        className={`flex h-full flex-col items-center justify-center gap-1 rounded-[24px] px-1 py-2.5 text-[11px] leading-none transition-colors active:bg-[#082b59]/5 ${active ? "font-semibold text-[#082b59]" : "font-medium text-slate-500"
+        className={`flex h-full flex-col items-center justify-center gap-1 rounded-[24px] px-1 py-2.5 text-[11px] leading-none transition-colors active:bg-[var(--brand-primary)]/5 ${active ? "font-semibold text-[var(--brand-primary)]" : "font-medium text-slate-500"
           }`}
       >
         <Icon className="h-6 w-6" weight={active ? "fill" : "regular"} />
@@ -201,12 +201,12 @@ export default function MobileBottomNav() {
             <Link
               href="/admission"
               aria-current={isActive("/admission") ? "page" : undefined}
-              className="relative flex h-full flex-col items-center justify-center gap-1 px-1 py-2.5 text-[11px] font-bold leading-none text-[#082b59]"
+              className="relative flex h-full flex-col items-center justify-center gap-1 px-1 py-2.5 text-[11px] font-bold leading-none text-[var(--brand-primary)]"
             >
               <span aria-hidden className="h-6 w-6" />
               <span>SPMB</span>
               <span
-                className={`absolute left-1/2 top-0 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#f4d21f] shadow-[0_6px_18px_rgba(244,210,31,0.5),0_2px_6px_rgba(8,43,89,0.12)] transition-transform active:scale-95 motion-reduce:transition-none ${isActive("/admission") ? "ring-4 ring-[#082b59]/15" : ""
+                className={`absolute left-1/2 top-0 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#f4d21f] shadow-[0_6px_18px_rgba(244,210,31,0.5),0_2px_6px_rgba(8,43,89,0.12)] transition-transform active:scale-95 motion-reduce:transition-none ${isActive("/admission") ? "ring-4 ring-[var(--brand-primary)]/15" : ""
                   }`}
               >
                 <FileText className="h-5 w-5" weight="fill" />
@@ -223,7 +223,7 @@ export default function MobileBottomNav() {
               onClick={() => setSheetOpen(true)}
               aria-expanded={sheetOpen}
               aria-controls="menu-lainnya"
-              className="flex h-full w-full flex-col items-center justify-center gap-1 rounded-[24px] px-1 py-2.5 text-[11px] font-medium leading-none text-slate-500 transition-colors active:bg-[#082b59]/5"
+              className="flex h-full w-full flex-col items-center justify-center gap-1 rounded-[24px] px-1 py-2.5 text-[11px] font-medium leading-none text-slate-500 transition-colors active:bg-[var(--brand-primary)]/5"
             >
               <List className="h-6 w-6" />
               <span>Lainnya</span>
@@ -240,7 +240,7 @@ export default function MobileBottomNav() {
         {/* Backdrop */}
         <div
           onClick={() => setSheetOpen(false)}
-          className={`absolute inset-0 bg-[#082b59]/40 transition-opacity duration-300 motion-reduce:transition-none ${sheetOpen ? "opacity-100" : "opacity-0"
+          className={`absolute inset-0 bg-[var(--brand-primary)]/40 transition-opacity duration-300 motion-reduce:transition-none ${sheetOpen ? "opacity-100" : "opacity-0"
             }`}
         />
         {/* Panel */}
@@ -254,12 +254,12 @@ export default function MobileBottomNav() {
         >
           <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-slate-200" />
           <div className="flex items-center justify-between px-4 pb-1 pt-3">
-            <h2 className="text-sm font-bold text-[#082b59]">Menu Lainnya</h2>
+            <h2 className="text-sm font-bold text-[var(--brand-primary)]">Menu Lainnya</h2>
             <button
               type="button"
               onClick={() => setSheetOpen(false)}
               aria-label="Tutup menu"
-              className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-[#082b59]/5 hover:text-[#082b59]"
+              className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-[var(--brand-primary)]/5 hover:text-[var(--brand-primary)]"
             >
               <X className="h-4 w-4" />
             </button>
@@ -274,8 +274,8 @@ export default function MobileBottomNav() {
                     onClick={() => setSheetOpen(false)}
                     aria-current={active ? "page" : undefined}
                     className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${active
-                        ? "bg-[#082b59]/5 text-[#082b59]"
-                        : "text-slate-500 hover:bg-slate-50 hover:text-[#082b59]"
+                        ? "bg-[var(--brand-primary)]/5 text-[var(--brand-primary)]"
+                        : "text-slate-500 hover:bg-slate-50 hover:text-[var(--brand-primary)]"
                       }`}
                   >
                     <Icon className="h-5 w-5" weight={active ? "fill" : "regular"} />

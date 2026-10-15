@@ -38,7 +38,7 @@ export default async function ProfilPage() {
         })
       }} />
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-16 text-white">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-16 text-white">
         <div className="absolute inset-0 hidden opacity-[0.04] sm:block">
           <GraduationCap className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
           <BookOpen className="absolute -left-10 bottom-0 h-48 w-48 -rotate-12" weight="fill" />
@@ -59,8 +59,8 @@ export default async function ProfilPage() {
         <div className="mx-auto max-w-3xl px-6">
           <CSSFadeIn>
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Tentang Kami</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Sejarah Singkat</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Tentang Kami</p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Sejarah Singkat</h2>
               <div className="mt-6 space-y-4 text-[15px] leading-relaxed text-slate-600">
                 {profil?.history ? (
                   <p>{profil.history}</p>
@@ -82,7 +82,7 @@ export default async function ProfilPage() {
                 href="https://dapo.kemendikdasmen.go.id/sekolah?npsn=69957381"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#f4f7fb] px-4 py-2 text-sm font-medium text-[#082b59] transition-colors hover:bg-[#082b59]/10"
+                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#f4f7fb] px-4 py-2 text-sm font-medium text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/10"
               >
                 <GraduationCap className="h-4 w-4 text-[#f4d21f]" />
                 Akreditasi {profil?.accreditation || "A"}
@@ -100,7 +100,7 @@ export default async function ProfilPage() {
             <CSSFadeIn>
               <div className="flex justify-center lg:justify-end">
                 <div className="relative">
-                  <div className="absolute -inset-4 rounded-full bg-gradient-to-br from-[#f4d21f]/30 to-[#1767b1]/20 blur-xl" />
+                  <div className="absolute -inset-4 rounded-full bg-gradient-to-br from-[#f4d21f]/30 to-[var(--brand-accent)]/20 blur-xl" />
                   <div className="relative h-64 w-64 overflow-hidden rounded-full border-4 border-[#f4d21f] md:h-80 md:w-80">
                     <Image
                       src={profil?.principal_photo_url || "/images/Kepala-Sekolah.jpg"}
@@ -110,7 +110,7 @@ export default async function ProfilPage() {
                       className="object-cover object-[center_20%]"
                     />
                   </div>
-                  <div className="absolute -bottom-2 -right-2 rounded-2xl bg-[#082b59] px-4 py-2 shadow-lg">
+                  <div className="absolute -bottom-2 -right-2 rounded-2xl bg-[var(--brand-primary)] px-4 py-2 shadow-lg">
                     <p className="text-xs font-bold text-white">Kepala Sekolah</p>
                   </div>
                 </div>
@@ -119,16 +119,16 @@ export default async function ProfilPage() {
 
             <CSSFadeIn delay={0.1}>
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Kepala Sekolah</p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Kepala Sekolah</p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">
                   {profil?.principal_name || "Khoirul Anwar, S.Pd"}
                 </h2>
                 <p className="mt-6 text-[15px] leading-relaxed text-slate-600">
                   {profil?.principal_quote || "Memimpin sekolah dengan visi untuk mencetak kader umat yang berakhlak mulia, cerdas, dan siap menjadi Da'i serta Ulama Hafidz yang bermanfaat bagi masyarakat."}
                 </p>
                 <div className="mt-6 flex items-center gap-3">
-                  <span className="rounded-full bg-[#082b59]/10 px-3 py-1 text-xs font-medium text-[#082b59]">Kurikulum Merdeka</span>
-                  <span className="rounded-full bg-[#082b59]/10 px-3 py-1 text-xs font-medium text-[#082b59]">ISMUBA</span>
+                  <span className="rounded-full bg-[var(--brand-primary)]/10 px-3 py-1 text-xs font-medium text-[var(--brand-primary)]">Kurikulum Merdeka</span>
+                  <span className="rounded-full bg-[var(--brand-primary)]/10 px-3 py-1 text-xs font-medium text-[var(--brand-primary)]">ISMUBA</span>
                 </div>
               </div>
             </CSSFadeIn>
@@ -141,18 +141,18 @@ export default async function ProfilPage() {
         <div className="mx-auto max-w-7xl px-6">
           <CSSFadeIn>
             <div className="mb-12 text-center">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Visi & Misi</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Arah dan Tujuan Sekolah</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Visi & Misi</p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Arah dan Tujuan Sekolah</h2>
             </div>
           </CSSFadeIn>
 
           <div className="grid gap-8 md:grid-cols-2">
             <CSSFadeIn>
               <div className="h-full rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-8">
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[#082b59] shadow-lg shadow-[#082b59]/20">
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--brand-primary)] shadow-lg shadow-[var(--brand-primary)]/20">
                   <Eye className="h-5 w-5 text-[#f4d21f]" weight="bold" />
                 </div>
-                <h3 className="text-xl font-semibold text-[#082b59]">Visi</h3>
+                <h3 className="text-xl font-semibold text-[var(--brand-primary)]">Visi</h3>
                 {profil?.vision ? (
                   <p className="mt-4 text-[15px] leading-relaxed text-slate-600">
                     {profil.vision}
@@ -167,10 +167,10 @@ export default async function ProfilPage() {
 
             <CSSFadeIn delay={0.1}>
               <div className="h-full rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-8">
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[#082b59] shadow-lg shadow-[#082b59]/20">
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--brand-primary)] shadow-lg shadow-[var(--brand-primary)]/20">
                   <Checks className="h-5 w-5 text-[#f4d21f]" weight="bold" />
                 </div>
-                <h3 className="text-xl font-semibold text-[#082b59]">Misi</h3>
+                <h3 className="text-xl font-semibold text-[var(--brand-primary)]">Misi</h3>
                 {profil?.mission ? (
                   <ul className="mt-4 space-y-2.5 text-[15px] leading-relaxed text-slate-600">
                     {(() => {
@@ -225,8 +225,8 @@ export default async function ProfilPage() {
           <div className="mx-auto max-w-7xl px-6">
             <CSSFadeIn>
               <div className="mb-12">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Infrastruktur</p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Fasilitas Sekolah</h2>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Infrastruktur</p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Fasilitas Sekolah</h2>
               </div>
             </CSSFadeIn>
 
@@ -235,20 +235,20 @@ export default async function ProfilPage() {
             {/* Ajakan lanjut — teks statis, tombol daftar hanya bila href valid */}
             <CSSFadeIn delay={0.1}>
               <div className="mt-12 flex flex-col items-center justify-between gap-5 rounded-2xl border border-[#dce3ed] bg-white p-6 sm:flex-row">
-                <p className="text-center text-sm font-medium text-[#082b59] sm:text-left sm:text-base">
+                <p className="text-center text-sm font-medium text-[var(--brand-primary)] sm:text-left sm:text-base">
                   Ingin melihat langsung suasana sekolah?
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <Link
                     href="/contact"
-                    className="rounded-xl border border-[#dce3ed] px-5 py-3 text-sm font-semibold text-[#082b59] transition hover:border-[#082b59] hover:bg-[#f4f7fb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1767b1] focus-visible:ring-offset-2"
+                    className="rounded-xl border border-[#dce3ed] px-5 py-3 text-sm font-semibold text-[var(--brand-primary)] transition hover:border-[var(--brand-primary)] hover:bg-[#f4f7fb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-2"
                   >
                     Hubungi Panitia
                   </Link>
                   {daftarHref && (
                     <Link
                       href={daftarHref}
-                      className="rounded-xl bg-[#f4d21f] px-5 py-3 text-sm font-bold text-[#082b59] transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#082b59] focus-visible:ring-offset-2"
+                      className="rounded-xl bg-[#f4d21f] px-5 py-3 text-sm font-bold text-[var(--brand-primary)] transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2"
                     >
                       Daftar SPMB
                     </Link>
@@ -267,21 +267,21 @@ export default async function ProfilPage() {
             <CSSFadeIn>
               <div className="flex flex-col items-center justify-between gap-6 rounded-2xl border border-[#dce3ed] bg-white p-6 sm:flex-row">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#082b59] shadow-lg shadow-[#082b59]/20">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--brand-primary)] shadow-lg shadow-[var(--brand-primary)]/20">
                     <Trophy className="h-6 w-6 text-[#f4d21f]" weight="fill" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Pencapaian</p>
-                    <h3 className="mt-1 text-lg font-semibold text-[#082b59]">Prestasi Sekolah</h3>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Pencapaian</p>
+                    <h3 className="mt-1 text-lg font-semibold text-[var(--brand-primary)]">Prestasi Sekolah</h3>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   {achievements.slice(0, 2).map((a) => (
-                    <span key={a.id} className="hidden rounded-full bg-[#1767b1]/10 px-3 py-1 text-xs font-semibold text-[#1767b1] sm:inline-block">
+                    <span key={a.id} className="hidden rounded-full bg-[var(--brand-accent)]/10 px-3 py-1 text-xs font-semibold text-[var(--brand-accent)] sm:inline-block">
                       {a.title.length > 30 ? a.title.substring(0, 30) + "..." : a.title}
                     </span>
                   ))}
-                  <Link href="/achievements" className="inline-flex items-center gap-1.5 rounded-xl bg-[#082b59] px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-[#1767b1]">
+                  <Link href="/achievements" className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-[var(--brand-accent)]">
                     Lihat semua <ArrowUpRight className="h-4 w-4" />
                   </Link>
                 </div>
@@ -296,14 +296,14 @@ export default async function ProfilPage() {
         <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
           <CSSFadeIn>
             <div className="mb-12 text-center">
-              <h2 className="text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Guru & Staff</h2>
+              <h2 className="text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Guru & Staff</h2>
             </div>
           </CSSFadeIn>
 
           {teachers.length === 0 ? (
             <CSSFadeIn>
               <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] py-16 text-center">
-                <Users className="h-12 w-12 text-[#082b59]/20" />
+                <Users className="h-12 w-12 text-[var(--brand-primary)]/20" />
                 <p className="mt-4 text-sm text-slate-500">Data guru masih kosong.</p>
               </div>
             </CSSFadeIn>
@@ -320,10 +320,10 @@ export default async function ProfilPage() {
             <CSSFadeIn>
               <div className="mb-12 flex items-end justify-between">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Dokumentasi</p>
-                  <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#082b59] md:text-4xl">Galeri Sekolah</h2>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Dokumentasi</p>
+                  <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Galeri Sekolah</h2>
                 </div>
-                <Link href="/gallery" className="text-sm font-semibold text-[#1767b1] transition-colors hover:text-[#082b59]">
+                <Link href="/gallery" className="text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)]">
                   Lihat semua <ArrowUpRight className="inline h-4 w-4" />
                 </Link>
               </div>
@@ -339,11 +339,11 @@ export default async function ProfilPage() {
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                     className="object-cover transition-transform duration-500 group-hover:scale-110"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#082b59]/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                   <div className="absolute bottom-0 left-0 right-0 p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                     <p className="text-xs font-semibold text-white line-clamp-1">{g.title}</p>
                     {g.category && (
-                      <span className="mt-1 inline-block rounded-full bg-[#f4d21f]/90 px-2 py-0.5 text-[9px] font-bold uppercase text-[#082b59]">{g.category}</span>
+                      <span className="mt-1 inline-block rounded-full bg-[#f4d21f]/90 px-2 py-0.5 text-[9px] font-bold uppercase text-[var(--brand-primary)]">{g.category}</span>
                     )}
                   </div>
                 </Link>
@@ -359,17 +359,17 @@ export default async function ProfilPage() {
           <CSSFadeIn>
             <div className="flex flex-col items-center justify-between gap-6 rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-6 sm:flex-row">
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#082b59] shadow-lg shadow-[#082b59]/20">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--brand-primary)] shadow-lg shadow-[var(--brand-primary)]/20">
                   <MapPin className="h-6 w-6 text-[#f4d21f]" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1767b1]">Lokasi Kami</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Lokasi Kami</p>
                   <p className="mt-1 text-sm text-slate-600">
                     {profil?.address || "Jl. Pemandian No. 88, Patemon, Tanggul, Jember, Jawa Timur"}
                   </p>
                 </div>
               </div>
-              <Link href="/contact" className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#082b59] px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-[#1767b1]">
+              <Link href="/contact" className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-[var(--brand-accent)]">
                 Hubungi Kami <ArrowUpRight className="h-4 w-4" />
               </Link>
             </div>
@@ -378,7 +378,7 @@ export default async function ProfilPage() {
       </section>
 
       {/* CTA SPMB */}
-      <section className="relative overflow-hidden border-t-8 border-[#f4d21f] bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a]">
+      <section className="relative overflow-hidden border-t-8 border-[#f4d21f] bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)]">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
         </div>
@@ -391,7 +391,7 @@ export default async function ProfilPage() {
             </div>
           </CSSFadeIn>
           <CSSFadeIn delay={0.1}>
-            <Link href={registrationHref(profil)} className="inline-flex w-fit items-center gap-2 rounded-xl bg-[#f4d21f] px-7 py-4 text-sm font-bold text-[#082b59] transition-all hover:bg-white hover:shadow-lg hover:shadow-[#f4d21f]/20">
+            <Link href={registrationHref(profil)} className="inline-flex w-fit items-center gap-2 rounded-xl bg-[#f4d21f] px-7 py-4 text-sm font-bold text-[var(--brand-primary)] transition-all hover:bg-white hover:shadow-lg hover:shadow-[#f4d21f]/20">
               Daftar sekarang <ArrowUpRight className="h-4 w-4" />
             </Link>
           </CSSFadeIn>

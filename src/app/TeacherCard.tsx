@@ -61,12 +61,12 @@ export default function TeacherCard({ teacher }: { teacher: Teacher }) {
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center bg-[#f0f4fa]">
-          <User className="h-20 w-20 text-[#082b59]/15" weight="light" />
+          <User className="h-20 w-20 text-[var(--brand-primary)]/15" weight="light" />
         </div>
       )}
 
       {/* Bottom scrim */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#082b59]/80 via-[#082b59]/30 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[var(--brand-primary)]/80 via-[var(--brand-primary)]/30 to-transparent" />
 
       {/* Name + position */}
       <div className="absolute inset-x-0 bottom-0 p-4">

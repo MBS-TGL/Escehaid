@@ -47,7 +47,7 @@ function ForbiddenContent() {
       </p>
       <Link
         href="/admin"
-        className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#082b59] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1767b1]"
+        className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]"
       >
         <House className="h-4 w-4" />
         Kembali ke Dashboard
@@ -61,7 +61,7 @@ export default function AdminForbiddenPage() {
     <Suspense
       fallback={
         <div className="flex min-h-[70vh] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
         </div>
       }
     >

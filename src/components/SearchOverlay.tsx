@@ -166,7 +166,7 @@ export default function SearchOverlay({
     <div className="fixed inset-0 z-[60]">
       {/* Backdrop — klik untuk menutup */}
       <div
-        className="absolute inset-0 bg-[#082b59]/40"
+        className="absolute inset-0 bg-[var(--brand-primary)]/40"
         onClick={onClose}
         aria-hidden
       />
@@ -260,7 +260,7 @@ export default function SearchOverlay({
 
           {status === "done" && groups.length === 0 && (
             <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
-              <FileText className="h-10 w-10 text-[#082b59]/15" />
+              <FileText className="h-10 w-10 text-[var(--brand-primary)]/15" />
               <p className="mt-3 text-sm font-medium text-slate-600">
                 Tidak ada hasil untuk &ldquo;{query.trim()}&rdquo;
               </p>
@@ -295,11 +295,11 @@ export default function SearchOverlay({
                               onClick={onClose}
                               onMouseMove={() => setActiveIndex(idx)}
                               className={`flex items-start gap-3 px-4 py-2.5 transition-colors ${
-                                active ? "bg-[#1767b1]/10" : "hover:bg-slate-50"
+                                active ? "bg-[var(--brand-accent)]/10" : "hover:bg-slate-50"
                               }`}
                             >
                               <span className="min-w-0 flex-1">
-                                <span className="block truncate text-sm font-semibold text-[#082b59]">
+                                <span className="block truncate text-sm font-semibold text-[var(--brand-primary)]">
                                   {item.title}
                                 </span>
                                 {item.excerpt && (
@@ -338,7 +338,7 @@ export default function SearchOverlay({
             <Link
               href={`/search?q=${encodeURIComponent(query.trim())}`}
               onClick={onClose}
-              className="ml-auto rounded-lg px-3 py-1.5 text-sm font-semibold text-[#1767b1] transition-colors hover:bg-[#1767b1]/10 hover:text-[#082b59]"
+              className="ml-auto rounded-lg px-3 py-1.5 text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:bg-[var(--brand-accent)]/10 hover:text-[var(--brand-primary)]"
             >
               Lihat semua hasil →
             </Link>

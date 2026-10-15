@@ -88,10 +88,10 @@ const TAB_MODE_SUMMARY: Record<TabMode, string> = {
 };
 
 const inputClass =
-  "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20";
+  "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20";
 
 const focusRing =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]";
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]";
 const triggerClass = `${inputClass} flex items-center justify-between gap-3 bg-white text-left`;
 
 function ChevronDown({ open }: { open: boolean }) {
@@ -144,8 +144,8 @@ function TilePreview({
     <div className="overflow-hidden rounded-3xl border border-[#dce3ed] bg-white shadow-sm">
       {/* Kepala — meniru judul bagian di /portal */}
       <div className="flex items-center justify-between gap-2 border-b border-[#e7ecf3] px-3.5 py-2 md:py-2.5">
-        <span className="truncate text-[13px] font-bold text-[#082b59]">Aplikasi Sekolah</span>
-        <span className="shrink-0 rounded-full bg-[#f4d21f]/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#082b59]">
+        <span className="truncate text-[13px] font-bold text-[var(--brand-primary)]">Aplikasi Sekolah</span>
+        <span className="shrink-0 rounded-full bg-[#f4d21f]/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--brand-primary)]">
           Pratinjau
         </span>
       </div>
@@ -357,7 +357,7 @@ function IconPicker({
                       onClick={() => pick(name)}
                       style={selected ? rc.tileStyle : undefined}
                       className={`flex h-11 items-center justify-center rounded-lg transition-colors ${focusRing} ${selected
-                          ? `${rc.tileClass} ring-2 ring-[#082b59]`
+                          ? `${rc.tileClass} ring-2 ring-[var(--brand-primary)]`
                           : "text-slate-500 hover:bg-slate-100"
                         }`}
                     >
@@ -565,7 +565,7 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (key: strin
                         onChange(key);
                         setOpen(false);
                       }}
-                      className={`h-9 w-9 justify-self-center rounded-full ring-2 ring-offset-2 transition-shadow ${focusRing} ${selected ? "ring-[#082b59]" : "ring-transparent hover:ring-slate-200"
+                      className={`h-9 w-9 justify-self-center rounded-full ring-2 ring-offset-2 transition-shadow ${focusRing} ${selected ? "ring-[var(--brand-primary)]" : "ring-transparent hover:ring-slate-200"
                         }`}
                     >
                       <span className={`flex h-full w-full items-center justify-center rounded-full ${c.dot}`}>
@@ -584,7 +584,7 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (key: strin
                     aria-label="Pilih warna kustom"
                     value={normalizeHex(value) ?? "#7c3aed"}
                     onChange={(e) => onChange(e.target.value.toLowerCase())}
-                    className={`h-10 w-12 shrink-0 cursor-pointer rounded-lg border bg-white p-1 ${rc.custom ? "border-[#082b59] ring-2 ring-[#082b59]/30" : "border-slate-200"
+                    className={`h-10 w-12 shrink-0 cursor-pointer rounded-lg border bg-white p-1 ${rc.custom ? "border-[var(--brand-primary)] ring-2 ring-[var(--brand-primary)]/30" : "border-slate-200"
                       }`}
                   />
                   <input
@@ -1023,8 +1023,8 @@ export default function AdminPortalPage() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1767b1]/10">
-            <SquaresFour className="h-5 w-5 text-[#1767b1]" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--brand-accent)]/10">
+            <SquaresFour className="h-5 w-5 text-[var(--brand-accent)]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Kelola Portal</h1>
@@ -1039,13 +1039,13 @@ export default function AdminPortalPage() {
             target="_blank"
             rel="noopener noreferrer"
             title="Buka /portal di tab baru"
-            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] sm:flex-none sm:px-4 md:py-2.5"
+            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] sm:flex-none sm:px-4 md:py-2.5"
           >
             <ArrowSquareOut className="h-4 w-4 shrink-0" />
             <span className="truncate">Lihat di portal</span>
           </a>
           <button onClick={openCreate}
-            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#082b59] px-3 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1] sm:flex-none sm:px-4 md:py-2.5">
+            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-3 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] sm:flex-none sm:px-4 md:py-2.5">
             <Plus className="h-4 w-4 shrink-0" />
             <span className="truncate">Tambah Aplikasi</span>
           </button>
@@ -1053,7 +1053,7 @@ export default function AdminPortalPage() {
       </div>
 
       {/* Stats desktop — kartu tetap bisa diklik sebagai filter.
-          Tanda important di border-[#082b59]! bukan gaya: keduanya sama-sama
+          Tanda important di border-[var(--brand-primary)]! bukan gaya: keduanya sama-sama
           arbitrary value berjenis border-color, sehingga pemenangnya ditentukan
           urutan stylesheet. Tanpa important, border bawaan StatCard
           (border-[#dce3ed]) menang dan border navy kartu aktif tidak pernah
@@ -1067,14 +1067,14 @@ export default function AdminPortalPage() {
               onClick={() => setFilter(stat.key)}
               aria-pressed={filter === stat.key}
               title={`Tampilkan: ${stat.label}`}
-              className="w-full rounded-2xl text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+              className="w-full rounded-2xl text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
             >
               <StatCard
                 label={stat.label}
                 value={stat.value}
                 variant={stat.variant}
                 className={
-                  filter === stat.key ? "border-[#082b59]! ring-2 ring-[#082b59]/30" : ""
+                  filter === stat.key ? "border-[var(--brand-primary)]! ring-2 ring-[var(--brand-primary)]/30" : ""
                 }
               />
             </button>
@@ -1130,8 +1130,8 @@ export default function AdminPortalPage() {
       {/* Bar aksi massal inline — desktop saja; mobile memakai bar sticky
           di bawah saat mode pilih. */}
       {selectedItems.length > 0 && (
-        <div className="mb-3 hidden flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-[#1767b1]/30 bg-[#1767b1]/5 px-3.5 py-3 md:flex">
-          <span className="flex items-center gap-2 text-sm font-semibold text-[#082b59]">
+        <div className="mb-3 hidden flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-[var(--brand-accent)]/30 bg-[var(--brand-accent)]/5 px-3.5 py-3 md:flex">
+          <span className="flex items-center gap-2 text-sm font-semibold text-[var(--brand-primary)]">
             <Checks className="h-4 w-4" />
             {selectedItems.length} aplikasi dipilih
           </span>
@@ -1145,7 +1145,7 @@ export default function AdminPortalPage() {
                 key={act.status}
                 type="button"
                 onClick={() => applyStatus(selectedItems, act.status)}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
               >
                 {act.label}
               </button>
@@ -1153,7 +1153,7 @@ export default function AdminPortalPage() {
             <button
               type="button"
               onClick={() => setConfirmBulkDelete(true)}
-              className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+              className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
             >
               Hapus
             </button>
@@ -1190,7 +1190,7 @@ export default function AdminPortalPage() {
                 onChange={(e) => toggleAllVisible(e.target.checked)}
                 disabled={visible.length === 0}
                 aria-label="Pilih semua aplikasi yang tampil"
-                className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed"
+                className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed"
               />
             </div>
             <div role="columnheader" className="text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Urutan</div>
@@ -1232,7 +1232,7 @@ export default function AdminPortalPage() {
                 {loading ? (
                   <div className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
-                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
+                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
                       <p className="text-sm text-slate-500">Memuat data aplikasi portal...</p>
                     </div>
                   </div>
@@ -1246,7 +1246,7 @@ export default function AdminPortalPage() {
                         <p className="text-sm font-medium text-slate-600">Belum ada aplikasi portal</p>
                         <p className="mt-1 text-xs text-slate-400">Tambahkan aplikasi pertama agar tampil di halaman /portal</p>
                       </div>
-                      <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[#082b59] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1767b1]">
+                      <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
                         <Plus className="h-3.5 w-3.5" /> Tambah Aplikasi Pertama
                       </button>
                     </div>
@@ -1265,7 +1265,7 @@ export default function AdminPortalPage() {
                       </div>
                       <button
                         onClick={() => { setQuery(""); setFilter("all"); }}
-                        className="mt-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:border-[#1767b1]/40 hover:text-[#082b59]"
+                        className="mt-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)]"
                       >
                         Reset filter & pencarian
                       </button>
@@ -1315,7 +1315,7 @@ export default function AdminPortalPage() {
               type="button"
               onClick={() => bulkSetStatus(act.status)}
               disabled={selectedItems.length === 0}
-              className="min-h-11 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-11 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {act.label}
             </button>
@@ -1339,7 +1339,7 @@ export default function AdminPortalPage() {
               Ctrl + S untuk menyimpan
             </span>
             <button onClick={handleSave} disabled={formSaving}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
+              className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-70">
               {formSaving ? (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
               ) : (
@@ -1440,7 +1440,7 @@ export default function AdminPortalPage() {
                 onClick={() => setAdvancedOpen((v) => !v)}
                 aria-expanded={advancedOpen}
                 aria-controls="lanjutan-panel"
-                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
               >
                 <span className="flex min-w-0 items-center gap-2">
                   <span className="shrink-0">Lanjutan</span>
@@ -1481,7 +1481,7 @@ export default function AdminPortalPage() {
                             aria-pressed={tabMode === mode}
                             onClick={() => setTabMode(mode)}
                             className={`rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${focusRing} ${tabMode === mode
-                                ? "bg-[#1767b1] text-white shadow-sm"
+                                ? "bg-[var(--brand-accent)] text-white shadow-sm"
                                 : "text-slate-500 hover:bg-slate-100"
                               }`}
                           >

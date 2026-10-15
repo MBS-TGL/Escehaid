@@ -103,7 +103,7 @@ export default function HeroCarousel() {
   return (
     <div
       ref={containerRef}
-      className="relative h-[480px] w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] md:h-[600px]"
+      className="relative h-[480px] w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] md:h-[600px]"
     >
       {/* Poster: tampil selama video belum berjalan — di HP sampai tombol play
           ditekan, di desktop selama buffer awal. `priority` karena ini yang
@@ -143,7 +143,7 @@ export default function HeroCarousel() {
       ) : null}
 
       {/* overlay gradient */}
-      <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#082b59]/60 via-transparent to-transparent pointer-events-none" />
+      <div className="absolute inset-0 z-10 bg-gradient-to-t from-[var(--brand-primary)]/60 via-transparent to-transparent pointer-events-none" />
 
       {/* Tombol play (khusus HP sebelum mulai) — seluruh area hero bisa diklik */}
       {!autoplay && (
@@ -154,7 +154,7 @@ export default function HeroCarousel() {
           className="absolute inset-0 z-20 flex cursor-pointer items-center justify-center"
         >
           <span className="flex h-20 w-20 items-center justify-center rounded-full bg-white/90 shadow-[0_8px_30px_rgba(8,43,89,0.45)] transition-transform duration-200 active:scale-95">
-            <Play weight="fill" className="h-9 w-9 translate-x-0.5 text-[#082b59]" />
+            <Play weight="fill" className="h-9 w-9 translate-x-0.5 text-[var(--brand-primary)]" />
           </span>
         </button>
       )}

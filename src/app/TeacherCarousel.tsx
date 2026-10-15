@@ -64,7 +64,7 @@ export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
       {/* Custom arrows */}
       <button
         onClick={() => splideInstance.current?.go("<")}
-        className="absolute -left-5 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-[#082b59] shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:border-[#1767b1] hover:bg-[#082b59] hover:text-white cursor-pointer"
+        className="absolute -left-5 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-[var(--brand-primary)] shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:border-[var(--brand-accent)] hover:bg-[var(--brand-primary)] hover:text-white cursor-pointer"
         aria-label="Previous"
       >
         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -73,7 +73,7 @@ export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
       </button>
       <button
         onClick={() => splideInstance.current?.go(">")}
-        className="absolute -right-5 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-[#082b59] shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:border-[#1767b1] hover:bg-[#082b59] hover:text-white cursor-pointer"
+        className="absolute -right-5 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-[var(--brand-primary)] shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:border-[var(--brand-accent)] hover:bg-[var(--brand-primary)] hover:text-white cursor-pointer"
         aria-label="Next"
       >
         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,7 +87,7 @@ export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
           <div className="splide__list">
             {teachers.map((t) => (
               <div key={t.id} className="splide__slide" style={{ width: "calc(16.6667% - 8.33333px)", marginRight: "10px" }}>
-                <div className="group/card relative aspect-[3/4] overflow-hidden rounded-none bg-[#082b59] shadow-md transition-shadow duration-500 hover:shadow-xl">
+                <div className="group/card relative aspect-[3/4] overflow-hidden rounded-none bg-[var(--brand-primary)] shadow-md transition-shadow duration-500 hover:shadow-xl">
                   {t.photo_url ? (
                     <Image
                       src={t.photo_url}
@@ -98,10 +98,10 @@ export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-[#f0f4fa]">
-                      <User className="h-16 w-16 text-[#082b59]/15" weight="light" />
+                      <User className="h-16 w-16 text-[var(--brand-primary)]/15" weight="light" />
                     </div>
                   )}
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#082b59] via-[#082b59]/40 to-transparent" />
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[var(--brand-primary)] via-[var(--brand-primary)]/40 to-transparent" />
                   <div className="absolute inset-x-0 bottom-0 p-3">
                     <h3 className="text-xs font-semibold text-white drop-shadow-sm leading-tight" title={t.name}>
                       {t.name}

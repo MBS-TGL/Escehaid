@@ -274,7 +274,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
   if (loading) {
     return (
       <div className="flex flex-col items-center gap-3 rounded-xl border border-slate-200/80 bg-white py-16">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
         <p className="text-sm text-slate-500">Memuat data pengguna...</p>
       </div>
     );
@@ -298,7 +298,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
         <button
           type="button"
           onClick={() => setInviteOpen(true)}
-          className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1767b1]"
+          className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]"
         >
           <UserPlus className="h-4 w-4" />
           Undang Pengguna
@@ -379,14 +379,14 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                     <tr key={item.id} className="transition-colors hover:bg-slate-50/80">
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#082b59]/10">
-                            <User className="h-5 w-5 text-[#082b59]" />
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/10">
+                            <User className="h-5 w-5 text-[var(--brand-primary)]" />
                           </div>
                           <div className="min-w-0">
                             <p className="flex items-center gap-1.5 text-sm font-medium text-slate-800">
                               <span className="truncate">{item.full_name}</span>
                               {isSelf && (
-                                <span className="shrink-0 rounded bg-[#082b59]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#082b59]">
+                                <span className="shrink-0 rounded bg-[var(--brand-primary)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--brand-primary)]">
                                   Anda
                                 </span>
                               )}
@@ -507,7 +507,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                   onClick={() => setPage(p)}
                   className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${
                     p === page
-                      ? "bg-[#082b59] text-white shadow-sm"
+                      ? "bg-[var(--brand-primary)] text-white shadow-sm"
                       : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                   }`}
                 >
@@ -567,7 +567,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                 placeholder="nama@sekolah.sch.id"
               />
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-[#082b59]">
+                <label className="mb-1.5 block text-sm font-medium text-[var(--brand-primary)]">
                   Peran <span className="text-red-500">*</span>
                 </label>
                 <div className="space-y-2">
@@ -580,7 +580,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                         onClick={() => setInviteRole(key)}
                         className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
                           inviteRole === key
-                            ? "border-[#1767b1] bg-[#1767b1]/10 ring-2 ring-[#1767b1]/20"
+                            ? "border-[var(--brand-accent)] bg-[var(--brand-accent)]/10 ring-2 ring-[var(--brand-accent)]/20"
                             : "border-slate-200 hover:border-slate-300"
                         }`}
                       >
@@ -589,7 +589,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                         >
                           {badge?.label ?? key}
                         </span>
-                        {inviteRole === key && <CheckCircle className="ml-auto h-5 w-5 text-[#1767b1]" />}
+                        {inviteRole === key && <CheckCircle className="ml-auto h-5 w-5 text-[var(--brand-accent)]" />}
                       </button>
                     );
                   })}
@@ -606,7 +606,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
               <button
                 onClick={handleInvite}
                 disabled={inviteSaving || !inviteName || !inviteEmail}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#082b59] py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-60"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-60"
               >
                 {inviteSaving ? (
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -652,7 +652,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                     onClick={() => setEditRoleKey(key)}
                     className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
                       editRoleKey === key
-                        ? "border-[#1767b1] bg-[#1767b1]/10 ring-2 ring-[#1767b1]/20"
+                        ? "border-[var(--brand-accent)] bg-[var(--brand-accent)]/10 ring-2 ring-[var(--brand-accent)]/20"
                         : "border-slate-200 hover:border-slate-300"
                     }`}
                   >
@@ -661,7 +661,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                     >
                       {badge?.label ?? key}
                     </span>
-                    {editRoleKey === key && <CheckCircle className="ml-auto h-5 w-5 text-[#1767b1]" />}
+                    {editRoleKey === key && <CheckCircle className="ml-auto h-5 w-5 text-[var(--brand-accent)]" />}
                   </button>
                 );
               })}
@@ -676,7 +676,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
               <button
                 onClick={handleSaveRole}
                 disabled={busyId === editRoleItem.id}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#082b59] py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-60"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-60"
               >
                 {busyId === editRoleItem.id ? (
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />

@@ -52,12 +52,12 @@ function Dropdown({
         aria-controls={open ? menuId : undefined}
         aria-label={menuLabel}
         onClick={toggle}
-        className="flex h-11 w-full min-w-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white pl-2.5 pr-2 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+        className="flex h-11 w-full min-w-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white pl-2.5 pr-2 text-sm font-semibold text-slate-700 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
       >
         {icon && <span className="shrink-0 text-slate-400">{icon}</span>}
         <span className="min-w-0 flex-1 truncate text-left">{triggerLabel}</span>
         {typeof badge === "number" && (
-          <span className="shrink-0 rounded-full bg-[#082b59] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white tabular-nums">
+          <span className="shrink-0 rounded-full bg-[var(--brand-primary)] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white tabular-nums">
             {badge}
           </span>
         )}
@@ -90,7 +90,7 @@ function Dropdown({
                   {opt.count}
                 </span>
               )}
-              {active && <Checks className="h-4 w-4 shrink-0 text-[#1767b1]" />}
+              {active && <Checks className="h-4 w-4 shrink-0 text-[var(--brand-accent)]" />}
             </MenuItem>
           );
         })}
@@ -208,8 +208,8 @@ export function MobileFilterBar({
 
   if (selectMode) {
     return (
-      <div className="mb-4 flex items-center gap-2 rounded-xl border border-[#1767b1]/30 bg-[#1767b1]/5 px-3 py-2 md:hidden">
-        <span aria-live="polite" className="flex items-center gap-1.5 text-sm font-semibold text-[#082b59]">
+      <div className="mb-4 flex items-center gap-2 rounded-xl border border-[var(--brand-accent)]/30 bg-[var(--brand-accent)]/5 px-3 py-2 md:hidden">
+        <span aria-live="polite" className="flex items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary)]">
           <Checks className="h-4 w-4 shrink-0" />
           {selectedCount} dipilih
         </span>
@@ -218,7 +218,7 @@ export function MobileFilterBar({
             <button
               type="button"
               onClick={onSelectAllVisible}
-              className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+              className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
             >
               {allSelected ? "Hapus centang" : "Pilih semua"}
             </button>
@@ -227,7 +227,7 @@ export function MobileFilterBar({
             <button
               type="button"
               onClick={onCancelSelect}
-              className="min-h-11 rounded-xl px-2 text-xs font-semibold text-slate-500 underline-offset-2 transition-colors hover:text-slate-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+              className="min-h-11 rounded-xl px-2 text-xs font-semibold text-slate-500 underline-offset-2 transition-colors hover:text-slate-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
             >
               Selesai
             </button>
@@ -249,7 +249,7 @@ export function MobileFilterBar({
             onChange={(e) => onQueryChange(e.target.value)}
             placeholder={placeholder}
             aria-label={searchLabel}
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-base focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-base focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
           />
           {query && (
             <button
@@ -297,9 +297,9 @@ export function MobilePickButton({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       aria-label="Masuk mode pilih"
-      className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white pl-2.5 pr-3 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+      className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white pl-2.5 pr-3 text-sm font-semibold text-slate-700 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
     >
-      <CheckSquare className="h-4 w-4 shrink-0 text-[#1767b1]" />
+      <CheckSquare className="h-4 w-4 shrink-0 text-[var(--brand-accent)]" />
       Pilih
     </button>
   );

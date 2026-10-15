@@ -27,7 +27,7 @@ export default async function ArtikelPage() {
           ],
         })
       }} />
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-16 text-white">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-16 text-white">
         <div className="absolute inset-0 hidden opacity-[0.04] sm:block">
           <BookOpen className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
           <FileText className="absolute -left-10 bottom-0 h-48 w-48 -rotate-12" weight="fill" />
@@ -47,7 +47,7 @@ export default async function ArtikelPage() {
         {articles.length === 0 ? (
           <CSSFadeIn>
             <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white py-20 text-center">
-              <BookOpen className="h-14 w-14 text-[#082b59]/20" />
+              <BookOpen className="h-14 w-14 text-[var(--brand-primary)]/20" />
               <p className="mt-5 text-base text-slate-500">Artikel masih kosong.</p>
               <p className="mt-1 text-sm text-slate-400">Nantikan tulisan dan tips dari guru kami.</p>
             </div>
@@ -58,21 +58,21 @@ export default async function ArtikelPage() {
               <div key={item.slug}>
                 <Link
                   href={`/articles/${item.slug}`}
-                  className="group flex flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:border-[#1767b1]/30 hover:shadow-lg hover:shadow-[#082b59]/5 sm:flex-row"
+                  className="group flex flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-lg hover:shadow-[var(--brand-primary)]/5 sm:flex-row"
                 >
                   {/* Number Badge */}
-                  <div className="flex shrink-0 items-center justify-center bg-gradient-to-br from-[#082b59] to-[#1767b1] px-6 sm:px-8">
+                  <div className="flex shrink-0 items-center justify-center bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-accent)] px-6 sm:px-8">
                     <span className="text-3xl font-bold text-white/80">{String(i + 1).padStart(2, "0")}</span>
                   </div>
 
                   {/* Content */}
                   <div className="flex flex-1 flex-col p-5 sm:p-6">
                     <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-[#1767b1]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#1767b1]">
+                      <span className="rounded-full bg-[var(--brand-accent)]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-accent)]">
                         {item.category}
                       </span>
                     </div>
-                    <h3 className="mt-3 text-lg font-semibold text-[#082b59] transition-colors group-hover:text-[#1767b1]">
+                    <h3 className="mt-3 text-lg font-semibold text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)]">
                       {item.title}
                     </h3>
                     <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-500 line-clamp-2">{item.excerpt}</p>
@@ -80,7 +80,7 @@ export default async function ArtikelPage() {
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-slate-400">oleh {item.author_name ?? "Tim MBS"}</span>
                       </div>
-                      <ArrowUpRight className="h-4 w-4 text-[#1767b1] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                      <ArrowUpRight className="h-4 w-4 text-[var(--brand-accent)] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </div>
                   </div>
                 </Link>

@@ -292,13 +292,13 @@ export default function AdminTopbar({
                         href={item.href}
                         onClick={() => { setSearchOpen(false); setSearchQuery(""); }}
                         className={`flex items-center gap-3 px-3 py-2.5 text-sm transition-colors ${isActive
-                            ? "bg-[#082b59]/5 text-[#082b59] font-semibold"
+                            ? "bg-[var(--brand-primary)]/5 text-[var(--brand-primary)] font-semibold"
                             : "text-slate-600 hover:bg-slate-50"
                           }`}
                       >
                         <item.icon className="h-4 w-4 flex-shrink-0" />
                         {item.label}
-                        {isActive && <span className="ml-auto text-[10px] font-bold text-[#082b59]">Aktif</span>}
+                        {isActive && <span className="ml-auto text-[10px] font-bold text-[var(--brand-primary)]">Aktif</span>}
                       </Link>
                     );
                   })
@@ -324,7 +324,7 @@ export default function AdminTopbar({
           >
             <Bell className="h-[18px] w-[18px]" />
             {unreadCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#1767b1] px-1 text-[9px] font-bold text-white">
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-accent)] px-1 text-[9px] font-bold text-white">
                 {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
@@ -340,7 +340,7 @@ export default function AdminTopbar({
                 <h3 className="text-sm font-semibold text-slate-800">Notifikasi</h3>
                 {unreadCount > 0 && (
                   <button onClick={handleMarkAllAsRead}
-                    className="text-[11px] font-semibold text-[#1767b1] hover:text-[#082b59]">
+                    className="text-[11px] font-semibold text-[var(--brand-accent)] hover:text-[var(--brand-primary)]">
                     Semua dibaca
                   </button>
                 )}
@@ -348,7 +348,7 @@ export default function AdminTopbar({
               <div className="max-h-80 overflow-y-auto">
                 {notifLoading ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#082b59] border-t-transparent" />
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--brand-primary)] border-t-transparent" />
                   </div>
                 ) : notifications.length === 0 ? (
                   <div className="flex flex-col items-center gap-2 py-8 text-center">
@@ -359,7 +359,7 @@ export default function AdminTopbar({
                   notifications.map((n) => {
                     const Icon = notifIcon[n.type] || Bell;
                     return (
-                      <div key={n.id} className={`flex gap-3 border-b border-slate-50 px-4 py-3 transition-colors hover:bg-slate-50/50 ${!n.is_read ? "bg-[#1767b1]/[0.03]" : ""}`}>
+                      <div key={n.id} className={`flex gap-3 border-b border-slate-50 px-4 py-3 transition-colors hover:bg-slate-50/50 ${!n.is_read ? "bg-[var(--brand-accent)]/[0.03]" : ""}`}>
                         <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${notifColor[n.type] || "bg-slate-100 text-slate-500"}`}>
                           <Icon className="h-4 w-4" />
                         </div>
@@ -372,7 +372,7 @@ export default function AdminTopbar({
                           <div className="mt-1.5 flex items-center gap-2">
                             {!n.is_read && (
                               <button onClick={() => handleMarkAsRead(n.id)}
-                                className="text-[10px] font-semibold text-[#1767b1] hover:text-[#082b59]">
+                                className="text-[10px] font-semibold text-[var(--brand-accent)] hover:text-[var(--brand-primary)]">
                                 Tandai dibaca
                               </button>
                             )}
@@ -392,7 +392,7 @@ export default function AdminTopbar({
               {notifications.length > 0 && (
                 <div className="border-t border-slate-100 px-4 py-2.5">
                   <button onClick={handleMarkAllAsRead}
-                    className="block w-full text-center text-xs font-semibold text-[#1767b1] hover:text-[#082b59]">
+                    className="block w-full text-center text-xs font-semibold text-[var(--brand-accent)] hover:text-[var(--brand-primary)]">
                     Tandai semua sudah dibaca
                   </button>
                 </div>
@@ -407,7 +407,7 @@ export default function AdminTopbar({
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className="flex items-center gap-2.5 rounded-xl py-1.5 pl-1.5 pr-3 transition-colors hover:bg-slate-50"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#082b59]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--brand-primary)]">
               <User className="h-4 w-4 text-white" />
             </div>
             <div className="hidden max-w-[9rem] text-left sm:block">

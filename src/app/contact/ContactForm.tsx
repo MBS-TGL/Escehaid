@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { submitContactMessage } from "@/lib/queries";
-import { MapPin, Phone, Envelope, Clock, WhatsappLogo, InstagramLogo, YoutubeLogo, FacebookLogo } from "@/components/Icons";
+import { MapPin, Phone, Envelope, Clock, WhatsappLogo, InstagramLogo, YoutubeLogo, FacebookLogo, TwitterLogo, MusicNotes } from "@/components/Icons";
 import { CSSFadeIn } from "@/components/CSSAnimations";
+import type { PublicBrand } from "@/lib/settings";
 
-export default function ContactForm() {
+export default function ContactForm({ brand }: { brand: PublicBrand }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: "" });
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -26,7 +27,7 @@ export default function ContactForm() {
   return (
     <div>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-16 text-white">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-16 text-white">
         <div className="absolute inset-0 hidden opacity-[0.04] sm:block">
           <MapPin className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
           <Phone className="absolute -left-10 bottom-0 h-48 w-48 -rotate-12" weight="fill" />
@@ -49,7 +50,7 @@ export default function ContactForm() {
             {/* Left: Form */}
             <CSSFadeIn>
               <div className="rounded-2xl border border-[#dce3ed] bg-white p-6 shadow-sm md:p-8">
-                <h2 className="text-xl font-bold text-[#082b59]">Kirim Pesan</h2>
+                <h2 className="text-xl font-bold text-[var(--brand-primary)]">Kirim Pesan</h2>
                 <p className="mt-1.5 text-sm text-slate-500">Isi form di bawah ini, kami akan merespons secepat mungkin.</p>
 
                 {status === "success" && (
@@ -65,64 +66,64 @@ export default function ContactForm() {
 
                 <form onSubmit={handleSubmit} className="mt-5 space-y-4">
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-[#082b59]">Nama Lengkap *</label>
+                    <label className="mb-1.5 block text-sm font-medium text-[var(--brand-primary)]">Nama Lengkap *</label>
                     <input
                       type="text"
                       required
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      className="w-full rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-sm transition-colors placeholder:text-slate-400 focus:border-[#1767b1] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#1767b1]"
+                      className="w-full rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-sm transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
                       placeholder="Masukkan nama lengkap"
                     />
                   </div>
                   <div className="grid gap-4 sm:grid-cols-3">
                     <div>
-                      <label className="mb-1.5 block text-sm font-medium text-[#082b59]">Email *</label>
+                      <label className="mb-1.5 block text-sm font-medium text-[var(--brand-primary)]">Email *</label>
                       <input
                         type="email"
                         required
                         value={form.email}
                         onChange={(e) => setForm({ ...form, email: e.target.value })}
-                        className="w-full rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-sm transition-colors placeholder:text-slate-400 focus:border-[#1767b1] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#1767b1]"
+                        className="w-full rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-sm transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
                         placeholder="email@contoh.com"
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-sm font-medium text-[#082b59]">Telepon</label>
+                      <label className="mb-1.5 block text-sm font-medium text-[var(--brand-primary)]">Telepon</label>
                       <input
                         type="tel"
                         value={form.phone}
                         onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                        className="w-full rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-sm transition-colors placeholder:text-slate-400 focus:border-[#1767b1] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#1767b1]"
+                        className="w-full rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-sm transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
                         placeholder="08xxx"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-[#082b59]">Subjek</label>
+                    <label className="mb-1.5 block text-sm font-medium text-[var(--brand-primary)]">Subjek</label>
                     <input
                       type="text"
                       value={form.subject}
                       onChange={(e) => setForm({ ...form, subject: e.target.value })}
-                      className="w-full rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-sm transition-colors placeholder:text-slate-400 focus:border-[#1767b1] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#1767b1]"
+                      className="w-full rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-sm transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
                       placeholder="Perihal pesan"
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-[#082b59]">Pesan *</label>
+                    <label className="mb-1.5 block text-sm font-medium text-[var(--brand-primary)]">Pesan *</label>
                     <textarea
                       required
                       rows={4}
                       value={form.message}
                       onChange={(e) => setForm({ ...form, message: e.target.value })}
-                      className="w-full resize-none rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-sm transition-colors placeholder:text-slate-400 focus:border-[#1767b1] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#1767b1]"
+                      className="w-full resize-none rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-sm transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
                       placeholder="Tulis pesan Anda..."
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={status === "loading"}
-                    className="rounded-xl bg-[#082b59] px-6 py-3 text-sm font-bold text-white transition-all hover:bg-[#1767b1] hover:shadow-lg hover:shadow-[#082b59]/20 disabled:opacity-50"
+                    className="rounded-xl bg-[var(--brand-primary)] px-6 py-3 text-sm font-bold text-white transition-all hover:bg-[var(--brand-accent)] hover:shadow-lg hover:shadow-[var(--brand-primary)]/20 disabled:opacity-50"
                   >
                     {status === "loading" ? "Mengirim..." : "Kirim Pesan"}
                   </button>
@@ -151,26 +152,26 @@ export default function ContactForm() {
               {/* Quick Info */}
               <CSSFadeIn delay={0.1}>
                 <div className="rounded-2xl border border-[#dce3ed] bg-white p-5">
-                  <h3 className="text-sm font-bold text-[#082b59]">Informasi Sekolah</h3>
+                  <h3 className="text-sm font-bold text-[var(--brand-primary)]">Informasi Sekolah</h3>
                   <div className="mt-3 space-y-2.5">
                     <a href="https://www.google.com/maps/search/?api=1&query=MBS+TANGGUL+JEMBER&query_place_id=ChIJ4U5j9O2L1i0RHVhDHWhtwi8" target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-3 rounded-xl bg-[#f4f7fb] px-4 py-2.5 transition-colors hover:bg-[#082b59]/5">
-                      <MapPin className="h-4 w-4 shrink-0 text-[#1767b1]" />
+                      className="flex items-center gap-3 rounded-xl bg-[#f4f7fb] px-4 py-2.5 transition-colors hover:bg-[var(--brand-primary)]/5">
+                      <MapPin className="h-4 w-4 shrink-0 text-[var(--brand-accent)]" />
                       <div className="min-w-0">
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Alamat</p>
-                        <p className="truncate text-sm text-slate-600">Jl. Pemandian No. 88, Patemon, Tanggul, Jember 68155</p>
+                        <p className="truncate text-sm text-slate-600">{brand.address}</p>
                       </div>
                     </a>
-                    <a href="mailto:smpm4tangguljember@gmail.com"
-                      className="flex items-center gap-3 rounded-xl bg-[#f4f7fb] px-4 py-2.5 transition-colors hover:bg-[#082b59]/5">
-                      <Envelope className="h-4 w-4 shrink-0 text-[#1767b1]" />
+                    <a href={`mailto:${brand.email}`}
+                      className="flex items-center gap-3 rounded-xl bg-[#f4f7fb] px-4 py-2.5 transition-colors hover:bg-[var(--brand-primary)]/5">
+                      <Envelope className="h-4 w-4 shrink-0 text-[var(--brand-accent)]" />
                       <div className="min-w-0">
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Email</p>
-                        <p className="truncate text-sm text-slate-600">smpm4tangguljember@gmail.com</p>
+                        <p className="truncate text-sm text-slate-600">{brand.email}</p>
                       </div>
                     </a>
                     <div className="flex items-center gap-3 rounded-xl bg-[#f4f7fb] px-4 py-2.5">
-                      <Clock className="h-4 w-4 shrink-0 text-[#1767b1]" />
+                      <Clock className="h-4 w-4 shrink-0 text-[var(--brand-accent)]" />
                       <div className="min-w-0">
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Jam Operasional</p>
                         <p className="text-sm text-slate-600">Senin - Sabtu, 07:00 - 15:00 WIB</p>
@@ -183,7 +184,7 @@ export default function ContactForm() {
               {/* Contact Persons */}
               <CSSFadeIn delay={0.15}>
                 <div className="rounded-2xl border border-[#dce3ed] bg-white p-5">
-                  <h3 className="text-sm font-bold text-[#082b59]">Contact Person SPMB</h3>
+                  <h3 className="text-sm font-bold text-[var(--brand-primary)]">Contact Person SPMB</h3>
                   <div className="mt-3 space-y-2.5">
                     {[
                       ["Ustadzah Azizah", "6285259341209", "0852-5934-1209"],
@@ -196,7 +197,7 @@ export default function ContactForm() {
                           href={`https://wa.me/${wa}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1767b1] transition-colors hover:text-[#082b59]"
+                          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)]"
                         >
                           <WhatsappLogo className="h-4 w-4" weight="fill" />
                           {display}
@@ -210,24 +211,29 @@ export default function ContactForm() {
               {/* Social Media */}
               <CSSFadeIn delay={0.2}>
                 <div className="rounded-2xl border border-[#dce3ed] bg-white p-5">
-                  <h3 className="text-sm font-bold text-[#082b59]">Ikuti Kami</h3>
-                  <div className="mt-3 flex gap-3">
+                  <h3 className="text-sm font-bold text-[var(--brand-primary)]">Ikuti Kami</h3>
+                  <div className="mt-3 flex flex-wrap gap-3">
                     {([
-                      [InstagramLogo, "https://instagram.com/mbstanggul", "Instagram"],
-                      [YoutubeLogo, "https://youtube.com/@MBSTANGGUL", "YouTube"],
-                      [FacebookLogo, "https://facebook.com/mbs.tanggul", "Facebook"],
-                    ] as [typeof InstagramLogo, string, string][]).map(([Icon, href, label]) => (
-                      <a
-                        key={label}
-                        href={href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#082b59]/5 text-[#082b59]/40 transition-all hover:bg-[#082b59] hover:text-white"
-                        aria-label={label}
-                      >
-                        <Icon className="h-5 w-5" weight="fill" />
-                      </a>
-                    ))}
+                      [InstagramLogo, brand.social.instagram, "Instagram"],
+                      [YoutubeLogo, brand.social.youtube, "YouTube"],
+                      [FacebookLogo, brand.social.facebook, "Facebook"],
+                      [MusicNotes, brand.social.tiktok, "TikTok"],
+                      [TwitterLogo, brand.social.x, "X"],
+                    ] as [typeof InstagramLogo, string, string][])
+                      // Tautan kosong / tidak valid disembunyikan otomatis.
+                      .filter(([, href]) => /^https?:\/\//.test(href))
+                      .map(([Icon, href, label]) => (
+                        <a
+                          key={label}
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--brand-primary)]/5 text-[var(--brand-primary)]/40 transition-all hover:bg-[var(--brand-primary)] hover:text-white"
+                          aria-label={label}
+                        >
+                          <Icon className="h-5 w-5" weight="fill" />
+                        </a>
+                      ))}
                   </div>
                 </div>
               </CSSFadeIn>

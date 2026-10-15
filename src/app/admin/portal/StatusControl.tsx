@@ -106,7 +106,7 @@ export function StatusControl({
             disabled={disabled}
             title={meta.hint}
             onClick={() => onChange(status)}
-            className={`flex items-center justify-center gap-1 whitespace-nowrap rounded-md font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#1767b1] disabled:opacity-50 ${
+            className={`flex items-center justify-center gap-1 whitespace-nowrap rounded-md font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-accent)] disabled:opacity-50 ${
               sm
                 ? "min-w-0 flex-1 px-0.5 py-1.5 text-[10px] leading-none tracking-tight"
                 : "flex-auto px-2 py-2 text-xs"
@@ -309,7 +309,7 @@ export function StatusPill({
         aria-busy={saving}
         title={compact ? `${meta.label} — ${meta.hint}` : undefined}
         onClick={toggle}
-        className={`relative inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:opacity-60 ${
+        className={`relative inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:opacity-60 ${
           compact
             ? // Pill tenang 28px + area sentuh 44px (pseudo melebar vertikal).
               "h-7 text-[11px] before:absolute before:inset-x-0 before:-top-2 before:-bottom-2 before:content-[''] " +
@@ -353,7 +353,7 @@ export function StatusPill({
                 data-active={active}
                 disabled={saving}
                 onClick={() => choose(status)}
-                className="flex w-full items-start gap-2 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#1767b1] disabled:opacity-60"
+                className="flex w-full items-start gap-2 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-accent)] disabled:opacity-60"
               >
                 <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.dotClass}`} />
                 <span className="min-w-0 flex-1">
@@ -364,7 +364,7 @@ export function StatusPill({
                     {STATUS_DESC[status]}
                   </span>
                 </span>
-                {active && <Checks className="mt-0.5 h-4 w-4 shrink-0 text-[#1767b1]" />}
+                {active && <Checks className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-accent)]" />}
               </button>
             );
           })}

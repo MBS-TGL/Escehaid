@@ -233,8 +233,8 @@ export default function AdminContactPage() {
   const sortIcon = (field: SortField) => {
     if (sortField !== field) return <SortAscending className="h-3 w-3 text-slate-300" />;
     return sortDir === "asc"
-      ? <ArrowUp className="h-3 w-3 text-[#1767b1]" />
-      : <ArrowDown className="h-3 w-3 text-[#1767b1]" />;
+      ? <ArrowUp className="h-3 w-3 text-[var(--brand-accent)]" />
+      : <ArrowDown className="h-3 w-3 text-[var(--brand-accent)]" />;
   };
 
   return (
@@ -242,8 +242,8 @@ export default function AdminContactPage() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[#082b59]/10">
-            <Envelope className="h-5 w-5 text-[#082b59]" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[var(--brand-primary)]/10">
+            <Envelope className="h-5 w-5 text-[var(--brand-primary)]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Pesan Masuk</h1>
@@ -265,9 +265,9 @@ export default function AdminContactPage() {
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5 md:flex">
-          <Checks className="h-4 w-4 text-[#082b59]" />
-          <span className="text-xs font-semibold text-[#082b59]">{selectedIds.size} dipilih</span>
+        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex">
+          <Checks className="h-4 w-4 text-[var(--brand-primary)]" />
+          <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
           <button onClick={() => handleBulkMarkRead(true)} aria-label={`Tandai ${selectedIds.size} pesan terpilih sudah dibaca`} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Tandai Dibaca</button>
           <button onClick={() => handleBulkMarkRead(false)} aria-label={`Tandai ${selectedIds.size} pesan terpilih belum dibaca`} className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-600">Tandai Belum Dibaca</button>
           <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} pesan terpilih`} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
@@ -341,7 +341,7 @@ export default function AdminContactPage() {
                 agenda/teachers/users/announcements/facilities. */}
                 <th className="hidden w-10 px-4 py-3 sm:table-cell">
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
-                    className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
+                    className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                 </th>
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">No</th>
                 <th className="cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("name")}>
@@ -362,7 +362,7 @@ export default function AdminContactPage() {
               {loading ? (
                 <tr><td colSpan={8} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
-                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
                     <p className="text-sm text-slate-500">Memuat data pesan...</p>
                   </div>
                 </td></tr>
@@ -380,16 +380,16 @@ export default function AdminContactPage() {
                 </td></tr>
               ) : (
                 paginated.map((item, index) => (
-                  <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[#082b59]/[0.03]" : ""} ${!item.is_read ? "bg-[#1767b1]/[0.03]" : ""}`}>
+                  <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[var(--brand-primary)]/[0.03]" : ""} ${!item.is_read ? "bg-[var(--brand-accent)]/[0.03]" : ""}`}>
                     <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
-                        className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
+                        className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                     </td>
                     <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
                     <td className="px-4 py-3.5 cursor-pointer" onClick={() => handleViewMessage(item)}>
                       <div className="flex items-center gap-2">
-                        <div className={`flex h-8 w-8 items-center justify-center rounded-full ${!item.is_read ? "bg-[#082b59]/10" : "bg-slate-100"}`}>
-                          <User className={`h-4 w-4 ${!item.is_read ? "text-[#082b59]" : "text-slate-400"}`} />
+                        <div className={`flex h-8 w-8 items-center justify-center rounded-full ${!item.is_read ? "bg-[var(--brand-primary)]/10" : "bg-slate-100"}`}>
+                          <User className={`h-4 w-4 ${!item.is_read ? "text-[var(--brand-primary)]" : "text-slate-400"}`} />
                         </div>
                         <span className={`text-sm ${!item.is_read ? "font-semibold text-slate-800" : "font-medium text-slate-700"}`}>{item.name}</span>
                       </div>
@@ -438,7 +438,7 @@ export default function AdminContactPage() {
               </button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                 <button key={p} onClick={() => setPage(p)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === page ? "bg-[#082b59] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === page ? "bg-[var(--brand-primary)] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
                   {p}
                 </button>
               ))}
@@ -522,7 +522,7 @@ export default function AdminContactPage() {
             onClick={() => handleBulkMarkRead(true)}
             disabled={selectedIds.size === 0}
             aria-label="Tandai pesan terpilih sudah dibaca"
-            className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Dibaca
           </button>
@@ -531,7 +531,7 @@ export default function AdminContactPage() {
             onClick={() => handleBulkMarkRead(false)}
             disabled={selectedIds.size === 0}
             aria-label="Tandai pesan terpilih belum dibaca"
-            className="min-h-10 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-10 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Belum Dibaca
           </button>
@@ -549,7 +549,7 @@ export default function AdminContactPage() {
           detailItem ? (
             <div className="flex w-full items-center justify-between">
               <a href={`mailto:${detailItem.email}?subject=Re: ${detailItem.subject || "Pesan dari Website"}`}
-                className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1]">
+                className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)]">
                 <Envelope className="h-4 w-4" />
                 Balas Email
               </a>
@@ -580,7 +580,7 @@ export default function AdminContactPage() {
               </div>
               <div>
                 <p className="text-[11px] font-semibold text-slate-400">Email</p>
-                <a href={`mailto:${detailItem.email}`} className="text-sm font-medium text-[#1767b1] hover:underline">{detailItem.email}</a>
+                <a href={`mailto:${detailItem.email}`} className="text-sm font-medium text-[var(--brand-accent)] hover:underline">{detailItem.email}</a>
               </div>
               <div>
                 <p className="text-[11px] font-semibold text-slate-400">Telepon</p>
@@ -690,12 +690,12 @@ function ContactMobileRow({
                 checked={selected}
                 onChange={() => onToggleSelect(item.id)}
                 aria-label={`Pilih pesan dari ${item.name}`}
-                className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+                className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
               />
             </span>
           ) : (
-            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${!item.is_read ? "bg-[#082b59]/10" : "bg-slate-100"}`}>
-              <User className={`h-5 w-5 ${!item.is_read ? "text-[#082b59]" : "text-slate-400"}`} />
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${!item.is_read ? "bg-[var(--brand-primary)]/10" : "bg-slate-100"}`}>
+              <User className={`h-5 w-5 ${!item.is_read ? "text-[var(--brand-primary)]" : "text-slate-400"}`} />
             </span>
           )
         }

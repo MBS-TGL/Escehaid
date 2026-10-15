@@ -35,7 +35,7 @@ const ACTION_FILTERS: { value: AuditAction | ""; label: string }[] = [
 
 const ACTION_BADGE: Record<string, string> = {
   create: "border-emerald-100 bg-emerald-50 text-emerald-600",
-  update: "border-blue-100 bg-blue-50 text-[#1767b1]",
+  update: "border-blue-100 bg-blue-50 text-[var(--brand-accent)]",
   delete: "border-red-100 bg-red-50 text-red-600",
 };
 
@@ -133,8 +133,8 @@ export default function AdminLogsPage() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[#1767b1]/10">
-            <Scroll className="h-5 w-5 text-[#1767b1]" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[var(--brand-accent)]/10">
+            <Scroll className="h-5 w-5 text-[var(--brand-accent)]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-800 md:text-2xl">Log Aktivitas</h1>
@@ -228,7 +228,7 @@ export default function AdminLogsPage() {
       {/* Hasil: memuat / error / kosong / tabel */}
       {available && loading && (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#dce3ed] bg-white px-6 py-14 text-center">
-          <Scroll className="h-10 w-10 animate-pulse text-[#082b59]/30" />
+          <Scroll className="h-10 w-10 animate-pulse text-[var(--brand-primary)]/30" />
           <p className="mt-3 text-sm text-slate-500">Memuat log…</p>
         </div>
       )}
@@ -245,7 +245,7 @@ export default function AdminLogsPage() {
 
       {available && !loading && !current?.error && rows.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#dce3ed] bg-white px-6 py-14 text-center">
-          <Scroll className="h-10 w-10 text-[#082b59]/15" />
+          <Scroll className="h-10 w-10 text-[var(--brand-primary)]/15" />
           <p className="mt-3 text-sm font-medium text-slate-600">
             {hasFilters
               ? "Tidak ada log yang cocok dengan filter"
@@ -313,7 +313,7 @@ export default function AdminLogsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <details>
-                        <summary className="cursor-pointer text-xs font-semibold text-[#1767b1] hover:underline">
+                        <summary className="cursor-pointer text-xs font-semibold text-[var(--brand-accent)] hover:underline">
                           Lihat
                         </summary>
                         <pre className="mt-2 max-h-44 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-slate-50 p-2 text-[11px] leading-relaxed text-slate-600">
@@ -339,13 +339,13 @@ export default function AdminLogsPage() {
                   <MobileListRow
                     onClick={() => setExpandedId(open ? null : row.id)}
                     thumb={
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#e4ecf6] text-sm font-bold text-[#082b59]">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#e4ecf6] text-sm font-bold text-[var(--brand-primary)]">
                         {actor.trim().charAt(0).toUpperCase() || "?"}
                       </div>
                     }
                     title={
                       <>
-                        <span className="text-[#082b59]">{actor}</span>{" "}
+                        <span className="text-[var(--brand-primary)]">{actor}</span>{" "}
                         {(AUDIT_ACTION_LABELS[row.action] ?? row.action).toLowerCase()}{" "}
                         {AUDIT_ENTITY_LABELS[row.entity_type] ?? row.entity_type}
                       </>
@@ -412,7 +412,7 @@ export default function AdminLogsPage() {
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
                 aria-label="Halaman sebelumnya"
-                className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-[#1767b1]/40 hover:text-[#1767b1] disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <CaretLeft className="h-3.5 w-3.5" /> Sebelumnya
               </button>
@@ -421,7 +421,7 @@ export default function AdminLogsPage() {
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
                 aria-label="Halaman berikutnya"
-                className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-[#1767b1]/40 hover:text-[#1767b1] disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Berikutnya <CaretRight className="h-3.5 w-3.5" />
               </button>

@@ -63,7 +63,7 @@ export function MenuItem({
       aria-current={active ? "true" : undefined}
       data-active={active ? "true" : undefined}
       onClick={onClick}
-      className={`flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 text-left text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#1767b1] ${
+      className={`flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 text-left text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-accent)] ${
         danger ? "text-red-600 hover:bg-red-50" : "text-slate-700 hover:bg-slate-50"
       }`}
     >

@@ -310,7 +310,7 @@ export function AddRegistrationSlideOver({
           {/* Catatan wajib — ditulis sekali, digeser sejajar kanan baris tab
               agar panel lebih compact (hemat satu baris tinggi). */}
           <p className="text-xs font-medium text-slate-500">
-            Hanya <span className="font-semibold text-[#082b59]">Nama Lengkap</span> yang wajib.
+            Hanya <span className="font-semibold text-[var(--brand-primary)]">Nama Lengkap</span> yang wajib.
           </p>
           <div className="flex w-fit max-w-full flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
             {tabs.map((t) => {
@@ -319,7 +319,7 @@ export function AddRegistrationSlideOver({
               return (
                 <button key={t.key} type="button" onClick={() => setTab(t.key)}
                   className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-xs font-semibold transition-all ${
-                    isActive ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                    isActive ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                   }`}>
                   {t.label}
                   {hasError && (
@@ -347,12 +347,12 @@ export function AddRegistrationSlideOver({
                 tab tetap bisa diklik langsung kapan pun. */}
             {nextTab && (
               <button type="button" onClick={() => setTab(nextTab.key)} disabled={saving}
-                className="rounded-xl border border-[#082b59]/25 px-4 py-2.5 text-sm font-semibold text-[#082b59] hover:bg-[#082b59]/5 disabled:opacity-40">
+                className="rounded-xl border border-[var(--brand-primary)]/25 px-4 py-2.5 text-sm font-semibold text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5 disabled:opacity-40">
                 Selanjutnya
               </button>
             )}
             <button onClick={handleSave} disabled={saving}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
+              className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-70">
               {saving ? (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
               ) : (
@@ -419,10 +419,10 @@ export function AddRegistrationSlideOver({
                 ]} />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-[#082b59]">Catatan Admin</label>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--brand-primary)]">Catatan Admin</label>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
                 placeholder="cth: didaftarkan via WA, berkas fisik diserahkan ke panitia"
-                className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-relaxed focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
             </div>
           </div>
         )}
@@ -431,7 +431,7 @@ export function AddRegistrationSlideOver({
         {tab === "siswa" && (
           <div className="space-y-6">
             <div>
-              <h4 className="mb-3 text-sm font-bold text-[#082b59]">Identitas</h4>
+              <h4 className="mb-3 text-sm font-bold text-[var(--brand-primary)]">Identitas</h4>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Input label="Nama Lengkap" required placeholder="Nama Lengkap Siswa"
@@ -450,7 +450,7 @@ export function AddRegistrationSlideOver({
             </div>
 
             <div>
-              <h4 className="mb-3 text-sm font-bold text-[#082b59]">Kelahiran &amp; Identitas Resmi</h4>
+              <h4 className="mb-3 text-sm font-bold text-[var(--brand-primary)]">Kelahiran &amp; Identitas Resmi</h4>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Select searchable label="Tempat Lahir" options={KOTA_KABUPATEN} value={data.birth_place}
@@ -468,7 +468,7 @@ export function AddRegistrationSlideOver({
             </div>
 
             <div>
-              <h4 className="mb-3 text-sm font-bold text-[#082b59]">Fisik &amp; Minat</h4>
+              <h4 className="mb-3 text-sm font-bold text-[var(--brand-primary)]">Fisik &amp; Minat</h4>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Input label="Tinggi Badan (cm)" placeholder="Contoh: 150"
@@ -488,7 +488,7 @@ export function AddRegistrationSlideOver({
             </div>
 
             <div>
-              <h4 className="mb-3 text-sm font-bold text-[#082b59]">Keluarga</h4>
+              <h4 className="mb-3 text-sm font-bold text-[var(--brand-primary)]">Keluarga</h4>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Input label="Anak Ke-" placeholder="Contoh: 2"
@@ -503,7 +503,7 @@ export function AddRegistrationSlideOver({
             </div>
 
             <div>
-              <h4 className="mb-3 text-sm font-bold text-[#082b59]">Sekolah &amp; Alamat</h4>
+              <h4 className="mb-3 text-sm font-bold text-[var(--brand-primary)]">Sekolah &amp; Alamat</h4>
               <div className="space-y-4">
                 <Input label="Asal Sekolah" placeholder="Nama Sekolah Asal"
                   value={data.previous_school} onChange={(e) => update("previous_school", e.target.value)} />
@@ -518,7 +518,7 @@ export function AddRegistrationSlideOver({
         {tab === "orangtua" && (
           <div className="space-y-6">
             <div>
-              <h4 className="mb-3 text-sm font-bold text-[#082b59]">Data Ayah</h4>
+              <h4 className="mb-3 text-sm font-bold text-[var(--brand-primary)]">Data Ayah</h4>
               <div className="space-y-4">
                 <Input label="Nama Ayah Kandung" placeholder="Nama Ayah"
                   value={data.father_name} onChange={(e) => update("father_name", e.target.value)} error={errors.father_name} />
@@ -539,7 +539,7 @@ export function AddRegistrationSlideOver({
               </div>
             </div>
             <div>
-              <h4 className="mb-3 text-sm font-bold text-[#082b59]">Data Ibu</h4>
+              <h4 className="mb-3 text-sm font-bold text-[var(--brand-primary)]">Data Ibu</h4>
               <div className="space-y-4">
                 <Input label="Nama Ibu Kandung" placeholder="Nama Ibu"
                   value={data.mother_name} onChange={(e) => update("mother_name", e.target.value)} error={errors.mother_name} />
@@ -560,7 +560,7 @@ export function AddRegistrationSlideOver({
               </div>
             </div>
             <div>
-              <h4 className="mb-3 text-sm font-bold text-[#082b59]">Kontak Orang Tua</h4>
+              <h4 className="mb-3 text-sm font-bold text-[var(--brand-primary)]">Kontak Orang Tua</h4>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input label="No. HP/WA" placeholder="08xxxxxxxxxx"
                   value={data.phone} onChange={(e) => update("phone", e.target.value)} error={errors.phone} />

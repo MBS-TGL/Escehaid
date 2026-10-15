@@ -76,10 +76,10 @@ function LoginForm() {
     <div className="min-h-screen flex bg-white">
       <title>Login Admin | SMP Muhammadiyah 4 Tanggul</title>
       {/* ── LEFT PANEL — Branding ───────────────────────── */}
-      <div className="hidden lg:flex lg:w-[44%] relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#1767b1]">
+      <div className="hidden lg:flex lg:w-[44%] relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-accent)]">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff04_1px,transparent_1px),linear-gradient(to_bottom,#ffffff04_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
         <div className="pointer-events-none absolute -top-24 -left-24 w-[420px] h-[420px] bg-[#f4d21f]/10 rounded-full blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 right-0 translate-x-1/4 translate-y-1/4 w-[380px] h-[380px] bg-[#1767b1]/20 rounded-full blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 right-0 translate-x-1/4 translate-y-1/4 w-[380px] h-[380px] bg-[var(--brand-accent)]/20 rounded-full blur-3xl" />
 
         <div className={`relative z-10 flex flex-col justify-between p-12 w-full transition-all duration-700 ease-out ${mounted ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-6"}`}>
           <div className="flex items-center gap-3">
@@ -137,14 +137,14 @@ function LoginForm() {
               /* ── RESET PASSWORD FORM ──── */
               <>
                 <div className="text-center mb-8">
-                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4 shadow-lg bg-[#1767b1]/10">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4 shadow-lg bg-[var(--brand-accent)]/10">
                     {resetSuccess ? (
                       <CheckCircle className="h-7 w-7 text-emerald-600" />
                     ) : (
                       <Image src="/images/Logo-Sekolah.png" alt="Logo" width={199} height={253} sizes="44px" className="w-9 object-contain" />
                     )}
                   </div>
-                  <h2 className="text-2xl font-extrabold text-[#082b59] mb-2">
+                  <h2 className="text-2xl font-extrabold text-[var(--brand-primary)] mb-2">
                     {resetSuccess ? "Email Terkirim!" : "Reset Password"}
                   </h2>
                   <p className="text-slate-500 text-sm">
@@ -164,14 +164,14 @@ function LoginForm() {
                 {!resetSuccess ? (
                   <form onSubmit={handleResetPassword} className="space-y-5">
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-[#082b59] ml-1">Email</label>
+                      <label className="text-sm font-semibold text-[var(--brand-primary)] ml-1">Email</label>
                       <input
                         type="email"
                         required
                         autoComplete="email"
                         value={resetEmail}
                         onChange={(e) => setResetEmail(e.target.value)}
-                        className="block w-full px-4 py-3 rounded-xl border border-[#dce3ed] bg-[#f4f7fb] text-[#082b59] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#1767b1]/20 focus:border-[#1767b1] transition-all text-sm"
+                        className="block w-full px-4 py-3 rounded-xl border border-[#dce3ed] bg-[#f4f7fb] text-[var(--brand-primary)] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[var(--brand-accent)]/20 focus:border-[var(--brand-accent)] transition-all text-sm"
                         placeholder="email@mbs.id"
                         autoFocus
                       />
@@ -179,7 +179,7 @@ function LoginForm() {
                     <button
                       type="submit"
                       disabled={resetLoading}
-                      className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl shadow-lg shadow-[#1767b1]/20 text-sm font-bold text-white bg-[#1767b1] hover:bg-[#0d4a8a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1767b1] disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-0.5"
+                      className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl shadow-lg shadow-[var(--brand-accent)]/20 text-sm font-bold text-white bg-[var(--brand-accent)] hover:bg-[var(--brand-primary-light)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--brand-accent)] disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-0.5"
                     >
                       {resetLoading ? (
                         <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -192,7 +192,7 @@ function LoginForm() {
 
                 <button
                   onClick={() => { setResetMode(false); setResetSuccess(false); setError(""); setResetEmail(""); }}
-                  className="mt-6 w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-slate-500 hover:text-[#082b59] transition-colors"
+                  className="mt-6 w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-slate-500 hover:text-[var(--brand-primary)] transition-colors"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Kembali ke Login
@@ -202,16 +202,16 @@ function LoginForm() {
               <>
                 {/* Mobile header */}
                 <div className="text-center mb-10 lg:hidden">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 shadow-lg bg-[#082b59] overflow-hidden">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 shadow-lg bg-[var(--brand-primary)] overflow-hidden">
                     <Image src="/images/Logo-Sekolah.png" alt="Logo" width={199} height={253} sizes="44px" className="w-11 object-contain" />
                   </div>
-                  <h2 className="text-3xl font-extrabold text-[#082b59] mb-2">Admin Panel</h2>
+                  <h2 className="text-3xl font-extrabold text-[var(--brand-primary)] mb-2">Admin Panel</h2>
                   <p className="text-slate-500 text-sm">SMP Muhammadiyah 4 Tanggul</p>
                 </div>
 
                 {/* Desktop header */}
                 <div className="hidden lg:block text-left mb-10">
-                  <h2 className="text-2xl font-extrabold text-[#082b59] mb-2">Masuk ke Akun Anda</h2>
+                  <h2 className="text-2xl font-extrabold text-[var(--brand-primary)] mb-2">Masuk ke Akun Anda</h2>
                   <p className="text-slate-500 text-sm">Silakan masukkan kredensial admin/publisher.</p>
                 </div>
 
@@ -228,7 +228,7 @@ function LoginForm() {
 
                 <form onSubmit={handleLogin} className="space-y-5">
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-[#082b59] ml-1">Email</label>
+                    <label className="text-sm font-semibold text-[var(--brand-primary)] ml-1">Email</label>
                     <div className="relative group">
                       <input
                         type="email"
@@ -236,7 +236,7 @@ function LoginForm() {
                         autoComplete="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="block w-full px-4 py-3 rounded-xl border border-[#dce3ed] bg-[#f4f7fb] text-[#082b59] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#1767b1]/20 focus:border-[#1767b1] transition-all text-sm"
+                        className="block w-full px-4 py-3 rounded-xl border border-[#dce3ed] bg-[#f4f7fb] text-[var(--brand-primary)] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[var(--brand-accent)]/20 focus:border-[var(--brand-accent)] transition-all text-sm"
                         placeholder="email@mbs.id"
                         autoFocus
                       />
@@ -245,11 +245,11 @@ function LoginForm() {
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between ml-1">
-                      <label className="text-sm font-semibold text-[#082b59]">Password</label>
+                      <label className="text-sm font-semibold text-[var(--brand-primary)]">Password</label>
                       <button
                         type="button"
                         onClick={() => { setResetMode(true); setResetEmail(email); setError(""); }}
-                        className="text-xs font-semibold text-[#1767b1] hover:underline transition-colors"
+                        className="text-xs font-semibold text-[var(--brand-accent)] hover:underline transition-colors"
                       >
                         Lupa password?
                       </button>
@@ -261,7 +261,7 @@ function LoginForm() {
                         autoComplete="current-password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="block w-full px-4 py-3 pr-11 rounded-xl border border-[#dce3ed] bg-[#f4f7fb] text-[#082b59] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#1767b1]/20 focus:border-[#1767b1] transition-all text-sm"
+                        className="block w-full px-4 py-3 pr-11 rounded-xl border border-[#dce3ed] bg-[#f4f7fb] text-[var(--brand-primary)] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[var(--brand-accent)]/20 focus:border-[var(--brand-accent)] transition-all text-sm"
                         placeholder="Masukkan password"
                       />
                       <button
@@ -277,7 +277,7 @@ function LoginForm() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl shadow-lg shadow-[#082b59]/20 text-sm font-bold text-white bg-[#082b59] hover:bg-[#1767b1] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1767b1] disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-0.5"
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl shadow-lg shadow-[var(--brand-primary)]/20 text-sm font-bold text-white bg-[var(--brand-primary)] hover:bg-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--brand-accent)] disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-0.5"
                   >
                     {loading ? (
                       <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -300,12 +300,12 @@ function LoginForm() {
           </div>
 
           <div className="flex items-center justify-center gap-4 mt-6 px-2">
-            <Link href="/" className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-[#1767b1] transition-colors">
+            <Link href="/" className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-[var(--brand-accent)] transition-colors">
               <ArrowLeft className="w-3.5 h-3.5" />
               Beranda
             </Link>
             <span className="w-1 h-1 rounded-full bg-slate-300" />
-            <Link href="/admission" className="text-xs font-bold text-slate-400 hover:text-[#1767b1] transition-colors">
+            <Link href="/admission" className="text-xs font-bold text-slate-400 hover:text-[var(--brand-accent)] transition-colors">
               SPMB Online
             </Link>
           </div>
@@ -320,7 +320,7 @@ export default function LoginPage() {
     <Suspense fallback={
       <div className="flex min-h-screen items-center justify-center bg-[#f4f7fb]">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
           <p className="text-sm text-slate-500">Memuat...</p>
         </div>
       </div>

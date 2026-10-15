@@ -163,7 +163,7 @@ export default function AdminSidebar({
             />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-[#082b59]">SMP Muhammadiyah 4</p>
+            <p className="truncate text-sm font-bold text-[var(--brand-primary)]">SMP Muhammadiyah 4</p>
             <p className="truncate text-[11px] text-slate-500">Tanggul</p>
           </div>
         </div>
@@ -194,15 +194,15 @@ export default function AdminSidebar({
                       <Link
                         href={item.href}
                         aria-current={isActive ? "page" : undefined}
-                        className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#082b59] focus-visible:ring-offset-1 ${isActive
-                            ? "bg-[#082b59] text-white shadow-md shadow-[#082b59]/20"
-                            : "text-slate-600 hover:bg-slate-50 hover:text-[#082b59]"
+                        className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1 ${isActive
+                            ? "bg-[var(--brand-primary)] text-white shadow-md shadow-[var(--brand-primary)]/20"
+                            : "text-slate-600 hover:bg-slate-50 hover:text-[var(--brand-primary)]"
                           }`}
                       >
                         <item.icon
                           className={`h-[18px] w-[18px] flex-shrink-0 ${isActive
                               ? "text-white"
-                              : "text-slate-400 group-hover:text-[#082b59]"
+                              : "text-slate-400 group-hover:text-[var(--brand-primary)]"
                             }`}
                         />
                         <span className="truncate">{item.label}</span>
@@ -210,7 +210,7 @@ export default function AdminSidebar({
                         {count > 0 && (
                           <span
                             className={`ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${isActive
-                                ? "bg-white text-[#082b59]"
+                                ? "bg-white text-[var(--brand-primary)]"
                                 : "bg-red-500 text-white"
                               }`}
                             aria-label={`${count} baru`}
@@ -239,7 +239,7 @@ export default function AdminSidebar({
             href="/"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-[#082b59] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#082b59]"
+            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
           >
             <ArrowSquareOut className="h-[18px] w-[18px] flex-shrink-0 text-slate-400" />
             Lihat website

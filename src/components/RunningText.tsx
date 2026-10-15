@@ -126,7 +126,7 @@ export function RunningText() {
 
   return (
     <div
-      className="relative overflow-hidden bg-[#082b59] py-2 text-white"
+      className="relative overflow-hidden bg-[var(--brand-primary)] py-2 text-white"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       role="marquee"
@@ -136,7 +136,7 @@ export function RunningText() {
           text is underneath. No gradient here: a translucent color would
           blend with the text color and produce a muddy/grey glyph as it
           passes through, instead of a clean fade. */}
-      <div className="absolute left-0 top-0 z-10 flex h-full items-center bg-[#082b59] pl-4 pr-8">
+      <div className="absolute left-0 top-0 z-10 flex h-full items-center bg-[var(--brand-primary)] pl-4 pr-8">
         <Megaphone className="h-3.5 w-3.5 text-[#f4d21f]" weight="fill" />
       </div>
       <div

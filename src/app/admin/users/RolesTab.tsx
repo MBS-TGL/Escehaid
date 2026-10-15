@@ -135,7 +135,7 @@ export function RolesTab() {
   if (loading) {
     return (
       <div className="flex flex-col items-center gap-3 rounded-xl border border-slate-200/80 bg-white py-16">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
         <p className="text-sm text-slate-500">Memuat matriks izin...</p>
       </div>
     );
@@ -173,7 +173,7 @@ export function RolesTab() {
                     setDirty(false);
                   }}
                   className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-colors ${
-                    active ? "bg-[#082b59]/10 text-[#082b59]" : "text-slate-600 hover:bg-slate-50"
+                    active ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]" : "text-slate-600 hover:bg-slate-50"
                   }`}
                 >
                   <badge.icon className={`h-4 w-4 shrink-0 ${badge.text}`} />
@@ -215,7 +215,7 @@ export function RolesTab() {
               type="button"
               onClick={handleSave}
               disabled={saving || !dirty}
-              className="flex items-center gap-1.5 rounded-xl bg-[#082b59] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#1767b1] disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-50"
             >
               {saving ? (
                 <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -250,7 +250,7 @@ export function RolesTab() {
                     checked={allChecked}
                     disabled={isSuper}
                     onChange={(e) => toggleModule(modPerms, e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1] disabled:opacity-40"
+                    className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)] disabled:opacity-40"
                     aria-label={`Pilih semua aksi ${mod.label}`}
                   />
                   <div className="min-w-0 flex-1">
@@ -279,7 +279,7 @@ export function RolesTab() {
                           checked={checked}
                           disabled={isSuper}
                           onChange={() => toggle(perm)}
-                          className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1] disabled:opacity-40"
+                          className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)] disabled:opacity-40"
                         />
                         <span>{action.label}</span>
                       </label>

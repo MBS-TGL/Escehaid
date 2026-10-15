@@ -31,7 +31,7 @@ export default async function GalleryPage({ searchParams }: { searchParams: Prom
           ],
         })
       }} />
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-16 text-white">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-16 text-white">
         <div className="absolute inset-0 hidden opacity-[0.04] sm:block">
           <ImageSquare className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
           <Star className="absolute -left-10 bottom-0 h-48 w-48 -rotate-12" weight="fill" />
@@ -51,7 +51,7 @@ export default async function GalleryPage({ searchParams }: { searchParams: Prom
         {gallery.length === 0 && page === 0 ? (
           <CSSFadeIn>
             <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white py-20 text-center">
-              <ImageSquare className="h-14 w-14 text-[#082b59]/20" />
+              <ImageSquare className="h-14 w-14 text-[var(--brand-primary)]/20" />
               <p className="mt-5 text-base text-slate-500">Galeri masih kosong.</p>
               <p className="mt-1 text-sm text-slate-400">Nantikan dokumentasi dari sekolah kami.</p>
             </div>

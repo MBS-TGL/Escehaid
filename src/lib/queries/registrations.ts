@@ -2,6 +2,7 @@ import { supabase } from "../supabase";
 import type { SpmbRegistration } from "../supabase";
 import { notifyAllAdmins } from "./users";
 import { getPublishedWaves, getWaveStatus } from "./waves";
+import { isFeatureEnabled } from "@/lib/flags";
 
 export async function submitRegistration(registration: {
   full_name: string;
@@ -17,6 +18,12 @@ export async function submitRegistration(registration: {
   registration_path: "reguler" | "prestasi" | "beasiswa";
   documents?: Record<string, string | null>;
 }): Promise<{ success: boolean; error?: string }> {
+  // Cek feature flag spmb_registration_open — tolak submit jika ditutup.
+  const spmbOpen = await isFeatureEnabled("spmb_registration_open");
+  if (!spmbOpen) {
+    return { success: false, error: "Pendaftaran SPMB saat ini ditutup. Silakan coba lagi nanti." };
+  }
+
   // Fase 4: catat gelombang yang sedang "open" saat pendaftar mengirim form.
   // Kalau tidak ada gelombang terbuka (atau gagal membaca), wave_id = null dan
   // pendaftaran TETAP disimpan — jangan blokir.

@@ -14,9 +14,9 @@ const links = [
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-[60vh] items-center justify-center px-6">
+    <div className="flex h-full min-h-[60vh] items-center justify-center px-6">
       <div className="text-center">
-        <p className="text-7xl font-bold text-[#082b59]/10" aria-hidden="true">404</p>
+        <p className="text-7xl font-bold text-[var(--brand-primary)]/10" aria-hidden="true">404</p>
         <h1 className="mt-4 text-xl font-bold text-slate-800">Halaman Tidak Ditemukan</h1>
         <p className="mt-2 text-sm text-slate-500">
           Halaman yang Anda cari tidak tersedia atau telah dipindahkan.
@@ -27,17 +27,17 @@ export default function NotFound() {
             <Link
               key={href}
               href={href}
-              className="group flex flex-col items-center gap-2 rounded-xl border border-[#dce3ed] bg-white p-3 transition-all hover:border-[#1767b1]/30 hover:shadow-md"
+              className="group flex flex-col items-center gap-2 rounded-xl border border-[#dce3ed] bg-white p-3 transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-md"
             >
-              <Icon className="h-5 w-5 text-[#082b59]/40 transition-colors group-hover:text-[#1767b1]" />
-              <span className="text-xs font-medium text-slate-600 group-hover:text-[#1767b1]">{label}</span>
+              <Icon className="h-5 w-5 text-[var(--brand-primary)]/40 transition-colors group-hover:text-[var(--brand-accent)]" />
+              <span className="text-xs font-medium text-slate-600 group-hover:text-[var(--brand-accent)]">{label}</span>
             </Link>
           ))}
         </div>
 
         <Link
           href="/"
-          className="mt-8 inline-block rounded-xl bg-[#082b59] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1]"
+          className="mt-8 inline-block rounded-xl bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)]"
         >
           Kembali ke Beranda
         </Link>

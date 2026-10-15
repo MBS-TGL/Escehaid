@@ -79,8 +79,8 @@ export default function ChangePasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
       <div className="w-full max-w-md rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
         <div className="mb-5 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#082b59]/10">
-            <Key className="h-5 w-5 text-[#082b59]" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--brand-primary)]/10">
+            <Key className="h-5 w-5 text-[var(--brand-primary)]" />
           </div>
           <div>
             <h1 className="text-lg font-bold text-slate-800">Ganti Password</h1>
@@ -124,7 +124,7 @@ export default function ChangePasswordPage() {
           <button
             type="submit"
             disabled={saving || password.length < MIN_LEN || password !== confirm}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#082b59] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1767b1] disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-60"
           >
             {saving ? (
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />

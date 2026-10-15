@@ -120,7 +120,7 @@ export function MobileListRow({
       onPointerLeave={cancelPress}
       className={`flex select-none items-center gap-3 border-t border-slate-100 py-3 pl-2.5 pr-1 [-webkit-touch-callout:none] ${
         onClick ? "cursor-pointer active:bg-slate-50" : ""
-      } ${selected ? "bg-[#082b59]/[0.03]" : ""} ${className}`}
+      } ${selected ? "bg-[var(--brand-primary)]/[0.03]" : ""} ${className}`}
     >
       {lead}
       {thumb}

@@ -86,7 +86,7 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       {/* Hero */}
-      <section className="relative bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] text-white">
+      <section className="relative bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] text-white">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#f4d21f] blur-[120px]" />
         </div>
@@ -144,18 +144,18 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
         {article.content ? (
           <div
             className="prose prose-lg prose-slate max-w-none
-prose-headings:text-[#082b59] prose-headings:font-extrabold prose-headings:scroll-mt-24
+prose-headings:text-[var(--brand-primary)] prose-headings:font-extrabold prose-headings:scroll-mt-24
               prose-p:text-gray-700 prose-p:leading-[1.9] prose-p:text-justify prose-p:mb-5
-              prose-a:text-[#1767b1] prose-a:no-underline prose-a:font-medium hover:prose-a:underline
-              prose-strong:text-[#082b59] prose-strong:font-bold
+              prose-a:text-[var(--brand-accent)] prose-a:no-underline prose-a:font-medium hover:prose-a:underline
+              prose-strong:text-[var(--brand-primary)] prose-strong:font-bold
               prose-em:text-slate-600
               prose-img:rounded-2xl prose-img:shadow-md prose-img:my-8
               prose-blockquote:border-l-4 prose-blockquote:border-[#f4d21f] prose-blockquote:bg-gradient-to-r prose-blockquote:from-amber-50 prose-blockquote:to-transparent prose-blockquote:py-4 prose-blockquote:pr-6 prose-blockquote:pl-6 prose-blockquote:rounded-r-xl prose-blockquote:italic prose-blockquote:text-slate-600
               prose-li:text-gray-700 prose-li:leading-relaxed prose-li:mb-1
               prose-ol:my-5 prose-ol:pl-6
               prose-ul:my-5 prose-ul:pl-6
-              prose-code:text-[#1767b1] prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:font-normal prose-code:before:content-none prose-code:after:content-none
-              prose-pre:bg-[#082b59] prose-pre:text-white prose-pre:rounded-xl prose-pre:border prose-pre:border-slate-700
+              prose-code:text-[var(--brand-accent)] prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:font-normal prose-code:before:content-none prose-code:after:content-none
+              prose-pre:bg-[var(--brand-primary)] prose-pre:text-white prose-pre:rounded-xl prose-pre:border prose-pre:border-slate-700
               prose-hr:border-slate-200 prose-hr:my-12
               prose-table:text-sm prose-table:border-collapse
               prose-th:bg-slate-50 prose-th:text-left prose-th:font-semibold prose-th:px-4 prose-th:py-3 prose-th:border prose-th:border-slate-200
@@ -170,7 +170,7 @@ prose-headings:text-[#082b59] prose-headings:font-extrabold prose-headings:scrol
         <div className="mt-12 border-t border-slate-200 pt-8">
           <Link
             href="/articles"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-[#1767b1] hover:text-[#082b59]"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-accent)] hover:text-[var(--brand-primary)]"
           >
             <ArrowLeft className="h-4 w-4" /> Kembali ke Artikel
           </Link>

@@ -84,7 +84,7 @@ function ListCard({ title, href, children }: { title: string; href: string; chil
         <h2 className="text-sm font-bold text-slate-800">{title}</h2>
         <Link
           href={href}
-          className="flex items-center gap-1 text-xs font-semibold text-[#1767b1] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+          className="flex items-center gap-1 text-xs font-semibold text-[var(--brand-accent)] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
         >
           Lihat semua <ArrowRight className="h-3 w-3" />
         </Link>
@@ -192,11 +192,11 @@ export default async function AdminPage() {
 
   const allStats: StatItem[] = [
     { label: "Berita", value: newsCount.count || 0, href: "/admin/news", icon: <Megaphone className="h-5 w-5 text-blue-600" />, variant: "info", show: canPublish },
-    { label: "Artikel", value: articlesCount.count || 0, href: "/admin/articles", icon: <Note className="h-5 w-5 text-[#082b59]" />, variant: "brand", show: canPublish },
+    { label: "Artikel", value: articlesCount.count || 0, href: "/admin/articles", icon: <Note className="h-5 w-5 text-[var(--brand-primary)]" />, variant: "brand", show: canPublish },
     { label: "Galeri", value: galleryCount.count || 0, href: "/admin/gallery", icon: <ImageSquare className="h-5 w-5 text-blue-600" />, variant: "info", show: canPublish },
-    { label: "Pendaftar", value: spmbCount.count || 0, href: "/admin/admission", icon: <Users className="h-5 w-5 text-[#082b59]" />, variant: "brand", show: isAdmin },
+    { label: "Pendaftar", value: spmbCount.count || 0, href: "/admin/admission", icon: <Users className="h-5 w-5 text-[var(--brand-primary)]" />, variant: "brand", show: isAdmin },
     { label: "Prestasi", value: achievementsCount.count || 0, href: "/admin/achievements", icon: <Trophy className="h-5 w-5 text-amber-600" />, variant: "warning", show: canPublish },
-    { label: "Pesan", value: contactCount.count || 0, href: "/admin/contact", icon: <Envelope className="h-5 w-5 text-[#082b59]" />, variant: "brand", show: isAdmin },
+    { label: "Pesan", value: contactCount.count || 0, href: "/admin/contact", icon: <Envelope className="h-5 w-5 text-[var(--brand-primary)]" />, variant: "brand", show: isAdmin },
   ];
 
   const stats = allStats.filter((s) => s.show);
@@ -217,8 +217,8 @@ export default async function AdminPage() {
                 key={item.id}
                 href="/admin/admission"
                 leading={
-                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#082b59]/10">
-                    <Users className="h-4 w-4 text-[#082b59]" />
+                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/10">
+                    <Users className="h-4 w-4 text-[var(--brand-primary)]" />
                   </div>
                 }
                 trailing={
@@ -248,13 +248,13 @@ export default async function AdminPage() {
                 key={item.id}
                 href="/admin/contact"
                 leading={
-                  <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${item.is_read ? "bg-slate-100" : "bg-[#082b59]/10"}`}>
-                    <Envelope className={`h-4 w-4 ${item.is_read ? "text-slate-400" : "text-[#082b59]"}`} />
+                  <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${item.is_read ? "bg-slate-100" : "bg-[var(--brand-primary)]/10"}`}>
+                    <Envelope className={`h-4 w-4 ${item.is_read ? "text-slate-400" : "text-[var(--brand-primary)]"}`} />
                   </div>
                 }
                 trailing={
                   !item.is_read ? (
-                    <span className="inline-flex items-center rounded-full bg-[#1767b1]/10 px-2 py-0.5 text-xs font-semibold text-[#1767b1]">Baru</span>
+                    <span className="inline-flex items-center rounded-full bg-[var(--brand-accent)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--brand-accent)]">Baru</span>
                   ) : null
                 }
               >
@@ -301,7 +301,7 @@ export default async function AdminPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Banner ringkas: sapaan + tanggal + aksi cepat (1 baris yang bisa digeser di HP) */}
-      <header className="mb-4 flex flex-col gap-3 rounded-2xl bg-gradient-to-r from-[#082b59] via-[#0a3570] to-[#1767b1] p-4 text-white shadow-lg shadow-[#082b59]/20 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+      <header className="mb-4 flex flex-col gap-3 rounded-2xl bg-gradient-to-r from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-accent)] p-4 text-white shadow-lg shadow-[var(--brand-primary)]/20 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <p className="text-xs text-white/70">{today}</p>
           <h1 className="mt-0.5 truncate text-lg font-bold sm:text-xl">
@@ -366,7 +366,7 @@ export default async function AdminPage() {
                 key={stat.label}
                 href={stat.href}
                 aria-label={`${stat.label}: ${stat.value}`}
-                className="flex flex-col gap-1 rounded-xl border border-slate-200/80 bg-white p-3 shadow-sm active:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+                className="flex flex-col gap-1 rounded-xl border border-slate-200/80 bg-white p-3 shadow-sm active:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xl font-bold leading-none text-slate-900">{stat.value}</span>
@@ -385,7 +385,7 @@ export default async function AdminPage() {
                   key={stat.label}
                   href={stat.href}
                   aria-label={`${stat.label}: ${stat.value}`}
-                  className="block h-full rounded-2xl transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+                  className="block h-full rounded-2xl transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
                 >
                   <StatCard label={stat.label} value={stat.value} icon={stat.icon} variant={stat.variant} />
                 </Link>

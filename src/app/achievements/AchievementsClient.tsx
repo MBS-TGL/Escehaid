@@ -43,7 +43,7 @@ function AchievementCard({ item, big = false }: { item: Achievement; big?: boole
 
   return (
     <article
-      className={`group flex flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:border-[#1767b1]/30 hover:shadow-lg hover:shadow-[#082b59]/5 ${
+      className={`group flex flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-lg hover:shadow-[var(--brand-primary)]/5 ${
         big ? "sm:col-span-2" : ""
       }`}
     >
@@ -67,23 +67,23 @@ function AchievementCard({ item, big = false }: { item: Achievement; big?: boole
       <div className="flex flex-1 flex-col p-5">
         <div className="flex flex-wrap items-center gap-1.5">
           {item.rank_label && (
-            <span className="rounded-md bg-[#f4d21f] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#082b59]">
+            <span className="rounded-md bg-[#f4d21f] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
               {item.rank_label}
             </span>
           )}
           {lvl && (
-            <span className="rounded-md bg-[#082b59]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#082b59]">
+            <span className="rounded-md bg-[var(--brand-primary)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
               {lvl}
             </span>
           )}
-          <span className="rounded-md border border-[#1767b1]/20 bg-[#1767b1]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#1767b1]">
+          <span className="rounded-md border border-[var(--brand-accent)]/20 bg-[var(--brand-accent)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-accent)]">
             {categoryLabel(item.category)}
           </span>
           <span className="text-[11px] text-slate-400">{item.year}</span>
         </div>
 
         <h3
-          className={`mt-2.5 font-semibold text-[#082b59] ${
+          className={`mt-2.5 font-semibold text-[var(--brand-primary)] ${
             big ? "text-lg sm:text-xl" : "text-base"
           }`}
         >
@@ -162,13 +162,13 @@ export default function PrestasiClient({ achievements }: { achievements: Achieve
   const chipCls = (active: boolean) =>
     `rounded-full px-5 py-2 text-sm font-medium transition-all ${
       active
-        ? "bg-[#082b59] text-white shadow-lg shadow-[#082b59]/20"
-        : "bg-[#f4f7fb] text-slate-500 hover:bg-[#082b59]/10 hover:text-[#082b59]"
+        ? "bg-[var(--brand-primary)] text-white shadow-lg shadow-[var(--brand-primary)]/20"
+        : "bg-[#f4f7fb] text-slate-500 hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]"
     }`;
 
   return (
     <div>
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-16 text-white">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-16 text-white">
         <div className="absolute inset-0 hidden opacity-[0.04] sm:block">
           <Trophy className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
           <Medal className="absolute -left-10 bottom-0 h-48 w-48 -rotate-12" weight="fill" />
@@ -189,14 +189,14 @@ export default function PrestasiClient({ achievements }: { achievements: Achieve
           /* ── Tanpa data sama sekali ── */
           <CSSFadeIn>
             <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white py-20 text-center">
-              <Trophy className="h-14 w-14 text-[#082b59]/20" />
+              <Trophy className="h-14 w-14 text-[var(--brand-primary)]/20" />
               <p className="mt-5 text-base text-slate-500">Belum ada data prestasi.</p>
               <p className="mt-1 text-sm text-slate-400">Lihat kabar terbaru sekolah kami sambil menunggu.</p>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                <Link href="/news" className="rounded-full bg-[#082b59] px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#082b59]/20 transition-all hover:bg-[#1767b1]">
+                <Link href="/news" className="rounded-full bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-[var(--brand-primary)]/20 transition-all hover:bg-[var(--brand-accent)]">
                   Lihat Berita Terbaru
                 </Link>
-                <Link href="/admission" className="rounded-full bg-[#f4f7fb] px-5 py-2.5 text-sm font-medium text-slate-600 transition-all hover:bg-[#082b59]/10 hover:text-[#082b59]">
+                <Link href="/admission" className="rounded-full bg-[#f4f7fb] px-5 py-2.5 text-sm font-medium text-slate-600 transition-all hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]">
                   Info SPMB
                 </Link>
               </div>
@@ -237,7 +237,7 @@ export default function PrestasiClient({ achievements }: { achievements: Achieve
               <CSSFadeIn>
                 <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white py-16 text-center">
                   <p className="text-sm text-slate-500">Tidak ada prestasi yang cocok dengan filter ini.</p>
-                  <button onClick={resetFilters} className="mt-4 rounded-full bg-[#082b59] px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#082b59]/20 transition-all hover:bg-[#1767b1]">
+                  <button onClick={resetFilters} className="mt-4 rounded-full bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-[var(--brand-primary)]/20 transition-all hover:bg-[var(--brand-accent)]">
                     Tampilkan semua
                   </button>
                 </div>
@@ -249,7 +249,7 @@ export default function PrestasiClient({ achievements }: { achievements: Achieve
                   <div className="mb-10">
                     <div className="mb-4 flex items-center gap-2">
                       <Star weight="fill" className="h-4 w-4 text-[#f4d21f]" />
-                      <h2 className="text-sm font-bold uppercase tracking-wider text-[#082b59]">Unggulan</h2>
+                      <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--brand-primary)]">Unggulan</h2>
                       <div className="h-1 w-6 rounded-full bg-[#f4d21f]" />
                     </div>
                     <CSSStagger stagger={80} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

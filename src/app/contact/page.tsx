@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import ContactForm from "./ContactForm";
+import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 
 export const metadata: Metadata = {
   title: "Kontak",
@@ -9,7 +10,10 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600;
 
-export default function KontakPage() {
+export default async function KontakPage() {
+  // Nilai kontak & media sosial diambil dari Pengaturan Situs; `revalidatePath`
+  // dipanggil admin saat menyimpan sehingga ISR di halaman ini ikut disegarkan.
+  const brand = toPublicBrand(await getSiteSettings());
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{
@@ -22,7 +26,7 @@ export default function KontakPage() {
           ],
         })
       }} />
-      <ContactForm />
+      <ContactForm brand={brand} />
     </>
   );
 }

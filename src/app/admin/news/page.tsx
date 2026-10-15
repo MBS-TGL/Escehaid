@@ -735,8 +735,8 @@ export default function AdminBeritaPage() {
   const sortIcon = (field: SortField) => {
     if (sortField !== field) return <SortAscending className="h-3 w-3 text-slate-300" />;
     return sortDir === "asc"
-      ? <ArrowUp className="h-3 w-3 text-[#1767b1]" />
-      : <ArrowDown className="h-3 w-3 text-[#1767b1]" />;
+      ? <ArrowUp className="h-3 w-3 text-[var(--brand-accent)]" />
+      : <ArrowDown className="h-3 w-3 text-[var(--brand-accent)]" />;
   };
 
   return (
@@ -744,15 +744,15 @@ export default function AdminBeritaPage() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[#1767b1]/10">
-            <Megaphone className="h-5 w-5 text-[#1767b1]" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[var(--brand-accent)]/10">
+            <Megaphone className="h-5 w-5 text-[var(--brand-accent)]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Kelola Berita</h1>
             <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">Berita, pengumuman, dan agenda sekolah</p>
           </div>
         </div>
-        <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[#082b59] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1] md:py-2.5">
+        <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] md:py-2.5">
           <Plus className="h-4 w-4" /> Buat Baru
         </button>
       </div>
@@ -770,9 +770,9 @@ export default function AdminBeritaPage() {
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5 md:flex">
-          <Checks className="h-4 w-4 text-[#082b59]" />
-          <span className="text-xs font-semibold text-[#082b59]">{selectedIds.size} dipilih</span>
+        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex">
+          <Checks className="h-4 w-4 text-[var(--brand-primary)]" />
+          <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
           <button onClick={() => handleBulkPublish(true)} aria-label={`Terbitkan ${selectedIds.size} berita terpilih`} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Publish</button>
           <button onClick={() => handleBulkPublish(false)} aria-label={`Kembalikan ${selectedIds.size} berita ke draft`} className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-600">Unpublish</button>
           <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} berita terpilih`} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
@@ -845,7 +845,7 @@ export default function AdminBeritaPage() {
                 agenda/teachers/users/announcements/facilities. */}
                 <th className="hidden w-10 px-4 py-3 sm:table-cell">
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
-                    className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
+                    className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                 </th>
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">No</th>
                 <th className="w-[40%] cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("title")}>
@@ -866,7 +866,7 @@ export default function AdminBeritaPage() {
               {loading ? (
                 <tr><td colSpan={8} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
-                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
                     <p className="text-sm text-slate-500">Memuat data berita...</p>
                   </div>
                 </td></tr>
@@ -881,7 +881,7 @@ export default function AdminBeritaPage() {
                       <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada berita"}</p>
                     </div>
                     {!search && filter === "all" && (
-                      <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[#082b59] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1767b1]">
+                      <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
                         <Plus className="h-3.5 w-3.5" /> Buat Berita Pertama
                       </button>
                     )}
@@ -889,10 +889,10 @@ export default function AdminBeritaPage() {
                 </td></tr>
               ) : (
                 paginated.map((item, index) => (
-                  <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[#082b59]/[0.03]" : ""}`}>
+                  <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[var(--brand-primary)]/[0.03]" : ""}`}>
                     <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
-                        className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
+                        className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                     </td>
                     <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
                     <td className="px-4 py-3.5 cursor-pointer" onClick={() => setViewItem(item)}>
@@ -911,7 +911,7 @@ export default function AdminBeritaPage() {
                               <BookmarkSimple weight="fill" className="ml-1.5 inline h-3.5 w-3.5 -translate-y-px text-[#f4d21f]" aria-label="Disematkan" />
                             )}
                             {item.attachment_url && (
-                              <Paperclip className="ml-1.5 inline h-3.5 w-3.5 -translate-y-px text-[#1767b1]" aria-label="Ada lampiran" />
+                              <Paperclip className="ml-1.5 inline h-3.5 w-3.5 -translate-y-px text-[var(--brand-accent)]" aria-label="Ada lampiran" />
                             )}
                           </p>
                           {item.summary && <p className="mt-0.5 text-xs text-slate-400 line-clamp-1">{item.summary}</p>}
@@ -985,7 +985,7 @@ export default function AdminBeritaPage() {
               </button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                 <button key={p} onClick={() => setPage(p)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === page ? "bg-[#082b59] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === page ? "bg-[var(--brand-primary)] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
                   {p}
                 </button>
               ))}
@@ -1026,7 +1026,7 @@ export default function AdminBeritaPage() {
                 <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada berita"}</p>
               </div>
               {!search && filter === "all" && (
-                <button onClick={openCreate} className="mt-1 flex min-h-10 items-center gap-1.5 rounded-lg bg-[#082b59] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1767b1]">
+                <button onClick={openCreate} className="mt-1 flex min-h-10 items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
                   <Plus className="h-3.5 w-3.5" /> Buat Berita Pertama
                 </button>
               )}
@@ -1075,7 +1075,7 @@ export default function AdminBeritaPage() {
             type="button"
             onClick={() => handleBulkPublish(true)}
             disabled={selectedIds.size === 0}
-            className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Terbitkan
           </button>
@@ -1083,7 +1083,7 @@ export default function AdminBeritaPage() {
             type="button"
             onClick={() => handleBulkPublish(false)}
             disabled={selectedIds.size === 0}
-            className="min-h-10 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-10 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Draft
           </button>
@@ -1110,7 +1110,7 @@ export default function AdminBeritaPage() {
             </div>
             {viewItem && newsStatus(viewItem) === "live" ? (
               <a href={`/news/${viewItem.slug}`} target="_blank" rel="noopener noreferrer"
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] md:flex-none">
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] md:flex-none">
                 <Eye className="h-4 w-4" /> Lihat di Website
               </a>
             ) : viewItem ? (
@@ -1142,16 +1142,16 @@ export default function AdminBeritaPage() {
                 href={viewItem.attachment_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mb-4 flex items-center gap-3 rounded-xl border border-[#1767b1]/20 bg-[#082b59]/5 px-4 py-3 transition-colors hover:bg-[#082b59]/10"
+                className="mb-4 flex items-center gap-3 rounded-xl border border-[var(--brand-accent)]/20 bg-[var(--brand-primary)]/5 px-4 py-3 transition-colors hover:bg-[var(--brand-primary)]/10"
               >
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[#082b59]/10 text-[10px] font-black text-[#082b59]">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--brand-primary)]/10 text-[10px] font-black text-[var(--brand-primary)]">
                   {attachmentKind(viewItem.attachment_name)}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-slate-700">{viewItem.attachment_name || "Lampiran"}</span>
                   <span className="block text-[11px] text-slate-400">Klik untuk membuka atau mengunduh</span>
                 </span>
-                <Download className="h-4 w-4 flex-shrink-0 text-[#1767b1]" />
+                <Download className="h-4 w-4 flex-shrink-0 text-[var(--brand-accent)]" />
               </a>
             )}
             <RichContent content={viewItem.content} emptyHint="Tidak ada konten" />
@@ -1210,7 +1210,7 @@ export default function AdminBeritaPage() {
                 <Eye className="h-4 w-4" /> Pratinjau
               </button>
               <button onClick={handleSave} disabled={formSaving}
-                className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
+                className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-70">
                 {formSaving ? (
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 ) : (
@@ -1258,7 +1258,7 @@ export default function AdminBeritaPage() {
                   slug: !editItem && !slugTouched ? slugify(title) : prev.slug,
                 }));
               }}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
               placeholder="Judul berita" />
           </div>
 
@@ -1272,7 +1272,7 @@ export default function AdminBeritaPage() {
                 readOnly={slugLocked}
                 onChange={(e) => { setSlugTouched(true); setForm({ ...form, slug: e.target.value }); }}
                 onBlur={() => { if (form.slug) setForm((f) => ({ ...f, slug: slugify(f.slug) })); }}
-                className={`w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 ${slugLocked ? "bg-slate-50 text-slate-500" : ""}`}
+                className={`w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 ${slugLocked ? "bg-slate-50 text-slate-500" : ""}`}
                 placeholder="otomatis dari judul"
               />
               {slugLocked && (
@@ -1344,7 +1344,7 @@ export default function AdminBeritaPage() {
                         onClick={() => setForm({ ...form, cover_image_position: opt.value })}
                         className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
                           form.cover_image_position === opt.value
-                            ? "border-[#1767b1] bg-[#1767b1]/10 text-[#1767b1] shadow-sm"
+                            ? "border-[var(--brand-accent)] bg-[var(--brand-accent)]/10 text-[var(--brand-accent)] shadow-sm"
                             : "border-slate-200 text-slate-500 hover:border-slate-300"
                         }`}>
                         <span className="text-[10px]">{opt.icon}</span>
@@ -1357,12 +1357,12 @@ export default function AdminBeritaPage() {
             ) : (
               <label
                 htmlFor="cover-image-input"
-                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add("border-[#1767b1]", "bg-[#1767b1]/5"); }}
-                onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("border-[#1767b1]", "bg-[#1767b1]/5"); }}
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add("border-[var(--brand-accent)]", "bg-[var(--brand-accent)]/5"); }}
+                onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("border-[var(--brand-accent)]", "bg-[var(--brand-accent)]/5"); }}
                 onDrop={async (e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  e.currentTarget.classList.remove("border-[#1767b1]", "bg-[#1767b1]/5");
+                  e.currentTarget.classList.remove("border-[var(--brand-accent)]", "bg-[var(--brand-accent)]/5");
                   const file = e.dataTransfer.files?.[0];
                   if (file && file.type.startsWith("image/")) {
                     setImageUploading(true);
@@ -1375,10 +1375,10 @@ export default function AdminBeritaPage() {
                     }
                   }
                 }}
-                className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50"
+                className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[var(--brand-accent)]/40 hover:bg-slate-50"
               >
                 {imageUploading ? (
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#1767b1] border-t-transparent" />
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--brand-accent)] border-t-transparent" />
                 ) : (
                   <ImageIcon className="h-8 w-8 text-slate-300" />
                 )}
@@ -1399,7 +1399,7 @@ export default function AdminBeritaPage() {
                   maxLength={125}
                   value={form.image_alt}
                   onChange={(e) => setForm({ ...form, image_alt: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
                   placeholder="Deskripsi singkat isi gambar"
                 />
                 <div className="mt-1 flex items-center justify-between gap-3">
@@ -1420,7 +1420,7 @@ export default function AdminBeritaPage() {
             </p>
             {attachmentFile || form.attachment_url ? (
               <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#082b59]/10 text-[10px] font-black text-[#082b59]">
+                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--brand-primary)]/10 text-[10px] font-black text-[var(--brand-primary)]">
                   {attachmentKind(attachmentFile?.name || form.attachment_name)}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -1447,7 +1447,7 @@ export default function AdminBeritaPage() {
                 </button>
               </div>
             ) : (
-              <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-5 transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50">
+              <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-5 transition-colors hover:border-[var(--brand-accent)]/40 hover:bg-slate-50">
                 <Paperclip className="h-7 w-7 text-slate-300" />
                 <span className="text-center text-xs text-slate-400">
                   Klik untuk memilih file lampiran
@@ -1462,7 +1462,7 @@ export default function AdminBeritaPage() {
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Ringkasan</label>
             <textarea value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })}
               rows={3}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-none"
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 resize-none"
               placeholder="Ringkasan singkat berita (opsional)" />
           </div>
 
@@ -1471,13 +1471,13 @@ export default function AdminBeritaPage() {
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Penulis</label>
               <input type="text" value={form.writer_name} onChange={(e) => setForm({ ...form, writer_name: e.target.value })}
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
                 placeholder="Nama penulis" />
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Editor</label>
               <input type="text" value={form.editor_name} onChange={(e) => setForm({ ...form, editor_name: e.target.value })}
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
                 placeholder="Nama editor" />
             </div>
           </div>
@@ -1503,7 +1503,7 @@ export default function AdminBeritaPage() {
               </div>
               <button type="button" onClick={() => setForm({ ...form, is_published: !form.is_published })}
                 aria-label="Terbitkan berita"
-                className={`relative h-6 w-11 rounded-full transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[""] ${form.is_published ? "bg-[#1767b1]" : "bg-slate-300"}`}>
+                className={`relative h-6 w-11 rounded-full transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[""] ${form.is_published ? "bg-[var(--brand-accent)]" : "bg-slate-300"}`}>
                 <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_published ? "left-[22px]" : "left-0.5"}`} />
               </button>
             </div>
@@ -1515,7 +1515,7 @@ export default function AdminBeritaPage() {
             <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3">
               <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Tanggal Publish (WIB)</label>
               <input type="datetime-local" value={form.published_at} onChange={(e) => setForm({ ...form, published_at: e.target.value })}
-                className="min-w-[180px] flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-base md:text-xs text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                className="min-w-[180px] flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-base md:text-xs text-slate-700 focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
               {form.published_at && (
                 <button type="button" onClick={() => setForm({ ...form, published_at: "" })}
                   className="text-[11px] text-slate-400 hover:text-slate-600">Reset</button>
@@ -1538,14 +1538,14 @@ export default function AdminBeritaPage() {
                   </div>
                   <button type="button" onClick={togglePin}
                     aria-pressed={form.is_pinned}
-                    className={`relative h-6 w-11 rounded-full transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[""] ${form.is_pinned ? "bg-[#1767b1]" : "bg-slate-300"}`}>
+                    className={`relative h-6 w-11 rounded-full transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[""] ${form.is_pinned ? "bg-[var(--brand-accent)]" : "bg-slate-300"}`}>
                     <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_pinned ? "left-[22px]" : "left-0.5"}`} />
                   </button>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Tampil sampai (WIB)</label>
                   <input type="datetime-local" value={form.expires_at} onChange={(e) => setForm({ ...form, expires_at: e.target.value })}
-                    className="min-w-[180px] flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-base md:text-xs text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                    className="min-w-[180px] flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-base md:text-xs text-slate-700 focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
                   {form.expires_at && (
                     <button type="button" onClick={() => setForm({ ...form, expires_at: "" })}
                       className="text-[11px] text-slate-400 hover:text-slate-600">Reset</button>
@@ -1585,11 +1585,11 @@ export default function AdminBeritaPage() {
           <>
             <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
               <button type="button" onClick={() => setPreviewDevice("desktop")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "desktop" ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "desktop" ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
                 <Desktop className="h-3.5 w-3.5" /> Desktop
               </button>
               <button type="button" onClick={() => setPreviewDevice("mobile")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "mobile" ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "mobile" ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
                 <DeviceMobile className="h-3.5 w-3.5" /> Mobile
               </button>
             </div>
@@ -1623,7 +1623,7 @@ export default function AdminBeritaPage() {
               </span>
             )}
           </div>
-          <h1 className="mt-2 text-2xl font-black leading-snug text-[#082b59]">
+          <h1 className="mt-2 text-2xl font-black leading-snug text-[var(--brand-primary)]">
             {form.title || "Tanpa judul"}
           </h1>
           {imagePreview && (
@@ -1670,7 +1670,7 @@ function SharePreviewCard({ form, imagePreview }: { form: FormData; imagePreview
             />
           </div>
         ) : (
-          <div className="flex w-full items-center justify-center bg-gradient-to-br from-[#082b59] to-[#1767b1] aspect-[1.91/1]">
+          <div className="flex w-full items-center justify-center bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-accent)] aspect-[1.91/1]">
             <ImageIcon className="h-10 w-10 text-white/25" />
           </div>
         )}
@@ -1758,7 +1758,7 @@ function NewsMobileRow({
                 checked={selected}
                 onChange={() => onToggleSelect(item.id)}
                 aria-label={`Pilih ${item.title}`}
-                className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+                className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
               />
             </span>
           ) : undefined
@@ -1777,7 +1777,7 @@ function NewsMobileRow({
               <BookmarkSimple weight="fill" className="h-3.5 w-3.5 shrink-0 text-[#f4d21f]" aria-label="Disematkan" />
             )}
             {item.attachment_url && (
-              <Paperclip className="h-3.5 w-3.5 shrink-0 text-[#1767b1]" aria-label="Ada lampiran" />
+              <Paperclip className="h-3.5 w-3.5 shrink-0 text-[var(--brand-accent)]" aria-label="Ada lampiran" />
             )}
             <span className="min-w-0">{item.title}</span>
           </span>

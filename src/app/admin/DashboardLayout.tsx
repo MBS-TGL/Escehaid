@@ -39,7 +39,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const fetchProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        router.push("/admin/login");
+        // Tidak ada sesi valid di browser — bersihkan cookie Supabase yang
+        // mungkin masih tersisa agar proxy tidak melihat sesi lama (loop).
+        await supabase.auth.signOut();
+        router.replace("/admin/login");
         return;
       }
 
@@ -51,7 +54,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       if (!data || !data.is_active) {
         await supabase.auth.signOut();
-        router.push("/admin/login?error=inactive");
+        router.replace("/admin/login?error=inactive");
         return;
       }
 
@@ -74,12 +77,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    if (!loading && !profile && pathname !== "/admin/login") {
-      router.push("/admin/login");
-    }
-  }, [loading, profile, pathname]);
-
   if (pathname === "/admin/login") {
     return <>{children}</>;
   }
@@ -88,7 +85,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
           <p className="text-sm text-slate-500">Memuat...</p>
         </div>
       </div>
@@ -99,7 +96,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
           <p className="text-sm text-slate-500">Mengalihkan...</p>
         </div>
       </div>

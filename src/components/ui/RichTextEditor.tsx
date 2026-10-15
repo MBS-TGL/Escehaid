@@ -62,7 +62,7 @@ function ToolbarBtn({
       disabled={disabled}
       title={title}
       className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm transition-colors
-        ${active ? "bg-[#082b59] text-white" : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"}
+        ${active ? "bg-[var(--brand-primary)] text-white" : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"}
         ${disabled ? "opacity-30 cursor-not-allowed" : ""}`}
     >
       {children}
@@ -91,7 +91,7 @@ export function RichTextEditor({
       Underline,
       Link.configure({
         openOnClick: false,
-        HTMLAttributes: { class: "text-[#1767b1] underline hover:text-[#082b59]" },
+        HTMLAttributes: { class: "text-[var(--brand-accent)] underline hover:text-[var(--brand-primary)]" },
       }),
       TaskList,
       TaskItem.configure({ nested: true }),
@@ -127,7 +127,7 @@ export function RichTextEditor({
   const wordCount = editor.storage.characterCount?.words?.() ?? null;
 
   return (
-    <div className={`overflow-hidden rounded-xl border border-slate-200 bg-white transition-colors focus-within:border-[#1767b1] focus-within:ring-2 focus-within:ring-[#1767b1]/20 ${className}`}>
+    <div className={`overflow-hidden rounded-xl border border-slate-200 bg-white transition-colors focus-within:border-[var(--brand-accent)] focus-within:ring-2 focus-within:ring-[var(--brand-accent)]/20 ${className}`}>
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-0.5 border-b border-slate-100 bg-slate-50/80 px-3 py-2">
         {/* History */}

@@ -25,7 +25,7 @@ const TONE_DOT: Record<StatusTone, string> = {
   active: "bg-[#16a34a]",
   off: "bg-[#94a3b8]",
   pending: "bg-[#f59e0b]",
-  info: "bg-[#1767b1]",
+  info: "bg-[var(--brand-accent)]",
   danger: "bg-[#dc2626]",
 };
 
@@ -184,10 +184,10 @@ export function RowGrip({
       }
       onClick={(e) => e.stopPropagation()}
       style={{ touchAction: "none" }}
-      className={`-my-3 -ml-2.5 flex w-11 shrink-0 touch-none select-none flex-col items-center justify-center self-stretch rounded-lg transition-colors [-webkit-touch-callout:none] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] ${
+      className={`-my-3 -ml-2.5 flex w-11 shrink-0 touch-none select-none flex-col items-center justify-center self-stretch rounded-lg transition-colors [-webkit-touch-callout:none] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${
         disabled
           ? "cursor-not-allowed text-slate-300"
-          : "cursor-grab text-[#94a3b8] hover:bg-[#1767b1]/10 hover:text-[#082b59] active:cursor-grabbing"
+          : "cursor-grab text-[#94a3b8] hover:bg-[var(--brand-accent)]/10 hover:text-[var(--brand-primary)] active:cursor-grabbing"
       }`}
     >
       <span className="flex w-[30px] flex-col items-center gap-0.5">

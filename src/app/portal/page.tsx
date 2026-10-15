@@ -63,7 +63,7 @@ const ICONS: Record<string, AppIcon> = {
 
 /** Kolom `color` di tabel portal_apps berisi kunci warna. Kelas ditulis utuh agar terbaca Tailwind. */
 const COLORS: Record<string, { box: string; ink: string }> = {
-  navy: { box: "bg-[#082b59]/10", ink: "text-[#082b59]" },
+  navy: { box: "bg-[var(--brand-primary)]/10", ink: "text-[var(--brand-primary)]" },
   sky: { box: "bg-sky-50", ink: "text-sky-600" },
   blue: { box: "bg-blue-50", ink: "text-blue-600" },
   amber: { box: "bg-amber-50", ink: "text-amber-600" },
@@ -96,7 +96,7 @@ function FeaturedAppCard({ app }: { app: PortalApp }) {
   const domain = formatDomain(app.href);
 
   const cls =
-    "group flex w-full items-center gap-4 rounded-3xl border-[1.5px] border-[#082b59] bg-white p-5 transition-all hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#082b59] sm:gap-5 sm:p-6";
+    "group flex w-full items-center gap-4 rounded-3xl border-[1.5px] border-[var(--brand-primary)] bg-white p-5 transition-all hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] sm:gap-5 sm:p-6";
 
   const content = (
     <>
@@ -105,13 +105,13 @@ function FeaturedAppCard({ app }: { app: PortalApp }) {
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
-          <span className="text-base font-bold text-[#082b59] sm:text-lg">{app.label}</span>
-          {app.is_external && <ArrowSquareOut className="h-4 w-4 shrink-0 text-[#1767b1]" />}
+          <span className="text-base font-bold text-[var(--brand-primary)] sm:text-lg">{app.label}</span>
+          {app.is_external && <ArrowSquareOut className="h-4 w-4 shrink-0 text-[var(--brand-accent)]" />}
         </span>
         <span className="mt-0.5 block text-sm text-slate-600">{app.description}</span>
         {domain && <span className="mt-1 block truncate text-xs text-slate-500">{domain}</span>}
       </span>
-      <span className="shrink-0 rounded-full bg-[#082b59] px-4 py-2 text-xs font-bold text-white transition-transform group-hover:scale-105 sm:px-5 sm:py-2.5 sm:text-sm">
+      <span className="shrink-0 rounded-full bg-[var(--brand-primary)] px-4 py-2 text-xs font-bold text-white transition-transform group-hover:scale-105 sm:px-5 sm:py-2.5 sm:text-sm">
         Buka aplikasi
       </span>
     </>
@@ -138,7 +138,7 @@ function AppCard({ app }: { app: PortalApp }) {
   const { box, ink } = COLORS[app.color] ?? COLORS.navy;
 
   const cls =
-    "group flex h-full flex-col items-start gap-2 rounded-3xl border border-[#dce3ed] bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[#082b59]/25 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#082b59] sm:p-5";
+    "group flex h-full flex-col items-start gap-2 rounded-3xl border border-[#dce3ed] bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[var(--brand-primary)]/25 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] sm:p-5";
 
   const content = (
     <>
@@ -147,10 +147,10 @@ function AppCard({ app }: { app: PortalApp }) {
       </span>
       <span className="flex items-center gap-1.5">
         <span className="text-sm font-semibold text-slate-800">{app.label}</span>
-        {app.is_external && <ArrowSquareOut className="h-3.5 w-3.5 shrink-0 text-[#1767b1]" />}
+        {app.is_external && <ArrowSquareOut className="h-3.5 w-3.5 shrink-0 text-[var(--brand-accent)]" />}
       </span>
       <span className="line-clamp-2 text-xs leading-relaxed text-slate-500">{app.description}</span>
-      <span className="mt-auto inline-flex items-center gap-1 rounded-full bg-[#082b59] px-3.5 py-1.5 text-xs font-bold text-white transition-transform group-hover:scale-105">
+      <span className="mt-auto inline-flex items-center gap-1 rounded-full bg-[var(--brand-primary)] px-3.5 py-1.5 text-xs font-bold text-white transition-transform group-hover:scale-105">
         Buka
         <ArrowUpRight className="h-3 w-3" />
       </span>
@@ -232,7 +232,7 @@ export default async function PortalPage() {
         })
       }} />
       {/* Hero — mengikuti template hero publik */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-12 text-white sm:py-14">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-12 text-white sm:py-14">
         <div className="absolute inset-0 hidden opacity-[0.04] sm:block">
           <SquaresFour className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
           <Star className="absolute -left-10 bottom-0 h-48 w-48 -rotate-12" weight="fill" />
@@ -255,24 +255,24 @@ export default async function PortalPage() {
         <CSSFadeIn>
           <Link
             href="/admission"
-            className="group flex items-center gap-4 rounded-2xl border border-[#f4d21f]/60 bg-[#f4d21f]/10 p-4 transition-all hover:border-[#f4d21f] hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#082b59] sm:p-5"
+            className="group flex items-center gap-4 rounded-2xl border border-[#f4d21f]/60 bg-[#f4d21f]/10 p-4 transition-all hover:border-[#f4d21f] hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] sm:p-5"
           >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#f4d21f] text-[#082b59] sm:h-14 sm:w-14">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#f4d21f] text-[var(--brand-primary)] sm:h-14 sm:w-14">
               <HandCoins className="h-6 w-6 sm:h-7 sm:w-7" weight="fill" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-base font-bold text-[#082b59]">SPMB Online</span>
+              <span className="block text-base font-bold text-[var(--brand-primary)]">SPMB Online</span>
               <span className="block text-sm text-slate-600">
                 Pendaftaran peserta didik baru SMP Muhammadiyah 4 Tanggul
               </span>
               {spmbNote && (
-                <span className="mt-1 flex items-center gap-1.5 text-xs font-medium text-[#082b59]">
+                <span className="mt-1 flex items-center gap-1.5 text-xs font-medium text-[var(--brand-primary)]">
                   <Megaphone className="h-3.5 w-3.5 shrink-0" weight="fill" />
                   <span className="truncate">{spmbNote}</span>
                 </span>
               )}
             </span>
-            <span className="shrink-0 rounded-full bg-[#f4d21f] px-4 py-2 text-sm font-bold text-[#082b59] transition-transform group-hover:scale-105">
+            <span className="shrink-0 rounded-full bg-[#f4d21f] px-4 py-2 text-sm font-bold text-[var(--brand-primary)] transition-transform group-hover:scale-105">
               Daftar
             </span>
           </Link>
@@ -281,7 +281,7 @@ export default async function PortalPage() {
         {/* Aplikasi sekolah — tersedia & sedang disiapkan dipisah */}
         <CSSFadeIn>
           <div className="mt-10">
-            <h2 className="text-base font-bold text-[#082b59]">Aplikasi Sekolah</h2>
+            <h2 className="text-base font-bold text-[var(--brand-primary)]">Aplikasi Sekolah</h2>
 
             {apps.length === 0 ? (
               <div className="mt-3 rounded-2xl border border-[#dce3ed] bg-white py-10 text-center">
@@ -333,21 +333,21 @@ export default async function PortalPage() {
         {upcomingAgenda.length > 0 && (
           <CSSFadeIn>
             <div className="mt-10">
-              <h2 className="text-base font-bold text-[#082b59]">Agenda Kegiatan</h2>
+              <h2 className="text-base font-bold text-[var(--brand-primary)]">Agenda Kegiatan</h2>
               <ul className="mt-3 divide-y divide-[#f0f3f8] overflow-hidden rounded-2xl border border-[#dce3ed] bg-white">
                 {upcomingAgenda.map((ev) => {
                   const [ey, em, ed] = ev.event_date.split("-").map(Number);
                   const date = ey && em && ed ? new Date(ey, em - 1, ed) : null;
                   return (
                     <li key={ev.id} className="flex items-center gap-3 px-4 py-3">
-                      <span className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-[#082b59]/5 text-[#082b59] leading-none">
+                      <span className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-[var(--brand-primary)]/5 text-[var(--brand-primary)] leading-none">
                         <span className="text-sm font-bold">{date ? ed : "-"}</span>
                         <span className="mt-0.5 text-[10px] font-semibold uppercase">
                           {date ? date.toLocaleDateString("id-ID", { month: "short" }) : ""}
                         </span>
                       </span>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-[#082b59]">{ev.title}</p>
+                        <p className="truncate text-sm font-semibold text-[var(--brand-primary)]">{ev.title}</p>
                         <p className="text-xs text-slate-500">
                           {date
                             ? date.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
@@ -366,7 +366,7 @@ export default async function PortalPage() {
         <CSSFadeIn>
           <div className="mt-10 flex flex-col gap-4 rounded-2xl border border-[#dce3ed] bg-white p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div className="min-w-0">
-              <h2 className="text-base font-bold text-[#082b59]">Butuh bantuan?</h2>
+              <h2 className="text-base font-bold text-[var(--brand-primary)]">Butuh bantuan?</h2>
               <p className="mt-1 text-sm text-slate-600">
                 Ada pertanyaan seputar portal atau layanan sekolah? Hubungi kami lewat WhatsApp.
               </p>
@@ -376,7 +376,7 @@ export default async function PortalPage() {
                 href={`https://wa.me/${waNumber}?text=${encodeURIComponent(WA_PORTAL_MESSAGE)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[#082b59] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4d21f]"
+                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4d21f]"
               >
                 <WhatsappLogo className="h-4 w-4" weight="fill" />
                 Chat WhatsApp
@@ -384,7 +384,7 @@ export default async function PortalPage() {
             ) : (
               <Link
                 href="/contact"
-                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[#082b59] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4d21f]"
+                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4d21f]"
               >
                 Hubungi sekolah
                 <ArrowUpRight className="h-4 w-4" />

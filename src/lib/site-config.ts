@@ -1,18 +1,15 @@
 /**
- * Konstanta konten situs — sumber tunggal untuk teks & tautan yang TIDAK
- * datang dari database (tagline, media sosial, info SPMB, daftar kategori
- * & tingkat prestasi).
+ * Konstanta konten situs — untuk nilai yang TIDAK dikelola lewat admin
+ * (info SPMB, kategori & tingkat prestasi).
+ *
+ * Catatan (Phase B): tagline, tautan media sosial, identitas, kontak, SEO,
+ * footer, dan warna tema KINI diatur lewat /admin/settings (tabel
+ * `site_settings` + registry src/lib/settings) — jangan menambahkannya ke sini.
  * Ubah nilai hanya di sini; komponen cukup mengimpor SITE.
  */
 import { Trophy, Medal, Mosque, GraduationCap, MedalMilitary, Palette } from "@/components/Icons";
 
 export const SITE = {
-  tagline: "School of Talents",
-  social: {
-    instagram: "https://www.instagram.com/mbstanggul",
-    youtube: "https://www.youtube.com/@mbstanggul",
-    facebook: "https://www.facebook.com/mbstanggul",
-  },
   spmb: {
     academicYear: "2027/2028",
     submitLocation: "Kantor MBS Tanggul",

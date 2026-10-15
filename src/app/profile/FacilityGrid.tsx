@@ -16,7 +16,7 @@ const SIZES_CARD = "(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 26rem";
 const SIZES_DIALOG = "(max-width: 1023px) 92vw, 64rem";
 
 const NAV_BUTTON =
-  "inline-flex items-center gap-1.5 rounded-xl border border-[#dce3ed] px-4 py-2.5 text-sm font-semibold text-[#082b59] transition hover:border-[#082b59] hover:bg-[#f4f7fb] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1767b1] focus-visible:ring-offset-1";
+  "inline-flex items-center gap-1.5 rounded-xl border border-[#dce3ed] px-4 py-2.5 text-sm font-semibold text-[var(--brand-primary)] transition hover:border-[var(--brand-primary)] hover:bg-[#f4f7fb] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-1";
 
 /**
  * Bentuk kartu pertama supaya grid selalu terisi penuh — berapa pun jumlah
@@ -71,7 +71,7 @@ function Media({
   return (
     <div
       className={`relative w-full overflow-hidden ${ratio} ${
-        src ? "bg-[#f4f7fb]" : "bg-gradient-to-br from-[#082b59] to-[#0d4a8a]"
+        src ? "bg-[#f4f7fb]" : "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-light)]"
       }`}
     >
       {src ? (
@@ -168,7 +168,7 @@ export default function FacilityGrid({ facilities }: { facilities: Facility[] })
             <button
               type="button"
               onClick={() => open(i)}
-              className="group flex h-full w-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white text-left transition-all hover:shadow-xl hover:shadow-[#082b59]/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1767b1] focus-visible:ring-offset-2"
+              className="group flex h-full w-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white text-left transition-all hover:shadow-xl hover:shadow-[var(--brand-primary)]/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-2"
             >
               <Media
                 facility={f}
@@ -179,7 +179,7 @@ export default function FacilityGrid({ facilities }: { facilities: Facility[] })
                 zoom
               />
               <div className="flex flex-1 flex-col p-6">
-                <h3 className="text-lg font-semibold text-[#082b59]">{f.name}</h3>
+                <h3 className="text-lg font-semibold text-[var(--brand-primary)]">{f.name}</h3>
                 <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">{f.description}</p>
               </div>
             </button>
@@ -196,14 +196,14 @@ export default function FacilityGrid({ facilities }: { facilities: Facility[] })
         {active !== null && item && (
           <div className="flex max-h-[90vh] flex-col">
             <header className="flex shrink-0 items-center justify-between gap-4 border-b border-[#e7ecf3] px-5 py-4">
-              <h3 id="facility-dialog-title" className="truncate text-lg font-semibold text-[#082b59]">
+              <h3 id="facility-dialog-title" className="truncate text-lg font-semibold text-[var(--brand-primary)]">
                 {item.name}
               </h3>
               <button
                 type="button"
                 onClick={() => dialogRef.current?.close()}
                 aria-label="Tutup pratinjau"
-                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-[#082b59] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1767b1]"
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)]"
               >
                 <X className="h-5 w-5" />
               </button>

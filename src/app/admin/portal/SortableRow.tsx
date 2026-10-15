@@ -158,7 +158,7 @@ function RowCheckbox({
       checked={selected}
       onChange={(e) => onSelect(item.id, e.target.checked)}
       aria-label={`Pilih ${item.label}`}
-      className="h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 accent-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+      className="h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
     />
   );
 }
@@ -325,7 +325,7 @@ function RowActionsMenu({
           e.stopPropagation();
           toggle();
         }}
-        className="flex h-11 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-40"
+        className="flex h-11 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-40"
       >
         <DotsThreeVertical className="h-5 w-5" />
       </button>
@@ -359,7 +359,7 @@ function RowActionsMenu({
                   setOpen(false);
                   it.run();
                 }}
-                className={`flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 text-left text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#1767b1] ${it.danger
+                className={`flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 text-left text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-accent)] ${it.danger
                   ? "text-red-600 hover:bg-red-50"
                   : "text-slate-700 hover:bg-slate-50"
                   }`}
@@ -447,9 +447,9 @@ export function SortableRow({
           ? "Urutan hanya bisa diubah saat menampilkan Semua tanpa pencarian"
           : "Tarik untuk mengubah urutan (atau tekan Space, lalu panah)"
       }
-      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] ${dragDisabled
+      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${dragDisabled
         ? "cursor-not-allowed text-slate-300"
-        : "cursor-grab text-slate-400 hover:bg-[#1767b1]/10 hover:text-[#082b59] active:cursor-grabbing"
+        : "cursor-grab text-slate-400 hover:bg-[var(--brand-accent)]/10 hover:text-[var(--brand-primary)] active:cursor-grabbing"
         }`}
     >
       <DotsSixVertical className="h-4 w-4" />
@@ -476,7 +476,7 @@ export function SortableRow({
         onClick={() => onEdit(item)}
         aria-label={`Edit ${item.label}`}
         title="Edit"
-        className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-blue-50 hover:text-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+        className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-blue-50 hover:text-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
       >
         <PencilSimple className="h-4 w-4" />
       </button>
@@ -485,7 +485,7 @@ export function SortableRow({
         onClick={() => onDuplicate(item)}
         aria-label={`Duplikat ${item.label}`}
         title="Duplikat"
-        className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-emerald-50 hover:text-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+        className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-emerald-50 hover:text-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
       >
         <Copy className="h-4 w-4" />
       </button>
@@ -498,7 +498,7 @@ export function SortableRow({
         onClick={() => onDelete(item)}
         aria-label={`Hapus ${item.label}`}
         title="Hapus"
-        className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+        className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
       >
         <Trash className="h-4 w-4" />
       </button>
@@ -656,7 +656,7 @@ export function SortableRow({
               checked={selected}
               onChange={(e) => onSelect(item.id, e.target.checked)}
               aria-label={`Pilih ${item.label}`}
-              className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+              className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
             />
           </span>
         ) : (

@@ -244,6 +244,51 @@ Script `database.sql` menangani semua manual (GRANT + RLS).
 
 > Catatan: `database.sql` sudah termasuk Phase 0 cleanup (aman dijalankan berkali-kali).
 
+### Migrasi modul SISTEM (RBAC + Pengaturan Situs)
+
+Dua script tambahan, **dijalankan berurutan** di SQL Editor (keduanya idempotent —
+`create table if not exists`, `create or replace function`, `drop policy if exists`):
+
+1. `supabase/rbac_foundation.sql` — tabel `roles` + `role_permissions`, kolom
+   `user_profiles.system_role`, fungsi `has_permission()` & `log_activity()`,
+   RLS, trigger guard `rbac_guard_privilege`, dan seed peran default.
+   Menjadikan semua admin lama `SUPER_ADMIN` (backfill).
+2. `supabase/site_settings.sql` — tabel `site_settings` (override pengaturan
+   situs per kunci) + RLS (baca publik, tulis hanya pemegang `settings:manage`).
+
+**Kode aman dijalankan sebelum migrasi** (degradasi anggun):
+
+- Tanpa (1): izin jatuh ke pemetaan peran legacy — admin lama tetap masuk.
+- Tanpa (2): pembacaan `site_settings` gagal → seluruh nilai jatuh ke
+  `school_profile` lalu ke default registry, jadi situs tampil normal;
+  menyimpan pengaturan menampilkan pesan ramah yang meminta migrasi dijalankan.
+
+> Registry skema + default pengaturan ada di kode
+> (`src/lib/settings/registry.ts`), bukan di tabel — itulah sebabnya menambah
+> kunci pengaturan tidak butuh migrasi SQL.
+
+### Migrasi Feature Flags (Phase C)
+
+Script ketiga, dijalankan **setelah** `site_settings.sql`:
+
+3. `supabase/feature_flags.sql` — tabel `feature_flags` (flag fitur dengan
+   penjadwalan opsional) + RLS (baca publik, tulis hanya pemegang
+   `flags:manage`) + seed 4 flag default:
+   - `maintenance_mode` — mode pemeliharaan situs publik
+   - `spmb_registration_open` — buka/tutup pendaftaran SPMB
+   - `announcement_banner` — tampilkan banner pengumuman
+   - `module_beta` — fitur eksperimental (placeholder)
+
+**Kode aman dijalankan sebelum migrasi** (degradasi anggun):
+
+- Tanpa (3): pembacaan `feature_flags` gagal → seluruh flag memakai
+  default registry (mis. SPMB terbuka, maintenance mati), sehingga
+  perilaku situs normal; menyimpan flag menampilkan pesan ramah.
+
+> Registry definisi flag ada di `src/lib/flags/registry.ts` — menambah
+> flag baru tidak butuh migrasi SQL (cuma tambah di kode + seed manual
+> opsional via SQL).
+
 ## Key Features
 
 - **Auto slug** — `generate_unique_slug()` handle collision otomatis (appends `-2`, `-3`, dst)

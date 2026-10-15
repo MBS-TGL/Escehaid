@@ -873,8 +873,8 @@ export default function AdminSPMBPage() {
   const sortIcon = (field: SortField) => {
     if (sortField !== field) return <SortAscending className="h-3 w-3 text-slate-300" />;
     return sortDir === "asc"
-      ? <ArrowUp className="h-3 w-3 text-[#1767b1]" />
-      : <ArrowDown className="h-3 w-3 text-[#1767b1]" />;
+      ? <ArrowUp className="h-3 w-3 text-[var(--brand-accent)]" />
+      : <ArrowDown className="h-3 w-3 text-[var(--brand-accent)]" />;
   };
 
   // ── TAB: GELOMBANG PENDAFTARAN ──────────────────────────
@@ -889,8 +889,8 @@ export default function AdminSPMBPage() {
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
             onClick={() => !regModeSaving && setGoogleModal(false)}>
             <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#082b59]/10">
-                <GraduationCap className="h-6 w-6 text-[#082b59]" />
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--brand-primary)]/10">
+                <GraduationCap className="h-6 w-6 text-[var(--brand-primary)]" />
               </div>
               <h3 className="text-center text-lg font-bold text-slate-800">Link Google Form</h3>
               <p className="mt-2 text-center text-sm text-slate-500">
@@ -904,7 +904,7 @@ export default function AdminSPMBPage() {
                 onChange={(e) => setGoogleUrlDraft(e.target.value)}
                 placeholder={GOOGLE_FORM_URL}
                 disabled={regModeSaving}
-                className="mt-4 w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60"
+                className="mt-4 w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 disabled:opacity-60"
               />
               <div className="mt-5 flex gap-3">
                 <button onClick={() => { setGoogleUrlDraft(regUrl); setGoogleModal(false); }} disabled={regModeSaving}
@@ -912,7 +912,7 @@ export default function AdminSPMBPage() {
                   Batal
                 </button>
                 <button onClick={handleSaveGoogleUrl} disabled={regModeSaving}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#082b59] py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-70">
                   {regModeSaving ? (
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   ) : (
@@ -930,7 +930,7 @@ export default function AdminSPMBPage() {
             Atur gelombang pendaftaran yang tampil di halaman Penerimaan Santri Baru.
           </p>
           <button onClick={() => openWaveForm()}
-            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#1767b1] md:py-2.5">
+            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] md:py-2.5">
             <Plus className="h-4 w-4" />
             Tambah Gelombang
           </button>
@@ -948,7 +948,7 @@ export default function AdminSPMBPage() {
         <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
           {wavesLoading ? (
             <div className="flex flex-col items-center gap-3 px-4 py-16 text-center">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
               <p className="text-sm text-slate-500">Memuat data gelombang...</p>
             </div>
           ) : waves.length === 0 ? (
@@ -1014,12 +1014,12 @@ export default function AdminSPMBPage() {
         </div>
 
         {/* ── PENGATURAN PENDAFTARAN (SUMBER + DOKUMEN) ─── */}
-        <h2 className="mb-3 mt-8 text-sm font-bold text-[#082b59]">Pengaturan Pendaftaran</h2>
+        <h2 className="mb-3 mt-8 text-sm font-bold text-[var(--brand-primary)]">Pengaturan Pendaftaran</h2>
 
         {/* ── SUMBER PENDAFTARAN (MODE REGISTRASI) ─────────── */}
         <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="text-sm font-bold text-[#082b59]">Sumber Pendaftaran</p>
+            <p className="text-sm font-bold text-[var(--brand-primary)]">Sumber Pendaftaran</p>
             <p className="mt-0.5 text-xs text-slate-500">
               Pilih tujuan tombol Daftar di website. Klik Google Form untuk mengatur link formulir; mode ini juga mengalihkan halaman form bawaan ke Google Form.
             </p>
@@ -1029,11 +1029,11 @@ export default function AdminSPMBPage() {
           </div>
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <button onClick={() => setGoogleModal(true)} disabled={regModeSaving}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${regMode === "google_form" ? "border-[#082b59] bg-[#082b59] text-white" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"}`}>
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${regMode === "google_form" ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"}`}>
               Google Form
             </button>
             <button onClick={() => handleChangeRegMode("internal")} disabled={regModeSaving}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${regMode === "internal" ? "border-[#082b59] bg-[#082b59] text-white" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"}`}>
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${regMode === "internal" ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"}`}>
               Form Internal
             </button>
           </div>
@@ -1042,7 +1042,7 @@ export default function AdminSPMBPage() {
         {/* ── PENGATURAN SPMB (DOKUMEN + KONTAK + SOROTAN) ──── */}
         <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm">
           <div className="min-w-0">
-            <p className="text-sm font-bold text-[#082b59]">Pengaturan SPMB</p>
+            <p className="text-sm font-bold text-[var(--brand-primary)]">Pengaturan SPMB</p>
             <p className="mt-0.5 text-xs text-slate-500">
               Tautan dokumen, nomor WhatsApp panitia, dan sorotan yang tampil di halaman SPMB.
             </p>
@@ -1055,11 +1055,11 @@ export default function AdminSPMBPage() {
                   onChange={(e) => { setDocBrochure(e.target.value); setDocBrochureErr(null); }}
                   aria-invalid={!!docBrochureErr} aria-describedby="doc-brochure-desc"
                   placeholder="https://drive.google.com/file/d/..." disabled={docSaving}
-                  className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
+                  className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 disabled:opacity-60" />
                 {docBrochure.trim().startsWith("https://") && (
                   <a href={docBrochure.trim()} target="_blank" rel="noopener noreferrer"
                     aria-label="Buka link di tab baru" title="Buka link di tab baru"
-                    className="flex shrink-0 items-center justify-center rounded-lg border border-slate-200 px-2.5 text-slate-500 transition-colors hover:border-[#1767b1] hover:text-[#1767b1]">
+                    className="flex shrink-0 items-center justify-center rounded-lg border border-slate-200 px-2.5 text-slate-500 transition-colors hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent)]">
                     <ExternalIcon className="h-3.5 w-3.5" />
                   </a>
                 )}
@@ -1079,11 +1079,11 @@ export default function AdminSPMBPage() {
                   onChange={(e) => { setDocOffline(e.target.value); setDocOfflineErr(null); }}
                   aria-invalid={!!docOfflineErr} aria-describedby="doc-offline-desc"
                   placeholder="https://drive.google.com/file/d/..." disabled={docSaving}
-                  className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
+                  className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 disabled:opacity-60" />
                 {docOffline.trim().startsWith("https://") && (
                   <a href={docOffline.trim()} target="_blank" rel="noopener noreferrer"
                     aria-label="Buka link di tab baru" title="Buka link di tab baru"
-                    className="flex shrink-0 items-center justify-center rounded-lg border border-slate-200 px-2.5 text-slate-500 transition-colors hover:border-[#1767b1] hover:text-[#1767b1]">
+                    className="flex shrink-0 items-center justify-center rounded-lg border border-slate-200 px-2.5 text-slate-500 transition-colors hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent)]">
                     <ExternalIcon className="h-3.5 w-3.5" />
                   </a>
                 )}
@@ -1102,7 +1102,7 @@ export default function AdminSPMBPage() {
                 onChange={(e) => { setDocPhone(e.target.value); setDocPhoneErr(null); }}
                 aria-invalid={!!docPhoneErr} aria-describedby="doc-phone-desc"
                 placeholder="0858-0673-8160" disabled={docSaving}
-                className="w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
+                className="w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 disabled:opacity-60" />
               {docPhoneErr ? (
                 <p id="doc-phone-desc" className="mt-1 text-xs font-medium text-red-600">{docPhoneErr}</p>
               ) : (
@@ -1117,7 +1117,7 @@ export default function AdminSPMBPage() {
                 onChange={(e) => setDocHighlight(e.target.value)}
                 aria-describedby="doc-highlight-desc" disabled={docSaving}
                 placeholder="Pada SPMB Indent 2027/2028, 35 calon murid telah dinyatakan diterima."
-                className="w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 disabled:opacity-60" />
+                className="w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 disabled:opacity-60" />
               <p id="doc-highlight-desc" className="mt-1 text-xs text-slate-400">
                 Tampil di halaman SPMB. Kosongkan untuk menyembunyikan.
               </p>
@@ -1125,7 +1125,7 @@ export default function AdminSPMBPage() {
           </div>
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <button onClick={handleSaveDocs} disabled={docSaving || !docDirty}
-              className="flex items-center justify-center gap-2 rounded-lg bg-[#082b59] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1767b1] disabled:opacity-50 disabled:cursor-not-allowed">
+              className="flex items-center justify-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-50 disabled:cursor-not-allowed">
               {docSaving ? (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
               ) : (
@@ -1139,14 +1139,14 @@ export default function AdminSPMBPage() {
         <div className="mb-4 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <p className="text-sm font-bold text-[#082b59]">Pertanyaan Tambahan Formulir</p>
+              <p className="text-sm font-bold text-[var(--brand-primary)]">Pertanyaan Tambahan Formulir</p>
               <p className="mt-0.5 text-xs text-slate-500">
                 Susun pertanyaan custom untuk form pendaftaran (seperti Google Form). Pertanyaan aktif tampil
                 sebagai langkah &ldquo;Pertanyaan Tambahan&rdquo; di halaman pendaftaran.
               </p>
             </div>
             <button onClick={() => openFieldForm()} disabled={formFields.length >= FIELD_MAX}
-              className="flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[#082b59] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#1767b1] disabled:opacity-50">
+              className="flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-50">
               <Plus className="h-4 w-4" />
               Tambah Pertanyaan
             </button>
@@ -1165,7 +1165,7 @@ export default function AdminSPMBPage() {
             <ul className="mt-4 divide-y divide-slate-100 rounded-xl border border-slate-200/80">
               {formFields.map((f, i) => (
                 <li key={f.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#082b59]/10 text-[11px] font-bold text-[#082b59]">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/10 text-[11px] font-bold text-[var(--brand-primary)]">
                     {i + 1}
                   </span>
                   <div className="min-w-0 flex-1">
@@ -1173,7 +1173,7 @@ export default function AdminSPMBPage() {
                       <span className={`text-sm font-semibold ${f.active ? "text-slate-800" : "text-slate-400"}`}>
                         {f.label}
                       </span>
-                      <span className="rounded-full border border-[#1767b1]/20 bg-[#1767b1]/5 px-2 py-0.5 text-[10px] font-semibold text-[#1767b1]">
+                      <span className="rounded-full border border-[var(--brand-accent)]/20 bg-[var(--brand-accent)]/5 px-2 py-0.5 text-[10px] font-semibold text-[var(--brand-accent)]">
                         {fieldTypeLabel(f.type)}
                       </span>
                       {f.required && (
@@ -1239,7 +1239,7 @@ export default function AdminSPMBPage() {
                   Batal
                 </button>
                 <button onClick={handleSaveWave} disabled={waveSaving}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
+                  className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-70">
                   {waveSaving ? (
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   ) : (
@@ -1267,7 +1267,7 @@ export default function AdminSPMBPage() {
                 <input type="text" value={waveForm.name}
                   onChange={(e) => setWaveForm({ ...waveForm, name: e.target.value })}
                   placeholder="cth: Gelombang Inden"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1277,7 +1277,7 @@ export default function AdminSPMBPage() {
                   </label>
                   <input type="date" value={waveForm.start_date}
                     onChange={(e) => setWaveForm({ ...waveForm, start_date: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-slate-700">
@@ -1285,7 +1285,7 @@ export default function AdminSPMBPage() {
                   </label>
                   <input type="date" value={waveForm.end_date} min={waveForm.start_date || undefined}
                     onChange={(e) => setWaveForm({ ...waveForm, end_date: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
                 </div>
               </div>
 
@@ -1293,7 +1293,7 @@ export default function AdminSPMBPage() {
                 <label className="mb-1.5 block text-sm font-semibold text-slate-700">Keterangan (opsional)</label>
                 <textarea value={waveForm.note} onChange={(e) => setWaveForm({ ...waveForm, note: e.target.value })}
                   rows={3} placeholder="cth: khusus pendaftar yang mendaftar lebih awal"
-                  className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                  className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm leading-relaxed focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1301,7 +1301,7 @@ export default function AdminSPMBPage() {
                   <label className="mb-1.5 block text-sm font-semibold text-slate-700">Urutan Tampil</label>
                   <input type="number" min={0} value={waveForm.sort_order}
                     onChange={(e) => setWaveForm({ ...waveForm, sort_order: e.target.value === "" ? 0 : Number(e.target.value) })}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tampil di Website</label>
@@ -1360,7 +1360,7 @@ export default function AdminSPMBPage() {
                   Batal
                 </button>
                 <button onClick={handleSaveField} disabled={fieldSaving}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
+                  className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-70">
                   {fieldSaving ? (
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   ) : (
@@ -1388,14 +1388,14 @@ export default function AdminSPMBPage() {
                 <input type="text" maxLength={200} value={fieldForm.label}
                   onChange={(e) => { setFieldForm({ ...fieldForm, label: e.target.value }); setFieldFormError(null); }}
                   placeholder="cth: Apakah anak Anda pernah mengikuti tahfidz?"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
               </div>
 
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-slate-700">Jenis Jawaban</label>
                 <select value={fieldForm.type}
                   onChange={(e) => { setFieldForm({ ...fieldForm, type: e.target.value as SpmbFieldType }); setFieldFormError(null); }}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20">
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20">
                   {SPMB_FIELD_TYPES.map((t) => (
                     <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
@@ -1410,7 +1410,7 @@ export default function AdminSPMBPage() {
                   <textarea rows={5} value={fieldForm.optionsText}
                     onChange={(e) => { setFieldForm({ ...fieldForm, optionsText: e.target.value }); setFieldFormError(null); }}
                     placeholder={"Ya\nTidak\nKadang-kadang"}
-                    className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                    className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm leading-relaxed focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
                   <p className="mt-1 text-xs text-slate-400">Tulis satu opsi per baris.</p>
                 </div>
               )}
@@ -1420,7 +1420,7 @@ export default function AdminSPMBPage() {
                 <input type="text" maxLength={200} value={fieldForm.placeholder}
                   onChange={(e) => setFieldForm({ ...fieldForm, placeholder: e.target.value })}
                   placeholder="Teks petunjuk di dalam kolom isian"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
               </div>
 
               <div>
@@ -1428,7 +1428,7 @@ export default function AdminSPMBPage() {
                 <input type="text" maxLength={300} value={fieldForm.help}
                   onChange={(e) => setFieldForm({ ...fieldForm, help: e.target.value })}
                   placeholder="Keterangan tambahan di bawah pertanyaan"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1511,9 +1511,9 @@ export default function AdminSPMBPage() {
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5 md:flex">
-          <Checks className="h-4 w-4 text-[#082b59]" />
-          <span className="text-xs font-semibold text-[#082b59]">{selectedIds.size} dipilih</span>
+        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex">
+          <Checks className="h-4 w-4 text-[var(--brand-primary)]" />
+          <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
           <button onClick={() => setConfirmAction({ id: "bulk", status: "accepted" })} aria-label={`Terima ${selectedIds.size} pendaftar terpilih`} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Terima</button>
           <button onClick={() => setConfirmAction({ id: "bulk", status: "rejected" })} aria-label={`Tolak ${selectedIds.size} pendaftar terpilih`} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Tolak</button>
           <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} pendaftar terpilih`} className="rounded-lg bg-slate-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-slate-700">Hapus</button>
@@ -1588,7 +1588,7 @@ export default function AdminSPMBPage() {
                 agenda/teachers/users/announcements/facilities. */}
                 <th className="hidden w-10 px-4 py-3 sm:table-cell">
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
-                    className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
+                    className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                 </th>
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">No</th>
                 <th className="cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("full_name")}>
@@ -1611,7 +1611,7 @@ export default function AdminSPMBPage() {
               {loading ? (
                 <tr><td colSpan={8} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
-                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
                     <p className="text-sm text-slate-500">Memuat data pendaftar...</p>
                   </div>
                 </td></tr>
@@ -1632,10 +1632,10 @@ export default function AdminSPMBPage() {
                   const st = statusConfig[item.status] || statusConfig.pending;
                   const StatusIcon = st.icon;
                   return (
-                    <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[#082b59]/[0.03]" : ""}`}>
+                    <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[var(--brand-primary)]/[0.03]" : ""}`}>
                       <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
                         <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
-                          className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
+                          className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                       </td>
                       <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
                       <td className="px-4 py-3.5 cursor-pointer" onClick={() => openDetail(item)}>
@@ -1702,7 +1702,7 @@ export default function AdminSPMBPage() {
               </button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                 <button key={p} onClick={() => setPage(p)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === page ? "bg-[#082b59] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === page ? "bg-[var(--brand-primary)] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
                   {p}
                 </button>
               ))}
@@ -1792,7 +1792,7 @@ export default function AdminSPMBPage() {
             onClick={() => setConfirmAction({ id: "bulk", status: "accepted" })}
             disabled={selectedIds.size === 0}
             aria-label="Terima pendaftar terpilih"
-            className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Terima
           </button>
@@ -1801,7 +1801,7 @@ export default function AdminSPMBPage() {
             onClick={() => setConfirmAction({ id: "bulk", status: "rejected" })}
             disabled={selectedIds.size === 0}
             aria-label="Tolak pendaftar terpilih"
-            className="min-h-10 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-10 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Tolak
           </button>
@@ -1813,7 +1813,7 @@ export default function AdminSPMBPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setViewItem(null)}>
           <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
             {/* Profile Header */}
-            <div className="bg-gradient-to-r from-[#082b59] via-[#0d4a8a] to-[#1767b1] px-6 py-5 text-white">
+            <div className="bg-gradient-to-r from-[var(--brand-primary)] via-[var(--brand-primary-light)] to-[var(--brand-accent)] px-6 py-5 text-white">
               <div className="flex items-center gap-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-xl font-bold">
                   {viewItem.full_name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
@@ -1866,11 +1866,11 @@ export default function AdminSPMBPage() {
                 <div className="flex flex-wrap border-b border-slate-100 px-6">
                   {tabs.map((t) => (
                     <button key={t.key} onClick={() => setViewTab(t.key)}
-                      className={`relative whitespace-nowrap px-4 py-2.5 text-xs font-semibold transition-colors ${viewTab === t.key ? "text-[#082b59]" : "text-slate-400 hover:text-slate-600"}`}>
+                      className={`relative whitespace-nowrap px-4 py-2.5 text-xs font-semibold transition-colors ${viewTab === t.key ? "text-[var(--brand-primary)]" : "text-slate-400 hover:text-slate-600"}`}>
                       {t.label}
-                      {t.key === "berkas" && docCount > 0 && <span className="ml-1 rounded-full bg-[#082b59]/10 px-1.5 text-[10px] text-[#082b59]">{docCount}</span>}
-                      {t.key === "tambahan" && <span className="ml-1 rounded-full bg-[#082b59]/10 px-1.5 text-[10px] text-[#082b59]">{customAnswers.length}</span>}
-                      {viewTab === t.key && <div className="absolute inset-x-2 -bottom-px h-0.5 bg-[#082b59]" />}
+                      {t.key === "berkas" && docCount > 0 && <span className="ml-1 rounded-full bg-[var(--brand-primary)]/10 px-1.5 text-[10px] text-[var(--brand-primary)]">{docCount}</span>}
+                      {t.key === "tambahan" && <span className="ml-1 rounded-full bg-[var(--brand-primary)]/10 px-1.5 text-[10px] text-[var(--brand-primary)]">{customAnswers.length}</span>}
+                      {viewTab === t.key && <div className="absolute inset-x-2 -bottom-px h-0.5 bg-[var(--brand-primary)]" />}
                     </button>
                   ))}
                 </div>
@@ -2011,7 +2011,7 @@ export default function AdminSPMBPage() {
                 Batal
               </button>
               <button onClick={handleSaveNotes} disabled={editSaving}
-                className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
+                className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-70">
                 {editSaving ? (
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 ) : (
@@ -2029,7 +2029,7 @@ export default function AdminSPMBPage() {
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Catatan Admin</label>
               <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)}
                 rows={8}
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm leading-relaxed focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-y"
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm leading-relaxed focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 resize-y"
                 placeholder="Tambahkan catatan untuk pendaftar ini..." />
             </div>
             <div className="rounded-xl border border-slate-200 p-4 space-y-3">
@@ -2157,8 +2157,8 @@ function PageHeader({ active, onSelect, onExport, onAdd, onImport }: { active: M
       {/* Header */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[#082b59]/10">
-            <Users className="h-5 w-5 text-[#082b59]" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[var(--brand-primary)]/10">
+            <Users className="h-5 w-5 text-[var(--brand-primary)]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Kelola SPMB</h1>
@@ -2167,7 +2167,7 @@ function PageHeader({ active, onSelect, onExport, onAdd, onImport }: { active: M
         </div>
         {active === "registrations" && (
           <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-            <button onClick={onAdd} className="flex min-h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#082b59] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1] sm:flex-none md:py-2.5">
+            <button onClick={onAdd} className="flex min-h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] sm:flex-none md:py-2.5">
               <Plus className="h-4 w-4" />
               Tambah Pendaftar
             </button>
@@ -2187,7 +2187,7 @@ function PageHeader({ active, onSelect, onExport, onAdd, onImport }: { active: M
       <div className="mb-6 flex w-fit flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
         {tabs.map((t) => (
           <button key={t.key} onClick={() => onSelect(t.key)}
-            className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all ${active === t.key ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+            className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all ${active === t.key ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
             <t.icon className="h-3.5 w-3.5" />
             {t.label}
           </button>
@@ -2285,7 +2285,7 @@ function BerkasItem({ label, url, isImage, isPdf }: { label: string; url: string
               Buka
             </a>
             <a href={url} download
-              className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-[#082b59] px-3 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#1767b1]">
+              className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]">
               <Download className="h-3.5 w-3.5" />
               Download
             </a>
@@ -2381,12 +2381,12 @@ function RegistrationMobileRow({
                 checked={selected}
                 onChange={() => onToggleSelect(item.id)}
                 aria-label={`Pilih ${item.full_name}`}
-                className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+                className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
               />
             </span>
           ) : (
             <span className="relative flex h-10 w-10 shrink-0 items-center justify-center">
-              <span aria-hidden="true" className="flex h-10 w-10 items-center justify-center rounded-full bg-[#082b59]/10 text-[11px] font-bold text-[#082b59]">
+              <span aria-hidden="true" className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-primary)]/10 text-[11px] font-bold text-[var(--brand-primary)]">
                 {item.full_name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
               </span>
               <StatusDot

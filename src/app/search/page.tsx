@@ -25,10 +25,10 @@ export default async function SearchPage({
 
   return (
     <div>
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-14 text-white md:py-16">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-14 text-white md:py-16">
         <div className="absolute inset-0 opacity-20">
           <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
-          <div className="absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-[#1767b1] blur-[120px]" />
+          <div className="absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-[var(--brand-accent)] blur-[120px]" />
         </div>
         <div className="relative mx-auto max-w-4xl px-6 text-center">
           <CSSFadeIn>

@@ -13,12 +13,12 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600;
 
-const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]";
+const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]";
 const container = "mx-auto max-w-7xl px-6";
 const DEFAULT_BROCHURE_URL = "https://www.smpmuh4tanggul.sch.id/info-spmb/";
 
 const waveStatusBadges: Record<string, { label: string; cls: string }> = {
-  upcoming: { label: "Akan dibuka", cls: "border border-blue-100 bg-blue-50 text-[#1767b1]" },
+  upcoming: { label: "Akan dibuka", cls: "border border-blue-100 bg-blue-50 text-[var(--brand-accent)]" },
   open: { label: "Dibuka", cls: "border border-emerald-100 bg-emerald-50 text-emerald-700" },
   closed: { label: "Ditutup", cls: "border border-slate-200 bg-slate-100 text-slate-500" },
 };
@@ -49,7 +49,7 @@ const ChevronRightIcon = ({ className }: { className?: string }) => (
 function SectionHeading({ title, desc, compact }: { title: string; desc?: React.ReactNode; compact?: boolean }) {
   return (
     <div className={`${compact ? "mb-5" : "mb-6"} max-w-2xl`}>
-      <h2 className={`font-bold text-[#082b59] ${compact ? "text-xl md:text-2xl" : "text-2xl md:text-3xl"}`}>{title}</h2>
+      <h2 className={`font-bold text-[var(--brand-primary)] ${compact ? "text-xl md:text-2xl" : "text-2xl md:text-3xl"}`}>{title}</h2>
       {desc && <p className="mt-1.5 text-sm leading-relaxed text-slate-500 md:text-base">{desc}</p>}
     </div>
   );
@@ -68,8 +68,8 @@ export default async function SPMBPage() {
   const remaining = openWave ? daysLeft(openWave.end_date) : null;
 
   const jalur = [
-    { icon: FileText, color: "bg-[#082b59]/10 text-[#082b59]", title: "Jalur Reguler", desc: "Pendaftaran terbuka untuk semua calon murid." },
-    { icon: Trophy, color: "bg-[#f4d21f]/25 text-[#082b59]", title: "Jalur Prestasi", desc: "Untuk calon murid berprestasi di bidang akademik maupun non-akademik." },
+    { icon: FileText, color: "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]", title: "Jalur Reguler", desc: "Pendaftaran terbuka untuk semua calon murid." },
+    { icon: Trophy, color: "bg-[#f4d21f]/25 text-[var(--brand-primary)]", title: "Jalur Prestasi", desc: "Untuk calon murid berprestasi di bidang akademik maupun non-akademik." },
     { icon: HandCoins, color: "bg-emerald-100 text-emerald-700", title: "Jalur Beasiswa", desc: "Untuk calon murid dari keluarga dengan keterbatasan ekonomi." },
   ];
 
@@ -80,9 +80,9 @@ export default async function SPMBPage() {
   ];
 
   const program = [
-    { icon: House, title: "SMP Boarding", desc: "Program asrama penuh sejak 2018/2019. Siswa dibimbing 24 jam oleh ustadz kompeten.", color: "bg-[#1767b1]/10 text-[#1767b1]" },
-    { icon: GraduationCap, title: "SMP Reguler", desc: "Pembelajaran penuh hari (full day) Senin-Sabtu pukul 07.00-15.00, meliputi mapel umum dan keagamaan.", color: "bg-[#f4d21f]/20 text-[#082b59]" },
-    { icon: BookOpen, title: "SMA Boarding", desc: "Program asrama penuh untuk jenjang SMA dengan kurikulum Tahfidz dan keunggulan akademik.", color: "bg-[#082b59]/10 text-[#082b59]" },
+    { icon: House, title: "SMP Boarding", desc: "Program asrama penuh sejak 2018/2019. Siswa dibimbing 24 jam oleh ustadz kompeten.", color: "bg-[var(--brand-accent)]/10 text-[var(--brand-accent)]" },
+    { icon: GraduationCap, title: "SMP Reguler", desc: "Pembelajaran penuh hari (full day) Senin-Sabtu pukul 07.00-15.00, meliputi mapel umum dan keagamaan.", color: "bg-[#f4d21f]/20 text-[var(--brand-primary)]" },
+    { icon: BookOpen, title: "SMA Boarding", desc: "Program asrama penuh untuk jenjang SMA dengan kurikulum Tahfidz dan keunggulan akademik.", color: "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]" },
   ];
 
   const alasan = [
@@ -104,7 +104,7 @@ export default async function SPMBPage() {
         })
       }} />
       {/* Hero (sama dengan halaman lain) */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-16 text-white">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-16 text-white">
         <div className="absolute inset-0 hidden opacity-[0.04] sm:block">
           <GraduationCap className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
           <FileText className="absolute -left-10 bottom-0 h-48 w-48 -rotate-12" weight="fill" />
@@ -137,12 +137,12 @@ export default async function SPMBPage() {
                     return (
                       <li
                         key={wave.id}
-                        className={`flex flex-col gap-1 border-l-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 ${status === "open" ? "border-[#1767b1] bg-[#1767b1]/[0.04]" : "border-transparent"
+                        className={`flex flex-col gap-1 border-l-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 ${status === "open" ? "border-[var(--brand-accent)] bg-[var(--brand-accent)]/[0.04]" : "border-transparent"
                           } ${status === "closed" ? "opacity-70" : ""}`}
                       >
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="font-semibold text-[#082b59]">{wave.name}</h3>
+                            <h3 className="font-semibold text-[var(--brand-primary)]">{wave.name}</h3>
                             <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${badge.cls}`}>{badge.label}</span>
                           </div>
                           {wave.note && <p className="mt-0.5 text-sm text-slate-500">{wave.note}</p>}
@@ -161,7 +161,7 @@ export default async function SPMBPage() {
                           {isCurrent && (
                             <Link
                               href={registerHref}
-                              className={`hidden items-center justify-center rounded-lg bg-[#f4d21f] px-4 py-2 text-sm font-bold text-[#082b59] transition-colors hover:bg-[#ffe14d] sm:inline-flex ${focusRing}`}
+                              className={`hidden items-center justify-center rounded-lg bg-[#f4d21f] px-4 py-2 text-sm font-bold text-[var(--brand-primary)] transition-colors hover:bg-[#ffe14d] sm:inline-flex ${focusRing}`}
                             >
                               Daftar Sekarang
                             </Link>
@@ -178,7 +178,7 @@ export default async function SPMBPage() {
                   href={brochureHref}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`font-semibold text-[#1767b1] underline underline-offset-4 hover:text-[#082b59] ${focusRing}`}
+                  className={`font-semibold text-[var(--brand-accent)] underline underline-offset-4 hover:text-[var(--brand-primary)] ${focusRing}`}
                 >
                   brosur resmi sekolah
                 </a>
@@ -205,7 +205,7 @@ export default async function SPMBPage() {
                         href={brochureHref}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={`font-semibold text-[#1767b1] underline underline-offset-4 hover:text-[#082b59] ${focusRing}`}
+                        className={`font-semibold text-[var(--brand-accent)] underline underline-offset-4 hover:text-[var(--brand-primary)] ${focusRing}`}
                       >
                         brosur resmi sekolah
                       </a>
@@ -220,7 +220,7 @@ export default async function SPMBPage() {
                         <j.icon className="h-5 w-5" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-[#082b59]">{j.title}</h3>
+                        <h3 className="font-semibold text-[var(--brand-primary)]">{j.title}</h3>
                         <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{j.desc}</p>
                       </div>
                     </div>
@@ -234,11 +234,11 @@ export default async function SPMBPage() {
                   {alur.map((step, i) => (
                     <li key={step.title} className="relative flex gap-4 pb-5 last:pb-0">
                       {i < alur.length - 1 && <span className="absolute left-[17px] top-9 bottom-1 w-px bg-[#dce3ed]" aria-hidden="true" />}
-                      <span className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#082b59] text-sm font-bold text-white" aria-hidden="true">
+                      <span className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)] text-sm font-bold text-white" aria-hidden="true">
                         {i + 1}
                       </span>
                       <div>
-                        <h3 className="font-semibold text-[#082b59]">{step.title}</h3>
+                        <h3 className="font-semibold text-[var(--brand-primary)]">{step.title}</h3>
                         <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{step.desc}</p>
                       </div>
                     </li>
@@ -264,7 +264,7 @@ export default async function SPMBPage() {
                         <item.icon className="h-5 w-5" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-[#082b59]">{item.title}</h3>
+                        <h3 className="font-semibold text-[var(--brand-primary)]">{item.title}</h3>
                         <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{item.desc}</p>
                       </div>
                     </div>
@@ -278,11 +278,11 @@ export default async function SPMBPage() {
                   <div className="space-y-4">
                     {alasan.map((a) => (
                       <div key={a.title} className="flex items-start gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#1767b1]/10 text-[#1767b1]">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-accent)]/10 text-[var(--brand-accent)]">
                           <a.icon className="h-5 w-5" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-[#082b59]">{a.title}</h3>
+                          <h3 className="font-semibold text-[var(--brand-primary)]">{a.title}</h3>
                           <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{a.desc}</p>
                         </div>
                       </div>
@@ -291,7 +291,7 @@ export default async function SPMBPage() {
                   {highlightText && (
                     <p className="mt-4 border-t border-[#dce3ed] pt-4 text-sm text-slate-600">
                       {highlightText}{" "}
-                      <Link href="/news" className={`whitespace-nowrap font-semibold text-[#1767b1] underline underline-offset-4 hover:text-[#082b59] ${focusRing}`}>
+                      <Link href="/news" className={`whitespace-nowrap font-semibold text-[var(--brand-accent)] underline underline-offset-4 hover:text-[var(--brand-primary)] ${focusRing}`}>
                         Lihat pengumuman
                       </Link>
                     </p>
@@ -306,7 +306,7 @@ export default async function SPMBPage() {
       {/* CTA penutup (ramping) */}
       <section className="bg-[#f6f8fb] py-10 md:py-12">
         <div className={container}>
-          <div className="flex flex-col items-center justify-between gap-5 rounded-2xl bg-gradient-to-br from-[#082b59] to-[#0d4a8a] px-6 py-8 text-white md:flex-row md:px-10">
+          <div className="flex flex-col items-center justify-between gap-5 rounded-2xl bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-light)] px-6 py-8 text-white md:flex-row md:px-10">
             <div className="text-center md:text-left">
               <h2 className="text-xl font-bold md:text-2xl">Siap mendaftarkan putra-putri Anda?</h2>
               <p className="mt-1 text-sm text-white/70">Daftar online hanya beberapa menit. Formulir offline dikumpulkan di {SITE.spmb.submitLocation}.</p>
@@ -314,7 +314,7 @@ export default async function SPMBPage() {
             <div className="flex flex-col items-center gap-3 sm:flex-row">
               <Link
                 href={registerHref}
-                className={`inline-flex items-center justify-center gap-2 rounded-xl bg-[#f4d21f] px-6 py-3 text-sm font-bold text-[#082b59] transition-colors hover:bg-[#ffe14d] ${focusRing}`}
+                className={`inline-flex items-center justify-center gap-2 rounded-xl bg-[#f4d21f] px-6 py-3 text-sm font-bold text-[var(--brand-primary)] transition-colors hover:bg-[#ffe14d] ${focusRing}`}
               >
                 Daftar Online
                 <ChevronRightIcon className="h-4 w-4" />

@@ -303,15 +303,15 @@ export default function AdminGalleryPage() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[#1767b1]/10">
-            <ImageSquare className="h-5 w-5 text-[#1767b1]" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[var(--brand-accent)]/10">
+            <ImageSquare className="h-5 w-5 text-[var(--brand-accent)]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Kelola Galeri</h1>
             <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">Foto dan video kegiatan sekolah</p>
           </div>
         </div>
-        <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[#082b59] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1] md:py-2.5">
+        <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] md:py-2.5">
           <Plus className="h-4 w-4" /> Tambah Media
         </button>
       </div>
@@ -329,9 +329,9 @@ export default function AdminGalleryPage() {
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5 md:flex">
-          <Checks className="h-4 w-4 text-[#082b59]" />
-          <span className="text-xs font-semibold text-[#082b59]">{selectedIds.size} dipilih</span>
+        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex">
+          <Checks className="h-4 w-4 text-[var(--brand-primary)]" />
+          <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
           <button onClick={() => setBulkDelete(true)} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
           <button onClick={() => setSelectedIds(new Set())} aria-label="Batalkan pilihan" title="Batalkan pilihan" className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
         </div>
@@ -402,7 +402,7 @@ export default function AdminGalleryPage() {
       {/* Grid View */}
       {loading ? (
         <div className="flex flex-col items-center gap-3 py-16">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
           <p className="text-sm text-slate-500">Memuat data gallery...</p>
         </div>
       ) : paginated.length === 0 ? (
@@ -415,7 +415,7 @@ export default function AdminGalleryPage() {
             <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada gallery"}</p>
           </div>
           {!search && typeFilter === "all" && filter === "all" && (
-            <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[#082b59] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1767b1]">
+            <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
               <Plus className="h-3.5 w-3.5" /> Tambah Media Pertama
             </button>
           )}
@@ -432,12 +432,12 @@ export default function AdminGalleryPage() {
               ];
               return (
                 <div key={item.id}
-                  className={`group relative overflow-hidden rounded-xl border bg-white shadow-sm transition-all hover:shadow-md hover:border-[#1767b1]/30 ${isSelected ? "border-[#082b59] ring-2 ring-[#082b59]/20" : "border-slate-200/70"}`}>
+                  className={`group relative overflow-hidden rounded-xl border bg-white shadow-sm transition-all hover:shadow-md hover:border-[var(--brand-accent)]/30 ${isSelected ? "border-[var(--brand-primary)] ring-2 ring-[var(--brand-primary)]/20" : "border-slate-200/70"}`}>
                   {/* Checkbox — desktop selalu tampil; mobile hanya di mode Pilih */}
                   <div className={`absolute left-2 top-2 z-10 ${pickMode ? "" : "hidden md:block"}`} onClick={(e) => e.stopPropagation()}>
                     <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(item.id)}
                       aria-label={`Pilih ${item.title}`}
-                      className="h-5 w-5 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
+                      className="h-5 w-5 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                   </div>
                   {/* Aksi desktop — hover; mobile memakai menu ⋄ di pojok gambar */}
                   <div className="absolute right-2 top-2 z-10 hidden gap-1 opacity-0 transition-opacity group-hover:opacity-100 md:flex" onClick={(e) => e.stopPropagation()}>
@@ -495,7 +495,7 @@ export default function AdminGalleryPage() {
               </button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                 <button key={p} onClick={() => setPage(p)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === page ? "bg-[#082b59] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === page ? "bg-[var(--brand-primary)] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
                   {p}
                 </button>
               ))}
@@ -631,7 +631,7 @@ export default function AdminGalleryPage() {
               Batal
             </button>
             <button onClick={handleSave} disabled={formSaving}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
+              className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-70">
               {formSaving ? (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
               ) : (
@@ -654,7 +654,7 @@ export default function AdminGalleryPage() {
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Judul <span className="text-red-500">*</span></label>
             <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
               placeholder="Judul media" />
           </div>
 
@@ -665,7 +665,7 @@ export default function AdminGalleryPage() {
                 <button key={t.key} type="button" onClick={() => setForm({ ...form, media_type: t.key })}
                   className={`flex items-center gap-2 rounded-lg border px-4 py-2.5 text-xs font-semibold transition-all ${
                     form.media_type === t.key
-                      ? "border-[#1767b1] bg-[#1767b1]/10 text-[#1767b1]"
+                      ? "border-[var(--brand-accent)] bg-[var(--brand-accent)]/10 text-[var(--brand-accent)]"
                       : "border-slate-200 text-slate-500 hover:border-slate-300"
                   }`}>
                   <t.icon className="h-4 w-4" /> {t.label}
@@ -677,7 +677,7 @@ export default function AdminGalleryPage() {
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Kategori</label>
             <input type="text" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
               placeholder="Contoh: Kegiatan, Fasilitas, Prestasi" />
           </div>
 
@@ -707,10 +707,10 @@ export default function AdminGalleryPage() {
               </div>
             ) : form.media_type === "video" ? (
               <input type="url" value={form.url} onChange={(e) => { setForm({ ...form, url: e.target.value }); setImagePreview(e.target.value); }}
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
                 placeholder="https://youtube.com/watch?v=..." />
             ) : (
-              <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50">
+              <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[var(--brand-accent)]/40 hover:bg-slate-50">
                 <ImageIcon className="h-8 w-8 text-slate-300" />
                 <span className="text-xs text-slate-400">Klik untuk upload gambar</span>
                 <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
@@ -722,7 +722,7 @@ export default function AdminGalleryPage() {
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Deskripsi</label>
             <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
               rows={4}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-none"
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 resize-none"
               placeholder="Deskripsi singkat (opsional)" />
           </div>
         </div>

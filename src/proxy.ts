@@ -2,11 +2,39 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { setDefaultResultOrder } from "node:dns";
 import { can } from "@/lib/rbac";
+import { unstable_cache } from "next/cache";
 
 // Sebaris pengaman yang sama dengan next.config.ts: bila proses proxy berjalan
 // terpisah, query user_profiles tetap memakai IPv4 lebih dulu (hindari
 // ECONNRESET yang membuat user dilempar balik ke halaman login).
 setDefaultResultOrder("ipv4first");
+
+/**
+ * Cache maintenance_mode flag di proxy (tanpa DB hit per request).
+ * TTL 30 detik — cukup cepat untuk admin toggle, cukup hemat untuk traffic.
+ */
+const getMaintenanceMode = unstable_cache(
+  async function getMaintenanceMode(): Promise<boolean> {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(url, key, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { data } = await supabase
+      .from("feature_flags")
+      .select("enabled, start_at, end_at")
+      .eq("key", "maintenance_mode")
+      .single();
+    if (!data) return false;
+    const now = new Date();
+    if (data.start_at && now < new Date(data.start_at)) return false;
+    if (data.end_at && now > new Date(data.end_at)) return false;
+    return data.enabled === true;
+  },
+  ["proxy-maintenance-mode"],
+  { revalidate: 30, tags: ["feature-flags"] }
+);
 
 /**
  * Peta rute admin → izin yang dibutuhkan. Hanya rute SISTEM yang digate di
@@ -26,6 +54,21 @@ const ROUTE_PERMISSIONS: ReadonlyArray<[prefix: string, perm: string]> = [
 /** Rute yang diizinkan tanpa cek izin (masih butuh login + aktif). */
 const EXEMPT_PREFIXES = ["/admin/403", "/admin/change-password"];
 
+/**
+ * Redirect yang ikut menyalin SEMUA cookie dari `supabaseResponse` — wajib
+ * untuk redirect yang didahului `auth.signOut()`. Cookie penghapus sesi hanya
+ * ditulis ke `supabaseResponse` (lewat `setAll`); tanpa disalin ke response
+ * redirect, browser tetap menyimpan sesi lama dan /admin ⇄ /admin/login
+ * saling me-redirect tanpa henti (ERR_TOO_MANY_REDIRECTS).
+ */
+function redirectWithCookies(url: URL, supabaseResponse: NextResponse) {
+  const redirect = NextResponse.redirect(url);
+  for (const cookie of supabaseResponse.cookies.getAll()) {
+    redirect.cookies.set(cookie);
+  }
+  return redirect;
+}
+
 function requiredPermissionFor(pathname: string): string | null {
   for (const prefix of EXEMPT_PREFIXES) {
     if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return null;
@@ -38,6 +81,27 @@ function requiredPermissionFor(pathname: string): string | null {
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
+
+  // ── Maintenance mode short-circuit (PUBLIK saja) ─────────────────────────
+  // Cek sebelum segala sesi agar halaman maintenance dilayankan secepat
+  // mungkin tanpa query user_profiles/dll. Admin (/admin) DIKECUALIKAN.
+  const isAdminPath = request.nextUrl.pathname.startsWith("/admin");
+  if (!isAdminPath) {
+    const maintenance = await getMaintenanceMode();
+    if (maintenance) {
+      // Render halaman maintenance (bisa custom nanti; sekarang pakai 503 + JSON).
+      return new NextResponse(
+        JSON.stringify({ error: "Situs dalam pemeliharaan. Silakan coba lagi nanti." }),
+        {
+          status: 503,
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "Retry-After": "60",
+          },
+        }
+      );
+    }
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -71,9 +135,12 @@ export async function proxy(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith("/admin")) {
     const path = request.nextUrl.pathname;
 
-    // Allow login page
+    // Allow login page. Bila ada `?error=…` (hasil guard no_profile/inactive
+    // di bawah), tampilkan halaman login apa adanya agar pesan error terbaca —
+    // jangan redirect balik ke /admin walau cookie lama masih ada, itu pemicu
+    // loop. Redirect ke /admin hanya untuk sesi yang valid.
     if (path === "/admin/login") {
-      if (userId) {
+      if (userId && !request.nextUrl.searchParams.has("error")) {
         return NextResponse.redirect(new URL("/admin", request.url));
       }
       return supabaseResponse;
@@ -94,13 +161,19 @@ export async function proxy(request: NextRequest) {
     // Redirect if profile not found (user needs to be set up)
     if (!profile) {
       await supabase.auth.signOut();
-      return NextResponse.redirect(new URL("/admin/login?error=no_profile", request.url));
+      return redirectWithCookies(
+        new URL("/admin/login?error=no_profile", request.url),
+        supabaseResponse
+      );
     }
 
     // Redirect if inactive
     if (!profile.is_active) {
       await supabase.auth.signOut();
-      return NextResponse.redirect(new URL("/admin/login?error=inactive", request.url));
+      return redirectWithCookies(
+        new URL("/admin/login?error=inactive", request.url),
+        supabaseResponse
+      );
     }
 
     // Paksa ganti password (reset oleh admin) — lempar ke halaman ganti password

@@ -37,7 +37,7 @@ export default function WhatsAppButton() {
               <ChatCircle className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-[#082b59]">SMP Muhammadiyah 4 Tanggul</p>
+              <p className="text-sm font-semibold text-[var(--brand-primary)]">SMP Muhammadiyah 4 Tanggul</p>
               <p className="text-xs text-green-600">Online</p>
             </div>
           </div>
@@ -64,7 +64,7 @@ export default function WhatsAppButton() {
       <div className="relative">
         {/* Bubble */}
         <div
-          className="absolute right-16 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-xl bg-white px-4 py-2 text-sm font-medium text-[#082b59] shadow-lg border border-[#dce3ed]"
+          className="absolute right-16 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-xl bg-white px-4 py-2 text-sm font-medium text-[var(--brand-primary)] shadow-lg border border-[#dce3ed]"
           style={{
             opacity: showBubble && !isOpen ? 1 : 0,
             transform: showBubble && !isOpen ? "translateY(-50%) translateX(0)" : "translateY(-50%) translateX(10px)",

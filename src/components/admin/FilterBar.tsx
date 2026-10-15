@@ -58,13 +58,13 @@ function FilterDropdown({ group }: { group: FilterGroup }) {
         aria-controls={open ? menuId : undefined}
         aria-label={`${group.menuLabel} — ${current?.label ?? ""}`}
         onClick={toggle}
-        className="inline-flex w-full items-center justify-between gap-1.5 rounded-xl border border-slate-200 bg-white py-2.5 pl-2.5 pr-2 text-sm font-semibold text-slate-700 transition-colors hover:border-[#1767b1]/40 hover:text-[#082b59] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] sm:gap-2 sm:pl-3 sm:pr-2.5"
+        className="inline-flex w-full items-center justify-between gap-1.5 rounded-xl border border-slate-200 bg-white py-2.5 pl-2.5 pr-2 text-sm font-semibold text-slate-700 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] sm:gap-2 sm:pl-3 sm:pr-2.5"
       >
         <span className="flex min-w-0 items-center gap-1.5 sm:gap-2">
           <span className="shrink-0 text-slate-400">{group.icon ?? <Funnel className="h-4 w-4" />}</span>
           <span className="min-w-0 max-w-[9rem] truncate">{current?.label}</span>
           {typeof current?.count === "number" && (
-            <span className="rounded-full bg-[#082b59] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white tabular-nums">
+            <span className="rounded-full bg-[var(--brand-primary)] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white tabular-nums">
               {current.count}
             </span>
           )}
@@ -95,7 +95,7 @@ function FilterDropdown({ group }: { group: FilterGroup }) {
               {typeof opt.count === "number" && (
                 <span className="shrink-0 text-xs font-semibold text-slate-400 tabular-nums">{opt.count}</span>
               )}
-              {active && <Checks className="h-4 w-4 shrink-0 text-[#1767b1]" />}
+              {active && <Checks className="h-4 w-4 shrink-0 text-[var(--brand-accent)]" />}
             </MenuItem>
           );
         })}
@@ -131,7 +131,7 @@ export function FilterBar({
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder={placeholder}
           aria-label={searchLabel}
-          className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-9 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+          className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-9 text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
         />
         {query && (
           <button

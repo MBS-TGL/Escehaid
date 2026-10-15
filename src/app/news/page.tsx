@@ -67,7 +67,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
         })
       }} />
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-16 text-white">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-16 text-white">
         <div className="absolute inset-0 hidden opacity-[0.04] sm:block">
           <Newspaper className="absolute -left-10 -top-10 h-64 w-64 -rotate-12" weight="fill" />
           <Newspaper className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
@@ -98,7 +98,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
               name="search"
               defaultValue={q}
               placeholder="Cari berita..."
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
             />
             {category && <input type="hidden" name="category" value={category} />}
           </form>
@@ -110,7 +110,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                 aria-current={category === c.key ? "page" : undefined}
                 className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
                   category === c.key
-                    ? "border-[#082b59] bg-[#082b59] text-white shadow-sm"
+                    ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white shadow-sm"
                     : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                 }`}
               >
@@ -139,7 +139,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
               {(q || category || currentPage > 1) && (
                 <Link
                   href="/news"
-                  className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[#082b59] transition-colors hover:border-[#1767b1] hover:text-[#1767b1]"
+                  className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent)]"
                 >
                   Lihat semua berita
                 </Link>
@@ -153,7 +153,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
               <CSSFadeIn>
                 <Link
                   href={`/news/${berita[0].slug}`}
-                  className="group grid overflow-hidden rounded-2xl border border-[#dce3ed] bg-white shadow-sm transition-all hover:border-[#1767b1]/30 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] lg:grid-cols-5"
+                  className="group grid overflow-hidden rounded-2xl border border-[#dce3ed] bg-white shadow-sm transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] lg:grid-cols-5"
                 >
                   <div className="relative overflow-hidden bg-slate-100 lg:col-span-3">
                     {berita[0].image_url ? (
@@ -168,7 +168,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                         priority
                       />
                     ) : (
-                      <div className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-[#082b59] to-[#1767b1]">
+                      <div className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-accent)]">
                         <span className="text-7xl font-bold text-white/20">{berita[0].title[0]}</span>
                       </div>
                     )}
@@ -177,7 +177,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                     <span className={`inline-flex w-fit items-center rounded-md border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${categoryConfig[berita[0].category]?.bg || "bg-slate-100"} ${categoryConfig[berita[0].category]?.color || "text-slate-600"} ${categoryConfig[berita[0].category]?.border || "border-slate-200"}`}>
                       {categoryConfig[berita[0].category]?.label || berita[0].category}
                     </span>
-                    <h2 className="text-xl font-bold leading-snug text-[#082b59] line-clamp-2 md:text-2xl">{berita[0].title}</h2>
+                    <h2 className="text-xl font-bold leading-snug text-[var(--brand-primary)] line-clamp-2 md:text-2xl">{berita[0].title}</h2>
                     {berita[0].summary && (
                       <p className="text-sm text-slate-600 line-clamp-2">{berita[0].summary}</p>
                     )}
@@ -208,7 +208,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                     <div key={item.id}>
                       <Link
                         href={`/news/${item.slug}`}
-                        className="group block overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:border-[#1767b1]/30 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+                        className="group block overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
                       >
                         <div className="overflow-hidden bg-slate-100">
                           {item.image_url ? (
@@ -221,7 +221,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                               className="h-auto w-full transition-transform duration-500 group-hover:scale-105"
                             />
                           ) : (
-                            <div className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-[#082b59] to-[#1767b1]">
+                            <div className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-accent)]">
                               <span className="text-3xl font-bold text-white/20">{item.title[0]}</span>
                             </div>
                           )}
@@ -230,7 +230,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                           <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${cat.bg} ${cat.color} ${cat.border}`}>
                             {cat.label}
                           </span>
-                          <h3 className="mt-2 text-sm font-bold text-[#082b59] line-clamp-2 transition-colors group-hover:text-[#1767b1]">{item.title}</h3>
+                          <h3 className="mt-2 text-sm font-bold text-[var(--brand-primary)] line-clamp-2 transition-colors group-hover:text-[var(--brand-accent)]">{item.title}</h3>
                           {item.summary && (
                             <p className="mt-1.5 text-xs text-slate-600 line-clamp-2">{item.summary}</p>
                           )}
@@ -281,7 +281,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                           <Link
                             key={p}
                             href={buildHref(p, category)}
-                            className={`flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === currentPage ? "bg-[#082b59] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+                            className={`flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === currentPage ? "bg-[var(--brand-primary)] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
                           >
                             {p}
                           </Link>

@@ -38,7 +38,7 @@ function ActivityCard({ item }: { item: Activity }) {
     <div>
       <Link
         href={`/activities/${item.slug}`}
-        className="group block overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:border-[#1767b1]/30 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+        className="group block overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
       >
         <div className="overflow-hidden bg-slate-100">
           <Image
@@ -58,7 +58,7 @@ function ActivityCard({ item }: { item: Activity }) {
               {activityTypeLabel(item.activity_type)}
             </span>
             {status === "today" && (
-              <span className="inline-flex items-center rounded-md bg-[#f4d21f] px-2 py-0.5 text-[10px] font-bold uppercase text-[#082b59]">
+              <span className="inline-flex items-center rounded-md bg-[#f4d21f] px-2 py-0.5 text-[10px] font-bold uppercase text-[var(--brand-primary)]">
                 Hari ini
               </span>
             )}
@@ -68,7 +68,7 @@ function ActivityCard({ item }: { item: Activity }) {
               </span>
             )}
             {status === "ongoing" && (
-              <span className="inline-flex items-center rounded-md bg-[#1767b1]/10 px-2 py-0.5 text-[10px] font-bold uppercase text-[#1767b1]">
+              <span className="inline-flex items-center rounded-md bg-[var(--brand-accent)]/10 px-2 py-0.5 text-[10px] font-bold uppercase text-[var(--brand-accent)]">
                 Berlangsung
               </span>
             )}
@@ -79,7 +79,7 @@ function ActivityCard({ item }: { item: Activity }) {
               </span>
             )}
           </div>
-          <h3 className="mt-2 text-sm font-bold text-[#082b59] line-clamp-2 transition-colors group-hover:text-[#1767b1]">
+          <h3 className="mt-2 text-sm font-bold text-[var(--brand-primary)] line-clamp-2 transition-colors group-hover:text-[var(--brand-accent)]">
             {item.title}
           </h3>
           {item.description && (
@@ -113,7 +113,7 @@ function ActivityFeaturedCard({ item }: { item: Activity }) {
   return (
     <Link
       href={`/activities/${item.slug}`}
-      className="group grid overflow-hidden rounded-2xl border border-[#dce3ed] bg-white shadow-sm transition-all hover:border-[#1767b1]/30 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] lg:grid-cols-5"
+      className="group grid overflow-hidden rounded-2xl border border-[#dce3ed] bg-white shadow-sm transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] lg:grid-cols-5"
     >
       <div className="relative overflow-hidden bg-slate-100 lg:col-span-3">
         <Image
@@ -133,12 +133,12 @@ function ActivityFeaturedCard({ item }: { item: Activity }) {
             {activityTypeLabel(item.activity_type)}
           </span>
           {item.is_featured && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-[#082b59] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white">
+            <span className="inline-flex items-center gap-1 rounded-md bg-[var(--brand-primary)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white">
               <Star className="h-3 w-3 text-[#f4d21f]" weight="fill" /> Unggulan
             </span>
           )}
           {status === "today" && (
-            <span className="inline-flex items-center rounded-md bg-[#f4d21f] px-2.5 py-1 text-[11px] font-bold uppercase text-[#082b59]">
+            <span className="inline-flex items-center rounded-md bg-[#f4d21f] px-2.5 py-1 text-[11px] font-bold uppercase text-[var(--brand-primary)]">
               Hari ini
             </span>
           )}
@@ -148,7 +148,7 @@ function ActivityFeaturedCard({ item }: { item: Activity }) {
             </span>
           )}
           {status === "ongoing" && (
-            <span className="inline-flex items-center rounded-md bg-[#1767b1]/10 px-2.5 py-1 text-[11px] font-bold uppercase text-[#1767b1]">
+            <span className="inline-flex items-center rounded-md bg-[var(--brand-accent)]/10 px-2.5 py-1 text-[11px] font-bold uppercase text-[var(--brand-accent)]">
               Berlangsung
             </span>
           )}
@@ -159,7 +159,7 @@ function ActivityFeaturedCard({ item }: { item: Activity }) {
             </span>
           )}
         </div>
-        <h2 className="text-xl font-bold leading-snug text-[#082b59] line-clamp-2 md:text-2xl">
+        <h2 className="text-xl font-bold leading-snug text-[var(--brand-primary)] line-clamp-2 md:text-2xl">
           {item.title}
         </h2>
         {item.description && (
@@ -173,7 +173,7 @@ function ActivityFeaturedCard({ item }: { item: Activity }) {
             </span>
           )}
           {status === "upcoming" && days !== null && days > 0 && (
-            <span className="flex items-center gap-1 font-semibold text-[#1767b1]">
+            <span className="flex items-center gap-1 font-semibold text-[var(--brand-accent)]">
               <Clock className="h-3.5 w-3.5" />
               {days === 1 ? "Mulai besok" : `${days} hari lagi`}
             </span>
@@ -285,7 +285,7 @@ export default async function ActivitiesPage({
         })
       }} />
       {/* Hero — gaya sama halaman Berita */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#082b59] via-[#0a3570] to-[#0d4a8a] py-16 text-white">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-16 text-white">
         <div className="absolute inset-0 hidden opacity-[0.04] sm:block">
           <CalendarBlank className="absolute -left-10 -top-10 h-64 w-64 -rotate-12" weight="fill" />
           <CalendarBlank className="absolute -right-10 -bottom-10 h-64 w-64 rotate-12" weight="fill" />
@@ -319,7 +319,7 @@ export default async function ActivitiesPage({
               name="q"
               defaultValue={q}
               placeholder="Cari kegiatan..."
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
             />
             {tipe && <input type="hidden" name="tipe" value={tipe} />}
           </form>
@@ -329,7 +329,7 @@ export default async function ActivitiesPage({
               aria-current={!tipe ? "page" : undefined}
               className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
                 !tipe
-                  ? "border-[#082b59] bg-[#082b59] text-white shadow-sm"
+                  ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white shadow-sm"
                   : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
@@ -342,7 +342,7 @@ export default async function ActivitiesPage({
                 aria-current={tipe === cfg.key ? "page" : undefined}
                 className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
                   tipe === cfg.key
-                    ? "border-[#082b59] bg-[#082b59] text-white shadow-sm"
+                    ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white shadow-sm"
                     : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                 }`}
               >
@@ -356,7 +356,7 @@ export default async function ActivitiesPage({
           /* Empty state berbeda: "belum ada" vs "tidak ada hasil" */
           <CSSFadeIn>
             <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white py-20 text-center">
-              <CalendarBlank className="h-14 w-14 text-[#082b59]/20" />
+              <CalendarBlank className="h-14 w-14 text-[var(--brand-primary)]/20" />
               <p className="mt-5 text-base text-slate-500">
                 {q || tipe ? "Tidak ada kegiatan yang cocok." : "Belum ada kegiatan."}
               </p>
@@ -370,7 +370,7 @@ export default async function ActivitiesPage({
               {(q || tipe) && (
                 <Link
                   href="/activities"
-                  className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[#082b59] transition-colors hover:border-[#1767b1] hover:text-[#1767b1]"
+                  className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent)]"
                 >
                   Lihat semua kegiatan
                 </Link>
@@ -384,7 +384,7 @@ export default async function ActivitiesPage({
               <p className="mt-5 text-base text-slate-500">Halaman tidak ditemukan — coba buka halaman pertama.</p>
               <Link
                 href={buildHref(1, tipe)}
-                className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[#082b59] transition-colors hover:border-[#1767b1] hover:text-[#1767b1]"
+                className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent)]"
               >
                 Lihat semua kegiatan
               </Link>
@@ -402,8 +402,8 @@ export default async function ActivitiesPage({
             {/* Akan datang — terdekat dulu, disembunyikan bila kosong */}
             {page === 1 && upcomingRest.length > 0 && (
               <div className="mt-10">
-                <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-[#082b59]">
-                  <span className="rounded-lg bg-[#f4d21f] p-1.5 text-[#082b59]">
+                <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-[var(--brand-primary)]">
+                  <span className="rounded-lg bg-[#f4d21f] p-1.5 text-[var(--brand-primary)]">
                     <CalendarBlank className="h-4 w-4" weight="fill" />
                   </span>
                   Akan Datang
@@ -419,7 +419,7 @@ export default async function ActivitiesPage({
             {/* Sudah berlangsung — terbaru dulu + pagination pola Berita */}
             {pastRest.length > 0 && (
               <div className={page === 1 ? "mt-10" : ""}>
-                <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-[#082b59]">
+                <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-[var(--brand-primary)]">
                   <span className="rounded-lg bg-slate-200 p-1.5 text-slate-600">
                     <Clock className="h-4 w-4" weight="fill" />
                   </span>
@@ -461,7 +461,7 @@ export default async function ActivitiesPage({
                                 href={buildHref(p, tipe)}
                                 aria-label={`Halaman ${p}`}
                                 aria-current={p === page ? "page" : undefined}
-                                className={`flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === page ? "bg-[#082b59] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+                                className={`flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === page ? "bg-[var(--brand-primary)] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
                               >
                                 {p}
                               </Link>

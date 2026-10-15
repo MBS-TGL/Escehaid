@@ -88,19 +88,19 @@ export default function AdminMobileNav({ badges = {} }: { badges?: Record<string
                 <Link
                   href={item.href}
                   aria-current={isActive ? "page" : undefined}
-                  className={`relative flex flex-col items-center justify-center gap-1 py-2 text-[11px] leading-none transition-colors active:bg-[#082b59]/5 ${isActive ? "font-semibold text-[#082b59]" : "font-medium text-slate-500"
+                  className={`relative flex flex-col items-center justify-center gap-1 py-2 text-[11px] leading-none transition-colors active:bg-[var(--brand-primary)]/5 ${isActive ? "font-semibold text-[var(--brand-primary)]" : "font-medium text-slate-500"
                     }`}
                 >
                   {isActive && (
                     <span
                       aria-hidden
-                      className="absolute left-1/2 top-0 h-[3px] w-8 -translate-x-1/2 rounded-b-full bg-[#082b59]"
+                      className="absolute left-1/2 top-0 h-[3px] w-8 -translate-x-1/2 rounded-b-full bg-[var(--brand-primary)]"
                     />
                   )}
                   <span className="relative">
                     <span className="flex h-7 w-12 items-center justify-center">
                       <item.icon
-                        className={`h-5 w-5 ${isActive ? "text-[#082b59]" : "text-slate-500"}`}
+                        className={`h-5 w-5 ${isActive ? "text-[var(--brand-primary)]" : "text-slate-500"}`}
                         weight={isActive ? "fill" : "regular"}
                       />
                     </span>
@@ -129,7 +129,7 @@ export default function AdminMobileNav({ badges = {} }: { badges?: Record<string
               onClick={() => setSheetOpen((v) => !v)}
               aria-expanded={sheetOpen}
               aria-controls="admin-nav-sheet"
-              className="flex w-full flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium leading-none text-slate-500 transition-colors active:bg-[#082b59]/5"
+              className="flex w-full flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium leading-none text-slate-500 transition-colors active:bg-[var(--brand-primary)]/5"
             >
               <span className="flex h-7 w-12 items-center justify-center">
                 <List className="h-5 w-5 text-slate-500" />
@@ -149,7 +149,7 @@ export default function AdminMobileNav({ badges = {} }: { badges?: Record<string
       >
         <div
           onClick={() => setSheetOpen(false)}
-          className={`absolute inset-0 bg-[#082b59]/40 transition-opacity duration-300 motion-reduce:transition-none ${sheetOpen ? "opacity-100" : "opacity-0"
+          className={`absolute inset-0 bg-[var(--brand-primary)]/40 transition-opacity duration-300 motion-reduce:transition-none ${sheetOpen ? "opacity-100" : "opacity-0"
             }`}
         />
 
@@ -175,14 +175,14 @@ export default function AdminMobileNav({ badges = {} }: { badges?: Record<string
               className="h-8 w-8 rounded-lg object-contain"
             />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold text-[#082b59]">SMP Muhammadiyah 4</p>
+              <p className="truncate text-sm font-bold text-[var(--brand-primary)]">SMP Muhammadiyah 4</p>
               <p className="truncate text-[11px] text-slate-500">Menu admin lengkap</p>
             </div>
             <button
               type="button"
               onClick={() => setSheetOpen(false)}
               aria-label="Tutup menu"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#082b59]"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
             >
               <X className="h-4 w-4" />
             </button>
@@ -210,13 +210,13 @@ export default function AdminMobileNav({ badges = {} }: { badges?: Record<string
                           href={item.href}
                           onClick={() => setSheetOpen(false)}
                           aria-current={isActive ? "page" : undefined}
-                          className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#082b59] focus-visible:ring-offset-1 ${isActive
-                            ? "bg-[#082b59] text-white shadow-md shadow-[#082b59]/20"
-                            : "text-slate-600 hover:bg-slate-50 hover:text-[#082b59]"
+                          className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1 ${isActive
+                            ? "bg-[var(--brand-primary)] text-white shadow-md shadow-[var(--brand-primary)]/20"
+                            : "text-slate-600 hover:bg-slate-50 hover:text-[var(--brand-primary)]"
                             }`}
                         >
                           <item.icon
-                            className={`h-[18px] w-[18px] flex-shrink-0 ${isActive ? "text-white" : "text-slate-400 group-hover:text-[#082b59]"
+                            className={`h-[18px] w-[18px] flex-shrink-0 ${isActive ? "text-white" : "text-slate-400 group-hover:text-[var(--brand-primary)]"
                               }`}
                           />
                           <span className="truncate">{item.label}</span>
@@ -241,7 +241,7 @@ export default function AdminMobileNav({ badges = {} }: { badges?: Record<string
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => setSheetOpen(false)}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-[#082b59] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#082b59]"
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
             >
               <ArrowSquareOut className="h-[18px] w-[18px] flex-shrink-0 text-slate-400" />
               Lihat website

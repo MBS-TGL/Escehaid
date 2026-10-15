@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import BrandLogo from "@/components/BrandLogo";
 import { MagnifyingGlass } from "@/components/Icons";
 import SearchOverlay from "@/components/SearchOverlay";
+import type { PublicBrand } from "@/lib/settings";
 
 const navLinks = [
   { href: "/", label: "Beranda" },
@@ -18,7 +19,7 @@ const navLinks = [
   { href: "/contact", label: "Kontak" },
 ];
 
-export default function Navbar() {
+export default function Navbar({ brand }: { brand: PublicBrand }) {
   const [scrolled, setScrolled] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -62,21 +63,18 @@ export default function Navbar() {
           <div className="flex h-16 items-center justify-between md:h-18">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2.5">
-              <Image
-                src="/images/Logo-Sekolah.png"
-                alt="Logo SMP Muhammadiyah 4 Tanggul"
-                width={140}
-                height={180}
-                sizes="40px"
+              <BrandLogo
+                src={brand.logo}
+                alt={`Logo ${brand.name}`}
                 priority
                 className="h-8 w-auto shrink-0 md:h-9"
               />
               <div className="flex flex-col leading-tight">
-                <span className="text-[13px] font-bold tracking-tight text-[#082b59]">
-                  SMP Muhammadiyah 4
+                <span className="text-[13px] font-bold tracking-tight text-[var(--brand-primary)]">
+                  {brand.shortName}
                 </span>
-                <span className="text-[11px] font-medium text-[#1767b1]">
-                  Tanggul
+                <span className="text-[11px] font-medium text-[var(--brand-accent)]">
+                  {brand.city}
                 </span>
               </div>
             </Link>
@@ -94,8 +92,8 @@ export default function Navbar() {
                       onMouseEnter={() => setHoveredIndex(i)}
                       onMouseLeave={() => setHoveredIndex(null)}
                       className={`nav-link rounded-lg px-3 py-2 text-sm font-medium transition-colors lg:px-3.5 ${isActive
-                          ? "nav-link-active text-[#082b59]"
-                          : "text-slate-500 hover:text-[#082b59]"
+                          ? "nav-link-active text-[var(--brand-primary)]"
+                          : "text-slate-500 hover:text-[var(--brand-primary)]"
                         } ${link.hideOnMd ? "hidden lg:block" : ""}`}
                     >
                       {link.label}
@@ -104,7 +102,7 @@ export default function Navbar() {
                 })}
                 <Link
                   href="/admission"
-                  className="ml-3 rounded-xl bg-[#f4d21f] px-5 py-2 text-sm font-bold text-[#082b59] transition-all hover:bg-[#e6c41c] hover:shadow-lg hover:shadow-[#f4d21f]/20"
+                  className="ml-3 rounded-xl bg-[#f4d21f] px-5 py-2 text-sm font-bold text-[var(--brand-primary)] transition-all hover:bg-[#e6c41c] hover:shadow-lg hover:shadow-[#f4d21f]/20"
                 >
                   SPMB
                 </Link>
@@ -116,8 +114,8 @@ export default function Navbar() {
                 aria-haspopup="dialog"
                 aria-expanded={searchOpen}
                 className={`rounded-lg p-2 transition-colors ${searchOpen
-                    ? "text-[#082b59]"
-                    : "text-slate-500 hover:text-[#082b59]"
+                    ? "text-[var(--brand-primary)]"
+                    : "text-slate-500 hover:text-[var(--brand-primary)]"
                   }`}
               >
                 <MagnifyingGlass className="h-5 w-5" />

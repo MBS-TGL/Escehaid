@@ -173,7 +173,7 @@ export function ImportRegistrationsModal({
             </button>
           ) : (
             <div className="flex items-center gap-2 text-sm text-slate-500">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#082b59] border-t-transparent" />
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--brand-primary)] border-t-transparent" />
               Mengimpor {progress.done}/{progress.total}{progress.failed > 0 ? ` (${progress.failed} gagal)` : ""}…
             </div>
           )
@@ -191,12 +191,12 @@ export function ImportRegistrationsModal({
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={parsing}
-              className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-300 px-4 py-8 text-center transition-colors hover:border-[#1767b1] hover:bg-[#082b59]/[0.03] disabled:opacity-60"
+              className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-300 px-4 py-8 text-center transition-colors hover:border-[var(--brand-accent)] hover:bg-[var(--brand-primary)]/[0.03] disabled:opacity-60"
             >
               {parsing ? (
-                <span className="h-6 w-6 animate-spin rounded-full border-2 border-[#082b59] border-t-transparent" />
+                <span className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--brand-primary)] border-t-transparent" />
               ) : (
-                <Upload className="h-6 w-6 text-[#1767b1]" />
+                <Upload className="h-6 w-6 text-[var(--brand-accent)]" />
               )}
               <span className="text-sm font-semibold text-slate-700">
                 {parsing ? "Membaca file…" : fileName || "Klik untuk memilih file"}
@@ -204,8 +204,8 @@ export function ImportRegistrationsModal({
               <span className="text-xs text-slate-500">Format .xlsx (sheet &ldquo;Form Responses 1&rdquo;) atau .csv</span>
             </button>
 
-            <div className="flex gap-2 rounded-xl bg-[#082b59]/5 p-3">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#082b59]" />
+            <div className="flex gap-2 rounded-xl bg-[var(--brand-primary)]/5 p-3">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
               <ul className="space-y-1 text-xs text-slate-600">
                 <li>Hanya sheet <b>Form Responses 1</b> yang dibaca — sheet lain diabaikan.</li>
                 <li>Baris tanpa NAMA LENGKAP (mis. baris &ldquo;INDENT&rdquo;) otomatis dilewati.</li>
@@ -228,7 +228,7 @@ export function ImportRegistrationsModal({
             </p>
             <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
               <div
-                className="h-full rounded-full bg-[#082b59] transition-all"
+                className="h-full rounded-full bg-[var(--brand-primary)] transition-all"
                 style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }}
               />
             </div>
@@ -248,7 +248,7 @@ export function ImportRegistrationsModal({
         title="Import Selesai"
         size="md"
         footer={
-          <button onClick={handleClose} className="rounded-xl bg-[#082b59] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1767b1]">
+          <button onClick={handleClose} className="rounded-xl bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--brand-accent)]">
             Selesai
           </button>
         }
@@ -287,7 +287,7 @@ export function ImportRegistrationsModal({
             <button
               onClick={handleImport}
               disabled={selectedCount === 0}
-              className="rounded-xl bg-[#082b59] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Import {selectedCount} Pendaftar
             </button>
@@ -334,7 +334,7 @@ export function ImportRegistrationsModal({
             const status = rowStatus(row);
             const editableIssues = new Set(row.issues.map((i) => i.field));
             return (
-              <div key={row.index} className={`rounded-xl border p-3 transition-colors ${row.include ? "border-[#082b59]/25 bg-[#082b59]/[0.03]" : "border-slate-200"}`}>
+              <div key={row.index} className={`rounded-xl border p-3 transition-colors ${row.include ? "border-[var(--brand-primary)]/25 bg-[var(--brand-primary)]/[0.03]" : "border-slate-200"}`}>
                 <div className="flex items-start gap-3">
                   <input
                     type="checkbox"
@@ -342,7 +342,7 @@ export function ImportRegistrationsModal({
                     disabled={status === "error"}
                     onChange={() => toggleRow(row.index)}
                     aria-label={`Pilih baris ${row.index} (${row.data.full_name})`}
-                    className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 accent-[#1767b1] disabled:opacity-40"
+                    className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 accent-[var(--brand-accent)] disabled:opacity-40"
                   />
                   <FileText className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
                   <div className="min-w-0 flex-1">
@@ -381,7 +381,7 @@ export function ImportRegistrationsModal({
                               <select
                                 value={row.raw.gender ?? ""}
                                 onChange={(e) => editField(row.index, f.key, e.target.value)}
-                                className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-[#1767b1]"
+                                className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-[var(--brand-accent)]"
                               >
                                 <option value="">— pilih —</option>
                                 <option value="Laki - Laki">Laki - Laki</option>
@@ -393,7 +393,7 @@ export function ImportRegistrationsModal({
                                 value={row.raw[f.key] ?? ""}
                                 onChange={(e) => editField(row.index, f.key, e.target.value)}
                                 placeholder={f.key === "birth" ? "JEMBER, 24 Juli 2014" : ""}
-                                className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-[#1767b1]"
+                                className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-[var(--brand-accent)]"
                               />
                             )}
                           </label>

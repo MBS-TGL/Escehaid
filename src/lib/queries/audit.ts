@@ -52,6 +52,7 @@ export const AUDIT_ENTITY_LABELS: Record<string, string> = {
   // ── Modul SISTEM (Phase A+) — dicatat via fungsi log_activity() ──
   roles: "Peran",
   role_permissions: "Izin Peran",
+  site_settings: "Pengaturan Situs",
 };
 
 /**

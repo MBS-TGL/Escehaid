@@ -69,7 +69,7 @@ export function FileUpload({ label, required, error, accept = ".pdf,.jpg,.jpeg,.
 
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-[#082b59]">
+      <label className="mb-1.5 block text-sm font-medium text-[var(--brand-primary)]">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
 
@@ -104,20 +104,20 @@ export function FileUpload({ label, required, error, accept = ".pdf,.jpg,.jpeg,.
           onClick={() => inputRef.current?.click()}
           className={`flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed px-3 py-2.5 transition-colors ${
             dragOver
-              ? "border-[#1767b1] bg-[#1767b1]/5"
+              ? "border-[var(--brand-accent)] bg-[var(--brand-accent)]/5"
               : error
               ? "border-red-400 bg-red-50"
-              : "border-[#dce3ed] bg-[#f4f7fb] hover:border-[#1767b1]/50 hover:bg-[#1767b1]/5"
+              : "border-[#dce3ed] bg-[#f4f7fb] hover:border-[var(--brand-accent)]/50 hover:bg-[var(--brand-accent)]/5"
           }`}
         >
-          <svg className={`h-5 w-5 shrink-0 ${dragOver ? "text-[#1767b1]" : "text-slate-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <svg className={`h-5 w-5 shrink-0 ${dragOver ? "text-[var(--brand-accent)]" : "text-slate-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
           </svg>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-[#082b59]">Klik atau drag file ke sini</p>
+            <p className="text-sm font-medium text-[var(--brand-primary)]">Klik atau drag file ke sini</p>
             <p className="truncate text-xs text-slate-400">PDF, JPG, PNG, WebP (maks. {maxSize} MB)</p>
           </div>
-          <span className="shrink-0 rounded-lg border border-[#dce3ed] bg-white px-3 py-1.5 text-xs font-semibold text-[#1767b1]">
+          <span className="shrink-0 rounded-lg border border-[#dce3ed] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--brand-accent)]">
             Pilih file
           </span>
         </div>
@@ -129,17 +129,17 @@ export function FileUpload({ label, required, error, accept = ".pdf,.jpg,.jpeg,.
           onClick={() => inputRef.current?.click()}
           className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed p-4 transition-colors ${
             dragOver
-              ? "border-[#1767b1] bg-[#1767b1]/5"
+              ? "border-[var(--brand-accent)] bg-[var(--brand-accent)]/5"
               : error
               ? "border-red-400 bg-red-50"
-              : "border-[#dce3ed] bg-[#f4f7fb] hover:border-[#1767b1]/50 hover:bg-[#1767b1]/5"
+              : "border-[#dce3ed] bg-[#f4f7fb] hover:border-[var(--brand-accent)]/50 hover:bg-[var(--brand-accent)]/5"
           }`}
         >
-          <svg className={`h-8 w-8 ${dragOver ? "text-[#1767b1]" : "text-slate-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <svg className={`h-8 w-8 ${dragOver ? "text-[var(--brand-accent)]" : "text-slate-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
           </svg>
           <div className="text-center">
-            <p className="text-sm font-medium text-[#082b59]">Klik atau drag file ke sini</p>
+            <p className="text-sm font-medium text-[var(--brand-primary)]">Klik atau drag file ke sini</p>
             <p className="mt-0.5 text-xs text-slate-400">PDF, JPG, PNG, WebP (maks. {maxSize} MB)</p>
           </div>
         </div>

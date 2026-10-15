@@ -30,7 +30,7 @@ export default function TeacherGrid({ teachers }: { teachers: Teacher[] }) {
             placeholder="Cari nama atau jabatan..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-full border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+            className="w-full rounded-full border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
           />
         </div>
       </div>
@@ -38,10 +38,10 @@ export default function TeacherGrid({ teachers }: { teachers: Teacher[] }) {
       {/* Grid */}
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl bg-[#f0f4fa] py-16 text-center">
-          <Users className="h-12 w-12 text-[#082b59]/20" />
-          <p className="mt-4 text-sm text-[#082b59]/60">Tidak ada guru ditemukan.</p>
+          <Users className="h-12 w-12 text-[var(--brand-primary)]/20" />
+          <p className="mt-4 text-sm text-[var(--brand-primary)]/60">Tidak ada guru ditemukan.</p>
           {search && (
-            <p className="mt-1 text-xs text-[#082b59]/40">Coba kata kunci lain</p>
+            <p className="mt-1 text-xs text-[var(--brand-primary)]/40">Coba kata kunci lain</p>
           )}
         </div>
       ) : (

@@ -778,8 +778,8 @@ export default function AdminArticlesPage() {
   const sortIcon = (field: SortField) => {
     if (sortField !== field) return <SortAscending className="h-3 w-3 text-slate-300" />;
     return sortDir === "asc"
-      ? <ArrowUp className="h-3 w-3 text-[#1767b1]" />
-      : <ArrowDown className="h-3 w-3 text-[#1767b1]" />;
+      ? <ArrowUp className="h-3 w-3 text-[var(--brand-accent)]" />
+      : <ArrowDown className="h-3 w-3 text-[var(--brand-accent)]" />;
   };
 
   // Slug field readonly untuk artikel terbit, kecuali ditekan "Ubah slug"
@@ -796,15 +796,15 @@ export default function AdminArticlesPage() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[#0d4a8a]/10">
-            <Note className="h-5 w-5 text-[#0d4a8a]" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[var(--brand-primary-light)]/10">
+            <Note className="h-5 w-5 text-[var(--brand-primary-light)]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Kelola Artikel</h1>
             <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">Artikel, tips, dan edukasi</p>
           </div>
         </div>
-        <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[#082b59] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#1767b1] md:py-2.5">
+        <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] md:py-2.5">
           <Plus className="h-4 w-4" /> Buat Baru
         </button>
       </div>
@@ -822,9 +822,9 @@ export default function AdminArticlesPage() {
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[#082b59]/20 bg-[#082b59]/5 px-4 py-2.5 md:flex">
-          <Checks className="h-4 w-4 text-[#082b59]" />
-          <span className="text-xs font-semibold text-[#082b59]">{selectedIds.size} dipilih</span>
+        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex">
+          <Checks className="h-4 w-4 text-[var(--brand-primary)]" />
+          <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
           <button onClick={() => handleBulkPublish(true)} aria-label={`Terbitkan ${selectedIds.size} artikel terpilih`} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Publish</button>
           <button onClick={() => handleBulkPublish(false)} aria-label={`Kembalikan ${selectedIds.size} artikel ke draft`} className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-600">Unpublish</button>
           <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} artikel terpilih`} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
@@ -897,7 +897,7 @@ export default function AdminArticlesPage() {
                 agenda/teachers/users/announcements/facilities. */}
                 <th className="hidden w-10 px-4 py-3 sm:table-cell">
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
-                    className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
+                    className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                 </th>
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">No</th>
                 <th className="cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("title")}>
@@ -918,7 +918,7 @@ export default function AdminArticlesPage() {
               {loading ? (
                 <tr><td colSpan={8} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
-                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#082b59] border-t-transparent" />
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
                     <p className="text-sm text-slate-500">Memuat data artikel...</p>
                   </div>
                 </td></tr>
@@ -933,7 +933,7 @@ export default function AdminArticlesPage() {
                       <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada artikel"}</p>
                     </div>
                     {!search && filter === "all" && (
-                      <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[#082b59] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1767b1]">
+                      <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
                         <Plus className="h-3.5 w-3.5" /> Buat Artikel Pertama
                       </button>
                     )}
@@ -941,10 +941,10 @@ export default function AdminArticlesPage() {
                 </td></tr>
               ) : (
                 paginated.map((item, index) => (
-                  <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[#082b59]/[0.03]" : ""}`}>
+                  <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[var(--brand-primary)]/[0.03]" : ""}`}>
                     <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
-                        className="h-4 w-4 rounded border-slate-300 text-[#082b59] focus:ring-[#1767b1]" />
+                        className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                     </td>
                     <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
                     <td className="px-4 py-3.5 cursor-pointer" onClick={() => setViewItem(item)}>
@@ -1040,7 +1040,7 @@ export default function AdminArticlesPage() {
               </button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                 <button key={p} onClick={() => setPage(p)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === page ? "bg-[#082b59] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === page ? "bg-[var(--brand-primary)] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
                   {p}
                 </button>
               ))}
@@ -1081,7 +1081,7 @@ export default function AdminArticlesPage() {
                 <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada artikel"}</p>
               </div>
               {!search && filter === "all" && (
-                <button onClick={openCreate} className="mt-1 flex min-h-10 items-center gap-1.5 rounded-lg bg-[#082b59] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1767b1]">
+                <button onClick={openCreate} className="mt-1 flex min-h-10 items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
                   <Plus className="h-3.5 w-3.5" /> Buat Artikel Pertama
                 </button>
               )}
@@ -1130,7 +1130,7 @@ export default function AdminArticlesPage() {
             type="button"
             onClick={() => handleBulkPublish(true)}
             disabled={selectedIds.size === 0}
-            className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Terbitkan
           </button>
@@ -1138,7 +1138,7 @@ export default function AdminArticlesPage() {
             type="button"
             onClick={() => handleBulkPublish(false)}
             disabled={selectedIds.size === 0}
-            className="min-h-10 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1] disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-10 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Draft
           </button>
@@ -1156,8 +1156,8 @@ export default function AdminArticlesPage() {
             )}
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#0d4a8a]/10">
-                  <FileText className="h-5 w-5 text-[#0d4a8a]" />
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary-light)]/10">
+                  <FileText className="h-5 w-5 text-[var(--brand-primary-light)]" />
                 </div>
                 <div className="min-w-0">
                   <h2 className="text-lg font-bold text-slate-800 line-clamp-1">{viewItem.title}</h2>
@@ -1208,7 +1208,7 @@ export default function AdminArticlesPage() {
               </button>
               {articleStatus(viewItem) === "live" ? (
                 <a href={`/articles/${viewItem.slug}`} target="_blank" rel="noopener noreferrer"
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] md:flex-none">
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] md:flex-none">
                   <Eye className="h-4 w-4" /> Lihat di Website
                 </a>
               ) : (
@@ -1308,7 +1308,7 @@ export default function AdminArticlesPage() {
                 <Eye className="h-4 w-4" /> Pratinjau
               </button>
               <button onClick={handleSave} disabled={formSaving}
-                className="flex items-center justify-center gap-2 rounded-xl bg-[#082b59] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1767b1] disabled:opacity-70">
+                className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-70">
                 {formSaving ? (
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 ) : (
@@ -1346,7 +1346,7 @@ export default function AdminArticlesPage() {
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Judul <span className="text-red-500">*</span></label>
             <input type="text" value={form.title} onChange={(e) => handleTitleChange(e.target.value)}
-              className={`w-full rounded-xl border px-4 py-2.5 text-base md:text-sm focus:outline-none focus:ring-2 ${titleError ? "border-red-300 focus:border-red-400 focus:ring-red-100" : "border-slate-200 focus:border-[#1767b1] focus:ring-[#1767b1]/20"}`}
+              className={`w-full rounded-xl border px-4 py-2.5 text-base md:text-sm focus:outline-none focus:ring-2 ${titleError ? "border-red-300 focus:border-red-400 focus:ring-red-100" : "border-slate-200 focus:border-[var(--brand-accent)] focus:ring-[var(--brand-accent)]/20"}`}
               placeholder="Judul artikel" />
             {titleError && <p className="mt-1 text-xs font-medium text-red-500">{titleError}</p>}
           </div>
@@ -1356,7 +1356,7 @@ export default function AdminArticlesPage() {
               <label className="text-sm font-semibold text-slate-700">Slug</label>
               {slugReadonly && (
                 <button type="button" onClick={() => setSlugOverride(true)}
-                  className="text-xs font-semibold text-[#1767b1] hover:underline">
+                  className="text-xs font-semibold text-[var(--brand-accent)] hover:underline">
                   Ubah slug
                 </button>
               )}
@@ -1364,7 +1364,7 @@ export default function AdminArticlesPage() {
             <input type="text" value={form.slug} readOnly={slugReadonly}
               onChange={(e) => { setSlugTouched(true); setForm({ ...form, slug: e.target.value }); }}
               onBlur={() => { if (form.slug) setForm((f) => ({ ...f, slug: slugify(f.slug) })); }}
-              className={`w-full rounded-xl border px-4 py-2.5 text-base md:text-sm focus:outline-none focus:ring-2 ${slugReadonly ? "cursor-not-allowed bg-slate-50 text-slate-500" : "border-slate-200 focus:border-[#1767b1] focus:ring-[#1767b1]/20"}`}
+              className={`w-full rounded-xl border px-4 py-2.5 text-base md:text-sm focus:outline-none focus:ring-2 ${slugReadonly ? "cursor-not-allowed bg-slate-50 text-slate-500" : "border-slate-200 focus:border-[var(--brand-accent)] focus:ring-[var(--brand-accent)]/20"}`}
               placeholder="otomatis dari judul" />
             {slugOverride && editItem?.is_published && (
               <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-amber-600">
@@ -1387,7 +1387,7 @@ export default function AdminArticlesPage() {
                   onClick={() => { setForm((f) => ({ ...f, category: c })); setAddingCategory(false); }}
                   className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
                     form.category.trim().toLowerCase() === c.toLowerCase()
-                      ? "border-[#1767b1] bg-[#1767b1]/10 text-[#1767b1] shadow-sm"
+                      ? "border-[var(--brand-accent)] bg-[var(--brand-accent)]/10 text-[var(--brand-accent)] shadow-sm"
                       : "border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700"
                   }`}>
                   {c}
@@ -1395,7 +1395,7 @@ export default function AdminArticlesPage() {
               ))}
               {!addingCategory && form.category.trim() &&
                 !categoryOptions.some((c) => c.toLowerCase() === form.category.trim().toLowerCase()) && (
-                <span className="rounded-lg border border-[#1767b1] bg-[#1767b1]/10 px-3 py-2 text-xs font-semibold text-[#1767b1]">
+                <span className="rounded-lg border border-[var(--brand-accent)] bg-[var(--brand-accent)]/10 px-3 py-2 text-xs font-semibold text-[var(--brand-accent)]">
                   {form.category.trim()}
                 </span>
               )}
@@ -1414,11 +1414,11 @@ export default function AdminArticlesPage() {
                     if (e.key === "Escape") setAddingCategory(false);
                   }}
                   placeholder="Nama kategori baru"
-                  className="w-44 rounded-lg border border-[#1767b1] px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                  className="w-44 rounded-lg border border-[var(--brand-accent)] px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
                 />
               ) : (
                 <button type="button" onClick={() => setAddingCategory(true)}
-                  className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs font-semibold text-slate-500 transition-colors hover:border-[#1767b1]/40 hover:text-[#1767b1]">
+                  className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs font-semibold text-slate-500 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-accent)]">
                   + Kategori baru
                 </button>
               )}
@@ -1432,8 +1432,8 @@ export default function AdminArticlesPage() {
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Gambar Sampul</label>
             <p className="mb-2 text-xs text-slate-400">Disarankan rasio 16:9 (mis. 1280×720) agar tidak terpotong. Bisa diklik, diseret-lepas, atau Ctrl+V dari clipboard.</p>
             {imageUploading && (
-              <div className="mb-2 flex items-center gap-2 text-xs text-[#1767b1]">
-                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#1767b1] border-t-transparent" />
+              <div className="mb-2 flex items-center gap-2 text-xs text-[var(--brand-accent)]">
+                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--brand-accent)] border-t-transparent" />
                 Memproses gambar...
               </div>
             )}
@@ -1456,16 +1456,16 @@ export default function AdminArticlesPage() {
               </div>
             ) : (
               <label
-                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add("border-[#1767b1]", "bg-[#1767b1]/5"); }}
-                onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("border-[#1767b1]", "bg-[#1767b1]/5"); }}
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add("border-[var(--brand-accent)]", "bg-[var(--brand-accent)]/5"); }}
+                onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("border-[var(--brand-accent)]", "bg-[var(--brand-accent)]/5"); }}
                 onDrop={async (e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  e.currentTarget.classList.remove("border-[#1767b1]", "bg-[#1767b1]/5");
+                  e.currentTarget.classList.remove("border-[var(--brand-accent)]", "bg-[var(--brand-accent)]/5");
                   const file = e.dataTransfer.files?.[0];
                   if (file) applyImageFile(file);
                 }}
-                className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[#1767b1]/40 hover:bg-slate-50">
+                className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[var(--brand-accent)]/40 hover:bg-slate-50">
                 <ImageIcon className="h-8 w-8 text-slate-300" />
                 <span className="text-xs text-slate-400">Klik, seret-lepas, atau Ctrl+V untuk upload gambar</span>
                 <input id="cover-image-input" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
@@ -1479,7 +1479,7 @@ export default function AdminArticlesPage() {
                   maxLength={125}
                   value={form.image_alt}
                   onChange={(e) => setForm({ ...form, image_alt: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
                   placeholder="Deskripsi singkat isi gambar"
                 />
                 <div className="mt-1 flex items-center justify-between gap-3">
@@ -1501,7 +1501,7 @@ export default function AdminArticlesPage() {
             </div>
             <textarea value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })}
               rows={3}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20 resize-none"
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 resize-none"
               placeholder="Ringkasan singkat artikel (opsional)" />
             {excerptOver && (
               <p className="mt-1 text-xs font-medium text-red-500">Melebihi {EXCERPT_MAX} karakter — disarankan maksimal {EXCERPT_MAX} karakter.</p>
@@ -1515,7 +1515,7 @@ export default function AdminArticlesPage() {
                   <label className="mb-1.5 block text-sm font-semibold text-slate-700">Penulis</label>
                   <input type="text" value={form.author_name}
                     onChange={(e) => setForm({ ...form, author_name: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
                     placeholder="Nama penulis (opsional)" />
                 </div>
               )}
@@ -1524,7 +1524,7 @@ export default function AdminArticlesPage() {
                   <label className="mb-1.5 block text-sm font-semibold text-slate-700">Editor</label>
                   <input type="text" value={form.editor_name}
                     onChange={(e) => setForm({ ...form, editor_name: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20"
+                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
                     placeholder="Nama editor (opsional)" />
                 </div>
               )}
@@ -1557,7 +1557,7 @@ export default function AdminArticlesPage() {
               </div>
               <button type="button" onClick={() => setForm({ ...form, is_published: !form.is_published })}
                 aria-label="Terbitkan artikel"
-                className={`relative h-6 w-11 rounded-full transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[""] ${form.is_published ? "bg-[#1767b1]" : "bg-slate-300"}`}>
+                className={`relative h-6 w-11 rounded-full transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[""] ${form.is_published ? "bg-[var(--brand-accent)]" : "bg-slate-300"}`}>
                 <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_published ? "left-[22px]" : "left-0.5"}`} />
               </button>
             </div>
@@ -1565,7 +1565,7 @@ export default function AdminArticlesPage() {
               <label className="whitespace-nowrap text-xs font-semibold text-slate-500">Tanggal Publish (WIB)</label>
               <input type="datetime-local" value={form.published_at}
                 onChange={(e) => setForm({ ...form, published_at: e.target.value })}
-                className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-xs text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-xs text-slate-700 focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
               {form.published_at && (
                 <button type="button" onClick={() => setForm({ ...form, published_at: "" })}
                   className="text-[11px] font-medium text-slate-400 hover:text-slate-600">
@@ -1594,7 +1594,7 @@ export default function AdminArticlesPage() {
                   </div>
                   <button type="button" onClick={togglePin}
                     aria-pressed={form.is_pinned}
-                    className={`relative h-6 w-11 rounded-full transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[""] ${form.is_pinned ? "bg-[#1767b1]" : "bg-slate-300"}`}>
+                    className={`relative h-6 w-11 rounded-full transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[""] ${form.is_pinned ? "bg-[var(--brand-accent)]" : "bg-slate-300"}`}>
                     <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_pinned ? "left-[22px]" : "left-0.5"}`} />
                   </button>
                 </div>
@@ -1602,7 +1602,7 @@ export default function AdminArticlesPage() {
                   <label className="whitespace-nowrap text-xs font-semibold text-slate-500">Tampil sampai (WIB)</label>
                   <input type="datetime-local" value={form.expires_at}
                     onChange={(e) => setForm({ ...form, expires_at: e.target.value })}
-                    className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-xs text-slate-700 focus:border-[#1767b1] focus:outline-none focus:ring-2 focus:ring-[#1767b1]/20" />
+                    className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-xs text-slate-700 focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
                   {form.expires_at && (
                     <button type="button" onClick={() => setForm({ ...form, expires_at: "" })}
                       className="text-[11px] font-medium text-slate-400 hover:text-slate-600">
@@ -1628,11 +1628,11 @@ export default function AdminArticlesPage() {
           <>
             <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
               <button type="button" onClick={() => setPreviewDevice("desktop")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "desktop" ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "desktop" ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
                 <Desktop className="h-3.5 w-3.5" /> Desktop
               </button>
               <button type="button" onClick={() => setPreviewDevice("mobile")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "mobile" ? "bg-[#082b59] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "mobile" ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
                 <DeviceMobile className="h-3.5 w-3.5" /> Mobile
               </button>
             </div>
@@ -1666,7 +1666,7 @@ export default function AdminArticlesPage() {
               </span>
             )}
           </div>
-          <h1 className="mt-2 text-2xl font-black leading-snug text-[#082b59]">
+          <h1 className="mt-2 text-2xl font-black leading-snug text-[var(--brand-primary)]">
             {form.title || "Tanpa judul"}
           </h1>
           {imagePreview && (
@@ -1684,18 +1684,18 @@ export default function AdminArticlesPage() {
           {/* Konten — kelas prose DISALIN VERBATIM dari /articles/[slug] + sanitize() */}
           <div
             className="prose prose-lg prose-slate max-w-none
-              prose-headings:text-[#082b59] prose-headings:font-extrabold prose-headings:scroll-mt-24
+              prose-headings:text-[var(--brand-primary)] prose-headings:font-extrabold prose-headings:scroll-mt-24
               prose-p:text-gray-700 prose-p:leading-[1.9] prose-p:text-justify prose-p:mb-5
-              prose-a:text-[#1767b1] prose-a:no-underline prose-a:font-medium hover:prose-a:underline
-              prose-strong:text-[#082b59] prose-strong:font-bold
+              prose-a:text-[var(--brand-accent)] prose-a:no-underline prose-a:font-medium hover:prose-a:underline
+              prose-strong:text-[var(--brand-primary)] prose-strong:font-bold
               prose-em:text-slate-600
               prose-img:rounded-2xl prose-img:shadow-md prose-img:my-8
               prose-blockquote:border-l-4 prose-blockquote:border-[#f4d21f] prose-blockquote:bg-gradient-to-r prose-blockquote:from-amber-50 prose-blockquote:to-transparent prose-blockquote:py-4 prose-blockquote:pr-6 prose-blockquote:pl-6 prose-blockquote:rounded-r-xl prose-blockquote:italic prose-blockquote:text-slate-600
               prose-li:text-gray-700 prose-li:leading-relaxed prose-li:mb-1
               prose-ol:my-5 prose-ol:pl-6
               prose-ul:my-5 prose-ul:pl-6
-              prose-code:text-[#1767b1] prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:font-normal prose-code:before:content-none prose-code:after:content-none
-              prose-pre:bg-[#082b59] prose-pre:text-white prose-pre:rounded-xl prose-pre:border prose-pre:border-slate-700
+              prose-code:text-[var(--brand-accent)] prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:font-normal prose-code:before:content-none prose-code:after:content-none
+              prose-pre:bg-[var(--brand-primary)] prose-pre:text-white prose-pre:rounded-xl prose-pre:border prose-pre:border-slate-700
               prose-hr:border-slate-200 prose-hr:my-12
               prose-table:text-sm prose-table:border-collapse
               prose-th:bg-slate-50 prose-th:text-left prose-th:font-semibold prose-th:px-4 prose-th:py-3 prose-th:border prose-th:border-slate-200
@@ -1726,7 +1726,7 @@ function SharePreviewCard({ form, imagePreview }: { form: FormData; imagePreview
             />
           </div>
         ) : (
-          <div className="flex w-full items-center justify-center bg-gradient-to-br from-[#082b59] to-[#1767b1] aspect-[1.91/1]">
+          <div className="flex w-full items-center justify-center bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-accent)] aspect-[1.91/1]">
             <ImageIcon className="h-10 w-10 text-white/25" />
           </div>
         )}
@@ -1822,7 +1822,7 @@ function ArticleMobileRow({
                 checked={selected}
                 onChange={() => onToggleSelect(item.id)}
                 aria-label={`Pilih ${item.title}`}
-                className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[#1767b1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+                className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
               />
             </span>
           ) : undefined

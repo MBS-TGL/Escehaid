@@ -99,7 +99,7 @@ export default function SearchView({
         onSubmit={(e) => e.preventDefault()}
         className="rounded-3xl border border-[#dce3ed] bg-white p-5 shadow-sm sm:p-6"
       >
-        <label htmlFor="site-search" className="block text-sm font-semibold text-[#082b59]">
+        <label htmlFor="site-search" className="block text-sm font-semibold text-[var(--brand-primary)]">
           Cari di situs ini
         </label>
         <div className="relative mt-2.5">
@@ -114,7 +114,7 @@ export default function SearchView({
             autoComplete="off"
             spellCheck={false}
             enterKeyHint="search"
-            className="w-full rounded-2xl border border-[#dce3ed] bg-slate-50/50 py-3.5 pl-12 pr-12 text-base text-slate-800 transition-colors placeholder:text-slate-400 focus:border-[#1767b1] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1767b1]/15"
+            className="w-full rounded-2xl border border-[#dce3ed] bg-slate-50/50 py-3.5 pl-12 pr-12 text-base text-slate-800 transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/15"
           />
           {query !== "" && (
             <button
@@ -136,7 +136,7 @@ export default function SearchView({
       <div className="mt-8">
         {status === "idle" && (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#dce3ed] bg-white px-6 py-12 text-center">
-            <MagnifyingGlass className="h-12 w-12 text-[#082b59]/20" />
+            <MagnifyingGlass className="h-12 w-12 text-[var(--brand-primary)]/20" />
             <p className="mt-4 text-sm text-slate-500">
               Ketik kata kunci — misalnya nama kegiatan, judul berita, atau kata kunci prestasi.
             </p>
@@ -148,7 +148,7 @@ export default function SearchView({
 
         {status === "done" && groups.length === 0 && (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white px-6 py-12 text-center">
-            <FileText className="h-12 w-12 text-[#082b59]/15" />
+            <FileText className="h-12 w-12 text-[var(--brand-primary)]/15" />
             <p className="mt-4 text-base font-medium text-slate-600">
               Tidak ada hasil untuk “{searchedQuery}”
             </p>
@@ -170,7 +170,7 @@ export default function SearchView({
                     </span>
                     <h2
                       id={`search-group-${group.kind}`}
-                      className="text-base font-bold text-[#082b59]"
+                      className="text-base font-bold text-[var(--brand-primary)]"
                     >
                       {group.label}
                     </h2>
@@ -183,9 +183,9 @@ export default function SearchView({
                       <li key={item.id}>
                         <Link
                           href={item.href}
-                          className="group block rounded-2xl border border-[#dce3ed] bg-white p-4 transition-all hover:border-[#1767b1]/40 hover:shadow-sm sm:p-5"
+                          className="group block rounded-2xl border border-[#dce3ed] bg-white p-4 transition-all hover:border-[var(--brand-accent)]/40 hover:shadow-sm sm:p-5"
                         >
-                          <span className="block text-[15px] font-semibold leading-snug text-[#082b59] transition-colors group-hover:text-[#1767b1]">
+                          <span className="block text-[15px] font-semibold leading-snug text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)]">
                             {item.title}
                           </span>
                           {item.excerpt && (

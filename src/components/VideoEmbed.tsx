@@ -53,7 +53,7 @@ export default function VideoEmbed({
   // ── Fallback: URL tak dikenali / ID tak terbaca → tombol buka di platform ──
   if (!embedUrl) {
     return (
-      <div className={`relative overflow-hidden rounded-2xl border border-[#dce3ed] bg-[#082b59] ${ratio}`}>
+      <div className={`relative overflow-hidden rounded-2xl border border-[#dce3ed] bg-[var(--brand-primary)] ${ratio}`}>
         {poster && (
           <div
             aria-hidden="true"
@@ -67,7 +67,7 @@ export default function VideoEmbed({
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#f4d21f] px-4 py-2.5 text-sm font-bold text-[#082b59] transition-colors hover:bg-[#e6c51a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4d21f]"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#f4d21f] px-4 py-2.5 text-sm font-bold text-[var(--brand-primary)] transition-colors hover:bg-[#e6c51a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4d21f]"
             aria-label={`Tonton video ${title} di ${provider} (tab baru)`}
           >
             <ArrowSquareOut className="h-4 w-4" aria-hidden="true" /> Tonton di {provider}
@@ -95,7 +95,7 @@ export default function VideoEmbed({
             type="button"
             onClick={() => setLoaded(true)}
             aria-label={`Putar video ${title} di ${provider}`}
-            className="group relative block h-full w-full overflow-hidden rounded-2xl border border-[#dce3ed] bg-[#082b59] text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1767b1]"
+            className="group relative block h-full w-full overflow-hidden rounded-2xl border border-[#dce3ed] bg-[var(--brand-primary)] text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
           >
             {poster && (
               <span
@@ -104,10 +104,10 @@ export default function VideoEmbed({
                 style={{ backgroundImage: `url(${JSON.stringify(poster)})` }}
               />
             )}
-            <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#082b59]/85 via-[#082b59]/30 to-transparent" />
+            <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/85 via-[var(--brand-primary)]/30 to-transparent" />
             <span className="absolute inset-0 flex flex-col items-center justify-center gap-3">
               <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 shadow-lg transition-transform group-hover:scale-105">
-                <svg viewBox="0 0 24 24" className="ml-0.5 h-6 w-6 fill-[#082b59]" aria-hidden="true">
+                <svg viewBox="0 0 24 24" className="ml-0.5 h-6 w-6 fill-[var(--brand-primary)]" aria-hidden="true">
                   <path d="M8 5.14v13.72a1 1 0 0 0 1.53.85l10.77-6.86a1 1 0 0 0 0-1.7L9.53 4.29A1 1 0 0 0 8 5.14Z" />
                 </svg>
               </span>
@@ -124,7 +124,7 @@ export default function VideoEmbed({
           href={parsed.canonicalUrl || url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[#1767b1] transition-colors hover:text-[#082b59]"
+          className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)]"
           aria-label={`Tonton video ${title} di ${provider} (tab baru)`}
         >
           Tonton di {provider} <ArrowSquareOut className="h-3.5 w-3.5" aria-hidden="true" />
