@@ -298,7 +298,7 @@ Features:
 | `npx tsc --noEmit` | ✅ 0 errors |
 | `npm run lint` | ✅ 0 errors / 71 warnings (baseline unchanged pattern, new files contribute minor warnings) |
 | `npm run test` | ✅ 35/35 passed |
-| `npm run build --webpack` | ❌ Fails due to pre-existing missing `browser/default-stylesheet.css` (deleted in user's earlier working tree changes) — unrelated to Phases A–C |
+| `npm run build --webpack` | ✅ Pass (sejak `serverExternalPackages: ["isomorphic-dompurify", "jsdom"]` di next.config.ts — jsdom baca default-stylesheet.css via `__dirname`, rusak bila di-bundle) |
 
 ---
 
@@ -382,7 +382,7 @@ The DB trigger `rbac_guard_privilege` prevents removing the last active SUPER_AD
 | 2 | **Feature flag consumption** | `announcement_banner` and `module_beta` defined but not yet rendered in public components. Decide where to surface banner. |
 | 3 | **RLS policies** | Existing RLS not in repo. Consider adding per-table RLS using `has_permission()` on staging before prod. |
 | 4 | **Activity log PII** | Currently logs full before/after objects in JSONB. Consider field-level redaction if sensitive fields added later. |
-| 5 | **Build issue** | Pre-existing missing `browser/default-stylesheet.css`. Needs fixing if build required in CI. |
+| 5 | **Build issue** | ✅ Fixed via `serverExternalPackages: ["isomorphic-dompurify", "jsdom"]` di next.config.ts. |
 
 ---
 

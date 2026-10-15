@@ -14,6 +14,13 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  // isomorphic-dompurify (→ jsdom) dibaca lewat require asli dari
+  // node_modules, BUKAN di-bundle webpack. Alasan: jsdom versi di bawahnya
+  // membaca browser/default-stylesheet.css via fs + __dirname — saat
+  // di-bundle, __dirname menunjuk ke .next/server/chunks sehingga prerender
+  // halaman publik (/news/[slug], /articles/[slug], ...) gagal dengan
+  // ENOENT saat "Collecting page data".
+  serverExternalPackages: ["isomorphic-dompurify", "jsdom"],
   allowedDevOrigins: ["192.168.2.106"],
   devIndicators: {
     position: "bottom-right",
