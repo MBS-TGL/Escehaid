@@ -81,10 +81,10 @@ export const navGroups: NavGroup[] = [
   {
     title: "Sistem",
     items: [
-      { label: "Pengaturan Situs", href: "/admin/settings", icon: Gear, perm: "settings:manage" },
-      { label: "Feature Flags", href: "/admin/flags", icon: Flag, perm: "flags:manage" },
-      { label: "Pengguna & Peran", href: "/admin/users", icon: UsersThree, perm: "users:manage" },
-      { label: "Log Aktivitas", href: "/admin/logs", icon: Scroll, perm: "logs:read" },
+      { label: "Pengaturan", href: "/admin/settings", icon: Gear, perm: "settings:manage" },
+      { label: "Fitur", href: "/admin/flags", icon: Flag, perm: "flags:manage" },
+      { label: "Pengguna", href: "/admin/users", icon: UsersThree, perm: "users:manage" },
+      { label: "Log", href: "/admin/logs", icon: Scroll, perm: "logs:read" },
     ],
   },
 ];

@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ComponentType, ReactNode } from "react";
 import { createClient } from "@/lib/supabase-server";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+};
 import {
   Users,
   ImageSquare,
