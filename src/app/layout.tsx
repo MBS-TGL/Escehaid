@@ -4,6 +4,7 @@ import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
 import PublicShell from "@/components/PublicShell";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { DEFAULT_THEME } from "@/lib/settings/theme";
 import { getSchoolProfile } from "@/lib/queries/profile";
@@ -79,8 +80,14 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       images: [ogImage],
     },
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: schoolName ?? "SMP Muhammadiyah 4 Tanggul",
+    },
     icons: {
-      icon: "/images/Logo-Favicon.png",
+      icon: [{ url: "/images/Logo-Favicon.png", sizes: "192x192", type: "image/png" }],
+      apple: "/images/apple-touch-icon.png",
     },
     manifest: "/manifest.json",
   };
@@ -226,6 +233,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             {children}
           </PublicShell>
         </ToastProvider>
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

@@ -6,9 +6,15 @@ import { SITE, waLink } from "@/lib/site-config";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "SPMB",
+  title: `SPMB Online ${SITE.spmb.academicYear}`,
   description: "Sistem Penerimaan Murid Baru (SPMB) SMP Muhammadiyah 4 Tanggul - jadwal gelombang, jalur pendaftaran, dan cara mendaftar.",
   alternates: { canonical: "/admission" },
+  openGraph: {
+    title: `SPMB Online ${SITE.spmb.academicYear}`,
+    description: "Jadwal gelombang, jalur pendaftaran, dan cara mendaftar SPMB SMP Muhammadiyah 4 Tanggul secara online.",
+    url: "/admission",
+    type: "website",
+  },
 };
 
 export const revalidate = 3600;
@@ -62,10 +68,13 @@ export default async function SPMBPage() {
   const offlineFormHref = profile?.spmb_offline_form_url ?? null;
   const spmbPhone = profile?.spmb_contact_phone?.trim() || "";
   const highlightText = profile?.spmb_highlight_text?.trim() || "";
-  const accreditation = profile?.accreditation?.trim() || "A";
+  const accreditation = profile?.accreditation?.trim() || "";
 
   const openWave = waves.find((w) => getWaveStatus(w) === "open");
   const remaining = openWave ? daysLeft(openWave.end_date) : null;
+  const nextUpcomingWave = waves
+    .filter((w) => getWaveStatus(w) === "upcoming")
+    .sort((a, b) => a.start_date.localeCompare(b.start_date))[0];
 
   const jalur = [
     { icon: FileText, color: "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]", title: "Jalur Reguler", desc: "Pendaftaran terbuka untuk semua calon murid." },
@@ -86,9 +95,76 @@ export default async function SPMBPage() {
   ];
 
   const alasan = [
-    { icon: CheckCircle, title: `Terakreditasi ${accreditation}`, desc: `Mutu pendidikan sekolah diakui dengan akreditasi ${accreditation}.` },
+    ...(accreditation
+      ? [{ icon: CheckCircle, title: `Terakreditasi ${accreditation}`, desc: `Mutu pendidikan sekolah diakui dengan akreditasi ${accreditation}.` }]
+      : []),
     { icon: BookOpen, title: "Pembinaan kepesantrenan", desc: "Program kepesantrenan di lingkungan boarding, termasuk tahfidz Al-Qur'an." },
     { icon: House, title: "Dua kampus terpisah", desc: "Kampus putra di Patemon dan kampus putri di Asrama Tahfidz Al-Qur'an Bambu Kuning." },
+  ];
+
+  const faq: { q: string; a: React.ReactNode }[] = [
+    {
+      q: "Bagaimana cara mendaftar SPMB secara online?",
+      a: "Pilih gelombang yang sedang dibuka pada jadwal di atas, lalu isi formulir pendaftaran online. Setelah itu, hasil penerimaan diumumkan melalui website sekolah, dan calon murid yang diterima melakukan daftar ulang sesuai jadwal pada pengumuman.",
+    },
+    {
+      q: "Apa saja jalur pendaftaran yang tersedia?",
+      a: "Tersedia tiga jalur: Jalur Reguler yang terbuka untuk semua calon murid, Jalur Prestasi untuk calon murid berprestasi akademik maupun non-akademik, dan Jalur Beasiswa untuk calon murid dari keluarga dengan keterbatasan ekonomi.",
+    },
+    {
+      q: "Program pendidikan apa saja yang ditawarkan?",
+      a: "SMP Boarding (asrama penuh sejak 2018/2019), SMP Reguler (pembelajaran penuh hari Senin-Sabtu pukul 07.00-15.00), dan SMA Boarding (asrama penuh jenjang SMA dengan kurikulum Tahfidz dan keunggulan akademik).",
+    },
+    {
+      q: "Bagaimana cara mengecek status dan hasil seleksi?",
+      a: "Buka tautan \u201cCek status pendaftaran & hasil seleksi\u201d pada bagian jadwal untuk memeriksa status pendaftaran dan hasil seleksi secara online.",
+    },
+    // TODO: isi dari panitia — nominal total biaya belum tersedia di repo
+    {
+      q: "Berapa total biaya pendidikan yang harus dibayarkan?",
+      a: (
+        <>
+          Rincian biaya pendidikan, boarding, dan kegiatan tersedia pada{" "}
+          <a
+            href={brochureHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`font-semibold text-[var(--brand-accent)] underline underline-offset-4 hover:text-[var(--brand-primary)] ${focusRing}`}
+          >
+            brosur resmi sekolah
+          </a>
+          . Untuk rincian terbaru, silakan hubungi panitia SPMB.
+        </>
+      ),
+    },
+    // TODO: isi dari panitia
+    {
+      q: "Dokumen apa saja yang perlu disiapkan?",
+      a: "Daftar berkas persyaratan akan diinformasikan oleh panitia SPMB. Silakan hubungi panitia untuk informasi lengkapnya.",
+    },
+    {
+      q: "Bagaimana cara menghubungi panitia SPMB?",
+      a: (
+        <>
+          {spmbPhone ? (
+            <>
+              Hubungi panitia SPMB melalui{" "}
+              <a
+                href={`https://wa.me/${waLink(spmbPhone)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`font-semibold text-[var(--brand-accent)] underline underline-offset-4 hover:text-[var(--brand-primary)] ${focusRing}`}
+              >
+                WhatsApp
+              </a>
+              . Formulir offline dapat dikumpulkan di {SITE.spmb.submitLocation}.
+            </>
+          ) : (
+            <>Kunjungi halaman Kontak untuk menghubungi panitia SPMB. Formulir offline dapat dikumpulkan di {SITE.spmb.submitLocation}.</>
+          )}
+        </>
+      ),
+    },
   ];
 
   return (
@@ -138,14 +214,14 @@ export default async function SPMBPage() {
                       <li
                         key={wave.id}
                         className={`flex flex-col gap-1 border-l-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 ${status === "open" ? "border-[var(--brand-accent)] bg-[var(--brand-accent)]/[0.04]" : "border-transparent"
-                          } ${status === "closed" ? "opacity-70" : ""}`}
+                          }`}
                       >
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="font-semibold text-[var(--brand-primary)]">{wave.name}</h3>
+                            <h3 className={`font-semibold ${status === "closed" ? "text-slate-600" : "text-[var(--brand-primary)]"}`}>{wave.name}</h3>
                             <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${badge.cls}`}>{badge.label}</span>
                           </div>
-                          {wave.note && <p className="mt-0.5 text-sm text-slate-500">{wave.note}</p>}
+                          {wave.note && <p className={`mt-0.5 text-sm ${status === "closed" ? "text-slate-600" : "text-slate-500"}`}>{wave.note}</p>}
                         </div>
                         <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-5">
                           <p className="text-sm text-slate-600 sm:text-right">
@@ -161,7 +237,7 @@ export default async function SPMBPage() {
                           {isCurrent && (
                             <Link
                               href={registerHref}
-                              className={`hidden items-center justify-center rounded-lg bg-[#f4d21f] px-4 py-2 text-sm font-bold text-[var(--brand-primary)] transition-colors hover:bg-[#ffe14d] sm:inline-flex ${focusRing}`}
+                              className={`inline-flex w-full items-center justify-center rounded-lg bg-[#f4d21f] px-4 py-2 text-sm font-bold text-[var(--brand-primary)] transition-colors hover:bg-[#ffe14d] sm:w-auto ${focusRing}`}
                             >
                               Daftar Sekarang
                             </Link>
@@ -314,6 +390,28 @@ export default async function SPMBPage() {
         </div>
       </section>
 
+      {/* FAQ (tanpa JS — <details>/<summary>) */}
+      <section className="py-10 md:py-12">
+        <div className={container}>
+          <CSSFadeIn>
+            <SectionHeading compact title="Pertanyaan yang Sering Diajukan" desc="Hal-hal yang paling sering ditanyakan calon murid dan orang tua." />
+            <div className="space-y-3">
+              {faq.map((item) => (
+                <details key={item.q} className={`group rounded-xl border border-[#dce3ed] bg-white p-4 transition-shadow hover:shadow-md ${focusRing}`}>
+                  <summary className={`flex cursor-pointer list-none items-center justify-between gap-3 font-semibold text-[var(--brand-primary)] outline-none [&::-webkit-details-marker]:hidden ${focusRing}`}>
+                    <span>{item.q}</span>
+                    <ChevronRightIcon className="h-4 w-4 shrink-0 text-[var(--brand-accent)] transition-transform group-open:rotate-90" />
+                  </summary>
+                  <div className="mt-2 border-t border-[#dce3ed] pt-2">
+                    <p className="text-sm leading-relaxed text-slate-600">{item.a}</p>
+                  </div>
+                </details>
+              ))}
+            </div>
+          </CSSFadeIn>
+        </div>
+      </section>
+
       {/* CTA penutup (ramping) */}
       <section className="bg-[#f6f8fb] py-10 md:py-12">
         <div className={container}>
@@ -323,13 +421,22 @@ export default async function SPMBPage() {
               <p className="mt-1 text-sm text-white/70">Daftar online hanya beberapa menit. Formulir offline dikumpulkan di {SITE.spmb.submitLocation}.</p>
             </div>
             <div className="flex flex-col items-center gap-3 sm:flex-row">
-              <Link
-                href={registerHref}
-                className={`inline-flex items-center justify-center gap-2 rounded-xl bg-[#f4d21f] px-6 py-3 text-sm font-bold text-[var(--brand-primary)] transition-colors hover:bg-[#ffe14d] ${focusRing}`}
-              >
-                Daftar Online
-                <ChevronRightIcon className="h-4 w-4" />
-              </Link>
+              {openWave ? (
+                <Link
+                  href={registerHref}
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl bg-[#f4d21f] px-6 py-3 text-sm font-bold text-[var(--brand-primary)] transition-colors hover:bg-[#ffe14d] ${focusRing}`}
+                >
+                  Daftar Online
+                  <ChevronRightIcon className="h-4 w-4" />
+                </Link>
+              ) : (
+                <span
+                  aria-disabled="true"
+                  className={`inline-flex cursor-not-allowed select-none items-center justify-center rounded-xl bg-[#f4d21f]/60 px-6 py-3 text-sm font-bold text-[var(--brand-primary)]/70 ${focusRing}`}
+                >
+                  {nextUpcomingWave ? `Dibuka ${formatWaveDate(nextUpcomingWave.start_date)}` : "Pendaftaran belum dibuka"}
+                </span>
+              )}
               {offlineFormHref && (
                 <a
                   href={offlineFormHref}

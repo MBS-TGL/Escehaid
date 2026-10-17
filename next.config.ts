@@ -71,6 +71,12 @@ const nextConfig: NextConfig = {
       ],
     },
     {
+      // Service worker & offline page harus selalu segar agar update PWA
+      // langsung terpakai (jangan kena HTTP cache panjang).
+      source: "/(sw.js|offline.html)",
+      headers: [{ key: "Cache-Control", value: "no-cache" }],
+    },
+    {
       source: "/(.*)",
       headers: [
         { key: "X-Content-Type-Options", value: "nosniff" },
