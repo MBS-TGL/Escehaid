@@ -40,7 +40,6 @@ export function FileUpload({ label, required, error, accept = ".pdf,.jpg,.jpeg,.
       return;
     }
 
-    const ext = "." + file.name.split(".").pop()?.toLowerCase();
     const allowedMimes = accept.split(",").flatMap((a) => ALLOWED_TYPES[a.trim()] || []);
     if (allowedMimes.length > 0 && !allowedMimes.includes(file.type)) {
       toast(`Format tidak didukung. Yang diperbolehkan: ${accept.replace(/\./g, "").toUpperCase()}`, "error");

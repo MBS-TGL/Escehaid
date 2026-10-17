@@ -16,13 +16,18 @@ const PRECACHE = [
 ];
 
 self.addEventListener("install", (event) => {
+  // Tidak auto skipWaiting: SW baru menunggu sampai halaman lama menampilkan
+  // notifikasi "versi baru" dan pengguna menekan muat ulang (kirim SKIP_WAITING).
   event.waitUntil(
     caches
       .open(STATIC_CACHE)
       .then((cache) => cache.addAll(PRECACHE))
       .catch(() => {})
-      .then(() => self.skipWaiting())
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {

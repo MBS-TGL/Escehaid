@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { Clock, User, ArrowLeft, Newspaper, MagnifyingGlass, BookmarkSimple, ShareNetwork, WhatsappLogo, FacebookLogo, TwitterLogo } from "@/components/Icons";
+import { Clock, User, ArrowLeft, Newspaper, MagnifyingGlass, BookmarkSimple, WhatsappLogo, FacebookLogo, TwitterLogo } from "@/components/Icons";
 import { getNewsBySlug, getNewsList, getRelatedNews } from "@/lib/queries";
 import { RichContent } from "@/components/RichContent";
 import CoverImage from "@/components/CoverImage";

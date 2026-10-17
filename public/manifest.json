@@ -32,5 +32,21 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "screenshots": [
+    {
+      "src": "/images/screenshots/home-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Beranda SMP Muhammadiyah 4 Tanggul"
+    },
+    {
+      "src": "/images/screenshots/admission-narrow.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "SPMB Online — jadwal, jalur, dan program pendaftaran"
+    }
   ]
 }

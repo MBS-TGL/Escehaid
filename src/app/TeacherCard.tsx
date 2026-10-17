@@ -11,7 +11,7 @@ export default function TeacherCard({ teacher }: { teacher: Teacher }) {
     transform: "perspective(800px) rotateX(0deg) rotateY(0deg) translateY(0px) scale(1)",
     boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
   });
-  const [isHovered, setIsHovered] = useState(false);
+  const [, setIsHovered] = useState(false);
 
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     const card = cardRef.current;

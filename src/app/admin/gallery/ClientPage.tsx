@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
+import Image from "next/image";
 import {
   getGalleryListAll,
   createGallery,
@@ -195,11 +196,6 @@ export default function AdminGalleryPage() {
     const s = new Set(selectedIds);
     if (s.has(id)) s.delete(id); else s.add(id);
     setSelectedIds(s);
-  }
-
-  function toggleSort(field: SortField) {
-    if (sortField === field) setSortDir((d) => d === "asc" ? "desc" : "asc");
-    else { setSortField(field); setSortDir("asc"); }
   }
 
   function enterPickMode(id?: string) {
@@ -459,7 +455,7 @@ export default function AdminGalleryPage() {
                   >
                     <div className="aspect-[4/3] bg-slate-100 flex items-center justify-center md:aspect-square">
                       {galleryThumb(item) ? (
-                        <img src={galleryThumb(item)} alt={item.title} loading="lazy" className="h-full w-full object-cover" />
+                        <Image src={galleryThumb(item)} alt={item.title} width={400} height={300} loading="lazy" className="h-full w-full object-cover" />
                       ) : item.media_type === "video" ? (
                         <Video className="h-10 w-10 text-slate-300 sm:h-12 sm:w-12" />
                       ) : (
@@ -550,7 +546,7 @@ export default function AdminGalleryPage() {
                   <Video className="h-16 w-16 text-slate-300" />
                 )
               ) : viewItem.url ? (
-                <img src={viewItem.url} alt={viewItem.title} loading="lazy" className="h-full w-full object-cover" />
+                <Image src={viewItem.url} alt={viewItem.title} width={640} height={360} loading="lazy" className="h-full w-full object-cover" />
               ) : (
                 <ImageSquare className="h-16 w-16 text-slate-300" />
               )}
@@ -697,7 +693,7 @@ export default function AdminGalleryPage() {
                     <video src={imagePreview} preload="none" className="h-40 w-full object-cover bg-black" />
                   )
                 ) : (
-                  <img src={imagePreview} alt="Preview" className="h-40 w-full object-cover" />
+                  <Image src={imagePreview} alt="Preview" width={640} height={160} sizes="100%" unoptimized className="h-40 w-full object-cover" />
                 )}
                 <button onClick={() => { setImageFile(null); setImagePreview(""); setForm({ ...form, url: "" }); }}
                   className="absolute right-2 top-2 rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">

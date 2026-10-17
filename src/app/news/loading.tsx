@@ -1,4 +1,4 @@
-import { SkeletonBlock, SkeletonText } from "@/components/ui/Skeleton";
+import { SkeletonBlock } from "@/components/ui/Skeleton";
 
 export default function BeritaLoading() {
   return (

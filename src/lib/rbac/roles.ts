@@ -16,7 +16,6 @@
  *  - `system_role = 'SUPER_ADMIN'` bersifat wildcard: `can()` selalu true.
  *    Izinnya tidak bisa dikurangi (guard di server action + UI terkunci).
  */
-import type { Permission } from "./permissions";
 
 /** Kunci peran bawaan. */
 export const ROLE_KEYS = [

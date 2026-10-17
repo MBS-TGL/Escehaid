@@ -131,9 +131,12 @@ export default function NewsImageZoom({
             onWheel={handleWheel}
             style={{ cursor: zoom > 1 ? (dragging ? "grabbing" : "grab") : "zoom-in" }}
           >
-            <img
+            <Image
               src={src}
               alt={alt}
+              width={1200}
+              height={1200}
+              sizes="90vw"
               className="max-h-[85vh] max-w-[90vw] select-none rounded-lg object-contain transition-transform duration-150"
               style={{
                 transform: `scale(${zoom}) translate(${drag.x / zoom}px, ${drag.y / zoom}px)`,

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import {
   getAchievementList,
@@ -42,7 +43,6 @@ import {
   Star,
   Files,
   Users,
-  Megaphone,
   CalendarBlank,
   BookOpen,
 } from "@/components/Icons";
@@ -312,6 +312,12 @@ export default function AdminAchievementsPage() {
     if (file) applyImageFile(file);
   }
 
+  // Ref ke handler terbaru agar listener paste cukup dipasang sekali per buka-form
+  const applyImageFileRef = useRef(applyImageFile);
+  useEffect(() => {
+    applyImageFileRef.current = applyImageFile;
+  });
+
   // Paste gambar (Ctrl+V) — aktif hanya selama form terbuka, sama seperti form berita
   useEffect(() => {
     if (!formOpen) return;
@@ -321,7 +327,7 @@ export default function AdminAchievementsPage() {
       for (const item of items) {
         if (item.type.startsWith("image/")) {
           const file = item.getAsFile();
-          if (file) { e.preventDefault(); applyImageFile(file); break; }
+          if (file) { e.preventDefault(); applyImageFileRef.current(file); break; }
         }
       }
     };
@@ -691,7 +697,7 @@ export default function AdminAchievementsPage() {
                     <td className="px-4 py-3.5 cursor-pointer" onClick={() => setViewItem(item)}>
                       <div className="flex items-center gap-3">
                         {item.image_url ? (
-                          <img src={item.image_url} alt="" loading="lazy" className="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
+                          <Image src={item.image_url} alt="" width={40} height={40} className="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
                         ) : (
                           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#f4d21f]/10">
                             <Medal className="h-5 w-5 text-[#f4d21f]" />
@@ -943,7 +949,7 @@ export default function AdminAchievementsPage() {
             </div>
             {viewItem.image_url && (
               <div className="mb-4 overflow-hidden rounded-xl">
-                <img src={viewItem.image_url} alt={viewItem.image_alt || viewItem.title} loading="lazy" className="h-40 w-full object-cover" />
+                <Image src={viewItem.image_url} alt={viewItem.image_alt || viewItem.title} width={640} height={160} sizes="100%" className="h-40 w-full object-cover" />
               </div>
             )}
             <div className="space-y-3 text-sm">
@@ -1161,7 +1167,7 @@ export default function AdminAchievementsPage() {
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Gambar</label>
             {imagePreview ? (
               <div className="relative mb-3 overflow-hidden rounded-xl border border-slate-200">
-                <img src={imagePreview} alt={form.image_alt || "Pratinjau gambar"} className="h-40 w-full object-cover" />
+                <Image src={imagePreview} alt={form.image_alt || "Pratinjau gambar"} width={640} height={160} sizes="100%" unoptimized className="h-40 w-full object-cover" />
                 <button onClick={() => { revokePreview(); setImageFile(null); setImagePreview(""); setForm({ ...form, image_url: "" }); }}
                   className="absolute right-2 top-2 rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
                   <X className="h-4 w-4" />

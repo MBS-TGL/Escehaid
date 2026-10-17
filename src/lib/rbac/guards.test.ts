@@ -3,7 +3,6 @@ import {
   guardLastSuperAdmin,
   guardSelfDelete,
   guardSelfRoleChange,
-  type GuardDenial,
 } from "@/lib/rbac/index";
 
 const SUPER_ADMIN_TARGET = {

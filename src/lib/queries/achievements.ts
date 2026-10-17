@@ -1,4 +1,3 @@
-import { cache } from "react";
 import { supabase } from "../supabase";
 import type { Achievement } from "../supabase";
 import { tryCompressImage } from "../compress-image";

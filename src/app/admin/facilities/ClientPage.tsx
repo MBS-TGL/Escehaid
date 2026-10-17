@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import Image from "next/image";
 import {
   DndContext,
   KeyboardSensor,
@@ -52,7 +53,6 @@ import {
   ArrowDown,
   SortAscending,
   Checks,
-  CheckSquare,
   DotsSixVertical,
   Copy,
   ArrowSquareOut,
@@ -780,7 +780,7 @@ export default function AdminFacilitiesPage() {
       >
         {viewItem?.image_url && (
           <div className="mb-4 -mx-5 -mt-5 overflow-hidden md:-mx-6">
-            <img src={viewItem.image_url} alt={viewItem.name} loading="lazy" className="aspect-video w-full object-cover" />
+            <Image src={viewItem.image_url} alt={viewItem.name} width={640} height={360} sizes="100%" loading="lazy" className="aspect-video w-full object-cover" />
           </div>
         )}
         {viewItem && (
@@ -882,7 +882,7 @@ export default function AdminFacilitiesPage() {
             {imagePreview ? (
               <div className="mb-3">
                 <div className="relative overflow-hidden rounded-xl border border-slate-200">
-                  <img src={imagePreview} alt="Preview" className="h-40 w-full object-cover" />
+                  <Image src={imagePreview} alt="Preview" width={640} height={160} sizes="100%" unoptimized className="h-40 w-full object-cover" />
                   <button onClick={() => { setImageFile(null); setImagePreview(""); setForm({ ...form, image_url: "" }); }}
                     aria-label="Hapus gambar"
                     className="absolute right-2 top-2 flex h-10 w-10 items-center justify-center rounded-lg bg-black/50 text-white hover:bg-black/70 md:h-7 md:w-7 md:p-1.5">
@@ -1038,7 +1038,7 @@ function SortableFacilityRow({
       <td className="px-4 py-3.5 cursor-pointer" onClick={() => onView(item)}>
         <div className="flex items-center gap-3">
           {item.image_url ? (
-            <img src={item.image_url} alt="" loading="lazy" className="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
+            <Image src={item.image_url} alt="" width={40} height={40} loading="lazy" className="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
           ) : (
             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">
               <ImageSquare className="h-5 w-5 text-slate-300" />

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { can, type PermissionSubject } from "@/lib/rbac";
 import { ALL_PERMISSIONS } from "@/lib/rbac/permissions";
 

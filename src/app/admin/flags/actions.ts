@@ -10,7 +10,7 @@
 import { createClient as createSessionClient } from "@/lib/supabase-server";
 import { updateTag } from "next/cache";
 import { requirePermission } from "@/lib/rbac/server";
-import { FEATURE_FLAGS, FEATURE_FLAG_MAP, type FeatureFlagKey } from "@/lib/flags/registry";
+import { FEATURE_FLAG_MAP } from "@/lib/flags/registry";
 import { FEATURE_FLAGS_TAG } from "@/lib/flags";
 
 export type ActionResult = {

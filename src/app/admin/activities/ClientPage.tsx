@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   getActivityListAll,
@@ -31,10 +32,8 @@ import {
   CalendarBlank,
   Eye,
   CheckCircle,
-  XCircle,
   Clock,
   X,
-  FileText,
   MapPin,
   CaretLeft,
   CaretRight,
@@ -665,7 +664,7 @@ export default function AdminActivitiesPage() {
                     <td className="px-4 py-3.5 cursor-pointer" onClick={() => setViewItem(item)}>
                       <div className="flex items-center gap-3">
                         {item.image_url ? (
-                          <img src={item.image_url} alt="" loading="lazy" className="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
+                          <Image src={item.image_url} alt="" width={40} height={40} className="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
                         ) : (
                           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">
                             <CalendarBlank className="h-5 w-5 text-slate-300" />
@@ -1106,7 +1105,7 @@ export default function AdminActivitiesPage() {
             {imagePreview ? (
               <div className="mb-3">
                 <div className="relative overflow-hidden rounded-xl border border-slate-200">
-                  <img src={imagePreview} alt="Preview" className="h-40 w-full object-cover" />
+                  <Image src={imagePreview} alt="Preview" width={640} height={160} sizes="100%" unoptimized className="h-40 w-full object-cover" />
                   <button onClick={() => { setImageFile(null); setImagePreview(""); setForm({ ...form, image_url: "" }); }}
                     className="absolute right-2 top-2 rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
                     <X className="h-4 w-4" />

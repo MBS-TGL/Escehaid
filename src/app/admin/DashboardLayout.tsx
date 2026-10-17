@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import AdminSidebar from "./Sidebar";
@@ -25,9 +25,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
   );
 
   useEffect(() => {
@@ -69,14 +73,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     // pindah antar halaman admin. Dengan [pathname], setiap klik menu mengulang
     // getUser() + query user_profiles dari browser (dua panggilan jaringan yang
     // sia-sia, karena proxy.ts sudah memeriksa sesi di server).
-  }, [isLogin]);
+  }, [isLogin, router, supabase]);
 
   useEffect(() => {
     if (searchParams.get("success") === "login") {
       toast("Login berhasil! Selamat datang.", "success");
       window.history.replaceState({}, "", "/admin");
     }
-  }, [searchParams]);
+  }, [searchParams, toast]);
 
   if (pathname === "/admin/login") {
     return <>{children}</>;

@@ -156,9 +156,12 @@ export default function GalleryLightbox({
                 />
               )
             ) : (
-              <img
+              <Image
                 src={selected.url}
                 alt={selected.title}
+                width={1200}
+                height={1200}
+                sizes="(max-width: 896px) 100vw, 896px"
                 className="w-full rounded-xl object-contain max-h-[80vh]"
                 loading="lazy"
                 decoding="async"

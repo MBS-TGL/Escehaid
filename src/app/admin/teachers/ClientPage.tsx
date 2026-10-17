@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
+import Image from "next/image";
 import {
   getAllTeachers,
   createTeacher,
@@ -421,7 +422,7 @@ export default function AdminTeachersPage() {
                     <td className="hidden px-4 py-3.5 sm:table-cell">
                       <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-slate-100">
                         {item.photo_url ? (
-                          <img src={`${item.photo_url}?v=${photoBust[item.id] || 0}`} alt={item.name} loading="lazy"
+                          <Image src={`${item.photo_url}?v=${photoBust[item.id] || 0}`} alt={item.name} width={40} height={40} loading="lazy"
                             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }}
                             className="h-full w-full object-cover" />
                         ) : null}
@@ -592,8 +593,8 @@ export default function AdminTeachersPage() {
             <div className="flex items-center gap-4">
               <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-slate-200 bg-slate-50">
                 {formPhotoPreview ? (
-                  <img src={formPhotoPreview} alt="Preview"
-                    onError={(e) => { setFormPhotoPreview(""); }}
+                  <Image src={formPhotoPreview} alt="Preview" width={80} height={80} unoptimized
+                    onError={() => { setFormPhotoPreview(""); }}
                     className="h-full w-full object-cover" />
                 ) : (
                   <User className="h-7 w-7 text-slate-300" weight="light" />

@@ -31,7 +31,6 @@ import {
   ShieldCheck,
   CaretDown,
   ArrowUp,
-  ArrowDown,
 } from "@/components/Icons";
 
 const ROLE_BADGE: Record<string, { text: string; bg: string; icon: React.ComponentType<{ className?: string }> }> = {

@@ -9,8 +9,6 @@ import {
   Users,
   Megaphone,
   Star,
-  Newspaper,
-  Info,
 } from "@/components/Icons";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import type { Achievement } from "@/lib/supabase";

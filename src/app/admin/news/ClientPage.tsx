@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
+import Image from "next/image";
 import {
   getNewsListAll,
   createNews,
@@ -29,7 +30,6 @@ import {
   Megaphone,
   Eye,
   CheckCircle,
-  XCircle,
   Clock,
   X,
   FileText,
@@ -45,7 +45,6 @@ import {
   ArrowUp,
   ArrowDown,
   SortAscending,
-  Funnel,
   Checks,
   Paperclip,
   Download,
@@ -601,7 +600,6 @@ export default function AdminBeritaPage() {
 
     // ── Upload gambar baru jika ada ──
     let imageUrl = form.image_url;
-    const oldImageUrl = editItem?.image_url || "";
     if (imageFile) {
       const tempId = editItem?.id || (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36));
       const uploaded = await uploadNewsImage(imageFile, tempId);
@@ -897,7 +895,7 @@ export default function AdminBeritaPage() {
                     <td className="px-4 py-3.5 cursor-pointer" onClick={() => setViewItem(item)}>
                       <div className="flex items-center gap-3">
                         {item.image_url ? (
-                          <img src={item.image_url} alt="" loading="lazy" className="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
+                          <Image src={item.image_url} alt="" width={40} height={40} loading="lazy" className="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
                         ) : (
                           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">
                             <FileText className="h-5 w-5 text-slate-300" />
@@ -1317,7 +1315,7 @@ export default function AdminBeritaPage() {
             {imagePreview ? (
               <div className="mb-3">
                 <div className="relative overflow-hidden rounded-xl border border-slate-200">
-                  <img src={imagePreview} alt="Preview" className="h-40 w-full object-cover" style={{
+                  <Image src={imagePreview} alt="Preview" width={640} height={160} sizes="100%" unoptimized className="h-40 w-full object-cover" style={{
                     objectPosition: form.cover_image_position === "top" ? "center 20%" : form.cover_image_position === "bottom" ? "center 80%" : "center center"
                   }} />
                   <button onClick={() => { setImageFile(null); setImagePreview(""); setForm({ ...form, image_url: "" }); }}
@@ -1659,9 +1657,12 @@ function SharePreviewCard({ form, imagePreview }: { form: FormData; imagePreview
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         {imagePreview ? (
           <div className="relative w-full bg-slate-100 aspect-[1.91/1]">
-            <img
+            <Image
               src={imagePreview}
               alt={form.image_alt || form.title || "Pratinjau sampul"}
+              fill
+              sizes="100%"
+              unoptimized
               className="h-full w-full object-cover"
               style={{
                 objectPosition: form.cover_image_position === "top" ? "center 20%" : form.cover_image_position === "bottom" ? "center 80%" : "center center",

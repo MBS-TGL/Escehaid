@@ -1,7 +1,8 @@
 import { FileText, GraduationCap, BookOpen, House, Download, CheckCircle, Trophy, HandCoins } from "@/components/Icons";
 import Link from "next/link";
-import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
+import { CSSFadeIn } from "@/components/CSSAnimations";
 import { getPublishedWaves, getWaveStatus, getSchoolProfile, registrationHref } from "@/lib/queries";
+import { spmbFaqs } from "@/app/faq-data";
 import { SITE, waLink } from "@/lib/site-config";
 import type { Metadata } from "next";
 
@@ -102,71 +103,6 @@ export default async function SPMBPage() {
     { icon: House, title: "Dua kampus terpisah", desc: "Kampus putra di Patemon dan kampus putri di Asrama Tahfidz Al-Qur'an Bambu Kuning." },
   ];
 
-  const faq: { q: string; a: React.ReactNode }[] = [
-    {
-      q: "Bagaimana cara mendaftar SPMB secara online?",
-      a: "Pilih gelombang yang sedang dibuka pada jadwal di atas, lalu isi formulir pendaftaran online. Setelah itu, hasil penerimaan diumumkan melalui website sekolah, dan calon murid yang diterima melakukan daftar ulang sesuai jadwal pada pengumuman.",
-    },
-    {
-      q: "Apa saja jalur pendaftaran yang tersedia?",
-      a: "Tersedia tiga jalur: Jalur Reguler yang terbuka untuk semua calon murid, Jalur Prestasi untuk calon murid berprestasi akademik maupun non-akademik, dan Jalur Beasiswa untuk calon murid dari keluarga dengan keterbatasan ekonomi.",
-    },
-    {
-      q: "Program pendidikan apa saja yang ditawarkan?",
-      a: "SMP Boarding (asrama penuh sejak 2018/2019), SMP Reguler (pembelajaran penuh hari Senin-Sabtu pukul 07.00-15.00), dan SMA Boarding (asrama penuh jenjang SMA dengan kurikulum Tahfidz dan keunggulan akademik).",
-    },
-    {
-      q: "Bagaimana cara mengecek status dan hasil seleksi?",
-      a: "Buka tautan \u201cCek status pendaftaran & hasil seleksi\u201d pada bagian jadwal untuk memeriksa status pendaftaran dan hasil seleksi secara online.",
-    },
-    // TODO: isi dari panitia — nominal total biaya belum tersedia di repo
-    {
-      q: "Berapa total biaya pendidikan yang harus dibayarkan?",
-      a: (
-        <>
-          Rincian biaya pendidikan, boarding, dan kegiatan tersedia pada{" "}
-          <a
-            href={brochureHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`font-semibold text-[var(--brand-accent)] underline underline-offset-4 hover:text-[var(--brand-primary)] ${focusRing}`}
-          >
-            brosur resmi sekolah
-          </a>
-          . Untuk rincian terbaru, silakan hubungi panitia SPMB.
-        </>
-      ),
-    },
-    // TODO: isi dari panitia
-    {
-      q: "Dokumen apa saja yang perlu disiapkan?",
-      a: "Daftar berkas persyaratan akan diinformasikan oleh panitia SPMB. Silakan hubungi panitia untuk informasi lengkapnya.",
-    },
-    {
-      q: "Bagaimana cara menghubungi panitia SPMB?",
-      a: (
-        <>
-          {spmbPhone ? (
-            <>
-              Hubungi panitia SPMB melalui{" "}
-              <a
-                href={`https://wa.me/${waLink(spmbPhone)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`font-semibold text-[var(--brand-accent)] underline underline-offset-4 hover:text-[var(--brand-primary)] ${focusRing}`}
-              >
-                WhatsApp
-              </a>
-              . Formulir offline dapat dikumpulkan di {SITE.spmb.submitLocation}.
-            </>
-          ) : (
-            <>Kunjungi halaman Kontak untuk menghubungi panitia SPMB. Formulir offline dapat dikumpulkan di {SITE.spmb.submitLocation}.</>
-          )}
-        </>
-      ),
-    },
-  ];
-
   return (
     <div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{
@@ -177,6 +113,17 @@ export default async function SPMBPage() {
             { "@type": "ListItem", position: 1, name: "Beranda", item: "https://www.smpmuh4tanggul.sch.id" },
             { "@type": "ListItem", position: 2, name: "SPMB Online", item: "https://www.smpmuh4tanggul.sch.id/admission" },
           ],
+        })
+      }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{
+        __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: spmbFaqs.map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: { "@type": "Answer", text: f.a },
+          })),
         })
       }} />
       {/* Hero (sama dengan halaman lain) */}
@@ -396,7 +343,7 @@ export default async function SPMBPage() {
           <CSSFadeIn>
             <SectionHeading compact title="Pertanyaan yang Sering Diajukan" desc="Hal-hal yang paling sering ditanyakan calon murid dan orang tua." />
             <div className="space-y-3">
-              {faq.map((item) => (
+              {spmbFaqs.map((item) => (
                 <details key={item.q} className={`group rounded-xl border border-[#dce3ed] bg-white p-4 transition-shadow hover:shadow-md ${focusRing}`}>
                   <summary className={`flex cursor-pointer list-none items-center justify-between gap-3 font-semibold text-[var(--brand-primary)] outline-none [&::-webkit-details-marker]:hidden ${focusRing}`}>
                     <span>{item.q}</span>
@@ -408,6 +355,35 @@ export default async function SPMBPage() {
                 </details>
               ))}
             </div>
+            <p className="mt-4 text-center text-sm text-slate-500">
+              Masih ada pertanyaan?{" "}
+              {spmbPhone ? (
+                <a
+                  href={`https://wa.me/${waLink(spmbPhone)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`font-semibold text-[var(--brand-accent)] underline underline-offset-4 hover:text-[var(--brand-primary)] ${focusRing}`}
+                >
+                  Chat panitia SPMB
+                </a>
+              ) : (
+                <Link
+                  href="/contact"
+                  className={`font-semibold text-[var(--brand-accent)] underline underline-offset-4 hover:text-[var(--brand-primary)] ${focusRing}`}
+                >
+                  Hubungi panitia
+                </Link>
+              )}
+              {" · "}
+              <a
+                href={brochureHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`font-semibold text-[var(--brand-accent)] underline underline-offset-4 hover:text-[var(--brand-primary)] ${focusRing}`}
+              >
+                Brosur resmi sekolah
+              </a>
+            </p>
           </CSSFadeIn>
         </div>
       </section>

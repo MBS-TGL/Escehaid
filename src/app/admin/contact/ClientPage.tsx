@@ -19,7 +19,6 @@ import {
   Eye,
   CheckCircle,
   Clock,
-  Phone,
   User,
   WhatsappLogo,
   CaretLeft,
@@ -30,7 +29,6 @@ import {
   ArrowDown,
   SortAscending,
   Checks,
-  PencilSimple,
   CalendarBlank,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
@@ -68,7 +66,6 @@ export default function AdminContactPage() {
   const [pickMode, setPickMode] = useState(false);
 
   // Modals
-  const [viewItem, setViewItem] = useState<ContactMessage | null>(null);
   const [deleteItem, setDeleteItem] = useState<ContactMessage | null>(null);
   const [bulkDelete, setBulkDelete] = useState(false);
 

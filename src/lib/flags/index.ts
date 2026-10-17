@@ -7,7 +7,7 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { supabase } from "@/lib/supabase";
-import { FEATURE_FLAGS, FEATURE_FLAG_MAP, type FeatureFlagKey } from "./registry";
+import { FEATURE_FLAG_MAP, type FeatureFlagKey } from "./registry";
 import { evaluateAllFlags, type FlagEvaluation } from "./evaluate";
 
 export const FEATURE_FLAGS_TAG = "feature-flags";

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import Image from "next/image";
 import { DotsSixVertical, ImageSquare } from "@/components/Icons";
 
 /**
@@ -100,9 +101,11 @@ export function MobileThumb({
         }`}
       >
         {showImage ? (
-          <img
+          <Image
             src={src as string}
             alt={alt ?? ""}
+            width={56}
+            height={56}
             loading="lazy"
             onError={() => setFailed(true)}
             className="size-full object-cover"

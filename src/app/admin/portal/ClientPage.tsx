@@ -27,7 +27,7 @@ import {
   revalidatePortal,
 } from "@/lib/queries";
 import type { PortalAppAdmin, PortalAppInput } from "@/lib/queries";
-import { StatCard, StatCardRow, ConfirmModal, SlideOver } from "@/components/ui";
+import { ConfirmModal, SlideOver } from "@/components/ui";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useFloatingPanel } from "@/components/ui/useFloatingPanel";
 import { useToast } from "@/components/ui/Toast";

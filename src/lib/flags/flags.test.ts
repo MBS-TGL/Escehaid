@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { evaluateFlag, evaluateAllFlags, type FlagEvaluation } from "@/lib/flags/evaluate";
+import { evaluateFlag, evaluateAllFlags } from "@/lib/flags/evaluate";
 import { FEATURE_FLAGS, type FeatureFlagDef } from "@/lib/flags/registry";
 
 const now = new Date("2026-10-15T12:00:00Z");

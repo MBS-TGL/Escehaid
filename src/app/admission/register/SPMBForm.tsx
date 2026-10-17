@@ -84,9 +84,13 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
   // pertanyaan aktif — jumlah langkah bisa berubah antar kunjungan.
   const customFields = useMemo(() => fields.filter((f) => f.active), [fields]);
   const hasCustom = customFields.length > 0;
-  const steps = hasCustom
-    ? ["Program", "Data Siswa", "Data Orang Tua", "Pertanyaan Tambahan", "Upload Berkas", "Selesai"]
-    : ["Program", "Data Siswa", "Data Orang Tua", "Upload Berkas", "Selesai"];
+  const steps = useMemo(
+    () =>
+      hasCustom
+        ? ["Program", "Data Siswa", "Data Orang Tua", "Pertanyaan Tambahan", "Upload Berkas", "Selesai"]
+        : ["Program", "Data Siswa", "Data Orang Tua", "Upload Berkas", "Selesai"],
+    [hasCustom]
+  );
   const customIdx = hasCustom ? 3 : -1;
   const uploadIdx = hasCustom ? 4 : 3;
   const doneIdx = steps.length - 1;
@@ -731,7 +735,6 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
                     ] as [keyof Documents, string, string][]).map(([key, label, abbr]) => {
                       const file = docs[key];
                       const sizeKB = file ? (file.size / 1024).toFixed(1) : null;
-                      const ext = file?.name.split(".").pop()?.toUpperCase();
                       return (
                         <div key={key} className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 ${file ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}>
                           <div className={`flex h-9 min-w-9 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold ${file ? "bg-green-100 text-green-700" : "bg-red-100 text-red-500"}`}>

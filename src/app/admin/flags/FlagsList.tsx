@@ -7,20 +7,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
-import { Modal, ConfirmModal } from "@/components/ui/Modal";
+import { ConfirmModal } from "@/components/ui/Modal";
 import { saveFlagSettings, resetFlagSettings } from "./actions";
 import { getFlagsByCategory, FLAG_CATEGORIES, type FeatureFlagKey, FEATURE_FLAG_MAP } from "@/lib/flags/registry";
-import { evaluateFlag, type FlagEvaluation, STATUS_LABEL, STATUS_TONE } from "@/lib/flags/evaluate";
+import { type FlagEvaluation, STATUS_LABEL } from "@/lib/flags/evaluate";
 import {
   Clock,
   CalendarBlank,
   Play,
   XCircle,
-  Trash,
   ArrowUUpLeft,
   ShieldCheck,
   Warning,
-  CaretDown,
   ArrowUp,
   FloppyDisk,
 } from "@/components/Icons";
@@ -29,8 +27,8 @@ export function FlagsList({ initialFlags, initialOverrides }: { initialFlags: Re
   const router = useRouter();
   const { toast } = useToast();
 
-  const [flags, setFlags] = useState(initialFlags);
-  const [overrides, setOverrides] = useState(initialOverrides);
+  const [flags] = useState(initialFlags);
+  const [overrides] = useState(initialOverrides);
   const [saving, setSaving] = useState<string | null>(null);
   const [editingKey, setEditingKey] = useState<FeatureFlagKey | null>(null);
   const [scheduleDraft, setScheduleDraft] = useState<{ startAt: string; endAt: string }>({ startAt: "", endAt: "" });

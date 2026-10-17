@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   getArticleListAll,
@@ -949,7 +950,7 @@ export default function AdminArticlesPage() {
                     <td className="px-4 py-3.5 cursor-pointer" onClick={() => setViewItem(item)}>
                       <div className="flex items-center gap-3">
                         {item.image_url ? (
-                          <img src={item.image_url} alt="" loading="lazy" className="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
+                          <Image src={item.image_url} alt="" width={40} height={40} className="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
                         ) : (
                           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100">
                             <FileText className="h-5 w-5 text-slate-300" />
@@ -1438,7 +1439,7 @@ export default function AdminArticlesPage() {
             )}
             {imagePreview ? (
               <div className="relative mb-3 overflow-hidden rounded-xl border border-slate-200">
-                <img src={imagePreview} alt="Preview" className="aspect-video w-full object-cover" />
+                <Image src={imagePreview} alt="Preview" width={640} height={360} sizes="100%" unoptimized className="aspect-video w-full object-cover" />
                 <div className="absolute right-2 top-2 flex items-center gap-1.5">
                   <label
                     className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-black/50 px-2 py-1.5 text-white transition-colors hover:bg-black/70"
@@ -1718,9 +1719,12 @@ function SharePreviewCard({ form, imagePreview }: { form: FormData; imagePreview
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         {imagePreview ? (
           <div className="relative w-full bg-slate-100 aspect-[1.91/1]">
-            <img
+            <Image
               src={imagePreview}
               alt={form.image_alt || form.title || "Pratinjau sampul"}
+              fill
+              sizes="100%"
+              unoptimized
               className="h-full w-full object-cover"
             />
           </div>

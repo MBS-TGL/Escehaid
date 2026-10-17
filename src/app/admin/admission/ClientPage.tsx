@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   getRegistrationList,
@@ -2298,7 +2299,7 @@ function BerkasItem({ label, url, isImage, isPdf }: { label: string; url: string
         <div className="border-t border-slate-100 bg-slate-50 p-3 space-y-3">
           {isImage && (
             <div className="rounded-lg border border-slate-200 bg-white p-1">
-              <img src={url} alt={label} className="max-h-72 w-full rounded object-contain" loading="lazy" />
+              <Image src={url} alt={label} width={640} height={360} sizes="100%" unoptimized className="max-h-72 w-full rounded object-contain" />
             </div>
           )}
           {isPdf && (

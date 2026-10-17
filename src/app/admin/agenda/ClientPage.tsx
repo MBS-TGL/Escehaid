@@ -19,7 +19,6 @@ import {
   Trash,
   Checks,
   FloppyDisk,
-  EyeSlash,
   X,
   CaretLeft,
   CaretRight,
