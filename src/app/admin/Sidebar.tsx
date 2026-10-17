@@ -25,6 +25,7 @@ import {
   Gear,
   Flag,
   UsersThree,
+  Download,
 } from "@/components/Icons";
 import { usePermissions } from "./PermissionsProvider";
 
@@ -66,6 +67,7 @@ export const navGroups: NavGroup[] = [
       { label: "Kegiatan", href: "/admin/activities", icon: CalendarBlank, perm: "kegiatan:read" },
       { label: "Agenda", href: "/admin/agenda", icon: CalendarCheck, perm: "agenda:read" },
       { label: "Galeri", href: "/admin/gallery", icon: ImageSquare, perm: "galeri:read" },
+      { label: "Unduhan", href: "/admin/downloads", icon: Download, perm: "unduhan:read" },
       { label: "Media", href: "/admin/media", icon: FolderOpen, perm: "media:read" },
       { label: "Prestasi", href: "/admin/achievements", icon: Trophy, perm: "prestasi:read" },
     ],

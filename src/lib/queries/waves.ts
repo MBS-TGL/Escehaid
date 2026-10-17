@@ -70,6 +70,8 @@ export async function updateWave(
     note: string | null;
     is_published: boolean;
     sort_order: number;
+    /** Timestamp publikasi hasil seleksi; null = tarik (disembunyikan lagi). */
+    result_published_at: string | null;
   }>
 ): Promise<{ data: SpmbWave | null; error?: string }> {
   const { data, error } = await supabase

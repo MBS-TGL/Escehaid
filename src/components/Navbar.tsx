@@ -54,7 +54,7 @@ export default function Navbar({ brand }: { brand: PublicBrand }) {
     <>
       <nav
         aria-label="Navigasi utama"
-        className={`sticky top-0 z-50 transition-all duration-300 motion-reduce:transition-none ${hideOnMobile} ${scrolled
+        className={`sticky top-0 z-50 print:hidden transition-all duration-300 motion-reduce:transition-none ${hideOnMobile} ${scrolled
             ? "border-b border-[#dce3ed]/60 bg-white/90 shadow-sm md:bg-white/80 md:backdrop-blur-xl"
             : "border-b border-[#dce3ed] bg-white"
           }`}

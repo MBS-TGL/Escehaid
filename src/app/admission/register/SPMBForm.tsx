@@ -370,6 +370,15 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
           <p className="mt-2 text-sm text-green-600">
             Data Anda telah kami terima. Silakan hubungi contact person di bawah untuk informasi lebih lanjut.
           </p>
+          <a
+            href="/admission/status"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-700"
+          >
+            Cek status pendaftaran
+          </a>
+          <p className="mt-2 text-xs text-green-700/70">
+            Simpan NISN & tanggal lahir — keduanya dibutuhkan untuk membuka status pendaftaran Anda.
+          </p>
         </div>
       ) : (
         <div className="rounded-2xl border border-[#dce3ed] bg-white p-6 shadow-sm md:p-8">

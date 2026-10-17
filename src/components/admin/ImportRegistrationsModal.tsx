@@ -17,7 +17,7 @@ import {
 import { adminCreateRegistration } from "@/lib/queries/registrations";
 import { readSpreadsheetFile } from "@/lib/spmb-import-file";
 import {
-  STATUS_LABEL, buildImportPayload, buildImportResult, detectDuplicates, rowStatus,
+  STATUS_LABEL, FIELD_LABELS, buildImportPayload, buildImportResult, detectDuplicates, rowStatus,
   updateRowField, type ImportResult, type ImportRow, type RawKey,
 } from "@/lib/spmb-import";
 import type { SpmbRegistration } from "@/lib/supabase";
@@ -326,6 +326,26 @@ export function ImportRegistrationsModal({
               Beri tahu admin sistem bila kolom ini perlu dimigrasikan.
             </p>
           </div>
+        )}
+
+        {/* Pemetaan kolom — buka bila ada nilai yang "terbaca dari kolom lain"
+            supaya salah-kunci langsung terlihat (field ← judul kolom sumber). */}
+        {result && result.mapping.length > 0 && (
+          <details className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+            <summary className="cursor-pointer select-none text-xs font-semibold text-slate-600">
+              Pemetaan kolom — {result.mapping.length} dipetakan
+              {result.unmapped.length > 0 ? `, ${result.unmapped.length} tanpa padanan` : ""}
+            </summary>
+            <ul className="mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-2">
+              {result.mapping.map((m) => (
+                <li key={m.key} className="min-w-0 truncate text-[11px] text-slate-500">
+                  <span className="font-semibold text-slate-700">{FIELD_LABELS[m.key]}</span>
+                  {" ← "}
+                  {m.header}
+                </li>
+              ))}
+            </ul>
+          </details>
         )}
 
         {/* Daftar baris */}

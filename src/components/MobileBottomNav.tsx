@@ -183,7 +183,7 @@ export default function MobileBottomNav() {
           }
         }}
         onBlurCapture={() => setKbFocus(false)}
-        className={`fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)_+_10px)] z-40 transition-transform duration-300 ease-out motion-reduce:transition-none md:hidden ${hidden ? "translate-y-[calc(100%_+_env(safe-area-inset-bottom)_+_44px)]" : ""
+        className={`fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)_+_10px)] z-40 print:hidden transition-transform duration-300 ease-out motion-reduce:transition-none md:hidden ${hidden ? "translate-y-[calc(100%_+_env(safe-area-inset-bottom)_+_44px)]" : ""
           }`}
       >
         <div

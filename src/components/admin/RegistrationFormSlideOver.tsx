@@ -5,6 +5,7 @@ import { SlideOver, Input, InputRupiah, Select, DatePicker, FileUpload } from "@
 import { SpmbCustomField, validateSpmbCustomAnswers } from "@/components/SpmbCustomField";
 import {
   adminCreateRegistration,
+  adminUpdateRegistration,
   findDuplicateRegistrations,
   getWaveStatus,
   spmbAnswerKey,
@@ -17,16 +18,19 @@ import {
   SPMB_EMPTY_DOCUMENT_FILES,
   buildSpmbDocuments,
   createEmptySpmbRegistrationData,
+  mergeSpmbDocuments,
   spmbDatePickerToIso,
   spmbParentName,
+  spmbRegistrationToFormData,
   type SpmbDocumentFiles,
+  type SpmbDocumentPaths,
   type SpmbRegistrationData,
 } from "@/lib/spmb-registration";
-import type { SpmbFormField, SpmbWave } from "@/lib/supabase";
+import type { SpmbFormField, SpmbRegistration, SpmbWave } from "@/lib/supabase";
 import { FloppyDisk, Warning } from "@/components/Icons";
 
-/** Tab panel "Tambah Pendaftar". */
-type AddTab = "pendaftaran" | "siswa" | "orangtua" | "tambahan" | "berkas";
+/** Tab panel Tambah/Edit Pendaftar. */
+type FormTab = "pendaftaran" | "siswa" | "orangtua" | "tambahan" | "berkas";
 
 type RegistrationPath = "reguler" | "prestasi" | "beasiswa";
 
@@ -62,6 +66,13 @@ const STATUS_OPTIONS = [
   { label: "Diterima", value: "accepted" },
 ];
 
+/** Label + warna badge status bawaan — mode edit menampilkannya read-only. */
+const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
+  pending: { label: "Menunggu", cls: "bg-amber-50 text-amber-700 border-amber-200" },
+  accepted: { label: "Diterima", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  rejected: { label: "Ditolak", cls: "bg-red-50 text-red-700 border-red-200" },
+};
+
 const WAVE_STATUS_LABEL: Record<string, string> = {
   upcoming: "Akan Datang",
   open: "Dibuka",
@@ -69,7 +80,7 @@ const WAVE_STATUS_LABEL: Record<string, string> = {
 };
 
 /** Tab tempat sebuah kunci error berada (untuk lompat + penanda di label tab). */
-function tabOf(key: string, hasCustom: boolean): AddTab {
+function tabOf(key: string, hasCustom: boolean): FormTab {
   if (key.startsWith("cf_")) return hasCustom ? "tambahan" : "pendaftaran";
   if (ORTU_KEYS.includes(key)) return "orangtua";
   if (SISWA_KEYS.includes(key)) return "siswa";
@@ -77,43 +88,71 @@ function tabOf(key: string, hasCustom: boolean): AddTab {
 }
 
 /**
- * SlideOver input manual pendaftar SPMB oleh admin/panitia (pendaftar offline
- * atau dibantu via WA). Bentuk data yang disimpan SAMA dengan form publik —
- * memakai buildSpmbDocuments/spmbParentName dari modul bersama — supaya modal
- * detail, pencarian, dan Export CSV tetap bekerja.
+ * SlideOver pendaftar SPMB oleh admin/panitia — dua mode:
+ *
+ * - **create** (default): input manual pendaftar offline / dibantu via WA.
+ * - **edit**: ubah data pendaftar yang sudah masuk. Seluruh tab di-prefill
+ *   dari kolom tabel + jsonb `documents` (lihat spmbRegistrationToFormData);
+ *   berkas lama dipertahankan (keep-or-replace — FileUpload hanya untuk
+ *   mengganti); STATUS read-only karena perubahan status tetap lewat alur
+ *   Terima/Tolak yang berkonfirmasi di daftar pendaftar.
+ *
+ * Bentuk data yang disimpan SAMA dengan form publik — memakai
+ * buildSpmbDocuments/spmbParentName dari modul bersama — supaya modal detail,
+ * pencarian, dan Export CSV tetap bekerja. Mode edit menggabungkan documents
+ * lama (mergeSpmbDocuments) sehingga jawaban cf_* dari pertanyaan yang kini
+ * non-aktif tidak hilang.
  *
  * Validasi longgar: hanya nama lengkap wajib; NISN/NIK/HP/email divalidasi
  * formatnya hanya bila diisi; pertanyaan custom tervalidasi sesuai skema.
- * Duplikat NISN/NIK hanya PERINGATAN (banner kuning), tidak memblokir.
+ * Duplikat NISN/NIK hanya PERINGATAN (banner kuning), tidak memblokir; mode
+ * edit mengecualikan baris yang sedang diedit (excludeId).
  *
- * Selalu di-mount ulang tiap dibuka ({addOpen && <… />}) → isian selalu kosong.
+ * Selalu di-mount ulang tiap dibuka ({addOpen && <… />}) → isian selalu dari
+ * awal (create) / dari data pendaftar (edit).
  */
-export function AddRegistrationSlideOver({
+export function RegistrationFormSlideOver({
   open,
   onClose,
-  onCreated,
+  onSaved,
   waves,
   formFields,
+  mode = "create",
+  registration = null,
 }: {
   open: boolean;
   onClose: () => void;
-  onCreated: () => void;
+  /** Dipanggil setelah simpan sukses (create maupun edit). */
+  onSaved: () => void;
   /** Semua gelombang (termasuk disembunyikan/ditutup) — admin boleh memilih apa pun. */
   waves: SpmbWave[];
   /** Skema pertanyaan tambahan dari builder (hanya yang aktif yang ditampilkan). */
   formFields: SpmbFormField[];
+  mode?: "create" | "edit";
+  /** Wajib saat mode="edit" — baris yang diedit. */
+  registration?: SpmbRegistration | null;
 }) {
-  const [tab, setTab] = useState<AddTab>("pendaftaran");
-  const [data, setData] = useState<SpmbRegistrationData>(createEmptySpmbRegistrationData);
-  const [custom, setCustom] = useState<Record<string, string>>({});
+  const isEdit = mode === "edit" && !!registration;
+  // Hidrasi sekali saat mount (komponen selalu di-mount ulang saat dibuka).
+  const hydrated = isEdit && registration ? spmbRegistrationToFormData(registration) : null;
+
+  const [tab, setTab] = useState<FormTab>("pendaftaran");
+  const [data, setData] = useState<SpmbRegistrationData>(() => hydrated?.data ?? createEmptySpmbRegistrationData());
+  const [custom, setCustom] = useState<Record<string, string>>(() => hydrated?.custom ?? {});
   const [docs, setDocs] = useState<SpmbDocumentFiles>(SPMB_EMPTY_DOCUMENT_FILES);
-  const [path, setPath] = useState<RegistrationPath>("reguler");
-  const [status, setStatus] = useState<"pending" | "accepted">("pending");
-  /** "" = tanpa gelombang. Default: gelombang published yang sedang "open" (sama dengan submitRegistration). */
-  const [waveId, setWaveId] = useState<string>(
-    () => waves.find((w) => w.is_published && getWaveStatus(w) === "open")?.id ?? ""
+  /** Path/URL berkas tersimpan (mode edit) — label "sudah ada"; diganti via docs. */
+  const [docPaths] = useState<SpmbDocumentPaths>(() => hydrated?.docPaths ?? {});
+  const [path, setPath] = useState<RegistrationPath>(
+    () => ((registration?.registration_path as RegistrationPath) || "reguler")
   );
-  const [notes, setNotes] = useState("");
+  const [status, setStatus] = useState<"pending" | "accepted">("pending");
+  /** "" = tanpa gelombang. Create: default gelombang published yang sedang "open". Edit: gelombang tersimpan. */
+  const [waveId, setWaveId] = useState<string>(() =>
+    isEdit
+      ? (registration?.wave_id ?? "")
+      : waves.find((w) => w.is_published && getWaveStatus(w) === "open")?.id ?? ""
+  );
+  const [notes, setNotes] = useState<string>(() => registration?.admin_notes ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -124,7 +163,7 @@ export function AddRegistrationSlideOver({
 
   const customFields = useMemo(() => formFields.filter((f) => f.active), [formFields]);
   const hasCustom = customFields.length > 0;
-  const tabs: { key: AddTab; label: string }[] = useMemo(
+  const tabs: { key: FormTab; label: string }[] = useMemo(
     () => [
       { key: "pendaftaran", label: "Pendaftaran" },
       { key: "siswa", label: "Siswa" },
@@ -136,7 +175,7 @@ export function AddRegistrationSlideOver({
   );
 
   const errorTabs = useMemo(() => {
-    const s = new Set<AddTab>();
+    const s = new Set<FormTab>();
     for (const [k, v] of Object.entries(errors)) if (v) s.add(tabOf(k, hasCustom));
     return s;
   }, [errors, hasCustom]);
@@ -147,15 +186,15 @@ export function AddRegistrationSlideOver({
    * jalur/status/gelombang) tidak dihitung supaya penandanya bermakna.
    */
   const filledTabs = useMemo(() => {
-    const s = new Set<AddTab>();
+    const s = new Set<FormTab>();
     const has = (k: string) => ((data as Record<string, string>)[k] ?? "").trim() !== "";
     if (data.program.trim() || notes.trim()) s.add("pendaftaran");
     if (SISWA_KEYS.some((k) => k !== "gender" && k !== "orphan_status" && has(k))) s.add("siswa");
     if (ORTU_KEYS.some(has)) s.add("orangtua");
     if (customFields.some((f) => (custom[spmbAnswerKey(f.id)] || "").trim())) s.add("tambahan");
-    if (DOC_FIELDS.some(({ key }) => docs[key])) s.add("berkas");
+    if (DOC_FIELDS.some(({ key }) => docs[key] || docPaths[key])) s.add("berkas");
     return s;
-  }, [data, notes, custom, customFields, docs]);
+  }, [data, notes, custom, customFields, docs, docPaths]);
 
   /** Tab berikutnya (untuk tombol "Selanjutnya" di footer); null = sudah tab terakhir. */
   const nextTab = useMemo(() => {
@@ -210,8 +249,13 @@ export function AddRegistrationSlideOver({
     }
 
     // Peringatan duplikat (NISN/NIK sama) — tidak memblokir, klik kedua lanjut.
+    // Mode edit: baris yang sedang diedit dikecualikan.
     if (!dupAcknowledged) {
-      const found = await findDuplicateRegistrations({ nisn: data.nisn, nik: data.nik });
+      const found = await findDuplicateRegistrations({
+        nisn: data.nisn,
+        nik: data.nik,
+        excludeId: isEdit ? registration!.id : undefined,
+      });
       if (found.length > 0) {
         setDupes(found);
         setDupAcknowledged(true);
@@ -225,16 +269,21 @@ export function AddRegistrationSlideOver({
 
     // Folder unik PER INPUT — jangan memakai pola folder form publik
     // (spmb-<tahun>/<nisn>) karena NISN duplikat akan menimpa berkas pendaftar lain.
-    const idPart = data.nisn.trim() || "manual";
+    const idPart = isEdit
+      ? `edit-${registration!.id.slice(0, 8)}`
+      : data.nisn.trim() || "manual";
     const folder = `spmb-${new Date().getFullYear()}/${idPart}-${Date.now()}`;
     const uploaded: string[] = [];
 
     try {
+      // Mode create: kunci tanpa berkas ditulis null (payload baru penuh).
+      // Mode edit: hanya berkas yang DIGANTI ikut payload — path lama di documents
+      // dipertahankan lewat merge (keep-or-replace).
       const filePaths: Partial<Record<keyof SpmbDocumentFiles, string | null>> = {};
       for (const { key, base } of DOC_FIELDS) {
         const file = docs[key];
         if (!file) {
-          filePaths[key] = null;
+          if (!isEdit) filePaths[key] = null;
           continue;
         }
         const path = `${folder}/${base}.${file.name.split(".").pop()}`;
@@ -254,20 +303,43 @@ export function AddRegistrationSlideOver({
         filePaths[key] = path;
       }
 
-      const documents = buildSpmbDocuments(data, filePaths);
-      // Jawaban pertanyaan tambahan (kunci cf_<id>) — hanya nilai non-kosong.
-      for (const f of customFields) {
-        const val = (custom[spmbAnswerKey(f.id)] || "").trim();
-        if (val) documents[spmbAnswerKey(f.id)] = val;
+      let documents: Record<string, string | null>;
+      if (isEdit) {
+        // Kunci BERKAS dikeluarkan dari hasil build — tanpa pengganti, path lama
+        // di documents lama harus selamat (jangan ditimpa null).
+        const docKeySet = new Set<string>(DOC_FIELDS.map((d) => d.key));
+        const dataDocs: Record<string, string | null> = {};
+        for (const [k, v] of Object.entries(buildSpmbDocuments(data, {}))) {
+          if (!docKeySet.has(k)) dataDocs[k] = v;
+        }
+        documents = mergeSpmbDocuments(registration!.documents ?? null, {
+          ...dataDocs,
+          ...filePaths,
+        });
+        // Jawaban pertanyaan tambahan: timpa bila terisi; HAPUS bila dikosongkan.
+        for (const f of customFields) {
+          const key = spmbAnswerKey(f.id);
+          const val = (custom[key] || "").trim();
+          if (val) documents[key] = val;
+          else delete documents[key];
+        }
+        // input_source lama dipertahankan lewat merge (tidak ditimpa).
+      } else {
+        documents = buildSpmbDocuments(data, filePaths);
+        // Jawaban pertanyaan tambahan (kunci cf_<id>) — hanya nilai non-kosong.
+        for (const f of customFields) {
+          const val = (custom[spmbAnswerKey(f.id)] || "").trim();
+          if (val) documents[spmbAnswerKey(f.id)] = val;
+        }
+        // Penanda input manual — dibaca badge "Manual" di daftar pendaftar.
+        documents.input_source = "admin";
       }
-      // Penanda input manual — dibaca badge "Manual" di daftar pendaftar.
-      documents.input_source = "admin";
 
-      const result = await adminCreateRegistration({
+      const payload = {
         full_name: data.full_name,
         birth_place: data.birth_place,
         birth_date: spmbDatePickerToIso(data.birth_date),
-        gender: data.gender === "P" ? "P" : "L",
+        gender: data.gender === "P" ? ("P" as const) : ("L" as const),
         address: data.address,
         phone: data.phone,
         email: data.email,
@@ -275,15 +347,18 @@ export function AddRegistrationSlideOver({
         parent_occupation: data.father_job,
         previous_school: data.previous_school,
         registration_path: path,
-        status,
         wave_id: waveId || null,
         admin_notes: notes,
         documents,
-      });
+      };
+
+      const result = isEdit
+        ? await adminUpdateRegistration(registration!.id, payload)
+        : await adminCreateRegistration({ ...payload, status });
       if (!result.success) {
         throw new Error(result.error || "Gagal menyimpan pendaftar.");
       }
-      onCreated();
+      onSaved();
     } catch (err) {
       // Insert/upload gagal → bersihkan berkas yang sudah terunggah (best-effort).
       if (uploaded.length > 0) {
@@ -295,12 +370,14 @@ export function AddRegistrationSlideOver({
     }
   }
 
+  const statusBadge = STATUS_BADGE[registration?.status ?? "pending"] ?? STATUS_BADGE.pending;
+
   return (
     <SlideOver
       open={open}
       onClose={() => !saving && onClose()}
-      title="Tambah Pendaftar"
-      description="Input manual oleh admin (pendaftar offline / dibantu via WhatsApp)"
+      title={isEdit ? "Edit Data Pendaftar" : "Tambah Pendaftar"}
+      description={isEdit ? (registration?.full_name ?? "") : "Input manual oleh admin (pendaftar offline / dibantu via WhatsApp)"}
       wrapperClassName="md:max-w-3xl"
       toolbar={
         /* Bar tab DI LUAR area scroll (prop toolbar SlideOver) — selalu
@@ -358,7 +435,11 @@ export function AddRegistrationSlideOver({
               ) : (
                 <>
                   <FloppyDisk className="h-4 w-4" />
-                  {dupes && dupes.length > 0 ? "Tetap simpan" : "Simpan"}
+                  {dupes && dupes.length > 0
+                    ? "Tetap simpan"
+                    : isEdit
+                      ? "Simpan Perubahan"
+                      : "Simpan"}
                 </>
               )}
             </button>
@@ -407,8 +488,24 @@ export function AddRegistrationSlideOver({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Select label="Jalur" options={PATH_OPTIONS} value={path}
                 onChange={(val) => setPath(val as RegistrationPath)} />
-              <Select label="Status Awal" options={STATUS_OPTIONS} value={status}
-                onChange={(val) => setStatus(val as "pending" | "accepted")} />
+              {isEdit ? (
+                // Status read-only — perubahan status lewat tombol Terima/Tolak
+                // yang berkonfirmasi di daftar pendaftar (alur sama seperti sebelumnya).
+                <div>
+                  <span className="mb-1.5 block text-sm font-medium text-[var(--brand-primary)]">Status</span>
+                  <div className="flex min-h-[42px] items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <span className={`inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusBadge.cls}`}>
+                      {statusBadge.label}
+                    </span>
+                    <span className="truncate text-[11px] text-slate-400" title="Perubahan status lewat tombol Terima/Tolak">
+                      via Terima/Tolak
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <Select label="Status Awal" options={STATUS_OPTIONS} value={status}
+                  onChange={(val) => setStatus(val as "pending" | "accepted")} />
+              )}
               <Select label="Gelombang" value={waveId} onChange={setWaveId}
                 options={[
                   { label: "Tanpa gelombang", value: "" },
@@ -450,7 +547,7 @@ export function AddRegistrationSlideOver({
             </div>
 
             <div>
-              <h4 className="mb-3 text-sm font-bold text-[var(--brand-primary)]">Kelahiran &amp; Identitas Resmi</h4>
+              <h4 className="mb-3 text-sm font-bold text-[var(--brand-primary)]">Kelahiran & Identitas Resmi</h4>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Select searchable label="Tempat Lahir" options={KOTA_KABUPATEN} value={data.birth_place}
@@ -468,7 +565,7 @@ export function AddRegistrationSlideOver({
             </div>
 
             <div>
-              <h4 className="mb-3 text-sm font-bold text-[var(--brand-primary)]">Fisik &amp; Minat</h4>
+              <h4 className="mb-3 text-sm font-bold text-[var(--brand-primary)]">Fisik & Minat</h4>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Input label="Tinggi Badan (cm)" placeholder="Contoh: 150"
@@ -503,7 +600,7 @@ export function AddRegistrationSlideOver({
             </div>
 
             <div>
-              <h4 className="mb-3 text-sm font-bold text-[var(--brand-primary)]">Sekolah &amp; Alamat</h4>
+              <h4 className="mb-3 text-sm font-bold text-[var(--brand-primary)]">Sekolah & Alamat</h4>
               <div className="space-y-4">
                 <Input label="Asal Sekolah" placeholder="Nama Sekolah Asal"
                   value={data.previous_school} onChange={(e) => update("previous_school", e.target.value)} />
@@ -588,17 +685,25 @@ export function AddRegistrationSlideOver({
           </div>
         )}
 
-        {/* ── Tab: Berkas (semua opsional; tidak ada fitur unggah
-               menyusul — dokumen hanya bisa dipilih saat menyimpan) ── */}
+        {/* ── Tab: Berkas (semua opsional; mode edit = keep-or-replace) ── */}
         {tab === "berkas" && (
           <div className="space-y-4">
             <p className="text-sm text-slate-500">
-              Semua berkas opsional. Format: PDF, JPG, PNG, WebP. Maksimal 10 MB per file.
+              {isEdit
+                ? "Berkas yang sudah tersimpan tetap dipakai kecuali Anda memilih berkas pengganti. Format: PDF, JPG, PNG, WebP. Maksimal 10 MB per file."
+                : "Semua berkas opsional. Format: PDF, JPG, PNG, WebP. Maksimal 10 MB per file."}
             </p>
             <div className="space-y-3">
               {DOC_FIELDS.map(({ key, label }) => (
-                <FileUpload key={key} label={label} compact value={docs[key]}
-                  onChange={(file) => updateDoc(key, file)} />
+                <div key={key}>
+                  <FileUpload label={label} compact value={docs[key]}
+                    onChange={(file) => updateDoc(key, file)} />
+                  {isEdit && !docs[key] && docPaths[key] && (
+                    <p className="mt-1 text-[11px] text-emerald-600">
+                      Berkas saat ini tersimpan — pilih berkas baru untuk mengganti.
+                    </p>
+                  )}
+                </div>
               ))}
             </div>
           </div>

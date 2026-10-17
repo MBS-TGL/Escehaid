@@ -185,6 +185,17 @@ export default async function SPMBPage() {
                 .
               </div>
             </div>
+
+            {/* Cek status: bagi yang sudah mendaftar */}
+            <p className="mt-4 text-center text-sm text-slate-500">
+              Sudah mendaftar?{" "}
+              <Link
+                href="/admission/status"
+                className={`font-semibold text-[var(--brand-accent)] underline underline-offset-4 hover:text-[var(--brand-primary)] ${focusRing}`}
+              >
+                Cek status pendaftaran & hasil seleksi
+              </Link>
+            </p>
           </CSSFadeIn>
         </div>
       </section>

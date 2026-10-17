@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   getRegistrationList,
   updateRegistrationStatus,
-  updateRegistrationNotes,
   updateRegistrationBulkStatus,
   deleteRegistration,
   deleteRegistrationBulk,
@@ -71,7 +70,7 @@ import {
   type StatusTone,
 } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
-import { AddRegistrationSlideOver } from "@/components/admin/AddRegistrationSlideOver";
+import { RegistrationFormSlideOver } from "@/components/admin/RegistrationFormSlideOver";
 import { ImportRegistrationsModal } from "@/components/admin/ImportRegistrationsModal";
 
 const PAGE_SIZE = 10;
@@ -183,10 +182,8 @@ export default function AdminSPMBPage() {
   /** Modal "Import Pendaftar" (massal dari ekspor Google Form). */
   const [importOpen, setImportOpen] = useState(false);
 
-  // Edit panel
+  // Edit panel — form penuh (RegistrationFormSlideOver mode "edit")
   const [editItem, setEditItem] = useState<SpmbRegistration | null>(null);
-  const [editNotes, setEditNotes] = useState("");
-  const [editSaving, setEditSaving] = useState(false);
 
   // Gelombang pendaftaran
   const [mainTab, setMainTab] = useState<MainTab>("registrations");
@@ -220,6 +217,13 @@ export default function AdminSPMBPage() {
   const [waveSaving, setWaveSaving] = useState(false);
   const [deleteWaveItem, setDeleteWaveItem] = useState<SpmbWave | null>(null);
   const [waveDeleting, setWaveDeleting] = useState(false);
+  /**
+   * Gelombang yang hasil seleksinya akan dipublikasikan/ditarik.
+   * Berupa modal konfirmasi — publikasi hasil bersifat sensitif (status
+   * pendaftar langsung terlihat publik), jadi tidak boleh sekali klik.
+   */
+  const [resultWave, setResultWave] = useState<SpmbWave | null>(null);
+  const [resultSaving, setResultSaving] = useState(false);
 
   // Builder pertanyaan tambahan form pendaftaran (ala Google Form)
   const [formFields, setFormFields] = useState<SpmbFormField[]>([]);
@@ -746,20 +750,6 @@ export default function AdminSPMBPage() {
     fetchData();
   }
 
-  async function handleSaveNotes() {
-    if (!editItem) return;
-    setEditSaving(true);
-    try {
-      await updateRegistrationNotes(editItem.id, editNotes);
-      toast("Catatan berhasil disimpan", "success");
-    } catch (e) {
-      toast(e instanceof Error && e.message ? e.message : "Gagal menyimpan catatan", "error");
-    }
-    setEditSaving(false);
-    setEditItem(null);
-    fetchData();
-  }
-
   async function handleToggleStatus(item: SpmbRegistration) {
     const nextStatus = item.status === "pending" ? "accepted" : item.status === "accepted" ? "rejected" : "pending";
     try {
@@ -852,6 +842,36 @@ export default function AdminSPMBPage() {
     toast(wave.is_published ? "Gelombang disembunyikan dari website" : "Gelombang ditampilkan di website", "success");
     fetchWaves();
     revalidatePaths(["/admission"]).catch(() => { });
+  }
+
+  /**
+   * Publikasikan / tarik hasil seleksi sebuah gelombang (dipicu dari modal
+   * konfirmasi `resultWave`). Saat dipublikasikan, status pendaftar
+   * (Lulus/Tidak Lolos) tampil di halaman publik /admission/status untuk
+   * pendaftar gelombang ini; saat ditarik kembali tampil "Dalam Proses".
+   */
+  async function handleToggleResultWave() {
+    if (!resultWave) return;
+    const publish = !resultWave.result_published_at;
+    setResultSaving(true);
+    const res = await updateWave(resultWave.id, {
+      result_published_at: publish ? new Date().toISOString() : null,
+    });
+    setResultSaving(false);
+    if (res.error) {
+      // Kolom belum ada (migrasi belum dijalankan) → pesan yang menunjuk SQL.
+      if (/result_published_at|42703|schema cache/i.test(res.error)) {
+        toast("Kolom result_published_at belum ada di database — jalankan supabase/spmb_status_check.sql terlebih dahulu.", "error");
+      } else {
+        toast(res.error, "error");
+      }
+      setResultWave(null);
+      return;
+    }
+    toast(publish ? "Hasil seleksi dipublikasikan" : "Hasil seleksi ditarik dari publik", "success");
+    setResultWave(null);
+    fetchWaves();
+    revalidatePaths(["/admission", "/admission/status"]).catch(() => { });
   }
 
   async function handleDeleteWave() {
@@ -976,6 +996,11 @@ export default function AdminSPMBPage() {
                             Disembunyikan
                           </span>
                         )}
+                        {w.result_published_at && (
+                          <span className="rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-[11px] font-semibold text-purple-700">
+                            Hasil Ditayangkan
+                          </span>
+                        )}
                         <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
                           Urutan {w.sort_order}
                         </span>
@@ -996,6 +1021,13 @@ export default function AdminSPMBPage() {
                           <span className={`absolute left-0.5 top-1 h-2 w-2 rounded-full bg-white transition-transform ${w.is_published ? "translate-x-3" : ""}`} />
                         </span>
                         {w.is_published ? "Tampil" : "Sembunyi"}
+                      </button>
+                      {/* Publikasi hasil seleksi — lewat modal konfirmasi */}
+                      <button onClick={() => setResultWave(w)}
+                        title={w.result_published_at ? "Tarik hasil seleksi dari publik" : "Publikasikan hasil seleksi gelombang ini"}
+                        className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${w.result_published_at ? "border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100" : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100"}`}>
+                        <CheckCircle className="h-3.5 w-3.5" />
+                        {w.result_published_at ? "Hasil: Tayang" : "Hasil: Belum"}
                       </button>
                       <button onClick={() => openWaveForm(w)} title="Edit Gelombang"
                         className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600">
@@ -1346,6 +1378,42 @@ export default function AdminSPMBPage() {
           </div>
         )}
 
+        {/* ── KONFIRMASI PUBLIKASI HASIL SELEKSI ──────────── */}
+        {resultWave && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+            onClick={() => !resultSaving && setResultWave(null)}>
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-full mx-auto ${resultWave.result_published_at ? "bg-amber-100" : "bg-purple-100"}`}>
+                {resultWave.result_published_at ? <Warning className="h-6 w-6 text-amber-600" /> : <CheckCircle className="h-6 w-6 text-purple-600" />}
+              </div>
+              <h3 className="text-center text-lg font-bold text-slate-800">
+                {resultWave.result_published_at ? "Tarik Hasil Seleksi?" : "Publikasikan Hasil Seleksi?"}
+              </h3>
+              {resultWave.result_published_at ? (
+                <p className="mt-2 text-center text-sm text-slate-500">
+                  Status pendaftar gelombang &ldquo;{resultWave.name}&rdquo; akan kembali tampil sebagai
+                  &ldquo;Dalam Proses&rdquo; di halaman cek status.
+                </p>
+              ) : (
+                <p className="mt-2 text-center text-sm text-slate-500">
+                  Pendaftar gelombang &ldquo;{resultWave.name}&rdquo; yang sudah diverifikasi akan melihat hasil
+                  (Lulus/Tidak Lolos) di halaman cek status publik beserta bukti yang bisa dicetak.
+                </p>
+              )}
+              <div className="mt-6 flex gap-3">
+                <button onClick={() => setResultWave(null)} disabled={resultSaving}
+                  className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                  Batal
+                </button>
+                <button onClick={handleToggleResultWave} disabled={resultSaving}
+                  className={`flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-70 ${resultWave.result_published_at ? "bg-amber-500 hover:bg-amber-600" : "bg-[var(--brand-primary)] hover:bg-[var(--brand-accent)]"}`}>
+                  {resultSaving ? "Menyimpan..." : resultWave.result_published_at ? "Ya, Tarik" : "Ya, Publikasikan"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── FORM TAMBAH/EDIT PERTANYAAN (SLIDE-OVER) ────── */}
         {fieldForm && (
           <SlideOver
@@ -1671,7 +1739,7 @@ export default function AdminSPMBPage() {
                           <button onClick={() => openDetail(item)} aria-label={`Lihat detail ${item.full_name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Detail">
                             <Eye className="h-4 w-4" />
                           </button>
-                          <button onClick={() => { setEditItem(item); setEditNotes(item.admin_notes || ""); }} aria-label={`Edit catatan ${item.full_name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit Catatan">
+                          <button onClick={() => setEditItem(item)} aria-label={`Edit data ${item.full_name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit Data">
                             <PencilSimple className="h-4 w-4" />
                           </button>
                           <button onClick={() => setDeleteItem(item)} aria-label={`Hapus pendaftaran ${item.full_name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
@@ -1749,7 +1817,7 @@ export default function AdminSPMBPage() {
                 onEnterPickMode={enterPickMode}
                 onToggleSelect={toggleSelect}
                 onDetail={openDetail}
-                onEditNotes={(r) => { setEditItem(r); setEditNotes(r.admin_notes || ""); }}
+                onEditData={setEditItem}
                 onSetStatus={(r, s) => {
                   // Terima/Tolak lewat modal konfirmasi; "Jadikan Menunggu"
                   // langsung dijalankan (kembalikan ke antrean review).
@@ -1971,9 +2039,9 @@ export default function AdminSPMBPage() {
 
             {/* Footer */}
             <div className="flex gap-3 border-t border-slate-100 px-6 py-4">
-              <button onClick={() => { setViewItem(null); setEditItem(viewItem); setEditNotes(viewItem.admin_notes || ""); }}
+              <button onClick={() => { setViewItem(null); setEditItem(viewItem); }}
                 className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                <PencilSimple className="h-4 w-4" /> Edit Catatan
+                <PencilSimple className="h-4 w-4" /> Edit Data
               </button>
               {viewItem.status === "pending" && (
                 <>
@@ -1992,64 +2060,33 @@ export default function AdminSPMBPage() {
         </div>
       )}
 
-      {/* ── EDIT NOTES SLIDE-OVER ──────────────────── */}
-      {editItem && (
-        <SlideOver
-          open={true}
-          onClose={() => !editSaving && setEditItem(null)}
-          title="Edit Catatan"
-          description={editItem.full_name}
-
-          footer={
-            <div className="flex w-full items-center justify-between">
-              <button onClick={() => setEditItem(null)} disabled={editSaving}
-                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
-                Batal
-              </button>
-              <button onClick={handleSaveNotes} disabled={editSaving}
-                className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-70">
-                {editSaving ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <>
-                    <FloppyDisk className="h-4 w-4" />
-                    Simpan Catatan
-                  </>
-                )}
-              </button>
-            </div>
-          }
-        >
-          <div className="space-y-5">
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Catatan Admin</label>
-              <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)}
-                rows={8}
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm leading-relaxed focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 resize-y"
-                placeholder="Tambahkan catatan untuk pendaftar ini..." />
-            </div>
-            <div className="rounded-xl border border-slate-200 p-4 space-y-3">
-              <p className="text-xs font-semibold text-slate-400">Info Pendaftar</p>
-              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-                <div><span className="text-slate-500">Jalur:</span> <span className="font-medium text-slate-800">{pathLabels[editItem.registration_path] || editItem.registration_path}</span></div>
-                <div><span className="text-slate-500">Status:</span> <span className={`font-medium ${statusConfig[editItem.status]?.color}`}>{statusConfig[editItem.status]?.label}</span></div>
-                <div><span className="text-slate-500">Sekolah:</span> <span className="font-medium text-slate-800">{editItem.previous_school || "-"}</span></div>
-                <div><span className="text-slate-500">Telepon:</span> <span className="font-medium text-slate-800">{editItem.phone || "-"}</span></div>
-              </div>
-            </div>
-          </div>
-        </SlideOver>
-      )}
-
-      {/* ── TAMBAH PENDAFTAR (SLIDE-OVER) ────────────── */}
+      {/* ── TAMBAH / EDIT PENDAFTAR (SLIDE-OVER) ────── */}
       {addOpen && (
-        <AddRegistrationSlideOver
+        <RegistrationFormSlideOver
           open
+          mode="create"
           onClose={() => setAddOpen(false)}
-          onCreated={() => {
+          onSaved={() => {
             setAddOpen(false);
             fetchData();
             toast("Pendaftar berhasil ditambahkan", "success");
+          }}
+          waves={waves}
+          formFields={formFields}
+        />
+      )}
+
+      {/* ── EDIT DATA PENDAFTAR (SLIDE-OVER) ────────── */}
+      {editItem && (
+        <RegistrationFormSlideOver
+          open
+          mode="edit"
+          registration={editItem}
+          onClose={() => setEditItem(null)}
+          onSaved={() => {
+            setEditItem(null);
+            fetchData();
+            toast("Perubahan pendaftar disimpan", "success");
           }}
           waves={waves}
           formFields={formFields}
@@ -2296,7 +2333,7 @@ function BerkasItem({ label, url, isImage, isPdf }: { label: string; url: string
  * Baris daftar mobile (SPMB): avatar inisial + titik status 14px di pojoknya
  * (amber = Menunggu, hijau = Diterima, merah = Ditolak), nama, badge jalur +
  * asal sekolah/email + tanggal, QuietBadge "Ditolak" untuk status tidak
- * biasa. Menu ⋯ berisi Detail, Edit Catatan, pilihan status (Jadikan
+ * biasa. Menu ⋯ berisi Detail, Edit Data, pilihan status (Jadikan
  * Menunggu / Terima / Tolak — Terima & Tolak lewat modal konfirmasi), Telepon
  * (bila ada nomor) & Hapus. Tap baris = buka modal detail; tekan lama = mode
  * pilih. Nomor urut & kolom tanggal tetap desktop-saja, sama seperti tabel
@@ -2309,7 +2346,7 @@ function RegistrationMobileRow({
   onEnterPickMode,
   onToggleSelect,
   onDetail,
-  onEditNotes,
+  onEditData,
   onSetStatus,
   onDelete,
 }: {
@@ -2319,14 +2356,14 @@ function RegistrationMobileRow({
   onEnterPickMode: (id: string) => void;
   onToggleSelect: (id: string) => void;
   onDetail: (r: SpmbRegistration) => void;
-  onEditNotes: (r: SpmbRegistration) => void;
+  onEditData: (r: SpmbRegistration) => void;
   onSetStatus: (r: SpmbRegistration, s: "pending" | "accepted" | "rejected") => void;
   onDelete: (r: SpmbRegistration) => void;
 }) {
   const st = statusConfig[item.status] || statusConfig.pending;
   const actions: RowAction[] = [
     { key: "detail", label: "Detail", icon: <Eye className="h-4 w-4" />, run: () => onDetail(item) },
-    { key: "notes", label: "Edit Catatan", icon: <PencilSimple className="h-4 w-4" />, run: () => onEditNotes(item) },
+    { key: "edit", label: "Edit Data", icon: <PencilSimple className="h-4 w-4" />, run: () => onEditData(item) },
     ...(item.status !== "pending"
       ? [{
           key: "pending",

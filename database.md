@@ -294,7 +294,28 @@
 | `note` | `text` |  Nullable |
 | `is_published` | `bool` |  |
 | `sort_order` | `int4` |  |
+| `result_published_at` | `timestamptz` |  Nullable — kolom migrasi `supabase/spmb_status_check.sql`. NULL = hasil seleksi belum diumumkan (status pendaftar tampil "Dalam Proses" di halaman publik cek status) |
 | `created_at` | `timestamptz` |  Nullable |
+
+## Table `downloads`
+
+Area unduhan publik (brosur, formulir, juklak) — migrasi `supabase/downloads.sql`. Berkas tersimpan di bucket Storage `documents` folder `downloads/`.
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary, default `gen_random_uuid()` |
+| `title` | `text` |  |
+| `description` | `text` |  Nullable |
+| `category` | `text` | Default `'Umum'` |
+| `file_url` | `text` |  |
+| `file_name` | `text` |  Nullable |
+| `file_size` | `int8` |  Nullable (byte) |
+| `is_active` | `bool` | Default `true` |
+| `sort_order` | `int4` | Default `0` |
+| `created_at` | `timestamptz` | Default `now()` |
+| `updated_at` | `timestamptz` | Default `now()` |
 
 ## Table `notifications`
 
@@ -539,4 +560,19 @@
 |--------|---------|-------|--------|-------|------------|
 | `role_permissions select` | SELECT | authenticated | PERMISSIVE | `true` | — |
 | `role_permissions write superadmin` | ALL | authenticated | PERMISSIVE | `has_permission(auth.uid(), 'users:manage'::text)` | `has_permission(auth.uid(), 'users:manage'::text)` |
+
+### `downloads`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Public can read active downloads` | SELECT | public | PERMISSIVE | `(is_active = true)` | — |
+| `Panel roles can manage downloads` | ALL | authenticated | PERMISSIVE | `(EXISTS (SELECT 1 FROM user_profiles up WHERE up.id = auth.uid() AND up.is_active = true AND up.role = ANY (ARRAY['developer'::user_role, 'admin'::user_role, 'publisher'::user_role])))` | sama dengan USING |
+
+## Functions
+
+### `spmb_public_status(p_nisn text, p_birth_date date)`
+
+Migrasi `supabase/spmb_status_check.sql`. `STABLE SECURITY DEFINER`, `GRANT EXECUTE` ke `anon` + `authenticated` (REVOKE dari `PUBLIC`).
+
+Mengembalikan maks. 1 baris (terbaru) dari `spmb_registrations` yang `documents->>'nisn'` = `p_nisn` **dan** `birth_date = p_birth_date`, di-join `spmb_waves` untuk nama gelombang + penanda `result_published`. Kolom yang dikembalikan terbatas untuk publik: `full_name, status, wave_name, wave_id, registered_at, result_published` — tanpa alamat, orang tua, kontak, berkas, atau catatan admin.
 

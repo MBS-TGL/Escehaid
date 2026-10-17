@@ -75,6 +75,12 @@ export interface SpmbWave {
   note: string | null;
   is_published: boolean;
   sort_order: number;
+  /**
+   * Kolom opsional (supabase/spmb_status_check.sql): diisi timestamp saat
+   * panitia mempublikasikan hasil seleksi gelombang ini. NULL/kolom belum ada
+   * → hasil seleksi pendaftar tampil sebagai "Dalam Proses".
+   */
+  result_published_at?: string | null;
   created_at: string;
 }
 
@@ -246,4 +252,20 @@ export interface ContactMessage {
   message: string;
   is_read: boolean;
   created_at: string;
+}
+
+/** Satu berkas di Area Unduhan publik (tabel `downloads`, supabase/downloads.sql). */
+export interface Download {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string;
+  /** URL publik berkas di Storage (bucket documents, folder downloads/). */
+  file_url: string;
+  file_name: string | null;
+  file_size: number | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
 }

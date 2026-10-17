@@ -3,6 +3,7 @@ import type { SpmbRegistration } from "../supabase";
 import { notifyAllAdmins } from "./users";
 import { getPublishedWaves, getWaveStatus } from "./waves";
 import { isFeatureEnabled } from "@/lib/flags";
+import { mergeSpmbDocuments } from "@/lib/spmb-registration";
 
 export async function submitRegistration(registration: {
   full_name: string;
@@ -288,15 +289,20 @@ export type SpmbRegistrationDuplicate = {
 
 /**
  * Cari pendaftar dengan NISN/NIK sama (via documents->>nisn / documents->>nik).
+ * `excludeId` untuk mode EDIT — baris yang sedang diedit tidak dihitung
+ * duplikat terhadap dirinya sendiri.
  * Best-effort: hanya dipakai untuk peringatan "kemungkinan duplikat" di panel
  * admin — kegagalan query diam-diam dianggap [] dan TIDAK memblokir simpan.
  */
 export async function findDuplicateRegistrations({
   nisn,
   nik,
+  excludeId,
 }: {
   nisn?: string;
   nik?: string;
+  /** id pendaftar yang sedang diedit — dikecualikan dari hasil. */
+  excludeId?: string;
 }): Promise<SpmbRegistrationDuplicate[]> {
   const n = nisn?.trim() || "";
   const k = nik?.trim() || "";
@@ -315,6 +321,7 @@ export async function findDuplicateRegistrations({
         return;
       }
       for (const row of data || []) {
+        if (excludeId && row.id === excludeId) continue;
         const existing = byId.get(row.id);
         if (existing) {
           if (!existing.matched.includes(column)) existing.matched.push(column);
@@ -330,6 +337,86 @@ export async function findDuplicateRegistrations({
   await findBy("nisn", n);
   await findBy("nik", k);
   return Array.from(byId.values());
+}
+
+/**
+ * Update penuh satu pendaftar oleh admin (mode EDIT panel /admin/admission).
+ * Bentuk input SAMA dengan adminCreateRegistration; kolom `status` SENGAJA
+ * tidak diikutkan — perubahan status tetap lewat alur Terima/Tolak yang
+ * berkonfirmasi di daftar pendaftar.
+ *
+ * documents di-MERGE (bukan ditimpa): kunci data & berkas yang diganti
+ * menimpa, kunci asing (cf_* pertanyaan non-aktif, input_source, dll.)
+ * dipertahankan — lihat mergeSpmbDocuments. Pemanggil hanya menyertakan
+ * kunci berkas yang benar-benar diganti (keep-or-replace).
+ */
+export async function adminUpdateRegistration(
+  id: string,
+  input: AdminCreateRegistrationInput
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const birthDate = input.birth_date?.trim() || "";
+
+    // Ambil documents lama untuk merge; gagal baca → anggap kosong (merge
+    // jadi timpa penuh — perilaku menyimpang hanya bila SELECT ditolak RLS,
+    // dan penulis pun pasti ditolak juga).
+    const { data: existingRow } = await supabase
+      .from("spmb_registrations")
+      .select("documents")
+      .eq("id", id)
+      .maybeSingle();
+
+    const documents = mergeSpmbDocuments(
+      existingRow?.documents ?? null,
+      input.documents || {}
+    );
+
+    const { data, error } = await supabase
+      .from("spmb_registrations")
+      .update({
+        full_name: input.full_name.trim(),
+        birth_place: input.birth_place?.trim() || "",
+        birth_date: birthDate || null,
+        gender: input.gender,
+        address: input.address?.trim() || "",
+        phone: input.phone?.trim() || "",
+        email: input.email?.trim() || "",
+        parent_name: input.parent_name ?? "",
+        parent_occupation: input.parent_occupation ?? "",
+        previous_school: input.previous_school?.trim() || "",
+        registration_path: input.registration_path,
+        wave_id: input.wave_id ?? null,
+        admin_notes: input.admin_notes?.trim() || "",
+        documents,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select("id");
+
+    if (error) {
+      console.error("Error updating registration (admin):", error);
+      if (error.code === "42501" || /row-level security/i.test(error.message || "")) {
+        return {
+          success: false,
+          error:
+            "Database menolak perubahan (policy RLS update belum mengizinkan peran ini).",
+        };
+      }
+      return { success: false, error: error.message };
+    }
+    // UPDATE dengan RLS bisa "berhasil" tanpa menyentuh baris → deteksi di sini.
+    if (!data || data.length === 0) {
+      return {
+        success: false,
+        error: "Perubahan tidak tersimpan — tidak ada baris yang terupdate (cek policy RLS).",
+      };
+    }
+    return { success: true };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("Error updating registration (admin):", e);
+    return { success: false, error: message };
+  }
 }
 
 // ============ TEACHERS ============

@@ -11,11 +11,14 @@ const ALLOWED_PATHS = new Set([
   "/news",
   "/admission",
   "/admission/register",
+  "/admission/status",
+  "/downloads",
   "/portal",
   "/articles",
   "/achievements",
   "/activities",
   "/search",
+  "/rss.xml",
 ]);
 function isAllowedPath(p: unknown): boolean {
   if (typeof p !== "string") return false;

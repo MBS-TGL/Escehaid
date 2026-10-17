@@ -190,6 +190,15 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://*.supabase.co" />
+        {/* Feed RSS (dilayani /rss.xml) — langsung di <head> root layout agar
+            tetap ada di semua halaman meski halaman menimpa `alternates`
+            metadata miliknya (shallow merge metadata Next.js). */}
+        <link
+          rel="alternate"
+          type="application/rss+xml"
+          title={schoolName}
+          href="/rss.xml"
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(schoolJsonLd) }}

@@ -124,9 +124,16 @@ function parseSheetData(sheetXml: string, shared: string[]): string[][] {
   const rows: string[][] = [];
   for (const rowTag of sheetXml.match(/<row\b[^>]*>[\s\S]*?<\/row>/g) ?? []) {
     const cells = new Map<number, string>();
-    for (const cellTag of rowTag.match(/<c\b[^>]*(?:\/>|>[\s\S]*?<\/c>)/g) ?? []) {
+    let seq = 0; // fallback posisional bila <c> tanpa atribut r
+    // [^>]* rakus akan menelan "/" sehingga alternatif \/ > tak pernah menang;
+    // oleh karena itu pakai [^>/]* agar ">" penutup <c .../> dikenali sebagai
+    // self-close, bukan sebagai pembuka <c ...> berikutnya.
+    for (const cellTag of rowTag.match(/<c\b[^>/]*(?:\/>|>[\s\S]*?<\/c>)/g) ?? []) {
       const ref = cellRef(cellTag);
-      if (ref === null) continue;
+      // Sel hampir selalu punya r="A1"; bila tidak ada (file buatan non-Google),
+      // anggap berurutan tanpa lubang agar kolom tidak bergeser.
+      const col = ref !== null ? colIndex(ref) : seq;
+      seq = col + 1;
       const type = cellTag.match(/\bt="([^"]*)"/)?.[1] ?? "";
       let value = "";
       if (type === "inlineStr") {
@@ -134,12 +141,15 @@ function parseSheetData(sheetXml: string, shared: string[]): string[][] {
           .map((t) => decodeXml(t.replace(/^<t\b[^>]*>/, "").replace(/<\/t>$/, "")))
           .join("");
       } else {
-        const v = cellTag.match(/<v>([\s\S]*?)<\/v>/)?.[1] ?? "";
-        if (type === "s") value = shared[Number(v)] ?? "";
+        const v = cellTag.match(/<v>([\s\S]*?)<\/v>/)?.[1]?.trim() ?? "";
+        // Sel kosong bertype shared-string (tanpa <v>) → "" apa adanya. Tanpa
+        // guard ini, Number("") = 0 dan shared[0] (biasanya judul "Timestamp")
+        // ikut terisi ke kolom yang seharusnya kosong.
+        if (type === "s") value = v === "" ? "" : (shared[Number(v)] ?? "");
         else if (type === "str") value = decodeXml(v);
         else value = plainNumber(decodeXml(v)); // angka / tanpa t
       }
-      cells.set(colIndex(ref), value);
+      cells.set(col, value);
     }
     const max = cells.size > 0 ? Math.max(...cells.keys()) : -1;
     const row: string[] = [];

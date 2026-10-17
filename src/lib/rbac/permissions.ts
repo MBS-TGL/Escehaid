@@ -99,6 +99,17 @@ export const MODULE_REGISTRY: readonly PermissionModule[] = [
     ],
   },
   {
+    key: "unduhan",
+    label: "Unduhan",
+    description: "Area unduhan publik (brosur, formulir, juklak)",
+    actions: [
+      { key: "read", label: "Melihat" },
+      { key: "create", label: "Menambah" },
+      { key: "update", label: "Mengubah" },
+      { key: "delete", label: "Menghapus" },
+    ],
+  },
+  {
     key: "media",
     label: "Media",
     description: "Pustaka berkas media",

@@ -58,6 +58,58 @@ export type ImportResult = {
   skipped: number;
   ignored: string[];
   unmapped: string[];
+  /**
+   * Pemetaan kolom yang terpakai (urut nomor kolom) — ditampilkan di pratinjau
+   * agar salah-kunci (field terisi data kolom lain) langsung terlihat.
+   */
+  mapping: { key: RawKey; header: string }[];
+};
+
+/** Label Indonesia per kunci — dipakai panel "Pemetaan kolom" di pratinjau.
+ *  Enam kunci data murni (birth_place, dst.) tidak pernah jadi target mapping,
+ *  tetap dilengkapi agar Record<RawKey, string> utuh. */
+export const FIELD_LABELS: Record<RawKey, string> = {
+  full_name: "Nama Lengkap",
+  nickname: "Nama Panggilan",
+  gender: "Jenis Kelamin",
+  birth: "Tempat, Tanggal Lahir",
+  birth_place: "Tempat Lahir",
+  birth_date: "Tanggal Lahir",
+  program: "Program",
+  nisn: "NISN",
+  nik: "NIK",
+  height: "Tinggi Badan",
+  weight: "Berat Badan",
+  language: "Bahasa",
+  hobby: "Hobi",
+  ambition: "Cita-cita",
+  child_order: "Anak Ke",
+  siblings: "Jumlah Saudara",
+  blood_type: "Golongan Darah",
+  orphan_status: "Yatim/Piatu",
+  previous_school: "Asal Sekolah",
+  address: "Alamat",
+  phone: "No. HP/WA",
+  email: "Email",
+  father_name: "Nama Ayah",
+  mother_name: "Nama Ibu",
+  father_birth: "Tempat, Tanggal Lahir Ayah",
+  mother_birth: "Tempat, Tanggal Lahir Ibu",
+  father_birth_place: "Tempat Lahir Ayah",
+  father_birth_date: "Tanggal Lahir Ayah",
+  mother_birth_place: "Tempat Lahir Ibu",
+  mother_birth_date: "Tanggal Lahir Ibu",
+  father_education: "Pendidikan Ayah",
+  mother_education: "Pendidikan Ibu",
+  father_job: "Pekerjaan Ayah",
+  mother_job: "Pekerjaan Ibu",
+  father_income: "Penghasilan Ayah",
+  mother_income: "Penghasilan Ibu",
+  kk: "Kartu Keluarga",
+  akta: "Akta Kelahiran",
+  surat_sekolah: "Surat Keterangan Sekolah",
+  ktp_ortu: "KTP Orang Tua",
+  bukti_transfer: "Bukti Transfer",
 };
 
 /* ─── Pemetaan header (toleran: trim, case-insensitive, keyword) ── */
@@ -74,18 +126,33 @@ function mapHeader(raw: string): RawKey | null {
   if (!h) return null;
   if (IGNORE_PATTERNS.some((re) => re.test(h))) return null; // metadata, sengaja diabaikan
 
-  // TTL orang tua dulu (mengandung "tanggal lahir" juga), baru TTL siswa.
-  if (h.includes("tanggal lahir") && h.includes("ayah")) return "father_birth";
-  if (h.includes("tanggal lahir") && h.includes("ibu")) return "mother_birth";
-  if (h.includes("tanggal lahir") || (h.includes("tempat") && h.includes("lahir"))) return "birth";
-  if (h.includes("nama ayah")) return "father_name";
-  if (h.includes("nama ibu")) return "mother_name";
-  if (h.includes("pendidikan") && h.includes("ayah")) return "father_education";
-  if (h.includes("pendidikan") && h.includes("ibu")) return "mother_education";
-  if (h.includes("pekerjaan") && h.includes("ayah")) return "father_job";
-  if (h.includes("pekerjaan") && h.includes("ibu")) return "mother_job";
-  if (h.includes("penghasilan") && h.includes("ayah")) return "father_income";
-  if (h.includes("penghasilan") && h.includes("ibu")) return "mother_income";
+  const hasAyah = h.includes("ayah");
+  const hasIbu = h.includes("ibu");
+  const birthish =
+    h.includes("tanggal lahir") || (h.includes("tempat") && h.includes("lahir"));
+
+  // Email responden — kolom bawaan Google Form ("Alamat email"). WAJIB dicek
+  // sebelum aturan "alamat": tanpa ini Alamat siswa terisi email responden.
+  if (h === "alamat email" || h === "email" || h === "e-mail") return "email";
+
+  // TTL orang tua dulu (mengandung "tanggal/tempat lahir" juga), baru TTL
+  // siswa — "Tempat Lahir Ayah" bukan tempat lahir siswa.
+  if (birthish && hasAyah) return "father_birth";
+  if (birthish && hasIbu) return "mother_birth";
+  if (birthish) return "birth";
+
+  // Nama orang tua SEBELUM "nama lengkap" — "Nama Lengkap Ayah" bukan nama siswa.
+  if (h.includes("nama") && hasAyah) return "father_name";
+  if (h.includes("nama") && hasIbu) return "mother_name";
+  if (h.includes("nama lengkap")) return "full_name";
+  if (h.includes("nama panggilan")) return "nickname";
+
+  if (h.includes("pendidikan") && hasAyah) return "father_education";
+  if (h.includes("pendidikan") && hasIbu) return "mother_education";
+  if (h.includes("pekerjaan") && hasAyah) return "father_job";
+  if (h.includes("pekerjaan") && hasIbu) return "mother_job";
+  if (h.includes("penghasilan") && hasAyah) return "father_income";
+  if (h.includes("penghasilan") && hasIbu) return "mother_income";
 
   // Berkas scan (URL unggahan Google Form).
   if (h.includes("kartu keluarga")) return "kk";
@@ -94,12 +161,11 @@ function mapHeader(raw: string): RawKey | null {
   if (h.includes("ktp")) return "ktp_ortu";
   if (h.includes("bukti transfer")) return "bukti_transfer";
 
-  if (h.includes("nama lengkap")) return "full_name";
-  if (h.includes("nama panggilan")) return "nickname";
   if (h.includes("jenis kelamin")) return "gender";
   if (h.includes("program")) return "program";
-  if (h.includes("nisn")) return "nisn";
-  if (h.includes("nik")) return "nik";
+  // NISN/NIK pakai word-boundary — "Status Nikah" bukan NIK.
+  if (/\bnisn\b/.test(h)) return "nisn";
+  if (/\bnik\b/.test(h)) return "nik";
   if (h.includes("tinggi")) return "height";
   if (h.includes("berat")) return "weight";
   if (h.includes("bahasa")) return "language";
@@ -111,7 +177,14 @@ function mapHeader(raw: string): RawKey | null {
   if (h.includes("yatim") || h.includes("piatu")) return "orphan_status";
   if (h.includes("asal sekolah")) return "previous_school";
   if (h.includes("alamat")) return "address";
-  if (h.includes("hp") || h.includes("wa") || h.includes("telepon")) return "phone";
+
+  // No. HP/WA hanya milik siswa — kolom HP ayah/ibu/orang tua/wali tidak
+  // punya field tujuan; tanpa pengecualian ini nomor orang tua "mencuri"
+  // nilai No. HP siswa (kolom pertama menang).
+  const phoneish = /\b(hp|wa|whatsapp|telepon|telpon|telp|tel)\b/.test(h);
+  if (phoneish && !hasAyah && !hasIbu && !h.includes("orang tua") && !h.includes("wali")) {
+    return "phone";
+  }
   return null;
 }
 
@@ -327,7 +400,9 @@ function buildRow(index: number, raw: Record<string, string>): ImportRow {
   data.full_name = cleanText(raw.full_name ?? "");
   data.father_name = cleanText(raw.father_name ?? "");
   data.mother_name = cleanText(raw.mother_name ?? "");
-  data.email = ""; // ekspor Google Form tidak punya kolom email
+  // Email responden dari kolom bawaan Google Form ("Alamat email") — biasanya
+  // email orang tua yang mengisi form; kosong bila kolom tidak ada.
+  data.email = cleanOptional(raw.email ?? "");
 
   // Program: cocokkan toleran; nilai asing tetap disimpan + WARNING.
   const programRaw = cleanText(raw.program ?? "");
@@ -512,7 +587,7 @@ export function buildImportPayload(row: ImportRow): AdminCreateRegistrationInput
     gender: row.data.gender === "P" ? "P" : "L",
     address: row.data.address,
     phone: row.data.phone,
-    email: "",
+    email: row.data.email,
     parent_name: spmbParentName(row.data),
     parent_occupation: row.data.father_job,
     previous_school: row.data.previous_school,
@@ -532,6 +607,12 @@ export function buildImportPayload(row: ImportRow): AdminCreateRegistrationInput
  */
 export function buildImportResult(table: SheetTable, existing: ExistingRow[]): ImportResult {
   const { map, ignored, unmapped } = mapHeaders(table.headers);
+
+  // Panel "Pemetaan kolom": field ← judul kolom sumber, urut nomor kolom.
+  const mapping = Object.entries(map)
+    .map(([key, col]) => ({ key: key as RawKey, col }))
+    .sort((a, b) => a.col - b.col)
+    .map(({ key, col }) => ({ key, header: table.headers[col]?.trim() || `(kolom ${col + 1})` }));
 
   const rawOf = (cells: string[]): Record<string, string> => {
     const raw: Record<string, string> = {};
@@ -553,5 +634,5 @@ export function buildImportResult(table: SheetTable, existing: ExistingRow[]): I
     row.include = status === "ready" || status === "warning";
   }
 
-  return { rows, skipped, ignored, unmapped };
+  return { rows, skipped, ignored, unmapped, mapping };
 }

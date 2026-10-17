@@ -317,3 +317,57 @@ Sisa verifikasi langsung (bukan penulisan kode):
 2. Deploy (Vercel)
 3. Login `/admin/portal` → uji **pill status** (buka menu, Esc, ganti status → toast + revalidate), **modal baru** (dua kolom, sticky pratinjau, Ctrl+S), geser baris, filter/pencarian
 4. Pastikan drag **nonaktif** saat filter aktif (memang didesain begitu)
+
+---
+
+## ✅ 17 Okt 2026 — Paket fitur SPMB publik + Unduhan + RSS
+
+Gerbang: `tsc` 0 · lint 0 error (73 warning lama) · vitest 35/35 · build 0.
+
+**Dibangun:**
+
+| # | Fitur | Berkas kunci |
+|---|---|---|
+| 1 | RSS feed `/rss.xml` (berita+artikel, ISR 15m, autodiscovery di layout) | `src/app/rss.xml/route.ts`, `layout.tsx` |
+| 2 | Cek status SPMB publik `/admission/status` — NISN + tanggal lahir (verifikasi ganda), hasil seleksi baru tampil setelah gelombang mempublikasikan | `src/app/admission/status/*`, `src/lib/queries/spmb-status.ts` |
+| 3 | Publikasi hasil seleksi per gelombang — toggle berkonfirmasi di tab Gelombang `/admin/admission`, badge "Hasil Ditayangkan", bukti cetak (`print:hidden` pada nav/footer/FAB) | `admin/admission/ClientPage.tsx`, `supabase/spmb_status_check.sql` |
+| 4 | Area Unduhan — publik `/downloads` + admin `/admin/downloads` (CRUD penuh, unggah ke bucket `documents`/downloads/, paritas mobile, RBAC modul `unduhan:*`) | `admin/downloads/*`, `queries/downloads.ts`, `supabase/downloads.sql` |
+
+**Sudah ada ternyata (tidak dibangun ulang):** PWA manifest (`public/manifest.json`, terpasang di layout) dan notifikasi admin (Topbar + `notify_admins` RPC + polling).
+
+**Integrasi ikutan:** sitemap (+/downloads, /admission/status), Footer menu "Unduhan", tautan dari /admission & layar sukses SPMBForm, whitelist `/api/revalidate` (+/downloads, /admission/status, /rss.xml), `media.ts` REFERENCE_TABLES +downloads, RBAC registry+roles modul `unduhan`, `database.md` (skema+RLS+fungsi baru).
+
+**WAJIB oleh user (SQL, urut bebas):**
+1. `supabase/spmb_status_check.sql` — kolom `spmb_waves.result_published_at` + fungsi `spmb_public_status()`
+2. `supabase/downloads.sql` — tabel `downloads` + RLS + seed izin `unduhan:*`
+
+Tanpa SQL itu: cek status menampilkan "Layanan belum aktif" (degradasi anggun), toggle hasil & admin Unduhan menampilkan pesan penunjuk migrasi.
+
+---
+
+## ✅ 17 Okt 2026 (sesi 2) — Edit Data Pendaftar + perbaikan import Excel
+
+Gerbang: `tsc` 0 · lint 0 error (73 warning lama) · vitest 62/62 · build 0.
+
+### 1. Edit data pendaftar SPMB (mode edit penuh di `/admin/admission`)
+
+Panel "Edit Catatan" lama diganti **`RegistrationFormSlideOver`** (`src/components/admin/RegistrationFormSlideOver.tsx`, pengganti `AddRegistrationSlideOver.tsx` yang dihapus) dengan `mode="create" | "edit"`:
+
+- **5 tab** (Pendaftaran / Siswa / Orang Tua / Tambahan / Berkas) — tab identik untuk create & edit; penanda titik merah (error) & hijau (sudah terisi) per tab.
+- **Hidrasi** dari kolom tabel + jsonb `documents` lewat `spmbRegistrationToFormData()` (`src/lib/spmb-registration.ts`): parent_name `"Ayah / Ibu"` dipecah, tanggal dinormalisasi `dd/mm/yyyy`, kunci `cf_*` (termasuk pertanyaan non-aktif) ikut terhidrasi.
+- **Keep-or-replace berkas**: FileUpload hanya mengganti bila admin memilih berkas baru; path lama bertahan via `mergeSpmbDocuments()` — dokumen jsonb lama (jawaban custom, `input_source`) tidak pernah hilang. Berkas baru unggah ke folder `reg-<id8>-<ts>` (beda dari pola publik supaya tak menimpa pendaftar lain).
+- **Status read-only** di form edit (badge + "via Terima/Tolak") — perubahan status tetap lewat alur Terima/Tolak berkonfirmasi.
+- **Duplikat NISN/NIK = peringatan** (banner kuning + "Tetap simpan"), mode edit mengecualikan baris sendiri (`findDuplicateRegistrations({ excludeId })`).
+- Entri edit di 3 tempat: pensil tabel desktop, tombol "Edit Data" di modal detail, menu ⋯ baris mobile. `updateRegistrationNotes`/`handleSaveNotes` dihapus dari ClientPage.
+- Test baru `src/lib/spmb-registration.test.ts` (hidrasi + merge, 14 test).
+
+**Tanpa SQL baru** — memakai tabel & kolom yang ada.
+
+### 2. Fix bug import Excel: kolom kosong bikin data tergeser
+
+Akarnya di parser XLSX `src/lib/spmb-import-file.ts` (2 bug, keduanya diregresikan di `spmb-import.test.ts`):
+
+1. Regex sel `<c\b[^>]*(?:\/>|…)` — `[^>]*` rakus menelan `/`, sehingga sel self-close Google (`<c r="B2" t="s"/>`) melebur dengan sel berikutnya → seluruh kolom kanan merosot satu kolom. Diperbaiki jadi `[^>/]*`.
+2. Sel `t="s"` tanpa `<v>` dihitung `shared[Number("")]` = `shared[0]` (judul "Timestamp") → kolom kosong "terisi" data lain. Diperbaiki: `v === ""` → `""`.
+
+Kedua perbaikan sudah diverifikasi: pemetaan kolom panel benar, baris dengan blok kosong (NISN..Yatim/Piatu) kini terbaca benar.

@@ -72,6 +72,7 @@ const REFERENCE_TABLES = [
   "contact_messages",
   "notifications",
   "user_profiles",
+  "downloads",
 ] as const;
 
 const MAX_FOLDER_DEPTH = 4;

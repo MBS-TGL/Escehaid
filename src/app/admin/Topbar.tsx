@@ -22,6 +22,7 @@ import {
   Info,
   FolderOpen,
   Scroll,
+  Download,
 } from "@/components/Icons";
 import {
   getUnreadNotificationCount,
@@ -45,6 +46,7 @@ const navSearchItems = [
   { label: "Kelola Fasilitas", href: "/admin/facilities", icon: ImageSquare, perm: "fasilitas:read" },
   { label: "Kelola Artikel", href: "/admin/articles", icon: Note, perm: "artikel:read" },
   { label: "Kelola Galeri", href: "/admin/gallery", icon: ImageSquare, perm: "galeri:read" },
+  { label: "Kelola Unduhan", href: "/admin/downloads", icon: Download, perm: "unduhan:read" },
   { label: "Media Library", href: "/admin/media", icon: FolderOpen, perm: "media:read" },
   { label: "Log Aktivitas", href: "/admin/logs", icon: Scroll, perm: "logs:read" },
   { label: "Kelola Prestasi", href: "/admin/achievements", icon: Trophy, perm: "prestasi:read" },

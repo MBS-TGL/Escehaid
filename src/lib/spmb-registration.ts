@@ -209,3 +209,145 @@ export function spmbDatePickerToIso(value: string): string {
   if (!m) return "";
   return `${m[3]}-${m[2]}-${m[1]}`;
 }
+
+/** ISO "YYYY-MM-DD" → "dd/mm/yyyy" untuk DatePicker; kosong/rusak → "". */
+export function spmbIsoToDatePicker(value: string | null | undefined): string {
+  const iso = (value || "").trim();
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return "";
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
+/* ─── Mode EDIT pendaftar (panel admin) ───────────────────── */
+
+/**
+ * Bentuk minimal baris spmb_registrations yang dibutuhkan hidrasi form edit —
+ * struktural (tidak mengimpor tipe Supabase) agar mudah dites.
+ */
+export type SpmbRegistrationRowLike = {
+  full_name: string;
+  birth_place: string;
+  /** Kolom `date` → "YYYY-MM-DD" atau null. */
+  birth_date: string | null;
+  gender: string;
+  address: string;
+  phone: string;
+  email: string;
+  /** Format "Nama Ayah / Nama Ibu" (lihat spmbParentName). */
+  parent_name: string;
+  previous_school: string;
+  documents: Record<string, string | null> | null;
+};
+
+/** Nilai yatim/piatu yang dikenali Select form — nilai lain dianggap "tidak". */
+const ORPHAN_VALUES = new Set(["tidak", "yatim", "piatu", "yatim_piatu"]);
+
+/** Ambil teks non-kosong dari jsonb documents; selain string → "". */
+function docText(docs: Record<string, string | null> | null, key: string): string {
+  const v = docs?.[key];
+  return typeof v === "string" ? v : "";
+}
+
+/**
+ * Hidrasi baris pendaftar tersimpan menjadi isian form admin (mode EDIT):
+ * - kolom tabel → field utama (nama, TTL, alamat, HP, email, asal sekolah);
+ * - parent_name "A / B" → nama ayah & ibu (format lihat spmbParentName);
+ * - jsonb documents → field tambahan (nisn, nik, program, data orang tua, …),
+ *   jawaban pertanyaan custom (kunci cf_<id>), dan path berkas tersimpan.
+ *
+ * Tanggal dinormalisasi ke "dd/mm/yyyy" untuk DatePicker — documents bisa
+ * menyimpan "dd/mm/yyyy" (form/admin) ATAU ISO (hasil import).
+ * Kunci cf_* yang tak dikenal tetap diambil supaya jawaban lama tidak hilang
+ * saat disimpan ulang (mergeSpmbDocuments mempertahankannya).
+ */
+export function spmbRegistrationToFormData(row: SpmbRegistrationRowLike): {
+  data: SpmbRegistrationData;
+  custom: Record<string, string>;
+  docPaths: SpmbDocumentPaths;
+} {
+  const docs = row.documents ?? {};
+  const data = createEmptySpmbRegistrationData();
+
+  data.program = docText(docs, "program");
+  data.full_name = row.full_name ?? "";
+  data.nickname = docText(docs, "nickname");
+  data.gender = row.gender === "P" ? "P" : "L";
+  data.birth_place = row.birth_place ?? "";
+  data.birth_date = spmbIsoToDatePicker(row.birth_date);
+  data.nisn = docText(docs, "nisn");
+  data.nik = docText(docs, "nik");
+  data.height = docText(docs, "height");
+  data.weight = docText(docs, "weight");
+  data.language = docText(docs, "language");
+  data.hobby = docText(docs, "hobby");
+  data.ambition = docText(docs, "ambition");
+  data.child_order = docText(docs, "child_order");
+  data.siblings = docText(docs, "siblings");
+  data.blood_type = docText(docs, "blood_type");
+  const orphan = docText(docs, "orphan_status");
+  data.orphan_status = ORPHAN_VALUES.has(orphan) ? orphan : "tidak";
+  data.previous_school = row.previous_school ?? "";
+  data.address = row.address ?? "";
+  data.phone = row.phone ?? "";
+  data.email = row.email ?? "";
+
+  // parent_name "Nama Ayah / Nama Ibu" — bagian pertama ayah, sisanya ibu
+  // (nama ibu sendiri bisa mengandung " / "? dibalut utuh setelah pemisah pertama).
+  const sep = row.parent_name ?? "";
+  const idx = sep.indexOf(" / ");
+  if (idx >= 0) {
+    data.father_name = sep.slice(0, idx).trim();
+    data.mother_name = sep.slice(idx + 3).trim();
+  } else {
+    data.father_name = sep.trim();
+    data.mother_name = "";
+  }
+
+  data.father_birth_place = docText(docs, "father_birth_place");
+  data.father_birth_date = spmbIsoToDatePicker(spmbDatePickerToIso(docText(docs, "father_birth_date")));
+  data.father_education = docText(docs, "father_education");
+  data.father_job = docText(docs, "father_job");
+  data.father_income = docText(docs, "father_income");
+  data.mother_name = data.mother_name || docText(docs, "mother_name");
+  data.mother_birth_place = docText(docs, "mother_birth_place");
+  data.mother_birth_date = spmbIsoToDatePicker(spmbDatePickerToIso(docText(docs, "mother_birth_date")));
+  data.mother_education = docText(docs, "mother_education");
+  data.mother_job = docText(docs, "mother_job");
+  data.mother_income = docText(docs, "mother_income");
+
+  // Jawaban pertanyaan custom — semua kunci cf_* (termasuk milik pertanyaan
+  // yang kini non-aktif) ikut dihidrasi agar tersimpan kembali saat merge.
+  const custom: Record<string, string> = {};
+  for (const [key, value] of Object.entries(docs)) {
+    if (key.startsWith("cf_") && typeof value === "string" && value.trim()) {
+      custom[key] = value;
+    }
+  }
+
+  // Path/URL berkas tersimpan — dipakai label "sudah ada"; diganti hanya bila
+  // admin memilih berkas baru (keep-or-replace).
+  const docPaths: SpmbDocumentPaths = {
+    kk: docText(docs, "kk") || null,
+    akta: docText(docs, "akta") || null,
+    surat_sekolah: docText(docs, "surat_sekolah") || null,
+    ktp_ortu: docText(docs, "ktp_ortu") || null,
+    bukti_transfer: docText(docs, "bukti_transfer") || null,
+  };
+
+  return { data, custom, docPaths };
+}
+
+/**
+ * Gabungkan documents lama + baru untuk mode EDIT:
+ * - kunci data bawaan & berkas baru MENIMPA nilai lama;
+ * - kunci asing (cf_* pertanyaan non-aktif, input_source, dll.) DIPERTAHANKAN;
+ * - path berkas lama dipertahankan bila tidak ada pengganti (keep-or-replace) —
+ *   makanya documents baru untuk edit TIDAK boleh memuat kunci berkas bernilai
+ *   null (pemanggil hanya menyertakan kunci yang benar-benar diganti).
+ */
+export function mergeSpmbDocuments(
+  oldDocs: Record<string, string | null> | null | undefined,
+  newDocs: Record<string, string | null>
+): Record<string, string | null> {
+  return { ...(oldDocs ?? {}), ...newDocs };
+}
