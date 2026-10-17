@@ -16,7 +16,7 @@ export default function WhatsAppButton() {
   const message = "Assalamualaikum, saya ingin bertanya tentang SMP Muhammadiyah 4 Tanggul.";
 
   return (
-    <div className="fixed bottom-24 right-4 z-50 print:hidden flex flex-col items-end gap-3 md:bottom-6 md:right-6">
+    <div className="pointer-events-none fixed bottom-24 right-4 z-50 print:hidden flex flex-col items-end gap-3 md:bottom-6 md:right-6">
       {/* Chat Panel */}
       <div
         id="wa-chat-panel"
@@ -82,7 +82,7 @@ export default function WhatsAppButton() {
           aria-label={isOpen ? "Tutup chat WhatsApp" : "Buka chat WhatsApp"}
           aria-expanded={isOpen}
           aria-controls="wa-chat-panel"
-          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg shadow-[#25D366]/30 hover:shadow-xl hover:shadow-[#25D366]/40 transition-all hover:scale-110 active:scale-95"
+          className="pointer-events-auto relative flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg shadow-[#25D366]/30 hover:shadow-xl hover:shadow-[#25D366]/40 transition-all hover:scale-110 active:scale-95"
         >
           <div
             className="absolute inset-0 flex items-center justify-center"

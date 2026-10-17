@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import type { Metadata } from "next";
-import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock, ClipboardText, MagnifyingGlass, Download, UserCircle } from "@/components/Icons";
+import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock } from "@/components/Icons";
 import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList } from "@/lib/queries";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
@@ -179,34 +179,6 @@ export default async function Home() {
             <div className="absolute -inset-4 hidden rounded-3xl bg-gradient-to-br from-[#f4d21f]/20 to-[var(--brand-accent)]/20 blur-2xl md:block" />
             <HeroCarousel />
           </div>
-        </div>
-      </section>
-
-      {/* ── AKSES CEPAT — 5 tautan utama ──────────────────── */}
-      <section className="border-y border-[#dce3ed] bg-white" aria-label="Akses cepat">
-        <div className="mx-auto max-w-[1296px] px-6 py-6 md:px-10 md:py-8">
-          <CSSFadeIn>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              {([
-                ["/admission", "SPMB Online", ClipboardText],
-                ["/admission/status", "Cek Status", MagnifyingGlass],
-                ["/downloads", "Unduhan", Download],
-                ["/portal", "Portal", UserCircle],
-                ["/contact", "Kontak", ChatCircle],
-              ] as [string, string, React.ElementType][]).map(([href, label, Icon]) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className="group flex items-center gap-3 rounded-xl border border-[#dce3ed] bg-white px-4 py-3.5 transition-all hover:border-[var(--brand-accent)]/40 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-                >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-primary)]/5 text-[var(--brand-primary)] transition-colors group-hover:bg-[var(--brand-primary)] group-hover:text-white">
-                    <Icon className="h-5 w-5" weight="fill" />
-                  </span>
-                  <span className="text-sm font-semibold text-[var(--brand-primary)]">{label}</span>
-                </Link>
-              ))}
-            </div>
-          </CSSFadeIn>
         </div>
       </section>
 
