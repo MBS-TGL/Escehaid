@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { User } from "@/components/Icons";
+import { nameInitials } from "@/lib/site-config";
 import type { Teacher } from "@/lib/supabase";
 
 export default function TeacherCard({ teacher }: { teacher: Teacher }) {
@@ -61,7 +61,12 @@ export default function TeacherCard({ teacher }: { teacher: Teacher }) {
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center bg-[#f0f4fa]">
-          <User className="h-20 w-20 text-[var(--brand-primary)]/15" weight="light" />
+          <span
+            aria-hidden="true"
+            className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--brand-primary)] text-2xl font-bold text-[#f4d21f]"
+          >
+            {nameInitials(teacher.name)}
+          </span>
         </div>
       )}
 

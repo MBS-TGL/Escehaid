@@ -2,8 +2,8 @@
 
 import { useRef, useEffect } from "react";
 import Image from "next/image";
-import { User } from "@/components/Icons";
 import { Splide } from "@splidejs/splide";
+import { nameInitials } from "@/lib/site-config";
 import type { Teacher } from "@/lib/supabase";
 
 import "@splidejs/splide/css";
@@ -98,7 +98,12 @@ export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-[#f0f4fa]">
-                      <User className="h-16 w-16 text-[var(--brand-primary)]/15" weight="light" />
+                      <span
+                        aria-hidden="true"
+                        className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-primary)] text-lg font-bold text-[#f4d21f]"
+                      >
+                        {nameInitials(t.name)}
+                      </span>
                     </div>
                   )}
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[var(--brand-primary)] via-[var(--brand-primary)]/40 to-transparent" />

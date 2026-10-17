@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Phone, Envelope, MusicNotes, TwitterLogo } from "@phosphor-icons/react";
+import { MapPin, Phone, Envelope, MusicNotes, TwitterLogo, ArrowSquareOut } from "@phosphor-icons/react";
 import { waLink } from "@/lib/site-config";
 import type { SchoolProfile } from "@/lib/supabase";
 import type { PublicBrand } from "@/lib/settings";
@@ -22,6 +22,8 @@ export default function Footer({
 }) {
   // Nomor WhatsApp: prioritas Pengaturan Situs, lalu nomor panitia SPMB profil sekolah.
   const waNumber = brand.whatsapp.trim() || profile?.spmb_contact_phone?.trim() || "";
+  const mapsHref = (address: string) =>
+    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 
   return (
     <footer className="print:hidden bg-[var(--brand-primary)] pb-[calc(env(safe-area-inset-bottom)_+_76px)] text-white md:pb-0">
@@ -100,7 +102,35 @@ export default function Footer({
               {brand.address && (
                 <li className="flex items-start gap-2">
                   <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#f4d21f]" />
-                  <span className="text-xs text-white/50">{brand.address}</span>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-white/50">{brand.address}</span>
+                    <a
+                      href={mapsHref(brand.address)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex w-fit items-center gap-1 text-xs font-medium text-white/50 transition-colors hover:text-[#f4d21f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4d21f]"
+                    >
+                      Lihat lokasi di Google Maps
+                      <ArrowSquareOut className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
+                </li>
+              )}
+              {brand.addressPutri && (
+                <li className="flex items-start gap-2">
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#f4d21f]" />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-white/50">{brand.addressPutri}</span>
+                    <a
+                      href={mapsHref(brand.addressPutri)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex w-fit items-center gap-1 text-xs font-medium text-white/50 transition-colors hover:text-[#f4d21f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4d21f]"
+                    >
+                      Lihat lokasi kampus putri di Google Maps
+                      <ArrowSquareOut className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
                 </li>
               )}
               {waNumber && (

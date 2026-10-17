@@ -189,6 +189,15 @@ export const SETTING_FIELDS: SettingField[] = [
     maxLength: 160,
   },
   {
+    key: "contact_address_putri",
+    group: "kontak",
+    type: "text",
+    label: "Alamat kampus putri (opsional)",
+    help: "Alamat Asrama Tahfidz Al-Qur'an (Bambu Kuning). Tampil di footer beserta tautan peta.",
+    default: "Jl. Teratai, Tekoan, Tanggul Kulon, Kec. Tanggul, Kabupaten Jember, Jawa Timur 68155",
+    maxLength: 200,
+  },
+  {
     key: "contact_city",
     group: "kontak",
     type: "text",

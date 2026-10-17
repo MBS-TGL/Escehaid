@@ -1,13 +1,15 @@
 import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock } from "@/components/Icons";
-import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList, registrationHref } from "@/lib/queries";
+import type { Metadata } from "next";
+import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock, ClipboardText, MagnifyingGlass, Download, UserCircle } from "@/components/Icons";
+import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList } from "@/lib/queries";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import { faqs } from "./faq-data";
 import HeroCarousel from "./HeroCarousel";
 import {
+  SITE,
   capitalizeCategory,
   achievementCategoryMeta,
   achievementLevelLabel,
@@ -60,11 +62,18 @@ const FACILITY_FALLBACKS: Record<string, string> = {
   "Lapangan Olahraga": "/images/Lapangan-Olahraga.jpg",
 };
 
-export const metadata = {
-  // Tanpa `title` → memakai default dari root layout (nama sekolah dari DB).
-  description: "SMP Muhammadiyah 4 Tanggul - Sekolah unggulan dengan program Tahfidz, keberbakatan, dan kepesantrenan. Daftar SPMB online sekarang.",
-  alternates: { canonical: "/" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  // Judul beranda memakai `absolute` agar TIDAK ikut template `%s | <nama>`
+  // dari root layout — kalau tidak, nama sekolah muncul dua kali.
+  const settings = await getSiteSettings();
+  const schoolName = settings.values.site_name.trim() || "SMP Muhammadiyah 4 Tanggul";
+  return {
+    title: { absolute: `${schoolName} | SPMB ${SITE.spmb.academicYear}, Tahfidz & Boarding di Jember` },
+    description:
+      "SMP Muhammadiyah 4 Tanggul - Sekolah unggulan dengan program Tahfidz, keberbakatan, dan kepesantrenan. Daftar SPMB online sekarang.",
+    alternates: { canonical: "/" },
+  };
+}
 
 export const revalidate = 300;
 
@@ -150,8 +159,8 @@ export default async function Home() {
 
             <div className="mt-9 flex flex-wrap items-center gap-5">
               <Link
-                href={registrationHref(profile)}
-                className="group inline-flex items-center gap-2 rounded-xl bg-[#f4d21f] px-6 py-3.5 text-sm font-bold text-[var(--brand-primary)] transition-all hover:bg-white hover:shadow-lg hover:shadow-[#f4d21f]/20"
+                href="/admission"
+                className="group inline-flex items-center gap-2 rounded-xl bg-[#f4d21f] px-6 py-3.5 text-sm font-bold text-[var(--brand-primary)] transition-all hover:bg-white hover:shadow-lg hover:shadow-[#f4d21f]/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4d21f]"
               >
                 Daftar
                 <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
@@ -170,6 +179,34 @@ export default async function Home() {
             <div className="absolute -inset-4 hidden rounded-3xl bg-gradient-to-br from-[#f4d21f]/20 to-[var(--brand-accent)]/20 blur-2xl md:block" />
             <HeroCarousel />
           </div>
+        </div>
+      </section>
+
+      {/* ── AKSES CEPAT — 5 tautan utama ──────────────────── */}
+      <section className="border-y border-[#dce3ed] bg-white" aria-label="Akses cepat">
+        <div className="mx-auto max-w-[1296px] px-6 py-6 md:px-10 md:py-8">
+          <CSSFadeIn>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {([
+                ["/admission", "SPMB Online", ClipboardText],
+                ["/admission/status", "Cek Status", MagnifyingGlass],
+                ["/downloads", "Unduhan", Download],
+                ["/portal", "Portal", UserCircle],
+                ["/contact", "Kontak", ChatCircle],
+              ] as [string, string, React.ElementType][]).map(([href, label, Icon]) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="group flex items-center gap-3 rounded-xl border border-[#dce3ed] bg-white px-4 py-3.5 transition-all hover:border-[var(--brand-accent)]/40 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-primary)]/5 text-[var(--brand-primary)] transition-colors group-hover:bg-[var(--brand-primary)] group-hover:text-white">
+                    <Icon className="h-5 w-5" weight="fill" />
+                  </span>
+                  <span className="text-sm font-semibold text-[var(--brand-primary)]">{label}</span>
+                </Link>
+              ))}
+            </div>
+          </CSSFadeIn>
         </div>
       </section>
 
@@ -620,7 +657,7 @@ export default async function Home() {
             </div>
           </CSSFadeIn>
           <CSSFadeIn delay={0.1}>
-            <Link href={registrationHref(profile)} className="inline-flex w-fit items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-6 py-3.5 text-sm font-bold text-white transition-all hover:bg-[var(--brand-accent)] hover:shadow-lg">
+            <Link href="/admission" className="inline-flex w-fit items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-6 py-3.5 text-sm font-bold text-white transition-all hover:bg-[var(--brand-accent)] hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]">
               Daftar sekarang <ArrowUpRight className="h-4 w-4" />
             </Link>
           </CSSFadeIn>

@@ -76,3 +76,23 @@ export function capitalizeCategory(cat: string): string {
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join("-");
 }
+
+/**
+ * Inisial 2 huruf dari nama untuk avatar tanpa foto (mis. "Khoirul Anwar, S.Pd"
+ * → "KA"). Gelar setelah koma dibuang; token singkatan bergaya "Drs."/"Hj."
+ * diabaikan selama masih tersisa minimal satu kata nama. Kalau nama hanya satu
+ * kata, dipakai dua huruf pertamanya.
+ */
+export function nameInitials(fullName: string): string {
+  const withoutDegrees = (fullName.split(",")[0] ?? "").trim();
+  const source = withoutDegrees || fullName.trim();
+  const words = source
+    .split(/\s+/)
+    .filter((w) => w.length > 0 && !/\.$/.test(w));
+  const nameWords = words.length > 0 ? words : source.split(/\s+/).filter(Boolean);
+  if (nameWords.length === 0) return "?";
+  if (nameWords.length === 1) {
+    return nameWords[0].slice(0, 2).toUpperCase();
+  }
+  return (nameWords[0].charAt(0) + nameWords[1].charAt(0)).toUpperCase();
+}

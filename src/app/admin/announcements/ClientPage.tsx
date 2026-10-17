@@ -62,6 +62,7 @@ export default function AdminAnnouncementsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<Announcement | null>(null);
   const [formText, setFormText] = useState("");
+  const [formExpires, setFormExpires] = useState("");
   const [formSaving, setFormSaving] = useState(false);
 
   const fetchItems = useCallback(async () => {
@@ -127,24 +128,27 @@ export default function AdminAnnouncementsPage() {
   function openCreate() {
     setEditItem(null);
     setFormText("");
+    setFormExpires("");
     setFormOpen(true);
   }
 
   function openEdit(item: Announcement) {
     setEditItem(item);
     setFormText(item.text);
+    setFormExpires(item.expires_at ? item.expires_at.slice(0, 10) : "");
     setFormOpen(true);
   }
 
   async function handleSave() {
     if (!formText.trim()) { toast("Teks pengumuman wajib diisi", "error"); return; }
+    const expiresAt = formExpires.trim() || null;
     setFormSaving(true);
     if (editItem) {
-      const { error } = await updateAnnouncement(editItem.id, { text: formText });
+      const { error } = await updateAnnouncement(editItem.id, { text: formText, expires_at: expiresAt });
       if (error) { toast(error, "error"); setFormSaving(false); return; }
       toast("Pengumuman diperbarui", "success");
     } else {
-      const { error } = await createAnnouncement(formText);
+      const { error } = await createAnnouncement(formText, expiresAt);
       if (error) { toast(error, "error"); setFormSaving(false); return; }
       toast("Pengumuman ditambahkan", "success");
     }
@@ -300,20 +304,21 @@ export default function AdminAnnouncementsPage() {
                 <th className="hidden w-20 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">Urutan</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Teks Pengumuman</th>
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</th>
+                <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:table-cell">Berlaku s/d</th>
                 <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:table-cell">Tanggal</th>
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={7} className="px-4 py-16 text-center">
+                <tr><td colSpan={8} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
                     <p className="text-sm text-slate-500">Memuat data pengumuman...</p>
                   </div>
                 </td></tr>
               ) : paginated.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-16 text-center">
+                <tr><td colSpan={8} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
                       <Megaphone className="h-8 w-8 text-slate-300" />
@@ -362,6 +367,11 @@ export default function AdminAnnouncementsPage() {
                           }`}>
                         {item.is_active ? "Aktif" : "Nonaktif"}
                       </button>
+                    </td>
+                    <td className="hidden px-4 py-3.5 text-center text-sm text-slate-500 lg:table-cell">
+                      {item.expires_at
+                        ? new Date(item.expires_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+                        : "—"}
                     </td>
                     <td className="hidden px-4 py-3.5 text-center text-sm text-slate-500 lg:table-cell">
                       {new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
@@ -513,6 +523,12 @@ export default function AdminAnnouncementsPage() {
               className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
             <p className="mt-1.5 text-xs text-slate-400">Teks ini akan ditampilkan di bar berjalan (marquee) di atas website</p>
           </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Berlaku sampai (opsional)</label>
+            <input type="date" value={formExpires} onChange={(e) => setFormExpires(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
+            <p className="mt-1.5 text-xs text-slate-400">Setelah tanggal ini (zona WIB) pengumuman otomatis disembunyikan dari bar. Kosongkan = tampil terus.</p>
+          </div>
         </div>
       </SlideOver>
 
@@ -630,6 +646,9 @@ function AnnouncementMobileRow({
         subtitle={
           <span className="min-w-0 truncate">
             {new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+            {item.expires_at
+              ? ` · s/d ${new Date(item.expires_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}`
+              : ""}
           </span>
         }
         actions={<RowActionsMenu label={`pengumuman ${item.text.slice(0, 30)}`} actions={actions} disabled={selectMode} />}

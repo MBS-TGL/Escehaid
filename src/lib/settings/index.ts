@@ -145,6 +145,8 @@ export interface PublicBrand {
    * menghasilkan alamat bertumpuk.
    */
   address: string;
+  /** Alamat kampus putri (opsional); kosong → Footer menyembunyikan baris ini. */
+  addressPutri: string;
   email: string;
   phone: string;
   /** Kosong → Footer memakai nomor WhatsApp panitia SPMB dari profil sekolah. */
@@ -164,6 +166,7 @@ export function toPublicBrand(settings: SiteSettings): PublicBrand {
     tagline: v.site_tagline,
     logo: v.site_logo_url,
     address: v.contact_address.trim(),
+    addressPutri: v.contact_address_putri.trim(),
     email: v.contact_email,
     phone: v.contact_phone,
     whatsapp: v.contact_whatsapp,
