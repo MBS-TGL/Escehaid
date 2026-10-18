@@ -85,21 +85,20 @@ export async function proxy(request: NextRequest) {
   // ── Maintenance mode short-circuit (PUBLIK saja) ─────────────────────────
   // Cek sebelum segala sesi agar halaman maintenance dilayankan secepat
   // mungkin tanpa query user_profiles/dll. Admin (/admin) DIKECUALIKAN.
-  const isAdminPath = request.nextUrl.pathname.startsWith("/admin");
-  if (!isAdminPath) {
+  // Rewritten ke /maintenance.html — path ini juga dijaga di sini agar
+  // tidak terjadi loop bila matcher berubah.
+  const pathname = request.nextUrl.pathname;
+  const isAdminPath = pathname.startsWith("/admin");
+  if (!isAdminPath && pathname !== "/maintenance.html") {
     const maintenance = await getMaintenanceMode();
     if (maintenance) {
-      // Render halaman maintenance (bisa custom nanti; sekarang pakai 503 + JSON).
-      return new NextResponse(
-        JSON.stringify({ error: "Situs dalam pemeliharaan. Silakan coba lagi nanti." }),
-        {
-          status: 503,
-          headers: {
-            "Content-Type": "application/json; charset=utf-8",
-            "Retry-After": "60",
-          },
-        }
-      );
+      return NextResponse.rewrite(new URL("/maintenance.html", request.url), {
+        status: 503,
+        headers: {
+          "Retry-After": "60",
+          "Cache-Control": "no-store",
+        },
+      });
     }
   }
 
@@ -214,9 +213,12 @@ export async function proxy(request: NextRequest) {
   return supabaseResponse;
 }
 
-// Hanya rute admin yang butuh pengecekan sesi. Matcher lama menjalankan proxy
-// di SEMUA halaman publik juga (berita, kegiatan, dst.), padahal tidak ada
-// logika yang dipakai di sana.
+// Proxy harus berjalan di SEMUA halaman (publik + admin) supaya short-circuit
+// maintenance mode dieksekusi. Kecualikan aset statis & file metadata — mereka
+// tidak butuh sesi/maintenance gate, dan membatasi matcher ke sini membuat
+// CSS/JS/gambar tetap termuat saat situs dalam pemeliharaan.
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|images/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|txt|xml|html|json|js|css|woff2?|ttf)$).*)",
+  ],
 };
