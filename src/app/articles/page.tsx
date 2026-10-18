@@ -1,10 +1,9 @@
 import { BookOpen, Clock, Play, User } from "@/components/Icons";
 import { getArticleListPaginated, getArticleCategories } from "@/lib/queries";
-import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
+import { CSSStagger } from "@/components/CSSAnimations";
 import PageHero from "@/components/public/PageHero";
 import FilterBar, { type FilterChip } from "@/components/public/FilterBar";
 import ContentCard from "@/components/public/ContentCard";
-import FeaturedCard from "@/components/public/FeaturedCard";
 import EmptyState from "@/components/public/EmptyState";
 import Pagination from "@/components/public/Pagination";
 import type { Metadata } from "next";
@@ -113,77 +112,42 @@ export default async function ArtikelPage({
           />
         ) : (
           <>
-            {/* Headline — pembuka majurna, halaman 1 saja */}
-            {currentPage === 1 && (
-              <CSSFadeIn>
-                <FeaturedCard
-                  href={`/articles/${articles[0].slug}`}
-                  title={articles[0].title}
-                  description={articles[0].excerpt}
-                  imageUrl={articles[0].image_url}
-                  imageAlt={articles[0].image_alt || articles[0].title}
-                  badges={
-                    <span className="inline-flex w-fit items-center rounded-md border border-[var(--brand-accent)]/20 bg-[var(--brand-accent)]/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--brand-accent)]">
-                      {articles[0].category}
-                    </span>
-                  }
-                  meta={
-                    <>
-                      <span className="flex items-center gap-1 text-xs">
-                        <User className="h-3 w-3" />
-                        {articles[0].author_name ?? "Tim MBS"}
+            {/* Grid kartu — 3 kolom, kartu terbaru di kiri-atas */}
+            <CSSStagger stagger={60} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {articles.map((item) => (
+                <div key={item.id}>
+                  <ContentCard
+                    href={`/articles/${item.slug}`}
+                    title={item.title}
+                    description={item.excerpt}
+                    imageUrl={item.image_url}
+                    imageAlt={item.image_alt || item.title}
+                    badges={
+                      <span className="inline-flex items-center rounded-md bg-[var(--brand-accent)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-accent)]">
+                        {item.category}
                       </span>
-                      <span className="flex items-center gap-1 text-xs">
-                        <Clock className="h-3 w-3" />
-                        {new Date(articles[0].published_at || articles[0].created_at).toLocaleDateString("id-ID", {
-                          day: "numeric", month: "long", year: "numeric",
-                        })}
-                      </span>
-                    </>
-                  }
-                  ctaLabel="Baca artikel"
-                />
-              </CSSFadeIn>
-            )}
-
-            {/* Grid kartu — 3 kolom, gaya sama dengan /news */}
-            <div className={currentPage === 1 ? "mt-8" : ""}>
-              <CSSStagger stagger={60} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {(currentPage === 1 ? articles.slice(1) : articles).map((item) => (
-                  <div key={item.id}>
-                    <ContentCard
-                      href={`/articles/${item.slug}`}
-                      title={item.title}
-                      description={item.excerpt}
-                      imageUrl={item.image_url}
-                      imageAlt={item.image_alt || item.title}
-                      badges={
-                        <span className="inline-flex items-center rounded-md bg-[var(--brand-accent)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-accent)]">
-                          {item.category}
+                    }
+                    meta={
+                      <>
+                        <span className="flex items-center gap-1 text-[11px]">
+                          <User className="h-3 w-3" />
+                          {item.author_name ?? "Tim MBS"}
                         </span>
-                      }
-                      meta={
-                        <>
-                          <span className="flex items-center gap-1 text-[11px]">
-                            <User className="h-3 w-3" />
-                            {item.author_name ?? "Tim MBS"}
+                        <span className="flex items-center gap-1 text-[11px]">
+                          <Clock className="h-3 w-3" />
+                          {new Date(item.published_at || item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                        </span>
+                        {item.video_url && (
+                          <span className="flex items-center gap-1 text-[11px] font-medium text-[var(--brand-accent)]">
+                            <Play weight="fill" className="h-3 w-3" /> Video
                           </span>
-                          <span className="flex items-center gap-1 text-[11px]">
-                            <Clock className="h-3 w-3" />
-                            {new Date(item.published_at || item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-                          </span>
-                          {item.video_url && (
-                            <span className="flex items-center gap-1 text-[11px] font-medium text-[var(--brand-accent)]">
-                              <Play weight="fill" className="h-3 w-3" /> Video
-                            </span>
-                          )}
-                        </>
-                      }
-                    />
-                  </div>
-                ))}
-              </CSSStagger>
-            </div>
+                        )}
+                      </>
+                    }
+                  />
+                </div>
+              ))}
+            </CSSStagger>
 
             <Pagination
               page={currentPage}

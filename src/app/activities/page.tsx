@@ -11,11 +11,10 @@ import {
   todayInJakarta,
   toJakartaDateKey,
 } from "@/lib/activity-types";
-import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
+import { CSSStagger } from "@/components/CSSAnimations";
 import { CalendarBlank, Clock, MapPin, ArrowRight } from "@/components/Icons";
 import PageHero from "@/components/public/PageHero";
 import FilterBar, { type FilterChip } from "@/components/public/FilterBar";
-import FeaturedCard from "@/components/public/FeaturedCard";
 import ContentCard from "@/components/public/ContentCard";
 import EmptyState from "@/components/public/EmptyState";
 import Pagination from "@/components/public/Pagination";
@@ -198,23 +197,14 @@ export default async function ActivitiesPage({
     return k === null || k < today;
   });
 
-  // Unggulan: PIN is_featured bila ada; kalau tidak → terdekat / terbaru.
-  const featured = activities.find((a) => a.is_featured) ?? upcoming[0] ?? past[0] ?? null;
-  const rest = featured ? activities.filter((a) => a.id !== featured.id) : activities;
-  const upcomingRest = rest
-    .filter((a) => {
-      const k = endKeyOf(a);
-      return k !== null && k >= today;
-    })
-    .sort(byStartDate);
-  const pastRest = rest.filter((a) => {
-    const k = endKeyOf(a);
-    return k === null || k < today;
-  });
+  // Unggulan tampil paling depan di seksi aslinya (sort stabil → urutan lain tetap).
+  const frontFirst = (a: Activity, b: Activity) => Number(b.is_featured) - Number(a.is_featured);
+  const upcomingItems = [...upcoming].sort(frontFirst);
+  const pastItems = [...past].sort(frontFirst);
 
-  const pastTotalPages = Math.max(1, Math.ceil(pastRest.length / PAGE_SIZE));
+  const pastTotalPages = Math.max(1, Math.ceil(pastItems.length / PAGE_SIZE));
   const outOfRange = page > pastTotalPages;
-  const pastPageItems = pastRest.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pastPageItems = pastItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   /** Link /activities dengan q + tipe + halaman yang sedang aktif. */
   const buildHref = (p: number, tipeKey: string) => {
@@ -312,82 +302,20 @@ export default async function ActivitiesPage({
           />
         ) : (
           <>
-            {/* Unggulan (hanya halaman 1) */}
-            {page === 1 && featured && (
-              <CSSFadeIn>
-                <FeaturedCard
-                  href={`/activities/${featured.slug}`}
-                  title={featured.title}
-                  description={featured.description}
-                  imageUrl={featured.image_url || "/images/Ruang-Kelas.jpg"}
-                  imageAlt={featured.title}
-                  badges={
-                    <>
-                      {activityBadges(featured).map((b) => (
-                        <span
-                          key={`${featured.id}-${b.label}`}
-                          className={`inline-flex w-fit items-center rounded-md px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${b.cls}`}
-                        >
-                          {b.live ? (
-                            <>
-                              <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" aria-hidden="true" />
-                              {b.label}
-                            </>
-                          ) : (
-                            b.label
-                          )}
-                        </span>
-                      ))}
-                    </>
-                  }
-                  meta={
-                    <>
-                      {featured.activity_date && (
-                        <span className="flex items-center gap-1 text-xs">
-                          <CalendarBlank className="h-3.5 w-3.5" />
-                          {formatActivityDateRange(featured.activity_date, featured.end_date, { long: true })}
-                        </span>
-                      )}
-                      {(() => {
-                        const status = activityStatus(featured.activity_date, featured.end_date);
-                        const days = daysUntilActivity(featured.activity_date);
-                        if (status === "upcoming" && days !== null && days > 0) {
-                          return (
-                            <span className="flex items-center gap-1 text-xs font-semibold text-[var(--brand-accent)]">
-                              <Clock className="h-3.5 w-3.5" />
-                              {days === 1 ? "Mulai besok" : `${days} hari lagi`}
-                            </span>
-                          );
-                        }
-                        return null;
-                      })()}
-                      {featured.location && (
-                        <span className="flex items-center gap-1 text-xs">
-                          <MapPin className="h-3.5 w-3.5" />
-                          {featured.location}
-                        </span>
-                      )}
-                    </>
-                  }
-                  ctaLabel="Lihat kegiatan"
-                />
-              </CSSFadeIn>
-            )}
-
             {/* Akan datang — agenda timeline (hanya halaman 1) */}
-            {page === 1 && upcomingRest.length > 0 && (
-              <div className="mt-10">
+            {page === 1 && upcomingItems.length > 0 && (
+              <div>
                 <div className="mb-3 flex items-center gap-2.5">
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--brand-accent)] text-white">
                     <CalendarBlank className="h-4 w-4" weight="fill" />
                   </span>
                   <h2 className="text-lg font-bold text-[var(--brand-primary)]">Akan Datang</h2>
                   <span className="rounded-full bg-[var(--brand-accent)]/10 px-2.5 py-0.5 text-xs font-bold text-[var(--brand-accent)]">
-                    {upcomingRest.length}
+                    {upcomingItems.length}
                   </span>
                 </div>
                 <CSSStagger stagger={60} className="rounded-2xl border border-[#dce3ed] bg-slate-50/50 p-2">
-                  {upcomingRest.map((item) => (
+                  {upcomingItems.map((item) => (
                     <ActivityTimelineRow key={item.id} item={item} />
                   ))}
                 </CSSStagger>
@@ -395,15 +323,15 @@ export default async function ActivitiesPage({
             )}
 
             {/* Sudah berlangsung — grid kartu kanonik + pagination shared */}
-            {pastRest.length > 0 && (
-              <div className={page === 1 ? "mt-10" : ""}>
+            {pastItems.length > 0 && (
+              <div className={page === 1 && upcomingItems.length > 0 ? "mt-10" : ""}>
                 <div className="mb-3 flex items-center gap-2.5">
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-200 text-slate-600">
                     <Clock className="h-4 w-4" weight="fill" />
                   </span>
                   <h2 className="text-lg font-bold text-[var(--brand-primary)]">Sudah Berlangsung</h2>
                   <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-500">
-                    {pastRest.length}
+                    {pastItems.length}
                   </span>
                 </div>
                 <CSSStagger stagger={60} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -415,7 +343,7 @@ export default async function ActivitiesPage({
                 <Pagination
                   page={page}
                   totalPages={pastTotalPages}
-                  total={pastRest.length}
+                  total={pastItems.length}
                   unit="kegiatan"
                   makeHref={(p) => buildHref(p, tipe)}
                   className="mt-10"

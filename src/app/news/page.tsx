@@ -1,10 +1,9 @@
 import { Newspaper, Clock, Paperclip, Play } from "@/components/Icons";
 import { getNewsListPaginated } from "@/lib/queries";
-import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
+import { CSSStagger } from "@/components/CSSAnimations";
 import PageHero from "@/components/public/PageHero";
 import FilterBar from "@/components/public/FilterBar";
 import ContentCard from "@/components/public/ContentCard";
-import FeaturedCard from "@/components/public/FeaturedCard";
 import EmptyState from "@/components/public/EmptyState";
 import Pagination from "@/components/public/Pagination";
 import { newsCategory, NEWS_CATEGORIES } from "@/lib/site-config";
@@ -33,9 +32,6 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
     q || undefined,
     category || undefined
   );
-
-  /** Badge kategori kartu unggulan (kategori tak dikenal → gaya netral). */
-  const featuredCat = newsCategory(berita[0]?.category);
 
   /** Link /news dengan search + kategori + halaman yang sedang aktif. */
   const buildHref = (page: number, cat: string) => {
@@ -105,86 +101,46 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
           />
         ) : (
           <>
-            {/* Featured — full width (only on page 1) */}
-            {currentPage === 1 && berita.length >= 1 && (
-              <CSSFadeIn>
-                <FeaturedCard
-                  href={`/news/${berita[0].slug}`}
-                  title={berita[0].title}
-                  description={berita[0].summary}
-                  imageUrl={berita[0].image_url}
-                  imageAlt={berita[0].image_alt || berita[0].title}
-                  badges={
-                    <span className={`inline-flex w-fit items-center rounded-md border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${featuredCat.bg} ${featuredCat.color} ${featuredCat.border}`}>
-                      {featuredCat.label}
-                    </span>
-                  }
-                  meta={
-                    <>
-                      <span className="flex items-center gap-1 text-xs">
-                        <Clock className="h-3 w-3" />
-                        {new Date(berita[0].published_at || berita[0].created_at).toLocaleDateString("id-ID", {
-                          day: "numeric", month: "long", year: "numeric",
-                        })}
-                      </span>
-                      {berita[0].attachment_url && (
-                        <span className="flex items-center gap-1 text-xs">
-                          <Paperclip className="h-3 w-3" /> Lampiran
+            {/* Grid — 3 kolom, kartu terbaru di kiri-atas */}
+            <CSSStagger stagger={60} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {berita.map((item) => {
+                const cat = newsCategory(item.category);
+                return (
+                  <div key={item.id}>
+                    <ContentCard
+                      href={`/news/${item.slug}`}
+                      title={item.title}
+                      description={item.summary}
+                      imageUrl={item.image_url}
+                      imageAlt={item.image_alt || item.title}
+                      badges={
+                        <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${cat.bg} ${cat.color} ${cat.border}`}>
+                          {cat.label}
                         </span>
-                      )}
-                      {berita[0].video_url && (
-                        <span className="flex items-center gap-1 text-xs font-medium text-[var(--brand-accent)]">
-                          <Play weight="fill" className="h-3 w-3" /> Video
-                        </span>
-                      )}
-                    </>
-                  }
-                />
-              </CSSFadeIn>
-            )}
-
-            {/* Grid — 3 columns */}
-            <div className={currentPage === 1 ? "mt-8" : ""}>
-              <CSSStagger stagger={60} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {(currentPage === 1 ? berita.slice(1) : berita).map((item) => {
-                  const cat = newsCategory(item.category);
-                  return (
-                    <div key={item.id}>
-                      <ContentCard
-                        href={`/news/${item.slug}`}
-                        title={item.title}
-                        description={item.summary}
-                        imageUrl={item.image_url}
-                        imageAlt={item.image_alt || item.title}
-                        badges={
-                          <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${cat.bg} ${cat.color} ${cat.border}`}>
-                            {cat.label}
+                      }
+                      meta={
+                        <>
+                          <span className="flex items-center gap-1 text-[11px]">
+                            <Clock className="h-3 w-3" />
+                            {new Date(item.published_at || item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
                           </span>
-                        }
-                        meta={
-                          <>
+                          {item.attachment_url && (
                             <span className="flex items-center gap-1 text-[11px]">
-                              <Clock className="h-3 w-3" />
-                              {new Date(item.published_at || item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                              <Paperclip className="h-3 w-3" /> Lampiran
                             </span>
-                            {item.attachment_url && (
-                              <span className="flex items-center gap-1 text-[11px]">
-                                <Paperclip className="h-3 w-3" /> Lampiran
-                              </span>
-                            )}
-                            {item.video_url && (
-                              <span className="flex items-center gap-1 text-[11px] font-medium text-[var(--brand-accent)]">
-                                <Play weight="fill" className="h-3 w-3" /> Video
-                              </span>
-                            )}
-                          </>
-                        }
-                      />
-                    </div>
-                  );
-                })}
-              </CSSStagger>
-            </div>
+                          )}
+                          {item.video_url && (
+                            <span className="flex items-center gap-1 text-[11px] font-medium text-[var(--brand-accent)]">
+                              <Play weight="fill" className="h-3 w-3" /> Video
+                            </span>
+                          )}
+                        </>
+                      }
+                    />
+                  </div>
+                );
+              })}
+            </CSSStagger>
 
             <Pagination
               page={currentPage}
