@@ -12,6 +12,7 @@ import {
 import { groupSearchResults, searchAllContent } from "@/lib/queries";
 import type { SearchItem } from "@/lib/queries";
 import { KIND_META, formatSearchDate } from "@/components/SearchMeta";
+import Highlight from "@/components/public/Highlight";
 
 type Status = "idle" | "loading" | "done";
 
@@ -186,11 +187,11 @@ export default function SearchView({
                           className="group block rounded-2xl border border-[#dce3ed] bg-white p-4 transition-all hover:border-[var(--brand-accent)]/40 hover:shadow-sm sm:p-5"
                         >
                           <span className="block text-[15px] font-semibold leading-snug text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)]">
-                            {item.title}
+                            <Highlight text={item.title} query={searchedQuery} />
                           </span>
                           {item.excerpt && (
                             <span className="mt-1 block line-clamp-2 text-sm text-slate-500">
-                              {item.excerpt}
+                              <Highlight text={item.excerpt} query={searchedQuery} />
                             </span>
                           )}
                           <span className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">

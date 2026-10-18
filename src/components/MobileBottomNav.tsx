@@ -194,7 +194,7 @@ export default function MobileBottomNav() {
           <BottomLink href="/" label="Beranda" icon={House} active={isActive("/")} />
           <BottomLink href="/news" label="Berita" icon={Newspaper} active={isActive("/news")} />
 
-          {/* SPMB — CTA emas: bola dipasang absolut di tepi atas bar
+          {/* SPMB — CTA aksen: bola dipasang absolut di tepi atas bar
               (pusat pas di garis, seperti referensi) sehingga label tetap
               sejajar item lain; duduk di cekungan notch layer latar. */}
           <li>
@@ -206,7 +206,7 @@ export default function MobileBottomNav() {
               <span aria-hidden className="h-6 w-6" />
               <span>SPMB</span>
               <span
-                className={`absolute left-1/2 top-0 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#f4d21f] shadow-[0_6px_18px_rgba(244,210,31,0.5),0_2px_6px_rgba(8,43,89,0.12)] transition-transform active:scale-95 motion-reduce:transition-none ${isActive("/admission") ? "ring-4 ring-[var(--brand-primary)]/15" : ""
+                className={`absolute left-1/2 top-0 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--brand-accent)] text-white shadow-[0_6px_18px_color-mix(in_srgb,var(--brand-accent)_50%,transparent),0_2px_6px_color-mix(in_srgb,var(--brand-primary)_12%,transparent)] transition-transform active:scale-95 motion-reduce:transition-none ${isActive("/admission") ? "ring-4 ring-[var(--brand-primary)]/15" : ""
                   }`}
               >
                 <FileText className="h-5 w-5" weight="fill" />

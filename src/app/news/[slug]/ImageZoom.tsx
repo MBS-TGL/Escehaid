@@ -80,7 +80,7 @@ export default function NewsImageZoom({
             type="button"
             onClick={() => setOpen(true)}
             aria-label={`Perbesar gambar: ${alt || "sampul"}`}
-            className="absolute inset-0 z-10 cursor-zoom-in bg-black/0 transition-colors hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#f4d21f]"
+            className="absolute inset-0 z-10 cursor-zoom-in bg-black/0 transition-colors hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--brand-accent)]"
           />
           {/* Perbesar badge */}
           <div className="absolute right-3 top-3 z-20 flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)]/80 px-3 py-2 text-xs font-semibold text-white shadow-lg border border-white/20 pointer-events-none">

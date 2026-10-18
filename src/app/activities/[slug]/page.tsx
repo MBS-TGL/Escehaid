@@ -17,7 +17,9 @@ import {
   isActivityLiveActive,
   toJakartaDateKey,
 } from "@/lib/activity-types";
-import { CSSStagger } from "@/components/CSSAnimations";
+import { CSSStagger, CSSFadeIn } from "@/components/CSSAnimations";
+import ReadingProgress from "@/components/public/ReadingProgress";
+import ShareButtons from "@/components/public/ShareButtons";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -27,11 +29,8 @@ import {
   CaretLeft,
   CaretRight,
   Clock,
-  FacebookLogo,
   MapPin,
   Phone,
-  TwitterLogo,
-  WhatsappLogo,
 } from "@/components/Icons";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -88,8 +87,6 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   }
 
   const activityUrl = `https://www.smpmuh4tanggul.sch.id/activities/${activity.slug}`;
-  const shareUrl = activityUrl;
-  const shareText = encodeURIComponent(activity.title);
 
   // Lokasi fisik & virtual (Fase 5: live_url → VirtualLocation + ModeCampuran)
   const place = activity.location
@@ -176,7 +173,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const status = activityStatus(activity.activity_date, activity.end_date);
   const statusPill =
     status === "today"
-      ? { label: "Hari Ini", cls: "bg-[#f4d21f] text-[var(--brand-primary)]" }
+      ? { label: "Hari Ini", cls: "bg-[var(--brand-accent)] text-white" }
       : status === "upcoming"
         ? { label: "Akan Datang", cls: "bg-emerald-100 text-emerald-700" }
         : status === "ongoing"
@@ -235,8 +232,6 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
   const iconBtnBase =
     "flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors";
-  const waBtnClass = `${iconBtnBase} hover:border-emerald-200 hover:text-emerald-600`;
-  const fbBtnClass = `${iconBtnBase} hover:border-blue-200 hover:text-blue-600`;
   const copyBtnClass = `${iconBtnBase} hover:border-[var(--brand-accent)]/30 hover:text-[var(--brand-accent)]`;
 
   return (
@@ -247,6 +242,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(videoObjectJsonLd) }} />
       )}
 
+      <ReadingProgress />
       {/* Sticky top bar — breadcrumb + share (pola detail Berita) */}
       <div className="sticky top-16 z-40 border-b border-slate-100 bg-white/95 backdrop-blur-md md:top-[72px]">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5">
@@ -257,23 +253,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             <span>/</span>
             <span className="max-w-[200px] truncate text-slate-600">{activity.title}</span>
           </nav>
-          <div className="ml-auto flex items-center gap-1.5" role="group" aria-label="Bagikan kegiatan">
-            <a href={`https://wa.me/?text=${shareText}%20${shareUrl}`} target="_blank" rel="noopener noreferrer"
-              aria-label="Bagikan ke WhatsApp"
-              className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600">
-              <WhatsappLogo className="h-3.5 w-3.5" />
-            </a>
-            <a href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`} target="_blank" rel="noopener noreferrer"
-              aria-label="Bagikan ke Facebook"
-              className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600">
-              <FacebookLogo className="h-3.5 w-3.5" />
-            </a>
-            <a href={`https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}`} target="_blank" rel="noopener noreferrer"
-              aria-label="Bagikan ke X (Twitter)"
-              className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-sky-50 hover:text-sky-600">
-              <TwitterLogo className="h-3.5 w-3.5" />
-            </a>
-          </div>
+          <ShareButtons url={activityUrl} title={activity.title} variant="icons" className="ml-auto" />
         </div>
       </div>
 
@@ -329,51 +309,46 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             {/* Ringkasan — callout sama seperti detail Berita; tidak tampil bila
                 isinya sama dgn awal konten (anti-dobel, lihat showLead) */}
             {showLead && (
-              <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+              <CSSFadeIn className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
                 <div className="flex items-start gap-3">
-                  <BookmarkSimple className="mt-0.5 h-4 w-4 shrink-0 text-[#f4d21f]" />
+                  <BookmarkSimple className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-accent)]" />
                   <p className="text-sm font-medium leading-relaxed text-slate-600">{activity.description}</p>
                 </div>
-              </div>
+              </CSSFadeIn>
             )}
 
             <RichContent content={activity.content} />
 
             {/* Video kegiatan (opsional) — embed click-to-load, antara konten & Share */}
             {video && (
-              <section className="mt-8" aria-labelledby="act-video-heading">
-                <div className="mb-4 flex items-center gap-3">
-                  <div className="h-1 w-8 bg-[#f4d21f]" />
-                  <h3 id="act-video-heading" className="text-lg font-bold text-[var(--brand-primary)]">Video Kegiatan</h3>
-                </div>
-                <VideoEmbed
-                  url={video.parsed.canonicalUrl || activity.video_url || ""}
-                  poster={activity.image_url || video.thumbnailUrl}
-                  title={activity.title}
-                />
-              </section>
+              <CSSFadeIn>
+                <section className="mt-8" aria-labelledby="act-video-heading">
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="h-1 w-8 bg-[var(--brand-accent)]" />
+                    <h3 id="act-video-heading" className="text-lg font-bold text-[var(--brand-primary)]">Video Kegiatan</h3>
+                  </div>
+                  <VideoEmbed
+                    url={video.parsed.canonicalUrl || activity.video_url || ""}
+                    poster={activity.image_url || video.thumbnailUrl}
+                    title={activity.title}
+                  />
+                </section>
+              </CSSFadeIn>
             )}
 
             {/* Share + Back (pola Berita) */}
-            <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+            <CSSFadeIn className="mt-10 flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <Link href="/activities" className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-accent)] hover:text-[var(--brand-primary)]">
                 <ArrowLeft className="h-4 w-4" /> Semua Kegiatan
               </Link>
               <div className="flex items-center gap-2">
-                <span id="act-share-label" className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Bagikan</span>
-                <div className="flex items-center gap-1.5" role="group" aria-labelledby="act-share-label">
-                  <a href={`https://wa.me/?text=${shareText}%20${shareUrl}`} target="_blank" rel="noopener noreferrer"
-                    aria-label="Bagikan ke WhatsApp" className={waBtnClass}>
-                    <WhatsappLogo className="h-4 w-4" />
-                  </a>
-                  <a href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`} target="_blank" rel="noopener noreferrer"
-                    aria-label="Bagikan ke Facebook" className={fbBtnClass}>
-                    <FacebookLogo className="h-4 w-4" />
-                  </a>
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Bagikan</span>
+                <div className="flex items-center gap-1.5">
+                  <ShareButtons url={activityUrl} title={activity.title} variant="outline" />
                   <CopyLinkButton url={activityUrl} compact className={copyBtnClass} />
                 </div>
               </div>
-            </div>
+            </CSSFadeIn>
 
             {/* Navigasi antar kegiatan (Sebelumnya = lebih lama, Berikutnya = lebih baru) */}
             {(older || newer) && (
@@ -411,7 +386,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             {related.length > 0 && (
               <div className="mt-10">
                 <div className="mb-5 flex items-center gap-3">
-                  <div className="h-1 w-8 bg-[#f4d21f]" />
+                  <div className="h-1 w-8 bg-[var(--brand-accent)]" />
                   <h3 className="text-lg font-bold text-[var(--brand-primary)]">Kegiatan Lainnya</h3>
                 </div>
                 <CSSStagger stagger={60} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -447,7 +422,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             <div className="space-y-5 lg:sticky lg:top-[128px]">
               <div className="rounded-xl border border-[#dce3ed] bg-white p-5 shadow-sm">
                 <div className="mb-4 flex items-center gap-2">
-                  <div className="h-1 w-6 bg-[#f4d21f]" />
+                  <div className="h-1 w-6 bg-[var(--brand-accent)]" />
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Info Kegiatan</h3>
                 </div>
 
@@ -489,7 +464,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                     </div>
                   )}
                   <div className="flex items-start gap-3">
-                    <span className={`mt-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full ${status === "today" || status === "ongoing" ? "bg-[#f4d21f]" : "bg-[var(--brand-accent)]"}`} aria-hidden="true" />
+                    <span className="mt-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-[var(--brand-accent)]" aria-hidden="true" />
                     <div className="min-w-0">
                       <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tipe &amp; Status</dt>
                       <dd className="mt-0.5 flex flex-wrap items-center gap-1.5">
@@ -509,7 +484,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                     href={activity.registration_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-[#f4d21f] px-4 py-2.5 text-sm font-bold text-[var(--brand-primary)] transition-colors hover:bg-[#e6c51a]"
+                    className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--brand-accent)] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:brightness-95"
                   >
                     <ArrowUpRight className="h-4 w-4" /> Daftar Sekarang
                   </a>
@@ -532,10 +507,10 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                     href={gcalHref}
                     target="_blank"
                     rel="noopener noreferrer"
-                    /* Kuning solid bila tak ada tombol Daftar; outline bila sudah ada. */
+                    /* Aksen solid bila tak ada tombol Daftar; outline bila sudah ada. */
                     className={`mt-5 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition-colors ${activity.registration_url
                         ? "border border-[var(--brand-primary)]/20 bg-white text-[var(--brand-primary)] hover:border-[var(--brand-primary)]/40 hover:bg-[var(--brand-primary)]/5"
-                        : "bg-[#f4d21f] text-[var(--brand-primary)] hover:bg-[#e6c51a]"
+                        : "bg-[var(--brand-accent)] text-white hover:brightness-95"
                       }`}
                   >
                     <CalendarCheck className="h-4 w-4" /> Tambahkan ke Kalender
@@ -544,15 +519,8 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
                 <div className="mt-4 flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5">
                   <span className="text-xs font-semibold text-slate-500">Bagikan</span>
-                  <div className="flex items-center gap-1.5" role="group" aria-label="Bagikan kegiatan">
-                    <a href={`https://wa.me/?text=${shareText}%20${shareUrl}`} target="_blank" rel="noopener noreferrer"
-                      aria-label="Bagikan ke WhatsApp" className={waBtnClass}>
-                      <WhatsappLogo className="h-4 w-4" />
-                    </a>
-                    <a href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`} target="_blank" rel="noopener noreferrer"
-                      aria-label="Bagikan ke Facebook" className={fbBtnClass}>
-                      <FacebookLogo className="h-4 w-4" />
-                    </a>
+                  <div className="flex items-center gap-1.5">
+                    <ShareButtons url={activityUrl} title={activity.title} variant="outline" />
                     <CopyLinkButton url={activityUrl} compact className={copyBtnClass} />
                   </div>
                 </div>

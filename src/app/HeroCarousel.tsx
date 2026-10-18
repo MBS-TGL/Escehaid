@@ -171,7 +171,7 @@ export default function HeroCarousel() {
               aria-current={i === current ? "true" : undefined}
               onClick={() => setCurrent(i)}
               className={`h-2 cursor-pointer rounded-full transition-all duration-300 ${
-                i === current ? "w-6 bg-[#f4d21f]" : "w-2 bg-white/40"
+                i === current ? "w-6 bg-[var(--brand-accent)]" : "w-2 bg-white/40"
               }`}
             />
           ))}

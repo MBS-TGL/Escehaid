@@ -2,13 +2,18 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { Clock, User, ArrowLeft, Newspaper, MagnifyingGlass, BookmarkSimple, WhatsappLogo, FacebookLogo, TwitterLogo } from "@/components/Icons";
+import { Clock, User, ArrowLeft, Newspaper, MagnifyingGlass, BookmarkSimple } from "@/components/Icons";
 import { getNewsBySlug, getNewsList, getRelatedNews } from "@/lib/queries";
 import { RichContent } from "@/components/RichContent";
 import CoverImage from "@/components/CoverImage";
 import AttachmentPanel from "./AttachmentPanel";
 import VideoEmbed from "@/components/VideoEmbed";
 import { resolveVideoUrl } from "@/lib/video-embed";
+import ReadingProgress from "@/components/public/ReadingProgress";
+import ShareButtons from "@/components/public/ShareButtons";
+import SidebarCTA from "@/components/public/SidebarCTA";
+import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
+import { newsCategory, NEWS_CATEGORIES } from "@/lib/site-config";
 
 export const revalidate = 300;
 
@@ -47,12 +52,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-const categoryConfig: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  berita: { label: "Berita", color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200" },
-  pengumuman: { label: "Pengumuman", color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200" },
-  agenda: { label: "Agenda", color: "text-purple-700", bg: "bg-purple-50", border: "border-purple-200" },
-};
-
 function EstimateReadingTime(content: string | null): number {
   if (!content) return 1;
   const text = content.replace(/<[^>]*>/g, "");
@@ -76,12 +75,11 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
   const filteredRecent = recentNews.filter((n) => n.id !== berita.id).slice(0, 5);
   // Video eksternal (opsional) — resolve TikTok pendek di server
   const video = berita.video_url ? await resolveVideoUrl(berita.video_url) : null;
-  const cat = categoryConfig[berita.category] || { label: berita.category, color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" };
+  const cat = newsCategory(berita.category);
   const readTime = EstimateReadingTime(berita.content);
   const publishDate = new Date(berita.published_at || berita.created_at);
 
   const shareUrl = `https://www.smpmuh4tanggul.sch.id/news/${berita.slug}`;
-  const shareText = encodeURIComponent(berita.title);
 
   const newsJsonLd = {
     "@context": "https://schema.org",
@@ -124,6 +122,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
     <div className="min-h-screen bg-white">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(newsJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <ReadingProgress />
       {/* Sticky top bar */}
       <div className="sticky top-16 z-40 border-b border-slate-100 bg-white/95 backdrop-blur-md md:top-[72px]">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5">
@@ -134,23 +133,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
             <span>/</span>
             <span className="max-w-[200px] truncate text-slate-600">{berita.title}</span>
           </nav>
-          <div className="ml-auto flex items-center gap-1.5" role="group" aria-label="Bagikan berita">
-            <a href={`https://wa.me/?text=${shareText}%20${shareUrl}`} target="_blank" rel="noopener noreferrer"
-              aria-label="Bagikan ke WhatsApp"
-              className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600">
-              <WhatsappLogo className="h-3.5 w-3.5" />
-            </a>
-            <a href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`} target="_blank" rel="noopener noreferrer"
-              aria-label="Bagikan ke Facebook"
-              className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600">
-              <FacebookLogo className="h-3.5 w-3.5" />
-            </a>
-            <a href={`https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}`} target="_blank" rel="noopener noreferrer"
-              aria-label="Bagikan ke X (Twitter)"
-              className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-sky-50 hover:text-sky-600">
-              <TwitterLogo className="h-3.5 w-3.5" />
-            </a>
-          </div>
+          <ShareButtons url={shareUrl} title={berita.title} variant="icons" className="ml-auto" />
         </div>
       </div>
 
@@ -221,12 +204,12 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
 
             {/* Summary */}
             {berita.summary && (
-              <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+              <CSSFadeIn className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
                 <div className="flex items-start gap-3">
-                  <BookmarkSimple className="mt-0.5 h-4 w-4 shrink-0 text-[#f4d21f]" />
+                  <BookmarkSimple className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-accent)]" />
                   <p className="text-sm font-medium leading-relaxed text-slate-600">{berita.summary}</p>
                 </div>
-              </div>
+              </CSSFadeIn>
             )}
 
             {/* Content — RichContent: kelas identik semua tampilan */}
@@ -239,56 +222,42 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
 
             {/* Video eksternal (opsional) — embed click-to-load, setelah lampiran & sebelum Share */}
             {video && (
-              <section className="mt-8" aria-labelledby="news-video-heading">
-                <div className="mb-4 flex items-center gap-3">
-                  <div className="h-1 w-8 bg-[#f4d21f]" />
-                  <h3 id="news-video-heading" className="text-lg font-bold text-[var(--brand-primary)]">Video</h3>
-                </div>
-                <VideoEmbed
-                  url={video.parsed.canonicalUrl || berita.video_url || ""}
-                  poster={berita.image_url || video.thumbnailUrl}
-                  title={berita.title}
-                />
-              </section>
+              <CSSFadeIn>
+                <section className="mt-8" aria-labelledby="news-video-heading">
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="h-1 w-8 bg-[var(--brand-accent)]" />
+                    <h3 id="news-video-heading" className="text-lg font-bold text-[var(--brand-primary)]">Video</h3>
+                  </div>
+                  <VideoEmbed
+                    url={video.parsed.canonicalUrl || berita.video_url || ""}
+                    poster={berita.image_url || video.thumbnailUrl}
+                    title={berita.title}
+                  />
+                </section>
+              </CSSFadeIn>
             )}
 
             {/* Share + Back */}
-            <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+            <CSSFadeIn className="mt-10 flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <Link href="/news" className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-accent)] hover:text-[var(--brand-primary)]">
                 <ArrowLeft className="h-4 w-4" /> Semua Berita
               </Link>
               <div className="flex items-center gap-2">
-                <span id="share-label" className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Bagikan</span>
-                <div className="flex items-center gap-1.5" role="group" aria-labelledby="share-label">
-                  <a href={`https://wa.me/?text=${shareText}%20${shareUrl}`} target="_blank" rel="noopener noreferrer"
-                    aria-label="Bagikan ke WhatsApp"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-white transition-colors hover:bg-emerald-600">
-                    <WhatsappLogo className="h-3.5 w-3.5" />
-                  </a>
-                  <a href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`} target="_blank" rel="noopener noreferrer"
-                    aria-label="Bagikan ke Facebook"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white transition-colors hover:bg-blue-700">
-                    <FacebookLogo className="h-3.5 w-3.5" />
-                  </a>
-                  <a href={`https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}`} target="_blank" rel="noopener noreferrer"
-                    aria-label="Bagikan ke X (Twitter)"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500 text-white transition-colors hover:bg-sky-600">
-                    <TwitterLogo className="h-3.5 w-3.5" />
-                  </a>
-                </div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Bagikan</span>
+                <ShareButtons url={shareUrl} title={berita.title} variant="solid" />
               </div>
-            </div>
+            </CSSFadeIn>
 
             {/* Related */}
             {relatedNews.length > 0 && (
               <div className="mt-10">
                 <div className="mb-5 flex items-center gap-3">
-                  <div className="h-1 w-8 bg-[#f4d21f]" />
+                  <div className="h-1 w-8 bg-[var(--brand-accent)]" />
                   <h3 className="text-lg font-bold text-[var(--brand-primary)]">Berita Terkait</h3>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <CSSStagger stagger={60} className="grid gap-4 sm:grid-cols-2">
                   {relatedNews.map((item) => {
-                    const rc = categoryConfig[item.category] || { label: item.category, color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" };
+                    const rc = newsCategory(item.category);
                     return (
                       <Link key={item.id} href={`/news/${item.slug}`}
                         className="group flex gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-md">
@@ -309,7 +278,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
                       </Link>
                     );
                   })}
-                </div>
+                </CSSStagger>
               </div>
             )}
           </article>
@@ -333,7 +302,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
               {filteredRecent.length > 0 && (
                 <div className="rounded-xl border border-slate-200 bg-white p-5">
                   <div className="mb-4 flex items-center gap-2">
-                    <div className="h-1 w-6 bg-[#f4d21f]" />
+                    <div className="h-1 w-6 bg-[var(--brand-accent)]" />
                     <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Berita Terbaru</h3>
                   </div>
                   <div className="space-y-3.5">
@@ -357,28 +326,21 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
 
               <div className="rounded-xl border border-slate-200 bg-white p-5">
                 <div className="mb-4 flex items-center gap-2">
-                  <div className="h-1 w-6 bg-[#f4d21f]" />
+                  <div className="h-1 w-6 bg-[var(--brand-accent)]" />
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Kategori</h3>
                 </div>
                 <div className="space-y-1.5">
-                  {Object.entries(categoryConfig).map(([key, cfg]) => (
-                    <Link key={key} href={`/news?category=${key}`}
+                  {NEWS_CATEGORIES.map((cfg) => (
+                    <Link key={cfg.key} href={`/news?category=${cfg.key}`}
                       className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition-colors hover:bg-slate-50">
-                      <span className={`h-2 w-2 flex-shrink-0 rounded-full ${key === "berita" ? "bg-blue-500" : key === "pengumuman" ? "bg-amber-500" : "bg-purple-500"}`} />
+                      <span className={`h-2 w-2 flex-shrink-0 rounded-full ${cfg.dot}`} />
                       <span className="font-medium">{cfg.label}</span>
                     </Link>
                   ))}
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-xl border border-[var(--brand-primary)]/10 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-light)] p-5 text-white">
-                <h3 className="text-sm font-bold">SMP Muhammadiyah 4 Tanggul</h3>
-                <p className="mt-1.5 text-xs text-white/60 leading-relaxed">Mari bergabung bersama kami untuk masa depan yang lebih cerah.</p>
-                <Link href="/admission"
-                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[#f4d21f] px-4 py-2.5 text-xs font-bold text-[var(--brand-primary)] transition-colors hover:bg-[#e6c51a]">
-                  Daftar Sekarang
-                </Link>
-              </div>
+              <SidebarCTA />
             </div>
           </aside>
         </div>

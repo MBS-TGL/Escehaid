@@ -1,35 +1,50 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { Gallery } from "@/lib/supabase";
 import Image from "next/image";
-import { X } from "@/components/Icons";
+import { X, CaretLeft, CaretRight } from "@/components/Icons";
 import { getYoutubeId, youtubeThumb, youtubeEmbedUrl } from "@/lib/youtube";
+
+/** Ritme tinggi kartu bergantian supaya grid terasa "masonry", bukan kotak seragam. */
+const ASPECTS = ["aspect-[4/5]", "aspect-square", "aspect-[4/3]", "aspect-[3/4]"];
 
 export default function GalleryLightbox({
   items,
   page,
   perPage,
+  cat,
 }: {
   items: Gallery[];
   page: number;
   perPage: number;
+  cat?: string;
 }) {
-  const [selected, setSelected] = useState<Gallery | null>(null);
+  const [index, setIndex] = useState<number | null>(null);
   const router = useRouter();
   const hasMore = items.length === perPage;
+  const selected = index === null ? null : items[index] ?? null;
   const selectedYtId = selected ? getYoutubeId(selected.url) : null;
 
-  function close() {
-    setSelected(null);
-  }
+  const close = useCallback(() => setIndex(null), []);
+  const step = useCallback(
+    (dir: 1 | -1) => {
+      setIndex((cur) => {
+        if (cur === null) return cur;
+        return (cur + dir + items.length) % items.length;
+      });
+    },
+    [items.length]
+  );
 
-  // Esc menutup + kunci scroll body saat lightbox terbuka
+  // Esc menutup, panah kiri/kanan berpindah, kunci scroll body saat terbuka.
   useEffect(() => {
-    if (!selected) return;
+    if (index === null) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSelected(null);
+      if (e.key === "Escape") close();
+      else if (e.key === "ArrowLeft") step(-1);
+      else if (e.key === "ArrowRight") step(1);
     };
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
@@ -37,12 +52,21 @@ export default function GalleryLightbox({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
-  }, [selected]);
+  }, [index, close, step]);
+
+  // Bangun URL galeri dengan mempertahankan filter kategori + halaman.
+  function hrefFor(p: number): string {
+    const params = new URLSearchParams();
+    if (cat) params.set("cat", cat);
+    if (p > 0) params.set("page", String(p));
+    const qs = params.toString();
+    return qs ? `/gallery?${qs}` : "/gallery";
+  }
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-        {items.map((item) => {
+      <div className="columns-2 gap-4 md:columns-3 lg:columns-4">
+        {items.map((item, i) => {
           const ytId = item.media_type === "video" ? getYoutubeId(item.url) : null;
           // Thumbnail kecil: foto pakai thumbnail_url, video pakai thumbnail
           // YouTube — gambar penuh/video hanya dimuat saat diklik.
@@ -52,10 +76,10 @@ export default function GalleryLightbox({
               : item.thumbnail_url || (ytId ? youtubeThumb(ytId) : "");
 
           return (
-            <div key={item.id}>
+            <div key={item.id} className="mb-4" style={{ breakInside: "avoid" }}>
               <button
-                onClick={() => setSelected(item)}
-                className="group relative block aspect-square w-full overflow-hidden rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] text-left"
+                onClick={() => setIndex(i)}
+                className={`group relative block w-full overflow-hidden rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] text-left ${ASPECTS[i % ASPECTS.length]}`}
               >
                 {thumb ? (
                   <Image
@@ -80,10 +104,11 @@ export default function GalleryLightbox({
                   </span>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                <div className="absolute bottom-0 left-0 right-0 p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                  <p className="text-sm font-semibold text-white">{item.title}</p>
+                {/* Keterangan: selalu tampil di layar sentuh, muncul saat hover di desktop. */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 transition-opacity duration-300 md:opacity-0 md:group-hover:opacity-100">
+                  <p className="text-sm font-semibold text-white drop-shadow-sm">{item.title}</p>
                   {item.category && (
-                    <p className="mt-1 text-xs text-white/70">{item.category}</p>
+                    <p className="mt-1 text-xs text-white/80">{item.category}</p>
                   )}
                 </div>
               </button>
@@ -92,43 +117,70 @@ export default function GalleryLightbox({
         })}
       </div>
 
-      {hasMore && (
-        <div className="mt-10 text-center">
-          <button
-            onClick={() => router.push(`/gallery?page=${page + 1}`, { scroll: false })}
-            className="rounded-xl bg-[var(--brand-primary)] px-8 py-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]"
-          >
-            Muat Lebih Banyak
-          </button>
+      {(hasMore || page > 0) && (
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+          {page > 0 && (
+            <button
+              onClick={() => router.push(hrefFor(page - 1), { scroll: false })}
+              className="rounded-xl border border-[#dce3ed] bg-white px-8 py-3 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:bg-[#f4f7fb]"
+            >
+              Kembali
+            </button>
+          )}
+          {hasMore && (
+            <button
+              onClick={() => router.push(hrefFor(page + 1), { scroll: false })}
+              className="rounded-xl bg-[var(--brand-primary)] px-8 py-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] hover:text-white"
+            >
+              Muat Lebih Banyak
+            </button>
+          )}
         </div>
       )}
 
-      {page > 0 && (
-        <div className="mt-4 text-center">
-          <button
-            onClick={() => router.push(page === 1 ? "/gallery" : `/gallery?page=${page - 1}`, { scroll: false })}
-            className="rounded-xl border border-[#dce3ed] bg-white px-8 py-3 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:bg-[#f4f7fb]"
-          >
-            Kembali
-          </button>
-        </div>
-      )}
-
-      {selected && (
+      {selected && index !== null && (
         <div
           role="dialog"
           aria-modal="true"
           aria-label={`Pratinjau: ${selected.title}`}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
           onClick={close}
         >
           <button
             onClick={close}
             aria-label="Tutup pratinjau"
-            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 z-10"
+            className="absolute right-4 top-4 z-10 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
           >
             <X className="h-6 w-6" />
           </button>
+
+          {items.length > 1 && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  step(-1);
+                }}
+                aria-label="Sebelumnya"
+                className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/10 p-2.5 text-white hover:bg-white/20"
+              >
+                <CaretLeft className="h-6 w-6" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  step(1);
+                }}
+                aria-label="Berikutnya"
+                className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/10 p-2.5 text-white hover:bg-white/20"
+              >
+                <CaretRight className="h-6 w-6" />
+              </button>
+              <span className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/90">
+                {index + 1} / {items.length}
+              </span>
+            </>
+          )}
 
           <div
             className="relative w-full max-w-4xl"
@@ -162,7 +214,7 @@ export default function GalleryLightbox({
                 width={1200}
                 height={1200}
                 sizes="(max-width: 896px) 100vw, 896px"
-                className="w-full rounded-xl object-contain max-h-[80vh]"
+                className="max-h-[80vh] w-full rounded-xl object-contain"
                 loading="lazy"
                 decoding="async"
               />

@@ -1,11 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Trophy,
-  Medal,
   Users,
   Megaphone,
   Star,
@@ -14,6 +13,8 @@ import {
   ArrowSquareOut,
 } from "@/components/Icons";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
+import PageHero from "@/components/public/PageHero";
+import EmptyState from "@/components/public/EmptyState";
 import VideoEmbed from "@/components/VideoEmbed";
 import type { Achievement } from "@/lib/supabase";
 import {
@@ -85,20 +86,20 @@ function AchievementCard({
           )}
         </div>
       ) : (
-        <div className="relative flex aspect-video w-full items-center justify-center bg-gradient-to-br from-[#f4d21f]/20 to-[#f4d21f]/5">
+        <div className="relative flex aspect-video w-full items-center justify-center bg-gradient-to-br from-[var(--brand-accent)]/20 to-[var(--brand-accent)]/5">
           {item.video_url && (
             <span aria-hidden="true" className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
               <Play weight="fill" className="h-3 w-3" /> Video
             </span>
           )}
-          <Icon weight="fill" className={big ? "h-16 w-16 text-[#f4d21f]" : "h-12 w-12 text-[#f4d21f]"} />
+          <Icon weight="fill" className={big ? "h-16 w-16 text-[var(--brand-accent)]" : "h-12 w-12 text-[var(--brand-accent)]"} />
         </div>
       )}
 
       <div className="flex flex-1 flex-col p-5">
         <div className="flex flex-wrap items-center gap-1.5">
           {item.rank_label && (
-            <span className="rounded-md bg-[#f4d21f] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+            <span className="rounded-md bg-[var(--brand-accent)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
               {item.rank_label}
             </span>
           )}
@@ -150,11 +151,35 @@ function AchievementCard({
   );
 }
 
-export default function PrestasiClient({ achievements }: { achievements: Achievement[] }) {
-  const [activeCat, setActiveCat] = useState(SEMUA);
-  const [activeLevel, setActiveLevel] = useState(SEMUA);
+export default function PrestasiClient({
+  achievements,
+  initialCat,
+  initialLevel,
+}: {
+  achievements: Achievement[];
+  initialCat?: string;
+  initialLevel?: string;
+}) {
+  const pathname = usePathname();
+  const [activeCat, setActiveCat] = useState(initialCat || SEMUA);
+  const [activeLevel, setActiveLevel] = useState(initialLevel || SEMUA);
   /** Prestasi aktif di modal detail (video ditampilkan di sini). */
   const [selected, setSelected] = useState<Achievement | null>(null);
+
+  /**
+   * Sinkronkan filter ke URL secara dangkal (tanpa navigasi/refetch) agar hasil
+   * filter bisa dibagikan — pola sama dengan halaman Pencarian.
+   */
+  const syncUrl = useCallback(
+    (cat: string, level: string) => {
+      const params = new URLSearchParams();
+      if (cat !== SEMUA) params.set("cat", cat);
+      if (level !== SEMUA) params.set("tingkat", level);
+      const qs = params.toString();
+      window.history.replaceState(null, "", qs ? `${pathname}?${qs}` : pathname);
+    },
+    [pathname]
+  );
 
   // Modal: ESC menutup + kunci scroll latar belakang
   useEffect(() => {
@@ -214,61 +239,55 @@ export default function PrestasiClient({ achievements }: { achievements: Achieve
   function resetFilters() {
     setActiveCat(SEMUA);
     setActiveLevel(SEMUA);
+    syncUrl(SEMUA, SEMUA);
   }
 
+  const setCat = (cat: string) => {
+    setActiveCat(cat);
+    syncUrl(cat, activeLevel);
+  };
+
+  const setLevel = (lvl: string) => {
+    setActiveLevel(lvl);
+    syncUrl(activeCat, lvl);
+  };
+
   const chipCls = (active: boolean) =>
-    `rounded-full px-5 py-2 text-sm font-medium transition-all ${
+    `rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
       active
-        ? "bg-[var(--brand-primary)] text-white shadow-lg shadow-[var(--brand-primary)]/20"
-        : "bg-[#f4f7fb] text-slate-500 hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]"
+        ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white shadow-sm"
+        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
     }`;
 
   return (
     <div>
-      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-16 text-white">
-        <div className="absolute inset-0 hidden opacity-[0.04] sm:block">
-          <Trophy className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
-          <Medal className="absolute -left-10 bottom-0 h-48 w-48 -rotate-12" weight="fill" />
-        </div>
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
-        </div>
-        <div className="relative mx-auto max-w-7xl px-6 text-center">
-          <CSSFadeIn>
-            <h1 className="text-3xl font-bold md:text-4xl text-balance">Prestasi</h1>
-            <p className="mt-3 text-base text-white/70 text-balance">Pencapaian terbaik siswa dan sekolah</p>
-          </CSSFadeIn>
-        </div>
-      </section>
+      <PageHero
+        variant="compact"
+        title="Prestasi"
+        description="Pencapaian terbaik siswa dan sekolah: kajian, lomba, dan capaian akademik."
+        icon={Trophy}
+        breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Prestasi" }]}
+      />
 
       <section className="mx-auto max-w-7xl px-6 py-16">
         {achievements.length === 0 ? (
           /* ── Tanpa data sama sekali ── */
-          <CSSFadeIn>
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white py-20 text-center">
-              <Trophy className="h-14 w-14 text-[var(--brand-primary)]/20" />
-              <p className="mt-5 text-base text-slate-500">Belum ada data prestasi.</p>
-              <p className="mt-1 text-sm text-slate-400">Lihat kabar terbaru sekolah kami sambil menunggu.</p>
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                <Link href="/news" className="rounded-full bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-[var(--brand-primary)]/20 transition-all hover:bg-[var(--brand-accent)]">
-                  Lihat Berita Terbaru
-                </Link>
-                <Link href="/admission" className="rounded-full bg-[#f4f7fb] px-5 py-2.5 text-sm font-medium text-slate-600 transition-all hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]">
-                  Info SPMB
-                </Link>
-              </div>
-            </div>
-          </CSSFadeIn>
+          <EmptyState
+            icon={Trophy}
+            title="Belum ada data prestasi."
+            description="Lihat kabar terbaru sekolah kami sambil menunggu."
+            action={{ href: "/news", label: "Lihat Berita Terbaru" }}
+          />
         ) : (
           <>
             {/* ── Filter kategori & tingkat (dibangun dari data) ── */}
             <CSSFadeIn>
               <div className="mb-6 flex flex-wrap justify-center gap-2">
-                <button aria-pressed={activeCat === SEMUA} onClick={() => setActiveCat(SEMUA)} className={chipCls(activeCat === SEMUA)}>
+                <button aria-pressed={activeCat === SEMUA} onClick={() => setCat(SEMUA)} className={chipCls(activeCat === SEMUA)}>
                   {SEMUA}
                 </button>
                 {catChips.map((cat) => (
-                  <button key={cat} aria-pressed={activeCat === cat} onClick={() => setActiveCat(cat)} className={chipCls(activeCat === cat)}>
+                  <button key={cat} aria-pressed={activeCat === cat} onClick={() => setCat(cat)} className={chipCls(activeCat === cat)}>
                     {categoryLabel(cat)}
                   </button>
                 ))}
@@ -277,11 +296,11 @@ export default function PrestasiClient({ achievements }: { achievements: Achieve
               {levelChips.length > 0 && (
                 <div className="mb-10 flex flex-wrap items-center justify-center gap-2">
                   <span className="mr-1 text-xs font-semibold uppercase tracking-wider text-slate-400">Tingkat</span>
-                  <button aria-pressed={activeLevel === SEMUA} onClick={() => setActiveLevel(SEMUA)} className={chipCls(activeLevel === SEMUA)}>
+                  <button aria-pressed={activeLevel === SEMUA} onClick={() => setLevel(SEMUA)} className={chipCls(activeLevel === SEMUA)}>
                     {SEMUA}
                   </button>
                   {levelChips.map((lvl) => (
-                    <button key={lvl} aria-pressed={activeLevel === lvl} onClick={() => setActiveLevel(lvl)} className={chipCls(activeLevel === lvl)}>
+                    <button key={lvl} aria-pressed={activeLevel === lvl} onClick={() => setLevel(lvl)} className={chipCls(activeLevel === lvl)}>
                       {levelLabel(lvl)}
                     </button>
                   ))}
@@ -305,9 +324,9 @@ export default function PrestasiClient({ achievements }: { achievements: Achieve
                 {featured.length > 0 && (
                   <div className="mb-10">
                     <div className="mb-4 flex items-center gap-2">
-                      <Star weight="fill" className="h-4 w-4 text-[#f4d21f]" />
+                      <Star weight="fill" className="h-4 w-4 text-[var(--brand-accent)]" />
                       <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--brand-primary)]">Unggulan</h2>
-                      <div className="h-1 w-6 rounded-full bg-[#f4d21f]" />
+                      <div className="h-1 w-6 rounded-full bg-[var(--brand-accent)]" />
                     </div>
                     <CSSStagger stagger={80} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                       {featured.map((item) => (
@@ -353,15 +372,15 @@ export default function PrestasiClient({ achievements }: { achievements: Achieve
                 className="h-48 w-full object-cover sm:h-56"
               />
             ) : (
-              <div className="flex h-40 w-full items-center justify-center bg-gradient-to-br from-[#f4d21f]/20 to-[#f4d21f]/5">
-                <Trophy weight="fill" className="h-14 w-14 text-[#f4d21f]" />
+              <div className="flex h-40 w-full items-center justify-center bg-gradient-to-br from-[var(--brand-accent)]/20 to-[var(--brand-accent)]/5">
+                <Trophy weight="fill" className="h-14 w-14 text-[var(--brand-accent)]" />
               </div>
             )}
 
             <div className="p-6">
               <div className="flex flex-wrap items-center gap-1.5">
                 {selected.rank_label && (
-                  <span className="rounded-md bg-[#f4d21f] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+                  <span className="rounded-md bg-[var(--brand-accent)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
                     {selected.rank_label}
                   </span>
                 )}
@@ -402,7 +421,7 @@ export default function PrestasiClient({ achievements }: { achievements: Achieve
               {selected.video_url && (
                 <div className="mt-6">
                   <div className="mb-3 flex items-center gap-2">
-                    <div className="h-1 w-6 rounded-full bg-[#f4d21f]" />
+                    <div className="h-1 w-6 rounded-full bg-[var(--brand-accent)]" />
                     <p className="text-sm font-bold uppercase tracking-wider text-[var(--brand-primary)]">Video Prestasi</p>
                     <a href={selected.video_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--brand-accent)] hover:text-[var(--brand-primary)]">
                       Buka di platform <ArrowSquareOut className="h-3 w-3" aria-hidden="true" />

@@ -77,6 +77,36 @@ export function capitalizeCategory(cat: string): string {
     .join("-");
 }
 
+/* ══════════════════════════════════════════════════════════════
+   BERITA — sumber tunggal label & gaya badge kategori. Dipakai
+   /news, detail berita, dan blok "Kabar Terbaru" di beranda agar
+   warna label tidak pernah menyimpang antar halaman.
+   ══════════════════════════════════════════════════════════════ */
+export const NEWS_CATEGORIES = [
+  { key: "berita", label: "Berita", color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", dot: "bg-blue-500" },
+  { key: "pengumuman", label: "Pengumuman", color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200", dot: "bg-amber-500" },
+  { key: "agenda", label: "Agenda", color: "text-purple-700", bg: "bg-purple-50", border: "border-purple-200", dot: "bg-purple-500" },
+];
+
+export type NewsCategoryMeta = (typeof NEWS_CATEGORIES)[number];
+
+/**
+ * Metadata kategori berita; kategori tak dikenal → label apa adanya dengan gaya
+ * netral, sehingga data lama tetap tampil tanpa perlu diperbarui.
+ */
+export function newsCategory(key?: string | null): NewsCategoryMeta | { key: string; label: string; color: string; bg: string; border: string; dot: string } {
+  const found = NEWS_CATEGORIES.find((c) => c.key === key);
+  if (found) return found;
+  return {
+    key: key ?? "",
+    label: key ?? "",
+    color: "text-slate-600",
+    bg: "bg-slate-50",
+    border: "border-slate-200",
+    dot: "bg-slate-400",
+  };
+}
+
 /**
  * Inisial 2 huruf dari nama untuk avatar tanpa foto (mis. "Khoirul Anwar, S.Pd"
  * → "KA"). Gelar setelah koma dibuang; token singkatan bergaya "Drs."/"Hj."

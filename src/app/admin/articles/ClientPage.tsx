@@ -1707,7 +1707,8 @@ export default function AdminArticlesPage() {
       <Modal
         open={previewOpen}
         onClose={closePreview}
-        size={previewDevice === "mobile" ? "sm" : "xl"}
+        // Desktop: lg (max-w-2xl) — sama persis dengan lebar panel form default.
+        size={previewDevice === "mobile" ? "sm" : "lg"}
         title="Pratinjau Artikel"
         description="Tampilan seperti halaman publik — berlaku untuk draft & terjadwal"
         footer={

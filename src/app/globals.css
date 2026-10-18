@@ -44,8 +44,8 @@ h3 {
 }
 
 ::selection {
-  background: #f4d21f;
-  color: var(--brand-primary);
+  background: var(--brand-accent);
+  color: #fff;
 }
 
 /* Shape consistency: all cards/buttons use 12px radius */
@@ -119,7 +119,7 @@ h3 {
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #f4d21f, #ffed4a, #f4d21f);
+  background: linear-gradient(135deg, var(--brand-accent), color-mix(in srgb, var(--brand-accent) 65%, white), var(--brand-accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -138,7 +138,7 @@ h3 {
   right: 14px;
   height: 2px;
   border-radius: 9999px;
-  background-color: #f4d21f;
+  background-color: var(--brand-accent);
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -283,7 +283,7 @@ html.admin-thin-scrollbar::-webkit-scrollbar-thumb:hover {
 }
 
 .tiptap-editor blockquote {
-  border-left: 3px solid #f4d21f;
+  border-left: 3px solid var(--brand-accent);
   padding-left: 0.75rem;
   margin: 0.75rem 0;
   color: #64748b;
@@ -435,4 +435,84 @@ html.admin-thin-scrollbar::-webkit-scrollbar-thumb:hover {
     transition: none !important;
     will-change: auto !important;
   }
+}
+
+/* Progress bar baca halaman detail (`ReadingProgress`).
+   Murni scroll-driven CSS: tanpa JS, tanpa listener scroll. Di browser tanpa
+   dukungan `animation-timeline`, `@supports` gagal → bar tetap scaleX(0)
+   (tak terlihat), jadi tidak pernah "nyangkut" di layar. */
+.reading-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 70;
+  height: 3px;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  background: var(--brand-accent);
+  pointer-events: none;
+}
+
+@keyframes reading-progress-grow {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@supports (animation-timeline: scroll()) {
+  .reading-progress {
+    animation: reading-progress-grow linear both;
+    animation-timeline: scroll(root);
+  }
+}
+
+/* Catatan: bar ini sengaja tetap aktif saat `prefers-reduced-motion` — ia tidak
+   bergerak sendiri, posisinya 1:1 mengikuti scroll pengguna, jadi bukan gerak UI
+   yang perlu dimatikan. */
+
+/* Foto hero full-bleed (`PageHero` varian "photo"). Zoom sangat halus saat
+   halaman mulai di-scroll: mengikuti scroll 1:1 (bukan animasi otonom), murni
+   transform supaya tetap murah. Diberi kedalaman/dimensi pada foto DB yang
+   komposisinya beragam. Dinonaktifkan saat reduced-motion DAN di layar < 768px
+   (kuota repaint di HP lebih ketat dan hero terlalu pendek untuk terasa). */
+@keyframes hero-media-zoom {
+  from {
+    transform: scale(1);
+  }
+
+  to {
+    transform: scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) and (min-width: 768px) {
+  @supports (animation-timeline: scroll()) {
+    .hero-media {
+      animation: hero-media-zoom linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 460px;
+    }
+  }
+}
+
+/* Motif geometris merek pada hero full-bleed: pancaran matahari yang
+   diabstraksi dari sudut kanan-bawah. Murni CSS (repeating-conic-gradient),
+   tanpa SVG atau berkas gambar. `soft-light` + mask radial supaya pancaran
+   membaur ke foto tanpa tepi kotak yang keras, dan tidak menerpa blok teks
+   di sisi kiri. */
+.hero-sunmark {
+  background: repeating-conic-gradient(
+    from 0deg at 100% 100%,
+    var(--brand-accent) 0deg 2.5deg,
+    transparent 2.5deg 10deg
+  );
+  mix-blend-mode: soft-light;
+  opacity: 0.6;
+  -webkit-mask-image: radial-gradient(circle at 100% 100%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(circle at 100% 100%, #000 0%, transparent 72%);
 }

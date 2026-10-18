@@ -1,4 +1,5 @@
-import { CSSFadeIn } from "@/components/CSSAnimations";
+import { MagnifyingGlass } from "@/components/Icons";
+import PageHero from "@/components/public/PageHero";
 import { searchAllContent } from "@/lib/queries";
 import SearchView from "./SearchView";
 import type { Metadata } from "next";
@@ -25,20 +26,12 @@ export default async function SearchPage({
 
   return (
     <div>
-      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-14 text-white md:py-16">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
-          <div className="absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-[var(--brand-accent)] blur-[120px]" />
-        </div>
-        <div className="relative mx-auto max-w-4xl px-6 text-center">
-          <CSSFadeIn>
-            <h1 className="text-3xl font-bold text-balance md:text-4xl">Pencarian</h1>
-            <p className="mt-3 text-base text-white/70 text-balance">
-              Satu kotak untuk mencari berita, artikel, kegiatan, dan prestasi
-            </p>
-          </CSSFadeIn>
-        </div>
-      </section>
+      <PageHero
+        variant="compact"
+        title="Pencarian"
+        description="Satu kotak untuk mencari berita, artikel, kegiatan, dan prestasi."
+        icon={MagnifyingGlass}
+      />
 
       <SearchView initialQuery={initialQuery} initialResults={initialResults} />
     </div>

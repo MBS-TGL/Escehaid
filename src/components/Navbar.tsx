@@ -102,7 +102,7 @@ export default function Navbar({ brand }: { brand: PublicBrand }) {
                 })}
                 <Link
                   href="/admission"
-                  className="ml-3 rounded-xl bg-[#f4d21f] px-5 py-2 text-sm font-bold text-[var(--brand-primary)] transition-all hover:bg-[#e6c41c] hover:shadow-lg hover:shadow-[#f4d21f]/20"
+                  className="ml-3 rounded-xl bg-[var(--brand-accent)] px-5 py-2 text-sm font-bold text-white transition-all hover:brightness-95 hover:shadow-lg hover:shadow-[var(--brand-accent)]/20"
                 >
                   SPMB
                 </Link>

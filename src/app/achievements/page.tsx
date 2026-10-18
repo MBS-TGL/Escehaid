@@ -36,8 +36,22 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export const revalidate = 300;
 
-export default async function PrestasiPage() {
-  const achievements = await getAchievements();
+export default async function PrestasiPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ cat?: string; tingkat?: string }>;
+}) {
+  const [achievements, sp] = await Promise.all([getAchievements(), searchParams]);
+
+  // Validasi filter dari URL terhadap data yang benar-benar ada — tautan usang
+  // (?cat=…) tidak boleh membuat halaman tampak kosong.
+  const hasCat = (v?: string) =>
+    !!v && achievements.some((a) => (a.category || "").toLowerCase() === v.toLowerCase());
+  const hasLevel = (v?: string) =>
+    !!v && achievements.some((a) => (a.level || "").toLowerCase() === v.toLowerCase());
+
+  const initialCat = hasCat(sp.cat) ? sp.cat : undefined;
+  const initialLevel = hasLevel(sp.tingkat) ? sp.tingkat : undefined;
 
   return (
     <div>
@@ -51,7 +65,7 @@ export default async function PrestasiPage() {
           ],
         })
       }} />
-      <PrestasiClient achievements={achievements} />
+      <PrestasiClient achievements={achievements} initialCat={initialCat} initialLevel={initialLevel} />
     </div>
   );
 }

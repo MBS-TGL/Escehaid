@@ -146,6 +146,180 @@ export async function getArticleBySlug(slug: string): Promise<ArticleWithAuthor 
   };
 }
 
+/** Bagian dari `run` di getArticleListPaginated — dipisah agar retry bersih. */
+async function queryArticlePage(
+  columns: string,
+  withAuthorName: boolean,
+  page: number,
+  pageSize: number,
+  search?: string,
+  withExpires?: boolean,
+  category?: string
+) {
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const term = sanitizeSearchTerm(search ?? "");
+
+  let query = supabase
+    .from("articles")
+    .select(`${columns}${withAuthorName ? ", author_name" : ""}`, { count: "exact" });
+
+  query = applyPublicArticleFilters(query, withExpires ?? false);
+
+  // Disematkan dulu, lalu terbaru (kolom is_pinned hanya bila sudah ada)
+  if (withExpires) {
+    query = query.order("is_pinned", { ascending: false });
+  }
+  query = query.order("published_at", { ascending: false, nullsFirst: false });
+
+  if (term) {
+    query = query.or(`title.ilike.%${term}%,excerpt.ilike.%${term}%`);
+  }
+  if (category) {
+    query = query.eq("category", category);
+  }
+
+  // select dengan string runtime + join tidak bisa di-infer Supabase
+  // (hasilnya ParserError, bukan baris) → cast manual seperti ArticleRow.
+  return (await query.range(from, to)) as unknown as {
+    data: ArticleRow[] | null;
+    error: { message?: string } | null;
+    count: number | null;
+  };
+}
+
+/**
+ * Daftar artikel publik per halaman — pola yang sama dengan getNewsListPaginated.
+ * `search` menyaring judul ATAU cuplikan; `category` = kategori bebas (artikel
+ * tidak punya enum). Kolom author_name bila belum ada → retry tanpa itu.
+ */
+export async function getArticleListPaginated(
+  page: number = 1,
+  pageSize: number = 9,
+  search?: string,
+  category?: string
+): Promise<{ items: ArticleWithAuthor[]; total: number; totalPages: number }> {
+  const [newCols, hasVideo] = await Promise.all([
+    articlesHasScheduledColumns(),
+    articlesHasVideoColumn(),
+  ]);
+  const base = `${ARTICLE_LIST_COLUMNS}${newCols ? `, ${ARTICLE_NEW_COLUMNS}` : ""}${hasVideo ? ", video_url" : ""}`;
+  let { data, error, count } = await queryArticlePage(
+    base,
+    true,
+    page,
+    pageSize,
+    search,
+    newCols,
+    category
+  );
+
+  // Kolom author_name belum ada (ALTER belum dijalankan)
+  // → jangan sampai halaman artikel jadi kosong, ulang tanpa kolom itu.
+  if (error && /author_name/.test(error.message || "")) {
+    ({ data, error, count } = await queryArticlePage(base, false, page, pageSize, search, newCols, category));
+  }
+
+  if (error) {
+    console.error("Error fetching articles:", JSON.stringify(error, ["message", "details", "hint", "code"]));
+    return { items: [], total: 0, totalPages: 0 };
+  }
+
+  const total = count || 0;
+  const totalPages = Math.ceil(total / pageSize);
+
+  return {
+    items: (data || []).map((item: ArticleRow) => ({
+      ...item,
+      author_name: item.author_name ?? item.user_profiles?.full_name ?? null,
+    })),
+    total,
+    totalPages,
+  };
+}
+
+/**
+ * Artikel terkait: kategori sama, bukan artikel ini, terbaru dulu.
+ * Kategori artikel bebas (bukan enum) → cukup eq kategori persis.
+ */
+export async function getRelatedArticles(category: string, currentId: string, limit = 4): Promise<ArticleWithAuthor[]> {
+  const newCols = await articlesHasScheduledColumns();
+  const hasVideo = await articlesHasVideoColumn();
+  const listColumns = `${ARTICLE_LIST_COLUMNS}${newCols ? `, ${ARTICLE_NEW_COLUMNS}` : ""}${hasVideo ? ", video_url" : ""}`;
+  let query = supabase
+    .from("articles")
+    .select(`${listColumns}, author_name`)
+    .eq("category", category)
+    .neq("id", currentId);
+
+  query = applyPublicArticleFilters(query, newCols);
+  if (newCols) {
+    query = query.order("is_pinned", { ascending: false });
+  }
+  query = query.order("published_at", { ascending: false, nullsFirst: false }).limit(limit);
+
+  const { data, error } = (await query) as unknown as {
+    data: ArticleRow[] | null;
+    error: { message?: string } | null;
+  };
+
+  if (error && /author_name/.test(error.message || "")) {
+    const retry = supabase
+      .from("articles")
+      .select(`${listColumns}, user_profiles(full_name)`)
+      .eq("category", category)
+      .neq("id", currentId);
+    let rq = applyPublicArticleFilters(retry, newCols);
+    if (newCols) rq = rq.order("is_pinned", { ascending: false });
+    rq = rq.order("published_at", { ascending: false, nullsFirst: false }).limit(limit);
+    const retried = (await rq) as unknown as {
+      data: ArticleRow[] | null;
+      error: { message?: string } | null;
+    };
+    return (retried.data || []).map((item: ArticleRow) => ({
+      ...item,
+      author_name: item.user_profiles?.full_name ?? null,
+    }));
+  }
+
+  if (error) {
+    console.error("Error fetching related articles:", error);
+    return [];
+  }
+  return (data || []).map((item: ArticleRow) => ({
+    ...item,
+    author_name: item.author_name ?? item.user_profiles?.full_name ?? null,
+  }));
+}
+
+/**
+ * Daftar kategori unik artikel publik — kategori artikel bebas (bukan enum),
+ * jadi chips filter tidak bisa hardcode. Select lean kolom category saja.
+ */
+export async function getArticleCategories(): Promise<string[]> {
+  const newCols = await articlesHasScheduledColumns();
+  let query = supabase.from("articles").select("category");
+  query = applyPublicArticleFilters(query, newCols);
+  query = query.order("published_at", { ascending: false, nullsFirst: false });
+
+  // select dengan string runtime + filter tak ter-infer → cast manual.
+  const { data, error } = (await query) as unknown as {
+    data: { category: string }[] | null;
+    error: { message?: string } | null;
+  };
+  if (error) {
+    console.error("Error fetching article categories:", error);
+    return [];
+  }
+  // Dedupe dengan urutan kemunculan pertama (artikel terbaru dulu).
+  const seen = new Set<string>();
+  for (const row of data || []) {
+    const cat = (row.category || "").trim();
+    if (cat) seen.add(cat);
+  }
+  return [...seen];
+}
+
 /**
  * Sitemap: hanya artikel yang tampil (filter publik yang sama) — draft &
  * terjadwal tidak boleh bocor ke sitemap. Ringkas: slug + tanggal saja.

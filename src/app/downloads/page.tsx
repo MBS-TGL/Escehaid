@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { Download, FileText, FolderOpen, Info } from "@/components/Icons";
-import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
+import { CSSStagger } from "@/components/CSSAnimations";
+import PageHero from "@/components/public/PageHero";
+import EmptyState from "@/components/public/EmptyState";
+import CategoryChips, { type CategoryChip } from "@/components/public/CategoryChips";
 import { getDownloadList, downloadKind, formatFileSize } from "@/lib/queries";
 import type { Metadata } from "next";
 
@@ -15,14 +18,32 @@ export const revalidate = 300;
 
 const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]";
 
-export default async function UnduhanPage() {
+export default async function UnduhanPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ cat?: string }>;
+}) {
+  const sp = await searchParams;
   const downloads = await getDownloadList();
 
   // Kelompokkan berdasarkan kategori, urut abjad; kategori "Umum" paling akhir
   // agar kategori spesifik (mis. SPMB) tampil lebih dulu.
-  const categories = Array.from(new Set(downloads.map((d) => d.category))).sort((a, b) =>
+  const allCategories = Array.from(new Set(downloads.map((d) => d.category))).sort((a, b) =>
     a === "Umum" ? 1 : b === "Umum" ? -1 : a.localeCompare(b, "id")
   );
+
+  const activeCat = sp.cat && allCategories.includes(sp.cat) ? sp.cat : undefined;
+  const categories = activeCat ? [activeCat] : allCategories;
+
+  const chips: CategoryChip[] = [
+    { key: "all", label: "Semua", href: "/downloads", active: !activeCat },
+    ...allCategories.map((c) => ({
+      key: c,
+      label: c,
+      href: `/downloads?cat=${encodeURIComponent(c)}`,
+      active: activeCat === c,
+    })),
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -37,31 +58,24 @@ export default async function UnduhanPage() {
         })
       }} />
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-16 text-white">
-        <div className="absolute inset-0 hidden opacity-[0.04] sm:block">
-          <Download className="absolute -left-10 -top-10 h-64 w-64 -rotate-12" weight="fill" />
-          <Download className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
-        </div>
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
-        </div>
-        <div className="relative mx-auto max-w-7xl px-4 text-center sm:px-6">
-          <CSSFadeIn>
-            <h1 className="text-3xl font-bold md:text-4xl text-balance">Unduhan</h1>
-            <p className="mt-3 text-base text-white/70 text-balance">
-              Brosur, formulir, dan dokumen resmi SMP Muhammadiyah 4 Tanggul
-            </p>
-          </CSSFadeIn>
-        </div>
-      </section>
+      <PageHero
+        variant="compact"
+        title="Unduhan"
+        description="Brosur, formulir, dan dokumen resmi SMP Muhammadiyah 4 Tanggul."
+        icon={Download}
+        breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Unduhan" }]}
+      />
 
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+        {allCategories.length > 1 && (
+          <CategoryChips chips={chips} className="mb-8" />
+        )}
         {downloads.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white py-16 text-center">
-            <Download className="h-12 w-12 text-[var(--brand-primary)]/20" />
-            <p className="mt-4 text-sm text-slate-500">Belum ada berkas unduhan.</p>
-            <p className="mt-1 text-xs text-slate-400">Dokumen resmi akan segera tersedia di sini.</p>
-          </div>
+          <EmptyState
+            icon={Download}
+            title="Belum ada berkas unduhan."
+            description="Dokumen resmi akan segera tersedia di sini."
+          />
         ) : (
           <CSSStagger className="space-y-10">
             {categories.map((category) => {
@@ -69,11 +83,11 @@ export default async function UnduhanPage() {
               return (
                 <div key={category}>
                   <div className="mb-4 flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand-primary)]/10">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand-accent)]/15">
                       <FolderOpen className="h-4.5 w-4.5 text-[var(--brand-primary)]" />
                     </div>
                     <h2 className="text-lg font-bold text-[var(--brand-primary)] md:text-xl">{category}</h2>
-                    <span className="rounded-full bg-slate-200/70 px-2 py-0.5 text-[11px] font-semibold text-slate-500">
+                    <span className="rounded-full bg-[var(--brand-accent)]/15 px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-primary)]/70">
                       {rows.length} berkas
                     </span>
                   </div>

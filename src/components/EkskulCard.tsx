@@ -55,7 +55,7 @@ export default function EkskulCard({ item }: { item: Ekskul }) {
         )}
 
         <div className="mt-auto pt-5">
-          <span className="mx-auto block h-0.5 w-8 rounded-full bg-[#f4d21f] opacity-40 transition-all duration-300 group-hover:h-1 group-hover:w-12 group-hover:opacity-100" />
+          <span className="mx-auto block h-0.5 w-8 rounded-full bg-[var(--brand-accent)] opacity-40 transition-all duration-300 group-hover:h-1 group-hover:w-12 group-hover:opacity-100" />
         </div>
       </div>
     </div>

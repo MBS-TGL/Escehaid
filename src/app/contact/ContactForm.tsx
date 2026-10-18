@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { submitContactMessage } from "@/lib/queries";
-import { MapPin, Phone, Envelope, Clock, WhatsappLogo, InstagramLogo, YoutubeLogo, FacebookLogo, TwitterLogo, MusicNotes } from "@/components/Icons";
+import { MapPin, Envelope, Clock, WhatsappLogo, InstagramLogo, YoutubeLogo, FacebookLogo, TwitterLogo, MusicNotes } from "@/components/Icons";
 import { CSSFadeIn } from "@/components/CSSAnimations";
+import PageHero from "@/components/public/PageHero";
 import type { PublicBrand } from "@/lib/settings";
 
 export default function ContactForm({ brand }: { brand: PublicBrand }) {
@@ -27,21 +28,13 @@ export default function ContactForm({ brand }: { brand: PublicBrand }) {
   return (
     <div>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-16 text-white">
-        <div className="absolute inset-0 hidden opacity-[0.04] sm:block">
-          <MapPin className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
-          <Phone className="absolute -left-10 bottom-0 h-48 w-48 -rotate-12" weight="fill" />
-        </div>
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
-        </div>
-        <div className="relative mx-auto max-w-7xl px-6 text-center">
-          <CSSFadeIn>
-            <h1 className="text-3xl font-bold md:text-4xl text-balance">Hubungi Kami</h1>
-            <p className="mt-3 text-base text-white/70 text-balance">Kami siap membantu Anda. Kirim pesan atau hubungi langsung.</p>
-          </CSSFadeIn>
-        </div>
-      </section>
+      <PageHero
+        variant="compact"
+        title="Hubungi Kami"
+        description="Kami siap membantu Anda. Kirim pesan atau hubungi langsung."
+        icon={MapPin}
+        breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Kontak" }]}
+      />
 
       {/* Main Content */}
       <section className="bg-[#f4f7fb]" style={{ contentVisibility: "auto" } as React.CSSProperties}>

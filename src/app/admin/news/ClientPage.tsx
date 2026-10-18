@@ -1660,6 +1660,10 @@ export default function AdminBeritaPage() {
         open={previewOpen}
         onClose={closePreview}
         size={previewDevice === "mobile" ? "sm" : "xl"}
+        // Desktop: lebar persis panel form agar handoff form ↔ pratinjau tak lompat.
+        widthClassName={
+          previewDevice === "mobile" ? undefined : "md:max-w-4xl lg:max-w-3xl"
+        }
         title="Pratinjau Berita"
         description="Tampilan seperti halaman publik — berlaku untuk draft & terjadwal"
         footer={

@@ -15,6 +15,7 @@ import {
   capitalizeCategory,
   achievementCategoryMeta,
   achievementLevelLabel,
+  newsCategory,
 } from "@/lib/site-config";
 import type { Achievement } from "@/lib/supabase";
 
@@ -47,11 +48,10 @@ function PrestasiIcon({ category, className }: { category?: string | null; class
   return <Icon className={className} />;
 }
 
-/** Gaya badge kategori berita — sinkron dengan categoryConfig di /news. */
-const NEWS_BADGE: Record<string, string> = {
-  berita: "border-blue-200 bg-blue-50 text-blue-700",
-  pengumuman: "border-amber-200 bg-amber-50 text-amber-700",
-  agenda: "border-purple-200 bg-purple-50 text-purple-700",
+/** Gaya badge kategori berita — dari sumber bersama (src/lib/site-config). */
+const NEWS_BADGE = (key?: string | null) => {
+  const c = newsCategory(key);
+  return `${c.border} ${c.bg} ${c.color}`;
 };
 
 /** content-visibility: lewati render section di luar layar; containIntrinsicSize mencegah scroll loncat. */
@@ -129,18 +129,18 @@ export default async function Home() {
         <div className="absolute inset-0 bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)]" />
         <div
           className="absolute inset-0 md:hidden"
-          style={{ backgroundImage: "radial-gradient(circle at 0% 0%, rgba(244,210,31,0.14), transparent 45%), radial-gradient(circle at 100% 100%, rgba(23,103,177,0.35), transparent 55%)" }}
+          style={{ backgroundImage: "radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--brand-accent) 14%, transparent), transparent 45%), radial-gradient(circle at 100% 100%, color-mix(in srgb, var(--brand-accent) 35%, transparent), transparent 55%)" }}
         />
         <div className="absolute inset-0 hidden opacity-20 md:block">
-          <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#f4d21f] blur-[150px]" />
+          <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[var(--brand-accent)] blur-[150px]" />
           <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-[var(--brand-accent)] blur-[180px]" />
         </div>
         <div className="absolute inset-0 hidden opacity-[0.03] md:block" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#f4d21f]/30 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--brand-accent)]/30 to-transparent" />
 
         <div className="relative mx-auto grid max-w-[1296px] gap-12 px-6 pb-20 pt-16 md:px-10 md:pb-28 md:pt-24 lg:grid-cols-[1.1fr_.9fr] lg:items-center">
           <div className="text-white">
-            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-[#f4d21f]/30 bg-[#f4d21f]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[#f4d21f]">
+            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-[var(--brand-accent)]/30 bg-[var(--brand-accent)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">
               Pusat Kaderisasi Da&apos;i &amp; Ulama Hafidz &middot; {brand.tagline}
             </div>
 
@@ -149,7 +149,7 @@ export default async function Home() {
               <span className="relative inline-block">
                 <span className="gradient-text">ilmu, iman,</span>
                 <svg className="absolute -bottom-1 left-0 w-full" viewBox="0 0 200 12" fill="none">
-                  <path d="M2 8C40 2 80 2 100 6C120 10 160 10 198 4" stroke="#f4d21f" strokeWidth="3" strokeLinecap="round" />
+                  <path d="M2 8C40 2 80 2 100 6C120 10 160 10 198 4" stroke="var(--brand-accent)" strokeWidth="3" strokeLinecap="round" />
                 </svg>
               </span>{" "}
               dan keberanian.
@@ -162,14 +162,14 @@ export default async function Home() {
             <div className="mt-9 flex flex-wrap items-center gap-5">
               <Link
                 href="/admission"
-                className="group inline-flex items-center gap-2 rounded-xl bg-[#f4d21f] px-6 py-3.5 text-sm font-bold text-[var(--brand-primary)] transition-all hover:bg-white hover:shadow-lg hover:shadow-[#f4d21f]/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4d21f]"
+                className="group inline-flex items-center gap-2 rounded-xl bg-[var(--brand-accent)] px-6 py-3.5 text-sm font-bold text-[var(--brand-primary)] transition-all hover:bg-white hover:shadow-lg hover:shadow-[var(--brand-accent)]/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
               >
                 Daftar
                 <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </Link>
               <Link
                 href="/profile"
-                className="group inline-flex items-center gap-1.5 text-sm font-semibold text-white/80 transition-colors hover:text-[#f4d21f]"
+                className="group inline-flex items-center gap-1.5 text-sm font-semibold text-white/80 transition-colors hover:text-[var(--brand-accent)]"
               >
                 Kenali sekolah
                 <CaretRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -178,7 +178,7 @@ export default async function Home() {
           </div>
 
           <div className="relative">
-            <div className="absolute -inset-4 hidden rounded-3xl bg-gradient-to-br from-[#f4d21f]/20 to-[var(--brand-accent)]/20 blur-2xl md:block" />
+            <div className="absolute -inset-4 hidden rounded-3xl bg-gradient-to-br from-[var(--brand-accent)]/20 to-[var(--brand-accent)]/20 blur-2xl md:block" />
             <HeroCarousel />
           </div>
         </div>
@@ -193,8 +193,8 @@ export default async function Home() {
             <CSSFadeIn>
               <div className="flex justify-center lg:justify-end">
                 <div className="relative">
-                  <div className="absolute -inset-4 hidden rounded-full bg-gradient-to-br from-[#f4d21f]/30 to-[var(--brand-accent)]/20 blur-xl md:block" />
-                  <div className="relative h-56 w-56 overflow-hidden rounded-full border-4 border-[#f4d21f] md:h-72 md:w-72">
+                  <div className="absolute -inset-4 hidden rounded-full bg-gradient-to-br from-[var(--brand-accent)]/30 to-[var(--brand-accent)]/20 blur-xl md:block" />
+                  <div className="relative h-56 w-56 overflow-hidden rounded-full border-4 border-[var(--brand-accent)] md:h-72 md:w-72">
                     <Image
                       src={profile?.principal_photo_url || "/images/Kepala-Sekolah.jpg"}
                       alt={`${profile?.principal_name || "Kepala Sekolah"} - Kepala Sekolah`}
@@ -216,8 +216,8 @@ export default async function Home() {
                 <h2 className="mt-4 text-3xl font-semibold leading-tight tracking-tight text-[var(--brand-primary)] md:text-4xl">
                   Belajar dengan arah, tumbuh dengan nilai.
                 </h2>
-                <blockquote className="relative mt-6 border-l-2 border-[#f4d21f] pl-6">
-                  <div className="absolute -left-3.5 top-0 h-7 w-7 rounded-full border-2 border-[#f4d21f] bg-[#f4f7fb]" />
+                <blockquote className="relative mt-6 border-l-2 border-[var(--brand-accent)] pl-6">
+                  <div className="absolute -left-3.5 top-0 h-7 w-7 rounded-full border-2 border-[var(--brand-accent)] bg-[#f4f7fb]" />
                   <p className="text-base leading-relaxed text-slate-600 md:text-lg">
                     &ldquo;{profile?.principal_quote || "Selamat datang di SMP Muhammadiyah 4 Tanggul. Kami berkomitmen mencerdaskan kehidupan bangsa melalui pendidikan berkualitas yang memadukan keunggulan akademik dan pembentukan karakter Islami."}&rdquo;
                   </p>
@@ -243,7 +243,7 @@ export default async function Home() {
               <div className="flex h-full flex-col">
                 <div className="mb-4">
                   <h3 className="text-lg font-bold text-[var(--brand-primary)]">Berita</h3>
-                  <div className="mt-1.5 h-1 w-10 rounded-full bg-[#f4d21f]" />
+                  <div className="mt-1.5 h-1 w-10 rounded-full bg-[var(--brand-accent)]" />
                 </div>
                 {/* Tanpa flex-1: sisa ruang kolom jatuh SETELAH tombol, bukan
                     memecah jarak antara kartu berita dan "Selengkapnya". */}
@@ -276,8 +276,8 @@ export default async function Home() {
                           )}
                         </div>
                         <div className="p-3.5">
-                          <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${NEWS_BADGE[beritaRaw[0]?.category] ?? "border-slate-200 bg-slate-50 text-slate-600"}`}>
-                            {beritaRaw[0]?.category || "Berita"}
+                          <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${NEWS_BADGE(beritaRaw[0]?.category)}`}>
+                            {newsCategory(beritaRaw[0]?.category).label || "Berita"}
                           </span>
                           <h4 className="mt-2 line-clamp-2 text-sm font-bold text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)]">
                             {beritaRaw[0]?.title || "Berita terbaru sekolah"}
@@ -324,7 +324,7 @@ export default async function Home() {
               <div className="flex h-full flex-col">
                 <div className="mb-4">
                   <h3 className="text-lg font-bold text-[var(--brand-primary)]">Kegiatan Sekolah</h3>
-                  <div className="mt-1.5 h-1 w-10 rounded-full bg-[#f4d21f]" />
+                  <div className="mt-1.5 h-1 w-10 rounded-full bg-[var(--brand-accent)]" />
                 </div>
                 <div className="flex flex-1 flex-col">
                   {activities.length === 0 ? (
@@ -384,7 +384,7 @@ export default async function Home() {
               <div className="flex h-full flex-col">
                 <div className="mb-4">
                   <h3 className="text-lg font-bold text-[var(--brand-primary)]">Fasilitas</h3>
-                  <div className="mt-1.5 h-1 w-10 rounded-full bg-[#f4d21f]" />
+                  <div className="mt-1.5 h-1 w-10 rounded-full bg-[var(--brand-accent)]" />
                 </div>
                 <div className="flex flex-1 flex-col">
                   {dbFacilities.length === 0 ? (
@@ -440,7 +440,7 @@ export default async function Home() {
               <div className="flex h-full flex-col">
                 <div className="mb-4">
                   <h3 className="text-lg font-bold text-[var(--brand-primary)]">Prestasi</h3>
-                  <div className="mt-1.5 h-1 w-10 rounded-full bg-[#f4d21f]" />
+                  <div className="mt-1.5 h-1 w-10 rounded-full bg-[var(--brand-accent)]" />
                 </div>
                 <div className="flex flex-1 flex-col">
                   {achievementsSorted.length === 0 ? (
@@ -517,7 +517,7 @@ export default async function Home() {
               ["7 Golden Habits", "Pembiasaan Harian: Muraja'ah, Mufrodhat, Shalat Jama'ah Lima Waktu, Shalat Rawatib, Dhuha, Tahajjud, Dan Puasa Senin-Kamis.", Star],
             ] as [string, string, typeof Star][]).map(([title, description, Icon]) => (
               <div key={title} className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white p-5 transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-xl hover:shadow-[var(--brand-primary)]/5">
-                <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-[#f4d21f] to-[var(--brand-accent)] opacity-0 transition-opacity group-hover:opacity-100" />
+                <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-[var(--brand-accent)] to-[var(--brand-accent)] opacity-0 transition-opacity group-hover:opacity-100" />
                 <div className="flex gap-4">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-light)] text-white shadow-lg shadow-[var(--brand-primary)]/20 transition-transform group-hover:scale-110">
                     <Icon weight="fill" className="h-5 w-5" />
@@ -608,12 +608,12 @@ export default async function Home() {
       {/* ── WHY MUH4TA ────────────────────────────────── */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] text-white" style={CV}>
         <div className="absolute inset-0 hidden opacity-10 md:block">
-          <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#f4d21f] blur-[120px]" />
+          <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[var(--brand-accent)] blur-[120px]" />
         </div>
         <div className="relative mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
           <CSSFadeIn>
             <div className="mx-auto max-w-2xl text-center">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#f4d21f]">Mengapa MUH4TA</p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Mengapa MUH4TA</p>
               <h2 className="mt-4 text-3xl font-semibold leading-tight md:text-4xl">
                 Sekolah yang dekat, terarah, dan terus bergerak maju.
               </h2>
@@ -627,7 +627,7 @@ export default async function Home() {
               ["Berani mencoba", "Siswa mendapat ruang untuk bertanya, berkarya, dan mengembangkan potensi.", Star],
             ] as [string, string, React.ElementType][]).map(([title, description, Icon]) => (
               <div key={title} className="group rounded-2xl border border-white/10 bg-white/5 p-6 transition-all md:backdrop-blur-sm duration-300 hover:border-white/20 hover:bg-white/10">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f4d21f]/10 text-[#f4d21f]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-accent)]/10 text-[var(--brand-accent)]">
                   <Icon className="h-5 w-5" weight="fill" />
                 </div>
                 <h3 className="mt-4 font-semibold">{title}</h3>
@@ -642,8 +642,8 @@ export default async function Home() {
       <FAQ />
 
       {/* ── FINAL CTA ─────────────────────────────────────── */}
-      <section className="relative overflow-hidden border-t-8 border-[#f4d21f] bg-white">
-        <div className="absolute -right-20 -top-20 hidden h-64 w-64 rounded-full bg-[#f4d21f]/10 blur-[100px] md:block" />
+      <section className="relative overflow-hidden border-t-8 border-[var(--brand-accent)] bg-white">
+        <div className="absolute -right-20 -top-20 hidden h-64 w-64 rounded-full bg-[var(--brand-accent)]/10 blur-[100px] md:block" />
         <div className="relative mx-auto flex max-w-[1296px] flex-col gap-7 px-6 py-16 md:flex-row md:items-center md:justify-between md:px-10">
           <CSSFadeIn>
             <div>

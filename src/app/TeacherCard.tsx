@@ -26,7 +26,7 @@ export default function TeacherCard({ teacher }: { teacher: Teacher }) {
 
     setStyle({
       transform: `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-12px) scale(1.05)`,
-      boxShadow: "0 20px 40px rgba(8,43,89,0.15), 0 0 30px rgba(244,210,31,0.25)",
+      boxShadow: "0 20px 40px color-mix(in srgb, var(--brand-primary) 15%, transparent), 0 0 30px color-mix(in srgb, var(--brand-accent) 25%, transparent)",
     });
   }
 
@@ -63,7 +63,7 @@ export default function TeacherCard({ teacher }: { teacher: Teacher }) {
         <div className="flex h-full w-full items-center justify-center bg-[#f0f4fa]">
           <span
             aria-hidden="true"
-            className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--brand-primary)] text-2xl font-bold text-[#f4d21f]"
+            className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--brand-primary)] text-2xl font-bold text-[var(--brand-accent)]"
           >
             {nameInitials(teacher.name)}
           </span>

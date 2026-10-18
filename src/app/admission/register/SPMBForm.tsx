@@ -603,7 +603,7 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
                   <h4 className="text-sm font-bold text-white">Program Pilihan</h4>
                 </div>
                 <div className="p-4">
-                  <div className="inline-flex items-center gap-2 rounded-lg bg-[#f4d21f]/10 px-3 py-1.5 text-sm font-semibold text-[var(--brand-primary)]">
+                  <div className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-accent)]/10 px-3 py-1.5 text-sm font-semibold text-[var(--brand-primary)]">
                     {data.program || "-"}
                   </div>
                 </div>

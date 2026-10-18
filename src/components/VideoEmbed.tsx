@@ -77,7 +77,7 @@ export default function VideoEmbed({
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#f4d21f] px-4 py-2.5 text-sm font-bold text-[var(--brand-primary)] transition-colors hover:bg-[#e6c51a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4d21f]"
+            className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-accent)] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
             aria-label={`Tonton video ${title} di ${provider} (tab baru)`}
           >
             <ArrowSquareOut className="h-4 w-4" aria-hidden="true" /> Tonton di {provider}

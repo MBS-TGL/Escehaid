@@ -1,6 +1,8 @@
-import { FileText, GraduationCap, BookOpen, House, Download, CheckCircle, Trophy, HandCoins } from "@/components/Icons";
+import { FileText, GraduationCap, BookOpen, House, Download, CheckCircle, Trophy, HandCoins, CaretRight } from "@/components/Icons";
 import Link from "next/link";
 import { CSSFadeIn } from "@/components/CSSAnimations";
+import PageHero from "@/components/public/PageHero";
+import FaqList from "@/components/public/FaqList";
 import { getPublishedWaves, getWaveStatus, getSchoolProfile, registrationHref } from "@/lib/queries";
 import { spmbFaqs } from "@/app/faq-data";
 import { SITE, waLink } from "@/lib/site-config";
@@ -47,12 +49,6 @@ function daysLeft(endDate: string): number {
   return Math.round((utc(endDate) - utc(today)) / 86400000);
 }
 
-/* Ikon lokal kecil */
-const svgProps = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": true } as const;
-const ChevronRightIcon = ({ className }: { className?: string }) => (
-  <svg {...svgProps} strokeWidth={2} className={className}><path d="m9 6 6 6-6 6" /></svg>
-);
-
 function SectionHeading({ title, desc, compact }: { title: string; desc?: React.ReactNode; compact?: boolean }) {
   return (
     <div className={`${compact ? "mb-5" : "mb-6"} max-w-2xl`}>
@@ -63,7 +59,10 @@ function SectionHeading({ title, desc, compact }: { title: string; desc?: React.
 }
 
 export default async function SPMBPage() {
-  const [waves, profile] = await Promise.all([getPublishedWaves(), getSchoolProfile()]);
+  const [waves, profile] = await Promise.all([
+    getPublishedWaves(),
+    getSchoolProfile(),
+  ]);
   const registerHref = registrationHref(profile);
   const brochureHref = profile?.spmb_brochure_url || DEFAULT_BROCHURE_URL;
   const offlineFormHref = profile?.spmb_offline_form_url ?? null;
@@ -79,7 +78,7 @@ export default async function SPMBPage() {
 
   const jalur = [
     { icon: FileText, color: "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]", title: "Jalur Reguler", desc: "Pendaftaran terbuka untuk semua calon murid." },
-    { icon: Trophy, color: "bg-[#f4d21f]/25 text-[var(--brand-primary)]", title: "Jalur Prestasi", desc: "Untuk calon murid berprestasi di bidang akademik maupun non-akademik." },
+    { icon: Trophy, color: "bg-[var(--brand-accent)]/25 text-[var(--brand-primary)]", title: "Jalur Prestasi", desc: "Untuk calon murid berprestasi di bidang akademik maupun non-akademik." },
     { icon: HandCoins, color: "bg-emerald-100 text-emerald-700", title: "Jalur Beasiswa", desc: "Untuk calon murid dari keluarga dengan keterbatasan ekonomi." },
   ];
 
@@ -91,7 +90,7 @@ export default async function SPMBPage() {
 
   const program = [
     { icon: House, title: "SMP Boarding", desc: "Program asrama penuh sejak 2018/2019. Siswa dibimbing 24 jam oleh ustadz kompeten.", color: "bg-[var(--brand-accent)]/10 text-[var(--brand-accent)]" },
-    { icon: GraduationCap, title: "SMP Reguler", desc: "Pembelajaran penuh hari (full day) Senin-Sabtu pukul 07.00-15.00, meliputi mapel umum dan keagamaan.", color: "bg-[#f4d21f]/20 text-[var(--brand-primary)]" },
+    { icon: GraduationCap, title: "SMP Reguler", desc: "Pembelajaran penuh hari (full day) Senin-Sabtu pukul 07.00-15.00, meliputi mapel umum dan keagamaan.", color: "bg-[var(--brand-accent)]/20 text-[var(--brand-primary)]" },
     { icon: BookOpen, title: "SMA Boarding", desc: "Program asrama penuh untuk jenjang SMA dengan kurikulum Tahfidz dan keunggulan akademik.", color: "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]" },
   ];
 
@@ -126,22 +125,26 @@ export default async function SPMBPage() {
           })),
         })
       }} />
-      {/* Hero (sama dengan halaman lain) */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-16 text-white">
-        <div className="absolute inset-0 hidden opacity-[0.04] sm:block">
-          <GraduationCap className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
-          <FileText className="absolute -left-10 bottom-0 h-48 w-48 -rotate-12" weight="fill" />
-        </div>
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
-        </div>
-        <div className="relative mx-auto max-w-7xl px-6 text-center">
-          <CSSFadeIn>
-            <h1 className="text-3xl font-bold md:text-4xl text-balance">SPMB Online</h1>
-            <p className="mt-3 text-base text-white/70 text-balance">Sistem Penerimaan Murid Baru SMP Muhammadiyah 4 Tanggul</p>
-          </CSSFadeIn>
-        </div>
-      </section>
+      {/* Hero — foto sekolah, teks rata kiri */}
+      <PageHero
+        variant="photo"
+        eyebrow="SPMB Online"
+        title="Penerimaan Murid Baru"
+        description={`Jadwal gelombang, jalur pendaftaran, dan cara mendaftar ${SITE.spmb.academicYear}.`}
+        image="/images/Masjid.jpg"
+        imageAlt="Masjid SMP Muhammadiyah 4 Tanggul"
+        icon={GraduationCap}
+        breadcrumb={[{ label: "Beranda", href: "/" }, { label: "SPMB" }]}
+      >
+        {registerHref && (
+          <Link
+            href={registerHref}
+            className={`inline-flex items-center gap-2 rounded-xl bg-[var(--brand-accent)] px-5 py-2.5 text-sm font-bold text-white transition-all hover:brightness-95 ${focusRing}`}
+          >
+            Daftar Sekarang
+          </Link>
+        )}
+      </PageHero>
 
       {/* Jadwal */}
       <section id="schedule" className="scroll-mt-28 py-10 md:py-12">
@@ -184,7 +187,7 @@ export default async function SPMBPage() {
                           {isCurrent && (
                             <Link
                               href={registerHref}
-                              className={`inline-flex w-full items-center justify-center rounded-lg bg-[#f4d21f] px-4 py-2 text-sm font-bold text-[var(--brand-primary)] transition-colors hover:bg-[#ffe14d] sm:w-auto ${focusRing}`}
+                              className={`inline-flex w-full items-center justify-center rounded-lg bg-[var(--brand-accent)] px-4 py-2 text-sm font-bold text-white transition-colors hover:brightness-95 sm:w-auto ${focusRing}`}
                             >
                               Daftar Sekarang
                             </Link>
@@ -337,24 +340,12 @@ export default async function SPMBPage() {
         </div>
       </section>
 
-      {/* FAQ (tanpa JS — <details>/<summary>) */}
+      {/* FAQ — satu gaya accordion dengan beranda (FaqList) */}
       <section className="py-10 md:py-12">
         <div className={container}>
           <CSSFadeIn>
             <SectionHeading compact title="Pertanyaan yang Sering Diajukan" desc="Hal-hal yang paling sering ditanyakan calon murid dan orang tua." />
-            <div className="space-y-3">
-              {spmbFaqs.map((item) => (
-                <details key={item.q} className={`group rounded-xl border border-[#dce3ed] bg-white p-4 transition-shadow hover:shadow-md ${focusRing}`}>
-                  <summary className={`flex cursor-pointer list-none items-center justify-between gap-3 font-semibold text-[var(--brand-primary)] outline-none [&::-webkit-details-marker]:hidden ${focusRing}`}>
-                    <span>{item.q}</span>
-                    <ChevronRightIcon className="h-4 w-4 shrink-0 text-[var(--brand-accent)] transition-transform group-open:rotate-90" />
-                  </summary>
-                  <div className="mt-2 border-t border-[#dce3ed] pt-2">
-                    <p className="text-sm leading-relaxed text-slate-600">{item.a}</p>
-                  </div>
-                </details>
-              ))}
-            </div>
+            <FaqList items={spmbFaqs} className="mx-auto max-w-3xl" />
             <p className="mt-4 text-center text-sm text-slate-500">
               Masih ada pertanyaan?{" "}
               {spmbPhone ? (
@@ -364,14 +355,14 @@ export default async function SPMBPage() {
                   rel="noopener noreferrer"
                   className={`font-semibold text-[var(--brand-accent)] underline underline-offset-4 hover:text-[var(--brand-primary)] ${focusRing}`}
                 >
-                  Chat panitia SPMB
+                  Hubungi Panitia
                 </a>
               ) : (
                 <Link
                   href="/contact"
                   className={`font-semibold text-[var(--brand-accent)] underline underline-offset-4 hover:text-[var(--brand-primary)] ${focusRing}`}
                 >
-                  Hubungi panitia
+                  Hubungi Panitia
                 </Link>
               )}
               {" · "}
@@ -400,15 +391,15 @@ export default async function SPMBPage() {
               {openWave ? (
                 <Link
                   href={registerHref}
-                  className={`inline-flex items-center justify-center gap-2 rounded-xl bg-[#f4d21f] px-6 py-3 text-sm font-bold text-[var(--brand-primary)] transition-colors hover:bg-[#ffe14d] ${focusRing}`}
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-accent)] px-6 py-3 text-sm font-bold text-white transition-colors hover:brightness-95 ${focusRing}`}
                 >
-                  Daftar Online
-                  <ChevronRightIcon className="h-4 w-4" />
+                  Daftar Sekarang
+                  <CaretRight className="h-4 w-4" />
                 </Link>
               ) : (
                 <span
                   aria-disabled="true"
-                  className={`inline-flex cursor-not-allowed select-none items-center justify-center rounded-xl bg-[#f4d21f]/60 px-6 py-3 text-sm font-bold text-[var(--brand-primary)]/70 ${focusRing}`}
+                  className={`inline-flex cursor-not-allowed select-none items-center justify-center rounded-xl bg-[var(--brand-accent)]/60 px-6 py-3 text-sm font-bold text-white/85 ${focusRing}`}
                 >
                   {nextUpcomingWave ? `Dibuka ${formatWaveDate(nextUpcomingWave.start_date)}` : "Pendaftaran belum dibuka"}
                 </span>

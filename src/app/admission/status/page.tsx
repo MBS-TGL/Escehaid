@@ -9,6 +9,7 @@ import {
   MagnifyingGlass,
 } from "@/components/Icons";
 import { CSSFadeIn } from "@/components/CSSAnimations";
+import PageHero from "@/components/public/PageHero";
 import { checkSpmbStatus } from "@/lib/queries/spmb-status";
 import { getSchoolProfile } from "@/lib/queries/profile";
 import { waLink } from "@/lib/site-config";
@@ -96,22 +97,17 @@ export default async function CekStatusPage({
   return (
     <div className="min-h-[70vh] bg-slate-50">
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-16 text-white">
-        <div className="absolute inset-0 hidden opacity-[0.04] sm:block">
-          <GraduationCap className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
-        </div>
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
-        </div>
-        <div className="relative mx-auto max-w-7xl px-6 text-center">
-          <CSSFadeIn>
-            <h1 className="text-3xl font-bold md:text-4xl text-balance">Cek Status Pendaftaran</h1>
-            <p className="mt-3 text-base text-white/70 text-balance">
-              Masukkan NISN dan tanggal lahir sesuai data yang Anda isi saat mendaftar SPMB
-            </p>
-          </CSSFadeIn>
-        </div>
-      </section>
+      <PageHero
+        variant="compact"
+        title="Cek Status Pendaftaran"
+        description="Masukkan NISN dan tanggal lahir sesuai data yang Anda isi saat mendaftar SPMB."
+        icon={GraduationCap}
+        breadcrumb={[
+          { label: "Beranda", href: "/" },
+          { label: "SPMB", href: "/admission" },
+          { label: "Status" },
+        ]}
+      />
 
       <section className="mx-auto max-w-2xl px-6 py-10 md:py-14">
         {/* Form pencarian (GET tanpa JS) */}
@@ -237,7 +233,7 @@ export default async function CekStatusPage({
               {found && showResult && (
                 <div className="overflow-hidden rounded-2xl border border-[#dce3ed] bg-white shadow-sm">
                   {isAccepted ? (
-                    <div className="border-b-4 border-[#f4d21f] bg-emerald-50 px-5 py-8 text-center">
+                    <div className="border-b-4 border-[var(--brand-accent)] bg-emerald-50 px-5 py-8 text-center">
                       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
                         <CheckCircle className="h-8 w-8 text-emerald-600" weight="fill" />
                       </div>
@@ -248,13 +244,13 @@ export default async function CekStatusPage({
                       </p>
                     </div>
                   ) : (
-                    <div className="border-b-4 border-[#f4d21f] bg-red-50 px-5 py-8 text-center">
+                    <div className="border-b-4 border-[var(--brand-accent)] bg-red-50 px-5 py-8 text-center">
                       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
                         <XCircle className="h-8 w-8 text-red-500" weight="fill" />
                       </div>
                       <h2 className="mt-3 text-2xl font-bold text-red-700">Belum Lolos Seleksi</h2>
                       <p className="mt-2 text-sm text-red-700/80">
-                        Terima kasih telah mendaftar. Jangan berkecil hati — kami menunggu Anda pada kesempatan
+                        Terima kasih telah mendaftar. Jangan berkecil hati, kami menunggu Anda pada kesempatan
                         berikutnya.
                       </p>
                     </div>

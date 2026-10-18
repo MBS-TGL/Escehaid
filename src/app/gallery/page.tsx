@@ -1,6 +1,9 @@
-import { ImageSquare, Star } from "@/components/Icons";
-import { getGalleryPage } from "@/lib/queries";
+import { ImageSquare } from "@/components/Icons";
+import { getGalleryPageFiltered, getGalleryCategories } from "@/lib/queries";
 import { CSSFadeIn } from "@/components/CSSAnimations";
+import PageHero from "@/components/public/PageHero";
+import EmptyState from "@/components/public/EmptyState";
+import CategoryChips, { type CategoryChip } from "@/components/public/CategoryChips";
 import GalleryLightbox from "./GalleryLightbox";
 import type { Metadata } from "next";
 
@@ -14,10 +17,31 @@ export const revalidate = 3600;
 
 const PER_PAGE = 20;
 
-export default async function GalleryPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+export default async function GalleryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; cat?: string }>;
+}) {
   const sp = await searchParams;
   const page = Math.max(0, Number(sp.page) || 0);
-  const gallery = await getGalleryPage(page, PER_PAGE);
+  const cat = sp.cat?.trim() || undefined;
+
+  const [gallery, categories] = await Promise.all([
+    getGalleryPageFiltered(page, PER_PAGE, cat),
+    getGalleryCategories(),
+  ]);
+
+  const chips: CategoryChip[] = [
+    { key: "all", label: "Semua", href: "/gallery", active: !cat },
+    ...categories.map((c) => ({
+      key: c,
+      label: c,
+      href: `/gallery?cat=${encodeURIComponent(c)}`,
+      active: cat === c,
+    })),
+  ];
+
+  const empty = gallery.length === 0;
 
   return (
     <div>
@@ -31,35 +55,29 @@ export default async function GalleryPage({ searchParams }: { searchParams: Prom
           ],
         })
       }} />
-      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-16 text-white">
-        <div className="absolute inset-0 hidden opacity-[0.04] sm:block">
-          <ImageSquare className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
-          <Star className="absolute -left-10 bottom-0 h-48 w-48 -rotate-12" weight="fill" />
-        </div>
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
-        </div>
-        <div className="relative mx-auto max-w-7xl px-6 text-center">
-          <CSSFadeIn>
-            <h1 className="text-3xl font-bold md:text-4xl text-balance">Galeri</h1>
-            <p className="mt-3 text-base text-white/70 text-balance">Dokumentasi kegiatan SMP Muhammadiyah 4 Tanggul</p>
-          </CSSFadeIn>
-        </div>
-      </section>
+      <PageHero
+        variant="compact"
+        title="Galeri"
+        description="Dokumentasi kegiatan SMP Muhammadiyah 4 Tanggul. Klik foto untuk memperbesar."
+        icon={ImageSquare}
+        breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Galeri" }]}
+      />
 
-      <section className="mx-auto max-w-7xl px-6 py-16" style={{ contentVisibility: "auto" } as React.CSSProperties}>
-        {gallery.length === 0 && page === 0 ? (
-          <CSSFadeIn>
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white py-20 text-center">
-              <ImageSquare className="h-14 w-14 text-[var(--brand-primary)]/20" />
-              <p className="mt-5 text-base text-slate-500">Galeri masih kosong.</p>
-              <p className="mt-1 text-sm text-slate-400">Nantikan dokumentasi dari sekolah kami.</p>
-            </div>
+      <section className="mx-auto max-w-7xl px-6 py-12 md:py-16" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+        {categories.length > 1 && (
+          <CSSFadeIn className="mb-8">
+            <CategoryChips chips={chips} />
           </CSSFadeIn>
+        )}
+
+        {empty ? (
+          <EmptyState
+            icon={ImageSquare}
+            title={cat ? `Belum ada dokumentasi kategori «${cat}».` : "Galeri masih kosong."}
+            description={cat ? "Coba pilih kategori lain, atau lihat semua dokumentasi." : "Nantikan dokumentasi dari sekolah kami."}
+          />
         ) : (
-          <CSSFadeIn>
-            <GalleryLightbox items={gallery} page={page} perPage={PER_PAGE} />
-          </CSSFadeIn>
+          <GalleryLightbox items={gallery} page={page} perPage={PER_PAGE} cat={cat} />
         )}
       </section>
     </div>

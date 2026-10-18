@@ -28,6 +28,7 @@ import {
 } from "@/lib/queries";
 import type { PortalApp } from "@/lib/queries";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
+import PageHero from "@/components/public/PageHero";
 import { waLink } from "@/lib/site-config";
 import type { Metadata } from "next";
 
@@ -231,33 +232,23 @@ export default async function PortalPage() {
           ],
         })
       }} />
-      {/* Hero — mengikuti template hero publik */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-12 text-white sm:py-14">
-        <div className="absolute inset-0 hidden opacity-[0.04] sm:block">
-          <SquaresFour className="absolute -right-10 -top-10 h-64 w-64 rotate-12" weight="fill" />
-          <Star className="absolute -left-10 bottom-0 h-48 w-48 -rotate-12" weight="fill" />
-        </div>
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#f4d21f] blur-[120px]" />
-        </div>
-        <div className="relative mx-auto max-w-7xl px-6 text-center">
-          <CSSFadeIn>
-            <h1 className="text-3xl font-bold md:text-4xl text-balance">Portal</h1>
-            <p className="mt-3 text-base text-white/70 text-balance">
-              Semua layanan sekolah dalam satu tempat
-            </p>
-          </CSSFadeIn>
-        </div>
-      </section>
+      {/* Hero — compact terang, layanan langsung terlihat */}
+      <PageHero
+        variant="compact"
+        title="Portal"
+        description="Semua layanan sekolah dalam satu tempat."
+        icon={SquaresFour}
+        breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Portal" }]}
+      />
 
       <section className="mx-auto max-w-5xl px-6 py-10 sm:py-12">
         {/* SPMB — layanan publik, dipisah dari aplikasi */}
         <CSSFadeIn>
           <Link
             href="/admission"
-            className="group flex items-center gap-4 rounded-2xl border border-[#f4d21f]/60 bg-[#f4d21f]/10 p-4 transition-all hover:border-[#f4d21f] hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] sm:p-5"
+            className="group flex items-center gap-4 rounded-2xl border border-[var(--brand-accent)]/60 bg-[var(--brand-accent)]/10 p-4 transition-all hover:border-[var(--brand-accent)] hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] sm:p-5"
           >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#f4d21f] text-[var(--brand-primary)] sm:h-14 sm:w-14">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-accent)] text-white sm:h-14 sm:w-14">
               <HandCoins className="h-6 w-6 sm:h-7 sm:w-7" weight="fill" />
             </span>
             <span className="min-w-0 flex-1">
@@ -272,7 +263,7 @@ export default async function PortalPage() {
                 </span>
               )}
             </span>
-            <span className="shrink-0 rounded-full bg-[#f4d21f] px-4 py-2 text-sm font-bold text-[var(--brand-primary)] transition-transform group-hover:scale-105">
+            <span className="shrink-0 rounded-full bg-[var(--brand-accent)] px-4 py-2 text-sm font-bold text-white transition-transform group-hover:scale-105">
               Daftar
             </span>
           </Link>
@@ -317,11 +308,11 @@ export default async function PortalPage() {
                     <h3 className="mb-3 text-sm font-semibold text-slate-700">
                       Sedang disiapkan ({soonApps.length})
                     </h3>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <CSSStagger stagger={60} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       {soonApps.map((app) => (
                         <SoonItem key={app.id} app={app} />
                       ))}
-                    </div>
+                    </CSSStagger>
                   </div>
                 )}
               </div>
@@ -376,7 +367,7 @@ export default async function PortalPage() {
                 href={`https://wa.me/${waNumber}?text=${encodeURIComponent(WA_PORTAL_MESSAGE)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4d21f]"
+                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
               >
                 <WhatsappLogo className="h-4 w-4" weight="fill" />
                 Chat WhatsApp
@@ -384,7 +375,7 @@ export default async function PortalPage() {
             ) : (
               <Link
                 href="/contact"
-                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4d21f]"
+                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
               >
                 Hubungi sekolah
                 <ArrowUpRight className="h-4 w-4" />

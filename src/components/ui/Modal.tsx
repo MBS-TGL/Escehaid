@@ -27,6 +27,9 @@ type ModalProps = {
   children: ReactNode;
   footer?: ReactNode;
   size?: "sm" | "md" | "lg" | "xl" | "2xl";
+  /** Menggantikan kelas lebar bawaan `size` — utk menyamakan lebar modal
+   *  dengan panel form (per-breakpoint, mis. "md:max-w-4xl lg:max-w-3xl"). */
+  widthClassName?: string;
   className?: string;
 };
 
@@ -46,6 +49,7 @@ export const Modal = memo(function Modal({
   children,
   footer,
   size = "md",
+  widthClassName,
   className = "",
 }: ModalProps) {
   const [mounted, setMounted] = useState(false);
@@ -125,7 +129,7 @@ export const Modal = memo(function Modal({
       <div className="absolute inset-0 bg-slate-950/40" />
 
       <div
-        className={`w-full z-10 ${sizeClasses[size]}`}
+        className={`w-full z-10 ${widthClassName ?? sizeClasses[size]}`}
         style={{
           transform: visible ? "translateY(0) scale(1)" : "scale(0.96) translateY(10px)",
           opacity: visible ? 1 : 0,
@@ -182,7 +186,7 @@ export const Modal = memo(function Modal({
  * Dua varian warna (hanya dua, sesuai kebutuhan UI admin):
  *  - `danger`  → merah lembut : aksi destruktif (hapus permanen, buang perubahan).
  *  - `warning` → amber lembut : aksi konsekuensial tapi tak menghilangkan apa pun
- *                (duplikat). Kuning brand #f4d21f versi padat sudah dilepas:
+ *                (duplikat). Aksen brand (`--brand-accent`) versi padat sudah dilepas:
  *                warna terang justru menjadikan aksi berisiko elemen paling
  *                mencolok di layar. Teks memakai `red-700`/`amber-800` (bukan
  *                `red-600`) agar kontras di atas basis lembut tetap lulus AA.

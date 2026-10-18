@@ -39,8 +39,60 @@ export async function getGalleryPage(page: number, perPage: number = 20): Promis
   return data || [];
 }
 
-export async function getGalleryByCategory(category: string): Promise<Gallery[]> {
+/** Kolom ringan untuk galeri publik (tanpa `select *`). */
+const GALLERY_PAGE_COLUMNS =
+  "id, title, description, url, thumbnail_url, category, media_type, created_at";
+
+/**
+ * Halaman galeri dengan filter kategori opsional. `range` tetap dipakai agar
+ * paginasi konsisten, filter kategori diterapkan sebelum range.
+ */
+export async function getGalleryPageFiltered(
+  page: number,
+  perPage: number = 20,
+  category?: string
+): Promise<Gallery[]> {
+  const start = page * perPage;
+  const end = start + perPage - 1;
+
+  let query = supabase
+    .from("gallery")
+    .select(GALLERY_PAGE_COLUMNS)
+    .order("created_at", { ascending: false });
+
+  if (category) query = query.eq("category", category);
+  query = query.range(start, end);
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching gallery page:", error);
+    return [];
+  }
+  return data || [];
+}
+
+/** Daftar kategori galeri (unik, terurut) untuk chip filter publik. */
+export async function getGalleryCategories(): Promise<string[]> {
   const { data, error } = await supabase
+    .from("gallery")
+    .select("category")
+    .not("category", "is", null)
+    .limit(500);
+
+  if (error) {
+    console.error("Error fetching gallery categories:", error);
+    return [];
+  }
+  const unique = new Set<string>();
+  for (const row of data || []) {
+    const value = (row as { category: string | null }).category?.trim();
+    if (value) unique.add(value);
+  }
+  return [...unique].sort((a, b) => a.localeCompare(b, "id"));
+}
+
+export async function getGalleryByCategory(category: string): Promise<Gallery[]> {  const { data, error } = await supabase
     .from("gallery")
     .select("*")
     .eq("category", category)
