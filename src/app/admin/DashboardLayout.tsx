@@ -75,6 +75,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     // sia-sia, karena proxy.ts sudah memeriksa sesi di server).
   }, [isLogin, router, supabase]);
 
+  // Scrollbar viewport tipis hanya saat di area admin (efek berjalan di semua
+  // rute, termasuk /admin/login & layar pemuatan). Keluar dari /admin →
+  // layout unmount → cleanup mengembalikan scrollbar halaman publik.
+  useEffect(() => {
+    document.documentElement.classList.add("admin-thin-scrollbar");
+    return () => document.documentElement.classList.remove("admin-thin-scrollbar");
+  }, []);
+
   useEffect(() => {
     if (searchParams.get("success") === "login") {
       toast("Login berhasil! Selamat datang.", "success");
