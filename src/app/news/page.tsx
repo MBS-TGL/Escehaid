@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Newspaper, Clock, CaretLeft, CaretRight, Paperclip, MagnifyingGlass } from "@/components/Icons";
+import { Newspaper, Clock, CaretLeft, CaretRight, Paperclip, MagnifyingGlass, Play } from "@/components/Icons";
 import { getNewsListPaginated } from "@/lib/queries";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import type { Metadata } from "next";
@@ -193,6 +193,11 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                           <Paperclip className="h-3 w-3" /> Lampiran
                         </span>
                       )}
+                      {berita[0].video_url && (
+                        <span className="flex items-center gap-1 text-xs font-medium text-[var(--brand-accent)]">
+                          <Play weight="fill" className="h-3 w-3" /> Video
+                        </span>
+                      )}
                     </div>
                   </div>
                 </Link>
@@ -242,6 +247,11 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                             {item.attachment_url && (
                               <span className="flex items-center gap-1 text-[11px]">
                                 <Paperclip className="h-3 w-3" /> Lampiran
+                              </span>
+                            )}
+                            {item.video_url && (
+                              <span className="flex items-center gap-1 text-[11px] font-medium text-[var(--brand-accent)]">
+                                <Play weight="fill" className="h-3 w-3" /> Video
                               </span>
                             )}
                           </div>

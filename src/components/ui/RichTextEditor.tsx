@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -109,6 +110,16 @@ export function RichTextEditor({
       },
     },
   });
+
+  // Sinkronkan nilai eksternal (mis. isi-otomatis AI, reset form) ke editor.
+  // Perubahan dari editor sendiri tidak ikut diproses (value === getHTML) dan
+  // tanpa emitUpdate agar tidak memicu onChange balik ke form.
+  useEffect(() => {
+    if (!editor) return;
+    if (value !== editor.getHTML()) {
+      editor.commands.setContent(value || "", { emitUpdate: false });
+    }
+  }, [editor, value]);
 
   if (!editor) return null;
 

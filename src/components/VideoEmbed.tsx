@@ -1,31 +1,41 @@
 "use client";
 
 import { useState } from "react";
-import { parseVideoUrl, videoEmbedUrl, VIDEO_PROVIDER_LABEL } from "@/lib/video-embed";
-import { ArrowSquareOut, InstagramLogo, YoutubeLogo, Video } from "@/components/Icons";
+import {
+  parseVideoUrl,
+  videoEmbedUrl,
+  videoProviderLabel,
+  type ParsedVideoUrl,
+} from "@/lib/video-embed";
+import { ArrowSquareOut, InstagramLogo, YoutubeLogo, Video, Cloud } from "@/components/Icons";
 
 /**
- * Embed video kegiatan — CLICK-TO-LOAD (ringan):
+ * Embed video konten — CLICK-TO-LOAD (ringan):
  *
  * - Awalnya hanya kartu poster (gambar kegiatan) + ikon putar + label penyedia
  *   dengan rasio TETAP → tanpa layout shift, tanpa skrip pihak ketiga.
- * - iframe (youtube-nocookie / instagram / tiktok resmi) baru dimuat saat kartu
- *   diklik/tap — tidak ada beban jaringan sebelum pengguna berminat.
- * - URL tak dikenali / embed tak tersedia → tombol "Tonton di <platform>"
+ * - iframe (youtube-nocookie / instagram / tiktok / vimeo / drive resmi) baru
+ *   dimuat saat kartu diklik/tap — tidak ada beban jaringan sebelum pengguna
+ *   berminat.
+ * - URL tak dikenali / embed tak tersedia → tombol "Tonton di <host>"
  *   (tab baru, rel="noopener noreferrer").
  * - Tanpa CSSFadeIn & tanpa `will-change` permanen (menyebabkan teks blur).
  */
 
-const PROVIDER_ICON = {
+const PROVIDER_ICON: Record<ParsedVideoUrl["provider"], typeof Video> = {
   youtube: YoutubeLogo,
   instagram: InstagramLogo,
   tiktok: Video,
+  vimeo: Video,
+  googledrive: Cloud,
   unknown: Video,
-} as const;
+};
 
 /** Rasio + lebar maksimum per penyedia (video vertikal jadi kartu ramping). */
 const RATIO_CLASS: Record<string, string> = {
   youtube: "aspect-video w-full",
+  vimeo: "aspect-video w-full",
+  googledrive: "aspect-video w-full",
   instagram: "mx-auto aspect-[4/5] w-full max-w-[540px]",
   tiktok: "mx-auto aspect-[9/16] w-full max-w-[420px]",
   unknown: "aspect-video w-full",
@@ -46,7 +56,7 @@ export default function VideoEmbed({
   const [loaded, setLoaded] = useState(false);
   const parsed = parseVideoUrl(url);
   const embedUrl = videoEmbedUrl(parsed);
-  const provider = VIDEO_PROVIDER_LABEL[parsed.provider];
+  const provider = videoProviderLabel(parsed);
   const Icon = PROVIDER_ICON[parsed.provider];
   const ratio = RATIO_CLASS[parsed.provider] ?? RATIO_CLASS.unknown;
 

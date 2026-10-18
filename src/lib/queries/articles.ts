@@ -2,7 +2,7 @@ import { supabase } from "../supabase";
 import type { Article } from "../supabase";
 import { tryCompressImage } from "../compress-image";
 import { FilterMethods, newsNowIso } from "./news";
-import { cleanupOldFiles, deleteStorageFileByUrl, generateUniqueArticleSlug, sanitizeSearchTerm, slugify } from "./shared";
+import { cleanupOldFiles, deleteStorageFileByUrl, generateUniqueArticleSlug, sanitizeSearchTerm, slugify, tableHasColumn } from "./shared";
 
 export interface ArticleWithAuthor extends Article {
   author_name?: string | null;
@@ -37,6 +37,29 @@ export function articlesHasScheduledColumns(): Promise<boolean> {
   return articleNewColsPromise;
 }
 
+let articleSourceColPromise: Promise<boolean> | null = null;
+/**
+ * Probe sekali per proses: apakah kolom `source` sudah ada di tabel articles
+ * (migrasi supabase/content_source.sql — penanda "panel-ai")? false → payload
+ * insert disusun tanpa `source` agar createArticle tetap aman sebelum migrasi.
+ */
+export function articlesHasSourceColumn(): Promise<boolean> {
+  if (!articleSourceColPromise) {
+    articleSourceColPromise = Promise.resolve(
+      supabase.from("articles").select("source").limit(0)
+    ).then(
+      ({ error }) => !error || !/does not exist|42703/.test(error.message || ""),
+      () => false
+    );
+  }
+  return articleSourceColPromise;
+}
+
+/** Probe kolom `video_url` (migrasi supabase/content_video.sql) — memoized. */
+export function articlesHasVideoColumn(): Promise<boolean> {
+  return tableHasColumn("articles", "video_url");
+}
+
 /**
  * Filter publik artikel — sama persis dengan policy SELECT Tahap 1 news:
  * is_published = true AND (published_at IS NULL OR published_at <= now())
@@ -60,8 +83,12 @@ function applyPublicArticleFilters<T extends FilterMethods<T>>(query: T, withExp
  * untuk sintaks `.or()`.
  */
 export async function getArticleList(limit?: number, search?: string): Promise<ArticleWithAuthor[]> {
-  const newCols = await articlesHasScheduledColumns();
+  const [newCols, hasVideo] = await Promise.all([
+    articlesHasScheduledColumns(),
+    articlesHasVideoColumn(),
+  ]);
   const term = sanitizeSearchTerm(search ?? "");
+  const listColumns = `${ARTICLE_LIST_COLUMNS}${hasVideo ? ", video_url" : ""}`;
   const run = async (columns: string) => {
     let query = supabase
       .from("articles")
@@ -80,9 +107,9 @@ export async function getArticleList(limit?: number, search?: string): Promise<A
   };
 
   // Coba dengan author_name dulu; bila kolom belum ada (42703), ulang tanpa itu.
-  let { data, error } = await run(`${ARTICLE_LIST_COLUMNS}, author_name`);
+  let { data, error } = await run(`${listColumns}, author_name`);
   if (error && /author_name/.test(error.message || "")) {
-    ({ data, error } = await run(ARTICLE_LIST_COLUMNS));
+    ({ data, error } = await run(listColumns));
   }
 
   if (error) {
@@ -198,9 +225,17 @@ export async function createArticle(article: {
   is_pinned?: boolean;
   expires_at?: string | null;
   published_at?: string;
+  /** Penanda asal artikel, mis. "panel-ai" (butuh kolom source — content_source.sql). */
+  source?: string;
+  /** Tautan video eksternal (opsional; probe video_url — content_video.sql). */
+  video_url?: string | null;
 }): Promise<{ data: Article | null; error?: string }> {
   const { data: { user } } = await supabase.auth.getUser();
   const newCols = await articlesHasScheduledColumns();
+  // Penanda sumber hanya dikirim bila kolomnya sudah ada (migrasi belum jalan → lewati diam-diam).
+  const hasSourceCol = article.source ? await articlesHasSourceColumn() : false;
+  // Tautan video hanya dikirim bila kolomnya sudah ada (probe, sama seperti source).
+  const hasVideoCol = article.video_url ? await articlesHasVideoColumn() : false;
   // Slug unik: dari slug form bila diisi, selain itu dari judul
   const baseSlug = article.slug ? slugify(article.slug) : slugify(article.title);
   const slug = await generateUniqueArticleSlug(baseSlug || "artikel");
@@ -215,6 +250,10 @@ export async function createArticle(article: {
     delete payload.is_pinned;
     delete payload.expires_at;
   }
+  delete payload.source;
+  if (hasSourceCol) payload.source = article.source;
+  delete payload.video_url;
+  if (hasVideoCol) payload.video_url = article.video_url;
   const { data, error } = await supabase
     .from("articles")
     .insert(payload)
@@ -244,9 +283,14 @@ export async function updateArticle(
     image_alt?: string;
     is_pinned?: boolean;
     expires_at?: string | null;
+    /** Tautan video eksternal (opsional; probe video_url — content_video.sql). */
+    video_url?: string | null;
   }
 ): Promise<{ data: Article | null; error?: string }> {
-  const newCols = await articlesHasScheduledColumns();
+  const [newCols, hasVideoCol] = await Promise.all([
+    articlesHasScheduledColumns(),
+    articlesHasVideoColumn(),
+  ]);
   // Baris lama: URL gambar (untuk bersihkan file) + published_at (untuk
   // tahu apakah ini pertama kali terbit — jangan menimpa tanggal lama).
   let oldImageUrl: string | null = null;
@@ -277,6 +321,7 @@ export async function updateArticle(
     delete article.is_pinned;
     delete article.expires_at;
   }
+  if (!hasVideoCol) delete article.video_url;
   let { data, error } = await supabase
     .from("articles")
     .update(article)
@@ -285,9 +330,9 @@ export async function updateArticle(
     .single();
 
   // Kolom opsional belum ada di DB → ulangi tanpa kolom itu
-  if (error && /(image_alt|is_pinned|expires_at)/.test(error.message || "")) {
+  if (error && /(image_alt|is_pinned|expires_at|video_url)/.test(error.message || "")) {
     const msg = error.message || "";
-    (["image_alt", "is_pinned", "expires_at"] as const).forEach((k) => {
+    (["image_alt", "is_pinned", "expires_at", "video_url"] as const).forEach((k) => {
       if (msg.includes(k)) delete article[k];
     });
     ({ data, error } = await supabase.from("articles").update(article).eq("id", id).select().single());

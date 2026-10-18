@@ -1,5 +1,28 @@
 import { supabase } from "../supabase";
 
+// ============ PROBE KOLOM OPSIONAL (memoized per proses) ============
+/**
+ * Probe sekali per proses: apakah kolom sudah ada di tabel? Dipakai untuk
+ * kolom migrasi opsional (mis. `video_url` — supabase/content_video.sql):
+ * false → insert/update disusun tanpa kolom itu (aman sebelum SQL dijalankan).
+ */
+const columnProbes = new Map<string, Promise<boolean>>();
+
+export function tableHasColumn(table: string, column: string): Promise<boolean> {
+  const key = `${table}.${column}`;
+  let probe = columnProbes.get(key);
+  if (!probe) {
+    probe = Promise.resolve(
+      supabase.from(table).select(column).limit(0)
+    ).then(
+      ({ error }) => !error || !/does not exist|42703/.test(error.message || ""),
+      () => false
+    );
+    columnProbes.set(key, probe);
+  }
+  return probe;
+}
+
 export async function cleanupOldFiles(folder: string, id: string) {
   const { data } = await supabase.storage.from("images").list(folder);
   if (data) {

@@ -77,7 +77,6 @@ npm run lint      # ESLint — syarat: 0 error
 ## Dokumen lain
 
 - `planning.md` — roadmap, status P1/P2, checklist rilis
-- `operasional.md` — **rollback deploy (Vercel) & backup Supabase**
 - `REMINDER_DOMAIN.md` — setup domain `smpmuh4tanggul.sch.id` di Vercel
 - `AGENTS.md` — aturan untuk AI coding agent (dikelola otomatis oleh `next dev`)
 

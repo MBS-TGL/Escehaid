@@ -1,22 +1,31 @@
 /**
- * Util video kegiatan — parse URL YouTube / Instagram / TikTok → embed ringan.
+ * Util video kegiatan/konten — parse URL YouTube / Instagram / TikTok /
+ * Vimeo / Google Drive → embed ringan.
  *
  * Dipakai dua sisi:
  * - KLIEN (admin & komponen VideoEmbed): `parseVideoUrl` mendeteksi penyedia
  *   untuk chip/label, `videoEmbedUrl` menurunkan src iframe click-to-load.
- * - SERVER (detail kegiatan): `resolveVideoUrl` menyelesaikan link pendek TikTok
- *   (vm.tiktok.com / vt.tiktok.com / tiktok.com/t/…) lewat redirect fetch ATAU
- *   oEmbed publik https://www.tiktok.com/oembed?url=… — dengan timeout, error
- *   aman (selalu jatuh ke URL mentah), dan cache TTL sederhana sehingga render
- *   statis tidak menembak jaringan di setiap request.
+ * - SERVER (detail kegiatan/berita/artikel): `resolveVideoUrl` menyelesaikan
+ *   link pendek TikTok (vm.tiktok.com / vt.tiktok.com / tiktok.com/t/…) lewat
+ *   redirect fetch ATAU oEmbed publik https://www.tiktok.com/oembed?url=… —
+ *   dengan timeout, error aman (selalu jatuh ke URL mentah), dan cache TTL
+ *   sederhana sehingga render statis tidak menembak jaringan di setiap request.
  *
  * Sengaja TIDAK memuat skrip embed pihak ketiga (instagram embed.js, dsb.):
- * cukup iframe resmi youtube-nocookie / instagram / tiktok.
+ * cukup iframe resmi youtube-nocookie / instagram / tiktok / vimeo / drive.
+ * Facebook sengaja tidak didukung (butuh skrip SDK); platform lain jatuh ke
+ * tombol link-out "Tonton di <hostname>".
  */
 
 import { youtubeEmbedUrl } from "./youtube";
 
-export type VideoProvider = "youtube" | "instagram" | "tiktok" | "unknown";
+export type VideoProvider =
+  | "youtube"
+  | "instagram"
+  | "tiktok"
+  | "vimeo"
+  | "googledrive"
+  | "unknown";
 
 export interface ParsedVideoUrl {
   /** Penyedia terdeteksi dari host URL. */
@@ -25,15 +34,25 @@ export interface ParsedVideoUrl {
   id: string | null;
   /** URL kanonik (bisa dibuka langsung); URL mentah bila tak dikenali. */
   canonicalUrl: string;
+  /** Hostname bersih (tanpa www.) — label fallback untuk platform tak dikenal. */
+  host: string;
 }
 
-/** Label penyedia untuk chip admin & label tombol publik. */
+/** Label penyedia untuk chip admin; host tak dikenal memakai videoProviderLabel(). */
 export const VIDEO_PROVIDER_LABEL: Record<VideoProvider, string> = {
   youtube: "YouTube",
   instagram: "Instagram",
   tiktok: "TikTok",
+  vimeo: "Vimeo",
+  googledrive: "Google Drive",
   unknown: "Tidak dikenali",
 };
+
+/** Label ramah: penyedia dikenal → VIDEO_PROVIDER_LABEL; selain itu hostname. */
+export function videoProviderLabel(parsed: ParsedVideoUrl): string {
+  if (parsed.provider !== "unknown") return VIDEO_PROVIDER_LABEL[parsed.provider];
+  return parsed.host || "Tidak dikenali";
+}
 
 const YT_ID = "[A-Za-z0-9_-]{11}";
 
@@ -44,16 +63,18 @@ const YT_ID = "[A-Za-z0-9_-]{11}";
  */
 export function parseVideoUrl(url?: string | null): ParsedVideoUrl {
   const raw = (url || "").trim();
-  const unknown: ParsedVideoUrl = { provider: "unknown", id: null, canonicalUrl: raw };
-  if (!raw) return { provider: "unknown", id: null, canonicalUrl: "" };
+  const emptyHost = { provider: "unknown" as const, id: null, canonicalUrl: "", host: "" };
+  if (!raw) return emptyHost;
 
   let u: URL;
   try {
     u = new URL(raw);
   } catch {
-    return unknown;
+    return { ...emptyHost, canonicalUrl: raw };
   }
-  if (u.protocol !== "http:" && u.protocol !== "https:") return unknown;
+  if (u.protocol !== "http:" && u.protocol !== "https:") {
+    return { ...emptyHost, canonicalUrl: raw };
+  }
 
   const host = u.hostname.toLowerCase().replace(/^www\./, "");
 
@@ -77,6 +98,7 @@ export function parseVideoUrl(url?: string | null): ParsedVideoUrl {
       provider: "youtube",
       id,
       canonicalUrl: id ? `https://www.youtube.com/watch?v=${id}` : raw,
+      host,
     };
   }
 
@@ -89,6 +111,7 @@ export function parseVideoUrl(url?: string | null): ParsedVideoUrl {
       provider: "instagram",
       id,
       canonicalUrl: id && kind ? `https://www.instagram.com/${kind}/${id}/` : raw,
+      host,
     };
   }
 
@@ -108,10 +131,35 @@ export function parseVideoUrl(url?: string | null): ParsedVideoUrl {
       provider: "tiktok",
       id,
       canonicalUrl: id && user ? `https://www.tiktok.com/${user}/video/${id}` : raw,
+      host,
     };
   }
 
-  return unknown;
+  // ── Vimeo: vimeo.com/ID, vimeo.com/video/ID, player.vimeo.com/video/ID ────
+  if (host === "vimeo.com" || host === "player.vimeo.com") {
+    const id = u.pathname.match(/(?:^\/|\/video\/)(\d{6,})/)?.[1] ?? null;
+    return {
+      provider: "vimeo",
+      id,
+      canonicalUrl: id ? `https://vimeo.com/${id}` : raw,
+      host,
+    };
+  }
+
+  // ── Google Drive: /file/d/ID/view|preview, open?id=ID ─────────────────────
+  // docs.google.com (form/dokumen) sengaja TIDAK didukung — hanya file drive.
+  if (host === "drive.google.com") {
+    let id = u.pathname.match(/^\/file\/d\/([A-Za-z0-9_-]+)/)?.[1] ?? null;
+    if (!id && (u.pathname === "/open" || u.pathname === "/uc")) id = u.searchParams.get("id");
+    return {
+      provider: "googledrive",
+      id,
+      canonicalUrl: id ? `https://drive.google.com/file/d/${id}/view` : raw,
+      host,
+    };
+  }
+
+  return { provider: "unknown", id: null, canonicalUrl: raw, host };
 }
 
 /**
@@ -130,6 +178,10 @@ export function videoEmbedUrl(parsed: ParsedVideoUrl): string | null {
     }
     case "tiktok":
       return parsed.id ? `https://www.tiktok.com/embed/v2/${parsed.id}` : null;
+    case "vimeo":
+      return parsed.id ? `https://player.vimeo.com/video/${parsed.id}` : null;
+    case "googledrive":
+      return parsed.id ? `https://drive.google.com/file/d/${parsed.id}/preview` : null;
     default:
       return null;
   }
@@ -206,7 +258,7 @@ async function fetchTikTokOembed(
 export async function resolveVideoUrl(url?: string | null): Promise<ResolvedVideo> {
   const raw = (url || "").trim();
   const empty: ResolvedVideo = {
-    parsed: { provider: "unknown", id: null, canonicalUrl: "" },
+    parsed: { provider: "unknown", id: null, canonicalUrl: "", host: "" },
     thumbnailUrl: null,
   };
   if (!raw) return empty;

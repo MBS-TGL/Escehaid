@@ -29,7 +29,7 @@ export const faqs: { q: string; a: string }[] = [
   },
   {
     q: "Apakah ada kegiatan ekstrakurikuler?",
-    a: "Tentu! Kami menyediakan berbagai kegiatan ekstrakurikuler seperti Sepak Bola, Futsal, Bulu Tangkis, Hizbul Wathan, Catur, Qiroah, dan masih banyak lagi untuk mengembangkan bakat siswa.",
+    a: "Tentu! Kami menyediakan berbagai kegiatan ekstrakurikuler seperti Sepak Bola, Futsal, Bulu Tangkis, Hizbul Wathan, Qiroah, dan masih banyak lagi untuk mengembangkan bakat siswa.",
   },
 ];
 

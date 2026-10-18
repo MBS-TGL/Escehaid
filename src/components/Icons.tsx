@@ -156,6 +156,9 @@ export {
   SoccerBall,
   MusicNotes,
   Palette,
+  PingPong,
+  Tent,
+  MicrophoneStage,
   Bus,
   ForkKnife,
   Heartbeat,
@@ -172,5 +175,6 @@ export {
   DotsThreeVertical,
   CheckSquare,
   Copy,
-  Upload
+  Upload,
+  ArrowsCounterClockwise
 } from "@phosphor-icons/react/dist/ssr";

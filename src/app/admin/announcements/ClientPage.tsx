@@ -10,6 +10,8 @@ import {
 } from "@/lib/queries";
 import type { Announcement } from "@/lib/queries";
 import { ConfirmModal, SlideOver, SkeletonBlock } from "@/components/ui";
+import AiFillPanel from "@/components/admin/AiFillPanel";
+import type { RefineData } from "@/lib/queries/ai";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -64,6 +66,8 @@ export default function AdminAnnouncementsPage() {
   const [formText, setFormText] = useState("");
   const [formExpires, setFormExpires] = useState("");
   const [formSaving, setFormSaving] = useState(false);
+  // Terisi bila teks diisi panel AI → pengumuman baru ditandai source="panel-ai".
+  const [aiAssisted, setAiAssisted] = useState(false);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -129,6 +133,7 @@ export default function AdminAnnouncementsPage() {
     setEditItem(null);
     setFormText("");
     setFormExpires("");
+    setAiAssisted(false);
     setFormOpen(true);
   }
 
@@ -136,7 +141,21 @@ export default function AdminAnnouncementsPage() {
     setEditItem(item);
     setFormText(item.text);
     setFormExpires(item.expires_at ? item.expires_at.slice(0, 10) : "");
+    setAiAssisted(false);
     setFormOpen(true);
+  }
+
+  // ── Panel isi-otomatis AI ──
+  /** Isi teks pengumuman hasil AI (field memang cuma satu). */
+  function applyAiFields(f: RefineData) {
+    setFormText((prev) => f.announcement || prev);
+    setAiAssisted(true);
+  }
+
+  /** Undo: kembalikan teks ke nilai sebelum ditimpa AI. */
+  function restoreAiSnapshot(s: Record<string, string>) {
+    setFormText(s.text ?? "");
+    setAiAssisted(false);
   }
 
   async function handleSave() {
@@ -148,7 +167,11 @@ export default function AdminAnnouncementsPage() {
       if (error) { toast(error, "error"); setFormSaving(false); return; }
       toast("Pengumuman diperbarui", "success");
     } else {
-      const { error } = await createAnnouncement(formText, expiresAt);
+      const { error } = await createAnnouncement(
+        formText,
+        expiresAt,
+        aiAssisted ? "panel-ai" : undefined
+      );
       if (error) { toast(error, "error"); setFormSaving(false); return; }
       toast("Pengumuman ditambahkan", "success");
     }
@@ -516,6 +539,17 @@ export default function AdminAnnouncementsPage() {
           </div>
         }>
         <div className="space-y-5">
+          {/* Isi otomatis AI — tempel kalimat mentah → dirapikan; di mode
+              edit tampil juga (menimpa teks lama setelah konfirmasi,
+              ada Undo). */}
+          <AiFillPanel
+            target="announcements"
+            current={{ text: formText }}
+            hasContent={!!formText.trim()}
+            onApply={applyAiFields}
+            onRestore={restoreAiSnapshot}
+            disabled={formSaving}
+          />
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Teks Pengumuman <span className="text-red-500">*</span></label>
             <input type="text" value={formText} onChange={(e) => setFormText(e.target.value)}

@@ -2,15 +2,19 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Trophy,
   Medal,
   Users,
   Megaphone,
   Star,
+  Play,
+  X,
+  ArrowSquareOut,
 } from "@/components/Icons";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
+import VideoEmbed from "@/components/VideoEmbed";
 import type { Achievement } from "@/lib/supabase";
 import {
   ACHIEVEMENT_CATEGORIES,
@@ -33,20 +37,39 @@ function levelLabel(value?: string | null): string {
   return achievementLevelLabel(value) || capitalizeCategory(value);
 }
 
-/** Kartu prestasi — gambar atas / teks bawah, konsisten dengan kartu berita. */
-function AchievementCard({ item, big = false }: { item: Achievement; big?: boolean }) {
+/** Kartu prestasi — gambar atas / teks bawah, konsisten dengan kartu berita.
+ *  Klik kartu → modal detail (dengan video bila ada). */
+function AchievementCard({
+  item,
+  big = false,
+  onSelect,
+}: {
+  item: Achievement;
+  big?: boolean;
+  onSelect: (item: Achievement) => void;
+}) {
   const meta = achievementCategoryMeta(item.category);
   const Icon = meta?.icon || Trophy;
   const lvl = levelLabel(item.level);
 
   return (
     <article
-      className={`group flex flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-lg hover:shadow-[var(--brand-primary)]/5 ${
+      onClick={() => onSelect(item)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(item);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Lihat detail prestasi: ${item.title}`}
+      className={`group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-lg hover:shadow-[var(--brand-primary)]/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${
         big ? "sm:col-span-2" : ""
       }`}
     >
       {item.image_url ? (
-        <div className="overflow-hidden bg-slate-100">
+        <div className="relative overflow-hidden bg-slate-100">
           <Image
             src={item.image_url}
             alt={item.image_alt || item.title}
@@ -55,9 +78,19 @@ function AchievementCard({ item, big = false }: { item: Achievement; big?: boole
             sizes={big ? "(max-width: 640px) 100vw, 50vw" : "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"}
             className="aspect-video w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
+          {item.video_url && (
+            <span aria-hidden="true" className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+              <Play weight="fill" className="h-3 w-3" /> Video
+            </span>
+          )}
         </div>
       ) : (
-        <div className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-[#f4d21f]/20 to-[#f4d21f]/5">
+        <div className="relative flex aspect-video w-full items-center justify-center bg-gradient-to-br from-[#f4d21f]/20 to-[#f4d21f]/5">
+          {item.video_url && (
+            <span aria-hidden="true" className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+              <Play weight="fill" className="h-3 w-3" /> Video
+            </span>
+          )}
           <Icon weight="fill" className={big ? "h-16 w-16 text-[#f4d21f]" : "h-12 w-12 text-[#f4d21f]"} />
         </div>
       )}
@@ -103,6 +136,15 @@ function AchievementCard({ item, big = false }: { item: Achievement; big?: boole
         {item.description && (
           <p className="mt-2 text-sm leading-relaxed text-slate-500 line-clamp-2">{item.description}</p>
         )}
+        <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-[var(--brand-accent)] transition-colors group-hover:text-[var(--brand-primary)]">
+          {item.video_url ? (
+            <>
+              <Play weight="fill" className="h-3.5 w-3.5" /> Lihat detail &amp; video
+            </>
+          ) : (
+            "Lihat detail"
+          )}
+        </p>
       </div>
     </article>
   );
@@ -111,6 +153,23 @@ function AchievementCard({ item, big = false }: { item: Achievement; big?: boole
 export default function PrestasiClient({ achievements }: { achievements: Achievement[] }) {
   const [activeCat, setActiveCat] = useState(SEMUA);
   const [activeLevel, setActiveLevel] = useState(SEMUA);
+  /** Prestasi aktif di modal detail (video ditampilkan di sini). */
+  const [selected, setSelected] = useState<Achievement | null>(null);
+
+  // Modal: ESC menutup + kunci scroll latar belakang
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelected(null);
+    };
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [selected]);
 
   /** Tahap 4.6 — tahun menurun, lalu created_at menurun (di komponen, query tidak diubah). */
   const sorted = useMemo(
@@ -252,7 +311,7 @@ export default function PrestasiClient({ achievements }: { achievements: Achieve
                     </div>
                     <CSSStagger stagger={80} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                       {featured.map((item) => (
-                        <AchievementCard key={item.id} item={item} big />
+                        <AchievementCard key={item.id} item={item} big onSelect={setSelected} />
                       ))}
                     </CSSStagger>
                   </div>
@@ -261,7 +320,7 @@ export default function PrestasiClient({ achievements }: { achievements: Achieve
                 {/* ── Sisanya — grid 3 kolom ── */}
                 <CSSStagger stagger={60} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                   {rest.map((item) => (
-                    <AchievementCard key={item.id} item={item} />
+                    <AchievementCard key={item.id} item={item} onSelect={setSelected} />
                   ))}
                 </CSSStagger>
               </>
@@ -269,6 +328,97 @@ export default function PrestasiClient({ achievements }: { achievements: Achieve
           </>
         )}
       </section>
+
+      {/* ── Modal detail prestasi (dengan video bila ada) ── */}
+      {selected && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-label={`Detail prestasi: ${selected.title}`}>
+          <div aria-hidden="true" className="absolute inset-0 bg-[var(--brand-primary)]/70 backdrop-blur-sm" onClick={() => setSelected(null)} />
+          <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setSelected(null)}
+              aria-label="Tutup detail prestasi"
+              className="absolute right-3 top-3 z-10 rounded-lg bg-black/50 p-1.5 text-white transition-colors hover:bg-black/70"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            {selected.image_url ? (
+              <Image
+                src={selected.image_url}
+                alt={selected.image_alt || selected.title}
+                width={1280}
+                height={720}
+                sizes="100vw"
+                className="h-48 w-full object-cover sm:h-56"
+              />
+            ) : (
+              <div className="flex h-40 w-full items-center justify-center bg-gradient-to-br from-[#f4d21f]/20 to-[#f4d21f]/5">
+                <Trophy weight="fill" className="h-14 w-14 text-[#f4d21f]" />
+              </div>
+            )}
+
+            <div className="p-6">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {selected.rank_label && (
+                  <span className="rounded-md bg-[#f4d21f] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+                    {selected.rank_label}
+                  </span>
+                )}
+                {levelLabel(selected.level) && (
+                  <span className="rounded-md bg-[var(--brand-primary)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+                    {levelLabel(selected.level)}
+                  </span>
+                )}
+                {selected.category && (
+                  <span className="rounded-md border border-[var(--brand-accent)]/20 bg-[var(--brand-accent)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-accent)]">
+                    {categoryLabel(selected.category)}
+                  </span>
+                )}
+                {selected.year && (
+                  <span className="text-[11px] text-slate-400">{selected.year}</span>
+                )}
+              </div>
+
+              <h2 className="mt-3 text-xl font-bold text-[var(--brand-primary)]">{selected.title}</h2>
+
+              {selected.participants && (
+                <p className="mt-3 flex items-start gap-1.5 text-sm text-slate-600">
+                  <Users className="mt-px h-4 w-4 shrink-0 text-slate-400" />
+                  <span>{selected.participants}</span>
+                </p>
+              )}
+              {selected.organizer && (
+                <p className="mt-1.5 flex items-start gap-1.5 text-sm text-slate-600">
+                  <Megaphone className="mt-px h-4 w-4 shrink-0 text-slate-400" />
+                  <span>{selected.organizer}</span>
+                </p>
+              )}
+              {selected.description && (
+                <p className="mt-4 text-sm leading-relaxed text-slate-500">{selected.description}</p>
+              )}
+
+              {/* Video eksternal — click-to-load; TikTok pendek tak teresolve di client → tombol "Tonton di ..." */}
+              {selected.video_url && (
+                <div className="mt-6">
+                  <div className="mb-3 flex items-center gap-2">
+                    <div className="h-1 w-6 rounded-full bg-[#f4d21f]" />
+                    <p className="text-sm font-bold uppercase tracking-wider text-[var(--brand-primary)]">Video Prestasi</p>
+                    <a href={selected.video_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--brand-accent)] hover:text-[var(--brand-primary)]">
+                      Buka di platform <ArrowSquareOut className="h-3 w-3" aria-hidden="true" />
+                    </a>
+                  </div>
+                  <VideoEmbed
+                    url={selected.video_url}
+                    poster={selected.image_url}
+                    title={selected.title}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

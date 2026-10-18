@@ -1,7 +1,7 @@
 import { supabase } from "../supabase";
 import type { News } from "../supabase";
 import { cleanupNewsAttachments, cleanupNewsImageFolder } from "./news-media";
-import { deleteStorageFileByUrl, generateUniqueNewsSlug, sanitizeSearchTerm, slugify } from "./shared";
+import { deleteStorageFileByUrl, generateUniqueNewsSlug, sanitizeSearchTerm, slugify, tableHasColumn } from "./shared";
 
 export interface NewsWithAuthor extends News {
   author_name?: string | null;
@@ -36,9 +36,32 @@ export function newsHasScheduledColumns(): Promise<boolean> {
   return newsNewColsPromise;
 }
 
+let newsSourceColPromise: Promise<boolean> | null = null;
+/**
+ * Probe sekali per proses: apakah kolom `source` sudah ada di tabel news
+ * (migrasi supabase/content_source.sql — penanda "panel-ai")? false → payload
+ * insert disusun tanpa `source` agar createNews tetap aman sebelum migrasi.
+ */
+export function newsHasSourceColumn(): Promise<boolean> {
+  if (!newsSourceColPromise) {
+    newsSourceColPromise = Promise.resolve(
+      supabase.from("news").select("source").limit(0)
+    ).then(
+      ({ error }) => !error || !/does not exist|42703/.test(error.message || ""),
+      () => false
+    );
+  }
+  return newsSourceColPromise;
+}
+
 /** "Sekarang" dalam ISO UTC presisi detik — aman untuk disisipkan ke sintaks .or(). */
 export function newsNowIso(): string {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
+/** Probe kolom `video_url` (migrasi supabase/content_video.sql) — memoized. */
+export function newsHasVideoColumn(): Promise<boolean> {
+  return tableHasColumn("news", "video_url");
 }
 
 /**
@@ -114,7 +137,8 @@ export async function getNewsListPaginated(
   category?: string
 ): Promise<{ items: NewsWithAuthor[]; total: number; totalPages: number }> {
   const newCols = await newsHasScheduledColumns();
-  const base = `${NEWS_LIST_COLUMNS}${newCols ? `, ${NEWS_NEW_COLUMNS}` : ""}`;
+  const hasVideo = await newsHasVideoColumn();
+  const base = `${NEWS_LIST_COLUMNS}${newCols ? `, ${NEWS_NEW_COLUMNS}` : ""}${hasVideo ? ", video_url" : ""}`;
   let { data, error, count } = await queryNewsPage(
     `${base}, attachment_url`,
     page,
@@ -150,12 +174,13 @@ export async function getNewsListPaginated(
 
 export async function getNewsList(limit?: number, search?: string): Promise<NewsWithAuthor[]> {
   const newCols = await newsHasScheduledColumns();
+  const hasVideo = await newsHasVideoColumn();
   let query = supabase
     .from("news")
     .select(
       `id, title, slug, summary, image_url, category, published_at, created_at${
         newCols ? `, ${NEWS_NEW_COLUMNS}` : ""
-      }, user_profiles(full_name)`
+      }${hasVideo ? ", video_url" : ""}, user_profiles(full_name)`
     );
 
   query = applyPublicNewsFilters(query, newCols);
@@ -291,9 +316,17 @@ export async function createNews(news: {
   is_published?: boolean;
   attachment_url?: string;
   attachment_name?: string;
+  /** Penanda asal berita, mis. "panel-ai" (butuh kolom source — content_source.sql). */
+  source?: string;
+  /** Tautan video eksternal (opsional; probe video_url — content_video.sql). */
+  video_url?: string | null;
 }): Promise<{ data: News | null; error?: string }> {
   const { data: { user } } = await supabase.auth.getUser();
   const newCols = await newsHasScheduledColumns();
+  // Penanda sumber hanya dikirim bila kolomnya sudah ada (migrasi belum jalan → lewati diam-diam).
+  const hasSourceCol = news.source ? await newsHasSourceColumn() : false;
+  // Tautan video hanya dikirim bila kolomnya sudah ada (probe, sama seperti source).
+  const hasVideoCol = news.video_url ? await newsHasVideoColumn() : false;
   // Slug unik: dari slug form bila diisi, selain itu dari judul
   const baseSlug = news.slug ? slugify(news.slug) : slugify(news.title);
   const slug = await generateUniqueNewsSlug(baseSlug || "berita");
@@ -309,6 +342,7 @@ export async function createNews(news: {
     // Kosong → null (belum pernah terbit); terbit tanpa tanggal → now
     published_at: news.published_at || (news.is_published ? new Date().toISOString() : null),
   };
+  if (hasSourceCol) payload.source = news.source;
   if (news.cover_image_position) payload.cover_image_position = news.cover_image_position;
   if (news.writer_name) payload.writer_name = news.writer_name;
   if (news.editor_name) payload.editor_name = news.editor_name;
@@ -321,6 +355,7 @@ export async function createNews(news: {
     payload.attachment_url = news.attachment_url;
     payload.attachment_name = news.attachment_name || "";
   }
+  if (hasVideoCol) payload.video_url = news.video_url;
   let { data, error } = await supabase
     .from("news")
     .insert(payload)
@@ -363,9 +398,14 @@ export async function updateNews(
     is_published?: boolean;
     attachment_url?: string;
     attachment_name?: string;
+    /** Tautan video eksternal (opsional; probe video_url — content_video.sql). */
+    video_url?: string | null;
   }
 ): Promise<{ data: News | null; error?: string }> {
-  const newCols = await newsHasScheduledColumns();
+  const [newCols, hasVideoCol] = await Promise.all([
+    newsHasScheduledColumns(),
+    newsHasVideoColumn(),
+  ]);
   const payload: Record<string, unknown> = {};
   if (news.title !== undefined) payload.title = news.title;
   // Slug hanya disentuh bila dikirim; lewat generator agar tetap unik (kecuali milik sendiri)
@@ -390,6 +430,7 @@ export async function updateNews(
     payload.attachment_url = news.attachment_url;
     payload.attachment_name = news.attachment_name || "";
   }
+  if (hasVideoCol && news.video_url !== undefined) payload.video_url = news.video_url;
   let { data, error } = await supabase
     .from("news")
     .update(payload)
@@ -398,9 +439,9 @@ export async function updateNews(
     .single();
 
   // Kolom opsional belum ada di DB → ulangi tanpa kolom itu
-  if (error && /(attachment_url|image_alt|is_pinned|expires_at)/.test(error.message || "")) {
+  if (error && /(attachment_url|image_alt|is_pinned|expires_at|video_url)/.test(error.message || "")) {
     const msg = error.message || "";
-    (["attachment_url", "attachment_name", "image_alt", "is_pinned", "expires_at"] as const).forEach((k) => {
+    (["attachment_url", "attachment_name", "image_alt", "is_pinned", "expires_at", "video_url"] as const).forEach((k) => {
       if (msg.includes(k)) delete payload[k];
     });
     ({ data, error } = await supabase.from("news").update(payload).eq("id", id).select().single());

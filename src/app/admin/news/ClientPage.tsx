@@ -68,6 +68,9 @@ import {
   type RowAction,
 } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
+import AiFillPanel from "@/components/admin/AiFillPanel";
+import VideoUrlField from "@/components/admin/VideoUrlField";
+import type { RefineData } from "@/lib/queries/ai";
 
 const PAGE_SIZE = 10;
 
@@ -97,6 +100,7 @@ interface FormData {
   is_published: boolean;
   attachment_url: string;
   attachment_name: string;
+  video_url: string;
 }
 
 const emptyForm: FormData = {
@@ -116,6 +120,7 @@ const emptyForm: FormData = {
   is_published: false,
   attachment_url: "",
   attachment_name: "",
+  video_url: "",
 };
 
 const ATTACHMENT_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.odt,.txt,.zip";
@@ -223,6 +228,9 @@ export default function AdminBeritaPage() {
   }, []);
   const [formSaving, setFormSaving] = useState(false);
   const [formError, setFormError] = useState("");
+  // true bila 4 field inti (judul/ringkasan/isi/kategori) terisi via AI panel —
+  // berita baru yang disimpan dalam kondisi ini ditandai source="panel-ai".
+  const [aiAssisted, setAiAssisted] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [imageUploading, setImageUploading] = useState(false);
@@ -234,7 +242,9 @@ export default function AdminBeritaPage() {
   const [baseline, setBaseline] = useState<string>("");
   const [pendingDraft, setPendingDraft] = useState<{ key: string; savedAt: number; data: FormData } | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
+  // Tab mobile (<lg) dalam SlideOver form: "form" | "preview". Di lg+ kedua
+  // kolom tampil berdampingan (split-view), tab otomatis menghilang.
+  const [previewTab, setPreviewTab] = useState<"form" | "preview">("form");
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
   const [colSupport, setColSupport] = useState(false);
 
@@ -418,6 +428,8 @@ export default function AdminBeritaPage() {
     setFormError("");
     setSlugTouched(false);
     setSlugUnlocked(false);
+    setAiAssisted(false);
+    setPreviewTab("form");
     checkPendingDraft(null);
     setFormOpen(true);
   }
@@ -440,6 +452,7 @@ export default function AdminBeritaPage() {
       is_published: item.is_published,
       attachment_url: item.attachment_url || "",
       attachment_name: item.attachment_name || "",
+      video_url: item.video_url || "",
     };
     setEditItem(item);
     setForm(next);
@@ -450,6 +463,8 @@ export default function AdminBeritaPage() {
     setFormError("");
     setSlugTouched(false);
     setSlugUnlocked(false);
+    setAiAssisted(false);
+    setPreviewTab("form");
     checkPendingDraft(item);
     setFormOpen(true);
   }
@@ -503,6 +518,33 @@ export default function AdminBeritaPage() {
     setForm((f) => ({ ...f, is_pinned: !f.is_pinned }));
   }
 
+  // ── Panel isi-otomatis AI ──
+  /** Isi form dengan hasil AI; slug diikuti bila buat baru & belum disentuh. */
+  function applyAiFields(f: RefineData) {
+    setForm((prev) => ({
+      ...prev,
+      title: f.title || prev.title,
+      summary: f.summary || prev.summary,
+      content: f.content || prev.content,
+      category: f.category || prev.category,
+      slug: !editItem && !slugTouched && f.title ? slugify(f.title) : prev.slug,
+    }));
+    setAiAssisted(true);
+  }
+
+  /** Undo: kembalikan field ke nilai sebelum ditimpa AI. */
+  function restoreAiSnapshot(s: Record<string, string>) {
+    setForm((prev) => ({
+      ...prev,
+      title: s.title,
+      summary: s.summary,
+      content: s.content,
+      category: s.category,
+      slug: !editItem && !slugTouched ? slugify(s.title) : prev.slug,
+    }));
+    setAiAssisted(false);
+  }
+
   // ── Duplikat: buka form baru terisi salinan (belum disimpan) ──
   async function openDuplicate(item: News) {
     const copied: FormData = {
@@ -516,6 +558,7 @@ export default function AdminBeritaPage() {
       writer_name: item.writer_name || "",
       editor_name: item.editor_name || "",
       image_alt: item.image_alt || "",
+      video_url: item.video_url || "",
     };
     copied.slug = slugify(copied.title);
     setViewItem(null);
@@ -528,6 +571,8 @@ export default function AdminBeritaPage() {
     setFormError("");
     setSlugTouched(false);
     setSlugUnlocked(false);
+    setAiAssisted(false);
+    setPreviewTab("form");
     checkPendingDraft(null);
     setFormOpen(true);
 
@@ -634,7 +679,11 @@ export default function AdminBeritaPage() {
       // Gunakan folder-based cleanup: list semua file di news/<id>/, hapus semua kecuali keepUrl
       cleanupNewsImageFolder(editItem.id, imageUrl || null).catch(() => {});
     } else {
-      const { data, error } = await createNews(rowPayload);
+      // Berita hasil isi-otomatis AI ditandai sumbernya (kolom `source`,
+      // tersedia setelah supabase/content_source.sql dijalankan).
+      const { data, error } = await createNews(
+        aiAssisted ? { ...rowPayload, source: "panel-ai" } : rowPayload
+      );
       if (error) { setFormError(error); setFormSaving(false); return; }
       newsId = data?.id || "";
       savedSlug = data?.slug || "";
@@ -1089,6 +1138,7 @@ export default function AdminBeritaPage() {
 
       {/* ── VIEW MODAL ──────────────────────────────── */}
       <Modal
+        size="2xl"
         open={!!viewItem}
         onClose={() => setViewItem(null)}
         title={viewItem?.title}
@@ -1190,34 +1240,57 @@ export default function AdminBeritaPage() {
       />
 
       {/* ── CREATE/EDIT FORM PANEL ──────────────────── */}
+      {/* Split-view desktop: form kiri + pratinjau live kanan (grid lg+).
+          Mobile (<lg): tab Form/Pratinjau via prop toolbar SlideOver. */}
       <SlideOver
         open={formOpen}
         onClose={requestClose}
         title={editItem ? "Edit Berita" : "Buat Berita Baru"}
         description={editItem ? "Perbarui informasi berita" : "Isi form untuk menerbitkan berita"}
+        wrapperClassName="md:max-w-4xl lg:max-w-6xl"
+        contentScroll={false}
+        toolbar={
+          <div className="flex rounded-xl bg-slate-100 p-1 lg:hidden" role="tablist" aria-label="Mode panel">
+            {(
+              [
+                { key: "form", label: "Form" },
+                { key: "preview", label: "Pratinjau" },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                role="tab"
+                aria-selected={previewTab === tab.key}
+                onClick={() => setPreviewTab(tab.key)}
+                className={`flex-1 rounded-lg px-4 py-1.5 text-xs font-semibold transition-all ${
+                  previewTab === tab.key
+                    ? "bg-white text-[var(--brand-primary)] shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        }
         footer={
           <div className="flex w-full items-center justify-between gap-2">
             <button onClick={requestClose} disabled={formSaving}
               className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
               Batal
             </button>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setPreviewOpen(true)} disabled={formSaving}
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
-                <Eye className="h-4 w-4" /> Pratinjau
-              </button>
-              <button onClick={handleSave} disabled={formSaving}
-                className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-70">
-                {formSaving ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <>
-                    <FloppyDisk className="h-4 w-4" />
-                    {saveLabel()}
-                  </>
-                )}
-              </button>
-            </div>
+            <button onClick={handleSave} disabled={formSaving}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-70">
+              {formSaving ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : (
+                <>
+                  <FloppyDisk className="h-4 w-4" />
+                  {saveLabel()}
+                </>
+              )}
+            </button>
           </div>
         }
       >
@@ -1241,7 +1314,27 @@ export default function AdminBeritaPage() {
           </div>
         )}
 
-        <div className="space-y-5">
+        <div className="h-full lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)] lg:gap-8">
+          {/* ── Kolom kiri: form — scroll mandiri (scrollbar terpisah) ── */}
+          <div className={`h-full min-h-0 space-y-5 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] lg:pr-2 ${previewTab === "form" ? "" : "hidden lg:block"}`}>
+          {/* Isi otomatis AI — tempel catatan mentah → field terisi; di mode
+              edit tampil juga (nimpa isi lama setelah konfirmasi, ada Undo). */}
+          <AiFillPanel
+            target="news"
+            current={{
+              title: form.title,
+              summary: form.summary,
+              content: form.content,
+              category: form.category,
+            }}
+            hasContent={
+              !!form.title.trim() || !!form.summary.trim() || !!form.content.trim()
+            }
+            onApply={applyAiFields}
+            onRestore={restoreAiSnapshot}
+            disabled={formSaving}
+          />
+
           {/* Title */}
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Judul <span className="text-red-500">*</span></label>
@@ -1288,9 +1381,6 @@ export default function AdminBeritaPage() {
               {SITE_URL}/news/<span className={form.slug ? "text-slate-500" : "text-slate-300"}>{form.slug || "…"}</span>
             </p>
           </div>
-
-          {/* Pratinjau kartu saat dibagikan */}
-          <SharePreviewCard form={form} imagePreview={imagePreview} />
 
           {/* Category */}
           <div>
@@ -1408,6 +1498,13 @@ export default function AdminBeritaPage() {
               </div>
             )}
           </div>
+
+          {/* Video eksternal (opsional) */}
+          <VideoUrlField
+            value={form.video_url}
+            onChange={(v) => setForm((f) => ({ ...f, video_url: v }))}
+            hint="Opsional — tautan YouTube, Vimeo, TikTok, Instagram, atau Google Drive."
+          />
 
           {/* Attachment (lampiran file) */}
           <div>
@@ -1552,6 +1649,33 @@ export default function AdminBeritaPage() {
               </div>
             )}
           </div>
+          </div>
+
+          {/* ── Kolom kanan: pratinjau live — scroll mandiri, header terpaku ── */}
+          <div className={`h-full min-h-0 min-w-0 flex-col ${previewTab === "preview" ? "flex" : "hidden lg:flex"}`}>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-bold text-[var(--brand-primary)]">Pratinjau Langsung</p>
+                <p className="text-[11px] text-slate-400">Mengikuti isi form secara real-time — draft & terjadwal</p>
+              </div>
+              <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
+                <button type="button" onClick={() => setPreviewDevice("desktop")}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "desktop" ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                  <Desktop className="h-3.5 w-3.5" /> Desktop
+                </button>
+                <button type="button" onClick={() => setPreviewDevice("mobile")}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "mobile" ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                  <DeviceMobile className="h-3.5 w-3.5" /> Mobile
+                </button>
+              </div>
+            </div>
+            {/* Kartu pratinjau: bingkai tetap, isinya yang scroll */}
+            <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-slate-200 bg-white">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] p-4 md:p-6">
+                <NewsPreview form={form} imagePreview={imagePreview} device={previewDevice} />
+              </div>
+            </div>
+          </div>
         </div>
       </SlideOver>
 
@@ -1570,121 +1694,66 @@ export default function AdminBeritaPage() {
         cancelLabel="Lanjut mengedit"
         confirmLabel="Buang"
       />
-
-      {/* ── PRATINJAU (draft/terjadwal) — tanpa route baru ── */}
-      <Modal
-        open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-        size={previewDevice === "mobile" ? "sm" : "xl"}
-        title="Pratinjau Berita"
-        description="Tampilan seperti halaman publik — berlaku untuk draft & terjadwal"
-        footer={
-          <>
-            <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
-              <button type="button" onClick={() => setPreviewDevice("desktop")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "desktop" ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-                <Desktop className="h-3.5 w-3.5" /> Desktop
-              </button>
-              <button type="button" onClick={() => setPreviewDevice("mobile")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "mobile" ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-                <DeviceMobile className="h-3.5 w-3.5" /> Mobile
-              </button>
-            </div>
-            <button onClick={() => setPreviewOpen(false)}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-              Tutup
-            </button>
-          </>
-        }
-      >
-        <div className={previewDevice === "mobile" ? "mx-auto max-w-sm" : "mx-auto max-w-3xl"}>
-          {/* Meta — kategori, tanggal, penulis (seperti halaman detail publik) */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <span className={`inline-flex items-center rounded-md border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${categoryConfig[form.category]?.color || "bg-slate-100 text-slate-600 border-slate-200"}`}>
-              {categoryConfig[form.category]?.label || form.category}
-            </span>
-            <span className="flex items-center gap-1 text-xs text-slate-400">
-              <Clock className="h-3 w-3" />
-              {form.published_at ? formatWibInput(form.published_at) : "-"}
-            </span>
-            {form.writer_name && (
-              <span className="flex items-center gap-1 text-xs text-slate-400">
-                <User className="h-3 w-3" /> {form.writer_name}
-                <span className="text-[11px] text-slate-300">Penulis</span>
-              </span>
-            )}
-            {form.editor_name && (
-              <span className="flex items-center gap-1 text-xs text-slate-400">
-                <User className="h-3 w-3" /> {form.editor_name}
-                <span className="text-[11px] text-slate-300">Editor</span>
-              </span>
-            )}
-          </div>
-          <h1 className="mt-2 text-2xl font-black leading-snug text-[var(--brand-primary)]">
-            {form.title || "Tanpa judul"}
-          </h1>
-          {imagePreview && (
-            <CoverImage
-              src={imagePreview}
-              alt={form.image_alt || form.title || "Sampul"}
-              className="mt-4 shadow-md"
-            />
-          )}
-          {form.summary && (
-            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
-              <div className="flex items-start gap-3">
-                <BookmarkSimple className="mt-0.5 h-4 w-4 shrink-0 text-[#f4d21f]" />
-                <p className="text-sm font-medium leading-relaxed text-slate-600">{form.summary}</p>
-              </div>
-            </div>
-          )}
-          {/* Konten — komponen bersama RichContent (kelas identik /news/[slug]) */}
-          <RichContent content={form.content} />
-        </div>
-      </Modal>
     </div>
   );
 }
 
-/** Kartu "Pratinjau saat dibagikan" — ikuti isi form secara langsung. */
-function SharePreviewCard({ form, imagePreview }: { form: FormData; imagePreview: string }) {
-  const domain = SITE_URL.replace(/^https?:\/\//, "");
+/** Markup pratinjau berita — duplikat render halaman publik /news/[slug]
+ *  (meta, judul, sampul, ringkasan, konten via RichContent bersama).
+ *  Dipakai ulang di kolom split-view desktop dan tab Pratinjau mobile. */
+function NewsPreview({
+  form,
+  imagePreview,
+  device,
+}: {
+  form: FormData;
+  imagePreview: string;
+  device: "desktop" | "mobile";
+}) {
   return (
-    <div>
-      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
-        Pratinjau saat dibagikan
-      </label>
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        {imagePreview ? (
-          <div className="relative w-full bg-slate-100 aspect-[1.91/1]">
-            <Image
-              src={imagePreview}
-              alt={form.image_alt || form.title || "Pratinjau sampul"}
-              fill
-              sizes="100%"
-              unoptimized
-              className="h-full w-full object-cover"
-              style={{
-                objectPosition: form.cover_image_position === "top" ? "center 20%" : form.cover_image_position === "bottom" ? "center 80%" : "center center",
-              }}
-            />
-          </div>
-        ) : (
-          <div className="flex w-full items-center justify-center bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-accent)] aspect-[1.91/1]">
-            <ImageIcon className="h-10 w-10 text-white/25" />
-          </div>
+    <div className={device === "mobile" ? "mx-auto max-w-sm" : ""}>
+      {/* Meta — kategori, tanggal, penulis (seperti halaman detail publik) */}
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className={`inline-flex items-center rounded-md border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${categoryConfig[form.category]?.color || "bg-slate-100 text-slate-600 border-slate-200"}`}>
+          {categoryConfig[form.category]?.label || form.category}
+        </span>
+        <span className="flex items-center gap-1 text-xs text-slate-400">
+          <Clock className="h-3 w-3" />
+          {form.published_at ? formatWibInput(form.published_at) : "-"}
+        </span>
+        {form.writer_name && (
+          <span className="flex items-center gap-1 text-xs text-slate-400">
+            <User className="h-3 w-3" /> {form.writer_name}
+            <span className="text-[11px] text-slate-300">Penulis</span>
+          </span>
         )}
-        <div className="border-t border-slate-200 px-4 py-3">
-          <p className="text-[11px] uppercase tracking-wide text-slate-400">{domain}</p>
-          <p className="mt-1 line-clamp-2 text-sm font-bold text-slate-800">
-            {form.title || "Judul berita tampil di sini"}
-          </p>
-          <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">
-            {form.summary || "Ringkasan berita tampil di sini…"}
-          </p>
-        </div>
+        {form.editor_name && (
+          <span className="flex items-center gap-1 text-xs text-slate-400">
+            <User className="h-3 w-3" /> {form.editor_name}
+            <span className="text-[11px] text-slate-300">Editor</span>
+          </span>
+        )}
       </div>
-      <p className="mt-1.5 text-[11px] text-slate-400">Kartu tautan di WhatsApp / Facebook.</p>
+      <h2 className="mt-2 text-2xl font-black leading-snug text-[var(--brand-primary)]">
+        {form.title || "Tanpa judul"}
+      </h2>
+      {imagePreview && (
+        <CoverImage
+          src={imagePreview}
+          alt={form.image_alt || form.title || "Sampul"}
+          className="mt-4 shadow-md"
+        />
+      )}
+      {form.summary && (
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+          <div className="flex items-start gap-3">
+            <BookmarkSimple className="mt-0.5 h-4 w-4 shrink-0 text-[#f4d21f]" />
+            <p className="text-sm font-medium leading-relaxed text-slate-600">{form.summary}</p>
+          </div>
+        </div>
+      )}
+      {/* Konten — komponen bersama RichContent (kelas identik /news/[slug]) */}
+      <RichContent content={form.content} />
     </div>
   );
 }

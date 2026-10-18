@@ -40,6 +40,24 @@ function isMissingOptionalColumn(
   return OPTIONAL_FIELDS.some((f) => new RegExp(f, "i").test(error.message || ""));
 }
 
+let activitySourceColPromise: Promise<boolean> | null = null;
+/**
+ * Probe sekali per proses: apakah kolom `source` sudah ada di tabel activities
+ * (migrasi supabase/content_source.sql — penanda "panel-ai")? false → payload
+ * insert disusun tanpa `source` agar createActivity tetap aman sebelum migrasi.
+ */
+export function activitiesHasSourceColumn(): Promise<boolean> {
+  if (!activitySourceColPromise) {
+    activitySourceColPromise = Promise.resolve(
+      supabase.from("activities").select("source").limit(0)
+    ).then(
+      ({ error }) => !error || !/does not exist|42703/.test(error.message || ""),
+      () => false
+    );
+  }
+  return activitySourceColPromise;
+}
+
 /** Salin payload TANPA kolom opsional (untuk retry saat migrasi belum jalan). */
 function stripOptionalFields(payload: Record<string, unknown>): Record<string, unknown> {
   const rest: Record<string, unknown> = { ...payload };
@@ -192,11 +210,17 @@ export async function createActivity(activity: {
   registration_url?: string | null;
   contact_person?: string | null;
   is_featured?: boolean | null;
+  /** Penanda asal kegiatan, mis. "panel-ai" (butuh kolom source — content_source.sql). */
+  source?: string;
 }): Promise<{ data: Activity | null; error?: string }> {
   const { data: { user } } = await supabase.auth.getUser();
+  // Penanda sumber hanya dikirim bila kolomnya sudah ada (migrasi belum jalan → lewati diam-diam).
+  const hasSourceCol = activity.source ? await activitiesHasSourceColumn() : false;
   // Slug unik: derive dari judul bila tak diisi; bila sudah dipakai → -2, -3, dst.
   activity.slug = await ensureUniqueSlug(activity.slug || activity.title);
   const payload = normalizeOptionalFields({ ...activity, author_id: user?.id });
+  delete payload.source;
+  if (hasSourceCol) payload.source = activity.source;
   let result = await supabase.from("activities").insert(payload).select().single();
   if (result.error && isMissingOptionalColumn(result.error)) {
     // Migrasi kolom opsional (Fase 5/6) belum jalan → simpan tanpa kolom baru.

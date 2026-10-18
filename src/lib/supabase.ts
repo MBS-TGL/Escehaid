@@ -137,6 +137,8 @@ export interface News {
   image_alt?: string | null;
   is_pinned?: boolean;
   expires_at?: string | null;
+  /** Tautan video eksternal — opsional, butuh migrasi supabase/content_video.sql. */
+  video_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -192,6 +194,8 @@ export interface Article {
   image_alt?: string | null;
   is_pinned?: boolean;
   expires_at?: string | null;
+  /** Tautan video eksternal — opsional, butuh migrasi supabase/content_video.sql. */
+  video_url?: string | null;
 }
 
 export interface Activity {
@@ -241,6 +245,8 @@ export interface Achievement {
   organizer?: string | null;
   is_featured?: boolean;
   image_alt?: string | null;
+  /** Tautan video eksternal — opsional, butuh migrasi supabase/content_video.sql. */
+  video_url?: string | null;
 }
 
 export interface ContactMessage {

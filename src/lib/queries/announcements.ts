@@ -61,8 +61,36 @@ export async function getActiveAnnouncements(): Promise<string[]> {
     .map((a) => a.text);
 }
 
-export async function createAnnouncement(text: string, expiresAt?: string | null): Promise<{ error?: string }> {
-  const { error } = await supabase.from("announcements").insert({ text, expires_at: expiresAt || null });
+let announcementSourceColPromise: Promise<boolean> | null = null;
+/**
+ * Probe sekali per proses: apakah kolom `source` sudah ada di tabel
+ * announcements (migrasi supabase/content_source.sql — penanda "panel-ai")?
+ * false → payload insert disusun tanpa `source` agar createAnnouncement
+ * tetap aman sebelum migrasi.
+ */
+export function announcementsHasSourceColumn(): Promise<boolean> {
+  if (!announcementSourceColPromise) {
+    announcementSourceColPromise = Promise.resolve(
+      supabase.from("announcements").select("source").limit(0)
+    ).then(
+      ({ error }) => !error || !/does not exist|42703/.test(error.message || ""),
+      () => false
+    );
+  }
+  return announcementSourceColPromise;
+}
+
+export async function createAnnouncement(
+  text: string,
+  expiresAt?: string | null,
+  /** Penanda asal pengumuman, mis. "panel-ai" (butuh kolom source — content_source.sql). */
+  source?: string
+): Promise<{ error?: string }> {
+  // Penanda sumber hanya dikirim bila kolomnya sudah ada (migrasi belum jalan → lewati diam-diam).
+  const hasSourceCol = source ? await announcementsHasSourceColumn() : false;
+  const payload: Record<string, unknown> = { text, expires_at: expiresAt || null };
+  if (hasSourceCol) payload.source = source;
+  const { error } = await supabase.from("announcements").insert(payload);
   if (error) return { error: error.message };
   return {};
 }

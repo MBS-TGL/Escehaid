@@ -7,6 +7,8 @@ import { getNewsBySlug, getNewsList, getRelatedNews } from "@/lib/queries";
 import { RichContent } from "@/components/RichContent";
 import CoverImage from "@/components/CoverImage";
 import AttachmentPanel from "./AttachmentPanel";
+import VideoEmbed from "@/components/VideoEmbed";
+import { resolveVideoUrl } from "@/lib/video-embed";
 
 export const revalidate = 300;
 
@@ -72,6 +74,8 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
   ]);
 
   const filteredRecent = recentNews.filter((n) => n.id !== berita.id).slice(0, 5);
+  // Video eksternal (opsional) — resolve TikTok pendek di server
+  const video = berita.video_url ? await resolveVideoUrl(berita.video_url) : null;
   const cat = categoryConfig[berita.category] || { label: berita.category, color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" };
   const readTime = EstimateReadingTime(berita.content);
   const publishDate = new Date(berita.published_at || berita.created_at);
@@ -231,6 +235,21 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
             {/* Lampiran file (PDF dsb.) — pratinjau tertanam */}
             {berita.attachment_url && (
               <AttachmentPanel url={berita.attachment_url} name={berita.attachment_name} />
+            )}
+
+            {/* Video eksternal (opsional) — embed click-to-load, setelah lampiran & sebelum Share */}
+            {video && (
+              <section className="mt-8" aria-labelledby="news-video-heading">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="h-1 w-8 bg-[#f4d21f]" />
+                  <h3 id="news-video-heading" className="text-lg font-bold text-[var(--brand-primary)]">Video</h3>
+                </div>
+                <VideoEmbed
+                  url={video.parsed.canonicalUrl || berita.video_url || ""}
+                  poster={berita.image_url || video.thumbnailUrl}
+                  title={berita.title}
+                />
+              </section>
             )}
 
             {/* Share + Back */}

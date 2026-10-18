@@ -5,6 +5,8 @@ import { ArrowLeft, Clock, User, BookOpen } from "@/components/Icons";
 import { getArticleBySlug } from "@/lib/queries";
 import { sanitize } from "@/lib/sanitize";
 import type { Metadata } from "next";
+import VideoEmbed from "@/components/VideoEmbed";
+import { resolveVideoUrl } from "@/lib/video-embed";
 
 export const revalidate = 300;
 
@@ -43,6 +45,9 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
   if (!article) notFound();
 
   const articleUrl = `https://www.smpmuh4tanggul.sch.id/articles/${article.slug}`;
+
+  // Video eksternal (opsional) — resolve TikTok pendek di server
+  const video = article.video_url ? await resolveVideoUrl(article.video_url) : null;
 
   const articleJsonLd = {
     "@context": "https://schema.org",
@@ -144,7 +149,7 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
         {article.content ? (
           <div
             className="prose prose-lg prose-slate max-w-none
-prose-headings:text-[var(--brand-primary)] prose-headings:font-extrabold prose-headings:scroll-mt-24
+              prose-headings:text-[var(--brand-primary)] prose-headings:font-extrabold prose-headings:scroll-mt-24
               prose-p:text-gray-700 prose-p:leading-[1.9] prose-p:text-justify prose-p:mb-5
               prose-a:text-[var(--brand-accent)] prose-a:no-underline prose-a:font-medium hover:prose-a:underline
               prose-strong:text-[var(--brand-primary)] prose-strong:font-bold
@@ -164,6 +169,21 @@ prose-headings:text-[var(--brand-primary)] prose-headings:font-extrabold prose-h
           />
         ) : (
           <p className="text-gray-500">Konten belum tersedia.</p>
+        )}
+
+        {/* Video eksternal (opsional) — embed click-to-load, setelah konten */}
+        {video && (
+          <section className="mt-8" aria-labelledby="art-video-heading">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="h-1 w-8 bg-[#f4d21f]" />
+              <h3 id="art-video-heading" className="text-lg font-bold text-[var(--brand-primary)]">Video</h3>
+            </div>
+            <VideoEmbed
+              url={video.parsed.canonicalUrl || article.video_url || ""}
+              poster={article.image_url || video.thumbnailUrl}
+              title={article.title}
+            />
+          </section>
         )}
 
         {/* Back link */}

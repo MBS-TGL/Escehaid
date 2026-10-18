@@ -24,8 +24,10 @@ import {
 import { compressImage } from "@/lib/compress-image";
 import { RichContent } from "@/components/RichContent";
 import CoverImage from "@/components/CoverImage";
-import { parseVideoUrl, VIDEO_PROVIDER_LABEL } from "@/lib/video-embed";
+import { VideoProviderChip } from "@/components/admin/VideoUrlField";
 import { Modal, ConfirmModal, SlideOver, RichTextEditor, SkeletonBlock } from "@/components/ui";
+import AiFillPanel from "@/components/admin/AiFillPanel";
+import type { RefineData } from "@/lib/queries/ai";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import type { Activity } from "@/lib/supabase";
 import {
@@ -50,9 +52,6 @@ import {
   Star,
   Copy,
   Phone,
-  YoutubeLogo,
-  InstagramLogo,
-  Video,
   Tag,
   Users,
 } from "@/components/Icons";
@@ -111,24 +110,6 @@ const emptyForm: FormData = {
   is_featured: false,
 };
 
-const VIDEO_PROVIDER_ICON = {
-  youtube: YoutubeLogo,
-  instagram: InstagramLogo,
-  tiktok: Video,
-  unknown: Video,
-} as const;
-
-/** Chip penyedia video terdeteksi (ikon + label) — form & modal lihat. */
-function VideoProviderChip({ url, className = "" }: { url: string; className?: string }) {
-  const parsed = parseVideoUrl(url);
-  const Icon = VIDEO_PROVIDER_ICON[parsed.provider];
-  return (
-    <span className={`inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-600 ${className}`}>
-      <Icon className="h-3.5 w-3.5" aria-hidden="true" /> {VIDEO_PROVIDER_LABEL[parsed.provider]}
-    </span>
-  );
-}
-
 export default function AdminActivitiesPage() {
   const { toast } = useToast();
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -162,6 +143,8 @@ export default function AdminActivitiesPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [imageUploading, setImageUploading] = useState(false);
+  // Terisi bila field diisi panel AI → kegiatan baru ditandai source="panel-ai".
+  const [aiAssisted, setAiAssisted] = useState(false);
 
   // Fetch
   const fetchActivities = useCallback(async () => {
@@ -318,6 +301,7 @@ export default function AdminActivitiesPage() {
     setImageFile(null);
     setImagePreview("");
     setFormError("");
+    setAiAssisted(false);
     setFormOpen(true);
   }
 
@@ -343,7 +327,37 @@ export default function AdminActivitiesPage() {
     setImageFile(null);
     setImagePreview(item.image_url || "");
     setFormError("");
+    setAiAssisted(false);
     setFormOpen(true);
+  }
+
+  // ── Panel isi-otomatis AI ──
+  /** Isi form hasil AI (summary→description); tipe "umum" hasil fallback tidak menimpa pilihan user. */
+  function applyAiFields(f: RefineData) {
+    setForm((prev) => ({
+      ...prev,
+      title: f.title || prev.title,
+      description: f.summary || prev.description,
+      content: f.content || prev.content,
+      activity_type: f.activity_type && f.activity_type !== "umum" ? f.activity_type : prev.activity_type,
+      location: f.location || prev.location,
+      activity_date: f.activity_date || prev.activity_date,
+    }));
+    setAiAssisted(true);
+  }
+
+  /** Undo: kembalikan field ke nilai sebelum ditimpa AI. */
+  function restoreAiSnapshot(s: Record<string, string>) {
+    setForm((prev) => ({
+      ...prev,
+      title: s.title ?? prev.title,
+      description: s.description ?? prev.description,
+      content: s.content ?? prev.content,
+      activity_type: s.activity_type ?? prev.activity_type,
+      location: s.location ?? prev.location,
+      activity_date: s.activity_date ?? prev.activity_date,
+    }));
+    setAiAssisted(false);
   }
 
   async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -393,7 +407,11 @@ export default function AdminActivitiesPage() {
       const oldSlug = editItem.slug && data?.slug && editItem.slug !== data.slug ? editItem.slug : undefined;
       revalidateActivities(data?.slug, oldSlug).catch(() => {});
     } else {
-      const { data, error } = await createActivity({ ...form, image_url: imageUrl });
+      const { data, error } = await createActivity(
+        aiAssisted
+          ? { ...form, image_url: imageUrl, source: "panel-ai" }
+          : { ...form, image_url: imageUrl }
+      );
       if (error) { setFormError(error); setFormSaving(false); return; }
       toast("Kegiatan berhasil dibuat", "success");
       revalidateActivities(data?.slug).catch(() => {});
@@ -601,7 +619,7 @@ export default function AdminActivitiesPage() {
       {/* Tabel desktop (md+) — tampilan & perilaku sama seperti sebelumnya */}
       <div className="hidden overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:block">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full table-fixed min-w-[1040px]">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
               <tr>
                 {/* hidden sm:table-cell — checkbox & No hanya untuk tablet/desktop; di
@@ -611,19 +629,19 @@ export default function AdminActivitiesPage() {
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
                     className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                 </th>
-                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">No</th>
-                <th className="w-[35%] cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("title")}>
+                <th className="hidden w-10 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">No</th>
+                <th className="w-[22%] cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("title")}>
                   <span className="flex items-center gap-1">Judul {sortIcon("title")}</span>
                 </th>
-                <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none" onClick={() => toggleSort("activity_type")}>
+                <th className="hidden w-36 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("activity_type")}>
                   <span className="flex items-center justify-center gap-1">Tipe {sortIcon("activity_type")}</span>
                 </th>
-                <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 md:table-cell cursor-pointer select-none" onClick={() => toggleSort("activity_date")}>
+                <th className="hidden w-48 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 md:table-cell cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("activity_date")}>
                   <span className="flex items-center justify-center gap-1">Tanggal {sortIcon("activity_date")}</span>
                 </th>
-                <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:table-cell">Lokasi</th>
-                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</th>
-                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
+                <th className="hidden w-44 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:table-cell">Lokasi</th>
+                <th className="w-24 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 whitespace-nowrap">Status</th>
+                <th className="w-28 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -677,27 +695,29 @@ export default function AdminActivitiesPage() {
                                 <Star className="h-3.5 w-3.5" weight="fill" />
                               </span>
                             )}
-                            <span className="truncate">{item.title}</span>
+                            <span className="truncate" title={item.title}>{item.title}</span>
                           </p>
                           {item.description && <p className="mt-0.5 text-xs text-slate-400 line-clamp-1">{item.description}</p>}
                         </div>
                       </div>
                     </td>
                     <td className="hidden px-4 py-3.5 text-center sm:table-cell">
-                      <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold ${activityTypeBadge(item.activity_type)}`}>
+                      <span className={`inline-flex items-center whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-semibold ${activityTypeBadge(item.activity_type)}`}>
                         {activityTypeLabel(item.activity_type)}
                       </span>
                     </td>
-                    <td className="hidden px-4 py-3.5 text-center text-sm text-slate-500 md:table-cell">
+                    <td className="hidden px-4 py-3.5 text-center text-sm text-slate-500 md:table-cell whitespace-nowrap">
                       {formatActivityDateRange(item.activity_date, item.end_date) || "-"}
                       {item.activity_time && (
                         <p className="mt-0.5 text-[11px] text-slate-400">{item.activity_time}</p>
                       )}
                     </td>
-                    <td className="hidden px-4 py-3.5 text-center text-sm text-slate-500 lg:table-cell">
-                      {item.location || "-"}
+                    <td className="hidden px-4 py-3.5 text-left text-sm text-slate-500 lg:table-cell">
+                      <p className="line-clamp-2 max-w-[200px]" title={item.location || undefined}>
+                        {item.location || "-"}
+                      </p>
                     </td>
-                    <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-4 py-3.5 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => handleTogglePublish(item)}
                         aria-label={`${item.is_published ? "Kembalikan ke draft" : "Terbitkan"} ${item.title}`}
                         className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
@@ -709,7 +729,7 @@ export default function AdminActivitiesPage() {
                         {item.is_published ? "Publish" : "Draft"}
                       </button>
                     </td>
-                    <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-4 py-3.5 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-1">
                         <button onClick={() => setViewItem(item)} aria-label={`Lihat ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat">
                           <Eye className="h-4 w-4" />
@@ -994,6 +1014,23 @@ export default function AdminActivitiesPage() {
         )}
 
         <div className="space-y-5">
+          {/* Isi otomatis AI — tempel catatan mentah → field terisi; di mode
+              edit tampil juga (nimpa isi lama setelah konfirmasi, ada Undo). */}
+          <AiFillPanel
+            target="activities"
+            current={{
+              title: form.title,
+              description: form.description,
+              content: form.content,
+              activity_type: form.activity_type,
+              location: form.location,
+              activity_date: form.activity_date,
+            }}
+            hasContent={!!form.title.trim() || !!form.description.trim() || !!form.content.trim()}
+            onApply={applyAiFields}
+            onRestore={restoreAiSnapshot}
+            disabled={formSaving}
+          />
           {/* Title */}
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Judul <span className="text-red-500">*</span></label>

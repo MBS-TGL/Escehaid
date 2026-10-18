@@ -36,6 +36,13 @@ type SlideOverProps = {
   wrapperClassName?: string;
   /** Override max-height inline panel (default 85vh). */
   maxHeight?: string;
+  /**
+   * true (default) = body panel yang scroll (perilaku lama, dipakai semua
+   * halaman lain). false = body di-clip dan PEMAKAI props yang mengelola
+   * scroll per-kolom (split-view ber-scrollbar terpisah) — kolom children
+   * wajib memakai h-full + overflow-y-auto sendiri.
+   */
+  contentScroll?: boolean;
 };
 
 export const SlideOver = memo(function SlideOver({
@@ -49,6 +56,7 @@ export const SlideOver = memo(function SlideOver({
   className = "",
   wrapperClassName = "",
   maxHeight,
+  contentScroll = true,
 }: SlideOverProps) {
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -130,7 +138,7 @@ export const SlideOver = memo(function SlideOver({
         onClick={(e) => e.stopPropagation()}
       >
         <div
-          className={`bg-white shadow-2xl w-full relative overflow-hidden flex flex-col border border-slate-200/60 md:rounded-2xl md:max-h-[calc(100vh-6rem)] ${className}`}
+          className={`bg-white shadow-2xl w-full relative overflow-hidden flex flex-col border border-slate-200/60 md:rounded-2xl md:max-h-[calc(100vh-6rem)] ${contentScroll ? "" : "h-[85vh] md:h-[calc(100vh-6rem)]"} ${className}`}
           style={{
             maxHeight: maxHeight ?? "min(85vh, calc(100vh - env(safe-area-inset-bottom, 0px)))",
           }}
@@ -158,7 +166,10 @@ export const SlideOver = memo(function SlideOver({
             </div>
           )}
 
-          <div className="flex-1 min-h-0 overflow-y-auto px-5 md:px-6 py-5" style={{ overscrollBehavior: "contain" }}>
+          <div
+            className={`flex-1 min-h-0 px-5 md:px-6 py-5 ${contentScroll ? "overflow-y-auto" : "overflow-hidden"}`}
+            style={{ overscrollBehavior: "contain" }}
+          >
             {children}
           </div>
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, BookOpen, FileText } from "@/components/Icons";
+import { ArrowUpRight, BookOpen, FileText, Play } from "@/components/Icons";
 import { getArticleList } from "@/lib/queries";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import type { Metadata } from "next";
@@ -71,6 +71,11 @@ export default async function ArtikelPage() {
                       <span className="rounded-full bg-[var(--brand-accent)]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-accent)]">
                         {item.category}
                       </span>
+                      {item.video_url && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-black/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                          <Play weight="fill" className="h-3 w-3 text-[var(--brand-accent)]" /> Video
+                        </span>
+                      )}
                     </div>
                     <h3 className="mt-3 text-lg font-semibold text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)]">
                       {item.title}

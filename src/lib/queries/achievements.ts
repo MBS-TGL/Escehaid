@@ -1,7 +1,12 @@
 import { supabase } from "../supabase";
 import type { Achievement } from "../supabase";
 import { tryCompressImage } from "../compress-image";
-import { deleteStorageFileByUrl, sanitizeSearchTerm, storagePathFromUrl } from "./shared";
+import { deleteStorageFileByUrl, sanitizeSearchTerm, storagePathFromUrl, tableHasColumn } from "./shared";
+
+/** Probe kolom `video_url` (migrasi supabase/content_video.sql) — memoized. */
+export function achievementsHasVideoColumn(): Promise<boolean> {
+  return tableHasColumn("achievements", "video_url");
+}
 
 /**
  * Daftar prestasi (semua baris tayang — tidak ada kolom is_published).
@@ -54,10 +59,16 @@ export async function createAchievement(achievement: {
   organizer?: string | null;
   is_featured?: boolean;
   image_alt?: string | null;
+  /** Tautan video eksternal (opsional; probe video_url — content_video.sql). */
+  video_url?: string | null;
 }): Promise<{ data: Achievement | null; error?: string }> {
+  // Tautan video hanya dikirim bila kolomnya sudah ada (migrasi belum jalan → lewati diam-diam).
+  const hasVideoCol = achievement.video_url ? await achievementsHasVideoColumn() : false;
+  const payload: Record<string, unknown> = { ...achievement };
+  if (!hasVideoCol) delete payload.video_url;
   const { data, error } = await supabase
     .from("achievements")
-    .insert(achievement)
+    .insert(payload)
     .select()
     .single();
 
@@ -103,25 +114,30 @@ export async function updateAchievement(
     year?: number;
     image_url?: string;
     sort_order?: number;
-    /** Kolom Tahap 1 (null = kosongkan) */
-    rank_label?: string | null;
-    level?: string | null;
-    participants?: string | null;
-    organizer?: string | null;
-    is_featured?: boolean;
-    image_alt?: string | null;
-  }
-): Promise<{ data: Achievement | null; error?: string }> {
+  /** Kolom Tahap 1 (null = kosongkan) */
+  rank_label?: string | null;
+  level?: string | null;
+  participants?: string | null;
+  organizer?: string | null;
+  is_featured?: boolean;
+  image_alt?: string | null;
+  /** Tautan video eksternal (opsional; probe video_url — content_video.sql). */
+  video_url?: string | null;
+}): Promise<{ data: Achievement | null; error?: string }> {
   // Ambil URL gambar lama supaya file lama bisa dibersihkan bila berganti
   let oldImageUrl: string | null = null;
   if (typeof achievement.image_url === "string") {
     const { data: current } = await supabase.from("achievements").select("image_url").eq("id", id).single();
     oldImageUrl = current?.image_url || null;
   }
+  // Tautan video hanya dikirim bila kolomnya sudah ada (migrasi belum jalan → lewati diam-diam).
+  const hasVideoCol = achievement.video_url ? await achievementsHasVideoColumn() : false;
+  const payload: Record<string, unknown> = { ...achievement };
+  if (!hasVideoCol) delete payload.video_url;
 
   const { data, error } = await supabase
     .from("achievements")
-    .update(achievement)
+    .update(payload)
     .eq("id", id)
     .select()
     .single();

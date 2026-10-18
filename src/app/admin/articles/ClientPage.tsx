@@ -14,11 +14,15 @@ import {
   uploadArticleImage,
   slugify,
   articlesHasScheduledColumns,
+  articlesHasVideoColumn,
   revalidateArticles,
   revalidatePaths,
   type ArticleWithAuthor,
 } from "@/lib/queries";
 import { Modal, SlideOver, RichTextEditor, ConfirmModal, SkeletonBlock } from "@/components/ui";
+import AiFillPanel from "@/components/admin/AiFillPanel";
+import VideoUrlField from "@/components/admin/VideoUrlField";
+import type { RefineData } from "@/lib/queries/ai";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { sanitize } from "@/lib/sanitize";
 import CoverImage from "@/components/CoverImage";
@@ -87,6 +91,7 @@ interface FormData {
   // datetime-local dalam zona WIB; dikonversi ke UTC sebelum dikirim
   published_at: string;
   expires_at: string;
+  video_url: string;
 }
 
 const emptyForm: FormData = {
@@ -103,6 +108,7 @@ const emptyForm: FormData = {
   is_published: false,
   published_at: "",
   expires_at: "",
+  video_url: "",
 };
 
 /** Domain pratinjau URL/OG — sama dengan BASE_URL di src/app/sitemap.ts. */
@@ -235,6 +241,8 @@ export default function AdminArticlesPage() {
   const [titleError, setTitleError] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
   const [slugOverride, setSlugOverride] = useState(false);
+  // Terisi bila field diisi panel AI → artikel baru ditandai source="panel-ai".
+  const [aiAssisted, setAiAssisted] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
@@ -247,15 +255,20 @@ export default function AdminArticlesPage() {
 
   // Tahap 2 (paritas berita): autosave, pratinjau, sematan, kolom tahap 1
   const [schedCols, setSchedCols] = useState(false);
+  // Kolom video eksternal (probe — content_video.sql)
+  const [videoCol, setVideoCol] = useState(false);
   const [pendingDraft, setPendingDraft] = useState<{ key: string; savedAt: number; data: FormData } | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
 
-  // Probe kolom tahap 1 (image_alt/is_pinned/expires_at) — sekali per muat halaman
+  // Probe kolom tahap 1 (image_alt/is_pinned/expires_at) + video — sekali per muat halaman
   useEffect(() => {
     let alive = true;
     articlesHasScheduledColumns()
       .then((ok) => { if (alive) setSchedCols(ok); })
+      .catch(() => {});
+    articlesHasVideoColumn()
+      .then((ok) => { if (alive) setVideoCol(ok); })
       .catch(() => {});
     return () => { alive = false; };
   }, []);
@@ -411,6 +424,7 @@ export default function AdminArticlesPage() {
     setInitialForm(emptyForm);
     setSlugTouched(false);
     setSlugOverride(false);
+    setAiAssisted(false);
     setTitleError("");
     setImageFile(null);
     setImagePreview("");
@@ -438,12 +452,14 @@ export default function AdminArticlesPage() {
       is_published: item.is_published,
       published_at: utcToWibInput(item.published_at),
       expires_at: utcToWibInput(item.expires_at),
+      video_url: item.video_url || "",
     };
     setEditItem(item);
     setForm(next);
     setInitialForm(next);
     setSlugTouched(true);
     setSlugOverride(false);
+    setAiAssisted(false);
     setTitleError("");
     setImageFile(null);
     setImagePreview(item.image_url || "");
@@ -519,6 +535,7 @@ export default function AdminArticlesPage() {
       author_name: item.author_name || "",
       editor_name: item.editor_name || "",
       image_alt: item.image_alt || "",
+      video_url: item.video_url || "",
     };
     copied.slug = slugify(copied.title);
     setViewItem(null);
@@ -531,6 +548,7 @@ export default function AdminArticlesPage() {
     setTitleError("");
     setSlugTouched(false);
     setSlugOverride(false);
+    setAiAssisted(false);
     setAddingCategory(false);
     setFormKey((k) => k + 1);
     checkPendingDraft(null);
@@ -564,6 +582,33 @@ export default function AdminArticlesPage() {
       // Slug otomatis dari judul hanya saat artikel baru & belum diedit manual
       slug: !editItem && !slugTouched ? slugify(value) : prev.slug,
     }));
+  }
+
+  // ── Panel isi-otomatis AI ──
+  /** Isi form hasil AI (summary→excerpt); slug ikut bila buat baru & belum disentuh. */
+  function applyAiFields(f: RefineData) {
+    setForm((prev) => ({
+      ...prev,
+      title: f.title || prev.title,
+      excerpt: f.summary || prev.excerpt,
+      content: f.content || prev.content,
+      category: f.category || prev.category,
+      slug: !editItem && !slugTouched && f.title ? slugify(f.title) : prev.slug,
+    }));
+    setAiAssisted(true);
+  }
+
+  /** Undo: kembalikan field ke nilai sebelum ditimpa AI. */
+  function restoreAiSnapshot(s: Record<string, string>) {
+    setForm((prev) => ({
+      ...prev,
+      title: s.title ?? prev.title,
+      excerpt: s.excerpt ?? prev.excerpt,
+      content: s.content ?? prev.content,
+      category: s.category ?? prev.category,
+      slug: !editItem && !slugTouched ? slugify(s.title ?? "") : prev.slug,
+    }));
+    setAiAssisted(false);
   }
 
   // Kompres → revoke URL lama → preview (pola sama dengan form berita)
@@ -685,14 +730,19 @@ export default function AdminArticlesPage() {
       payload.is_pinned = form.is_pinned;
       (payload as { expires_at?: string | null }).expires_at = expiresUtc || null;
     }
+    // Video eksternal hanya dikirim bila kolomnya sudah ada (probe videoCol)
+    if (videoCol) payload.video_url = form.video_url.trim();
+    // Artikel hasil isi-otomatis AI ditandai sumbernya (kolom `source`,
+    // tersedia setelah supabase/content_source.sql dijalankan).
+    const rowPayload = !editItem && aiAssisted ? { ...payload, source: "panel-ai" } : payload;
 
     if (editItem) {
-      const { data, error } = await updateArticle(editItem.id, payload);
+      const { data, error } = await updateArticle(editItem.id, rowPayload);
       if (error) { setFormError(error); toast(error, "error"); setFormSaving(false); return; }
       revalidateArticles(data?.slug, editItem.slug).catch(() => {});
       toast("Artikel berhasil diperbarui", "success");
     } else {
-      const { data, error } = await createArticle(payload);
+      const { data, error } = await createArticle(rowPayload);
       if (error) { setFormError(error); toast(error, "error"); setFormSaving(false); return; }
       revalidateArticles(data?.slug).catch(() => {});
       if (!form.is_published) {
@@ -1343,6 +1393,21 @@ export default function AdminArticlesPage() {
         )}
 
         <div className="space-y-5">
+          {/* Isi otomatis AI — tempel catatan mentah → field terisi; di mode
+              edit tampil juga (nimpa isi lama setelah konfirmasi, ada Undo). */}
+          <AiFillPanel
+            target="articles"
+            current={{
+              title: form.title,
+              excerpt: form.excerpt,
+              content: form.content,
+              category: form.category,
+            }}
+            hasContent={!!form.title.trim() || !!form.excerpt.trim() || !!form.content.trim()}
+            onApply={applyAiFields}
+            onRestore={restoreAiSnapshot}
+            disabled={formSaving}
+          />
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Judul <span className="text-red-500">*</span></label>
             <input type="text" value={form.title} onChange={(e) => handleTitleChange(e.target.value)}
@@ -1375,9 +1440,6 @@ export default function AdminArticlesPage() {
               {SITE_URL}/articles/<span className={form.slug ? "text-slate-500" : "text-slate-300"}>{form.slug || "…"}</span>
             </p>
           </div>
-
-          {/* Pratinjau kartu saat dibagikan */}
-          <SharePreviewCard form={form} imagePreview={imagePreview} />
 
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Kategori</label>
@@ -1491,6 +1553,14 @@ export default function AdminArticlesPage() {
               </div>
             )}
           </div>
+
+          {videoCol && (
+            <VideoUrlField
+              value={form.video_url}
+              onChange={(v) => setForm((f) => ({ ...f, video_url: v }))}
+              hint="Opsional — tautan YouTube, Vimeo, TikTok, Instagram, atau Google Drive."
+            />
+          )}
 
           <div>
             <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -1704,46 +1774,6 @@ export default function AdminArticlesPage() {
           />
         </div>
       </Modal>
-    </div>
-  );
-}
-
-/** Kartu "Pratinjau saat dibagikan" — ikuti isi form secara langsung. */
-function SharePreviewCard({ form, imagePreview }: { form: FormData; imagePreview: string }) {
-  const domain = SITE_URL.replace(/^https?:\/\//, "");
-  return (
-    <div>
-      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
-        Pratinjau saat dibagikan
-      </label>
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        {imagePreview ? (
-          <div className="relative w-full bg-slate-100 aspect-[1.91/1]">
-            <Image
-              src={imagePreview}
-              alt={form.image_alt || form.title || "Pratinjau sampul"}
-              fill
-              sizes="100%"
-              unoptimized
-              className="h-full w-full object-cover"
-            />
-          </div>
-        ) : (
-          <div className="flex w-full items-center justify-center bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-accent)] aspect-[1.91/1]">
-            <ImageIcon className="h-10 w-10 text-white/25" />
-          </div>
-        )}
-        <div className="border-t border-slate-200 px-4 py-3">
-          <p className="text-[11px] uppercase tracking-wide text-slate-400">{domain}</p>
-          <p className="mt-1 line-clamp-2 text-sm font-bold text-slate-800">
-            {form.title || "Judul artikel tampil di sini"}
-          </p>
-          <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">
-            {form.excerpt || "Ringkasan artikel tampil di sini…"}
-          </p>
-        </div>
-      </div>
-      <p className="mt-1.5 text-[11px] text-slate-400">Kartu tautan di WhatsApp / Facebook.</p>
     </div>
   );
 }

@@ -5,6 +5,8 @@ import { getSchoolProfile, getTeacherList, getFacilityList, getAchievementList, 
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import TeacherGrid from "./TeacherGrid";
 import FacilityGrid from "./FacilityGrid";
+import { ekskul } from "../ekskul-data";
+import EkskulCard from "@/components/EkskulCard";
 
 export const metadata = {
   title: "Profil",
@@ -259,6 +261,24 @@ export default async function ProfilPage() {
           </div>
         </section>
       )}
+
+      {/* Ekstrakurikuler */}
+      <section id="ekstrakurikuler" className="scroll-mt-28 bg-white py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+        <div className="mx-auto max-w-7xl px-6">
+          <CSSFadeIn>
+            <div className="mb-12">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Pengembangan Diri</p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Ekstrakurikuler</h2>
+            </div>
+          </CSSFadeIn>
+
+          <CSSStagger stagger={80} className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
+            {ekskul.map((item) => (
+              <EkskulCard key={item.slug} item={item} />
+            ))}
+          </CSSStagger>
+        </div>
+      </section>
 
       {/* Prestasi Highlights */}
       {achievements.length > 0 && (

@@ -47,6 +47,7 @@ import {
   BookOpen,
 } from "@/components/Icons";
 import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
+import VideoUrlField from "@/components/admin/VideoUrlField";
 import {
   MobileFilterBar,
   MobileListRow,
@@ -94,6 +95,7 @@ interface FormData {
   organizer: string;
   image_alt: string;
   is_featured: boolean;
+  video_url: string;
 }
 
 const emptyForm: FormData = {
@@ -108,6 +110,7 @@ const emptyForm: FormData = {
   organizer: "",
   image_alt: "",
   is_featured: false,
+  video_url: "",
 };
 
 export default function AdminAchievementsPage() {
@@ -391,6 +394,7 @@ export default function AdminAchievementsPage() {
       organizer: item.organizer || "",
       image_alt: item.image_alt || "",
       is_featured: !!item.is_featured,
+      video_url: item.video_url || "",
     };
     setEditItem(item);
     setForm(next);
@@ -419,6 +423,7 @@ export default function AdminAchievementsPage() {
       organizer: item.organizer || "",
       image_alt: item.image_alt || "",
       is_featured: false,
+      video_url: item.video_url || "",
     };
     setViewItem(null);
     setEditItem(null);
@@ -477,6 +482,7 @@ export default function AdminAchievementsPage() {
       organizer: form.organizer.trim() || null,
       image_alt: form.image_alt.trim() || null,
       is_featured: form.is_featured,
+      video_url: form.video_url.trim() || null,
     };
 
     if (editItem) {
@@ -1215,6 +1221,13 @@ export default function AdminAchievementsPage() {
               </span>
             </div>
           </div>
+
+          {/* Video eksternal (opsional) */}
+          <VideoUrlField
+            value={form.video_url}
+            onChange={(v) => setForm((f) => ({ ...f, video_url: v }))}
+            hint="Opsional — tautan YouTube, Vimeo, TikTok, Instagram, atau Google Drive."
+          />
 
           {/* Deskripsi */}
           <div>
