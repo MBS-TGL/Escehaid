@@ -72,8 +72,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
         eyebrow="Kabar Terbaru"
         title="Berita"
         description="Informasi terkini dari SMP Muhammadiyah 4 Tanggul. Kegiatan, pengumuman, dan agenda sekolah."
-        image="/images/Ruang-Kelas.jpg"
-        imageAlt="Suasana ruang kelas SMP Muhammadiyah 4 Tanggul"
+        graphic="berita"
         icon={Newspaper}
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Berita" }]}
       >

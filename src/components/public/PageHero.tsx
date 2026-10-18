@@ -1,16 +1,16 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { ComponentType, ReactNode } from "react";
 import { CSSFadeIn } from "@/components/CSSAnimations";
+import HeroGraphic, { type HeroGraphicName } from "./HeroGraphic";
 
 /**
  * Hero halaman publik — 3 varian berbeda karakter supaya tidak ada dua halaman
  * dengan blok hero persis sama:
  *
- * - "photo"  : full-bleed foto (dari DB) + scrim brand dua lapis, motif matahari
- *              geometris di sudut, zoom halus mengikuti scroll. Fallback → gradient.
- * - "split"  : editorial asimetris — teks kiri di latar terang, foto kanan ber-clip
- *              arch di atas pelat aksen solid. Fallback → panel brand.
+ * - "photo"  : full-bleed komposisi geometris-editorial + gradient brand, zoom
+ *              halus mengikuti scroll. Fallback → gradient + ikon raksasa.
+ * - "split"  : editorial asimetris — teks kiri di latar terang, komposisi grafis
+ *              kanan ber-clip arch di atas pelat aksen solid. Fallback → panel brand.
  * - "compact": pita terang ramping untuk halaman fungsional (search, status, portal).
  */
 
@@ -20,9 +20,9 @@ export type PageHeroProps = {
   title: string;
   description?: string;
   eyebrow?: string;
-  image?: string | null;
-  imageAlt?: string;
-  /** Ikon dekoratif fallback (Phosphor SSR) saat tidak ada foto. */
+  /** Komposisi geometris hero (lihat HeroGraphic). */
+  graphic?: HeroGraphicName;
+  /** Ikon dekoratif fallback (Phosphor SSR) saat tidak ada komposisi grafis. */
   icon?: ComponentType<{ className?: string; weight?: "fill" | "regular" }>;
   breadcrumb?: CrumbItem[];
   /** Elemen tambahan di bawah deskripsi (stat strip, chip dsb). */
@@ -56,8 +56,7 @@ export default function PageHero({
   title,
   description,
   eyebrow,
-  image,
-  imageAlt = "",
+  graphic,
   icon: Icon,
   breadcrumb,
   children,
@@ -66,43 +65,27 @@ export default function PageHero({
 }: PageHeroProps) {
   const crumbs = breadcrumb ?? [];
 
-  /* ── PHOTO: full-bleed foto + scrim brand ─────────────────────────── */
+  /* ── PHOTO: full-bleed komposisi grafis + gradient brand ──────────── */
   if (variant === "photo") {
     return (
       <section className={`relative overflow-hidden bg-[var(--brand-primary)] text-white ${className}`}>
-        {image ? (
-          <>
-            {/* Zoom halus mengikuti scroll (lihat .hero-media di globals.css). */}
-            <div className="hero-media absolute inset-0">
-              <Image
-                src={image}
-                alt={imageAlt || title}
-                fill
-                sizes="100vw"
-                priority
-                className="object-cover saturate-[1.05] contrast-[1.05] brightness-[0.98]"
-              />
-            </div>
-            {/* Dua lapis scrim: horizontal (kontras teks di kiri) + vignette
-                vertikal (kedalaman, mengikat foto ke warna merek). */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[var(--brand-primary)] via-[var(--brand-primary)]/78 to-[var(--brand-primary)]/25" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/70 via-transparent to-[var(--brand-primary)]/15" />
-            {/* Motif geometris merek: pancaran matahari dari sudut kanan-bawah
-                (murni CSS, lihat .hero-sunmark). Sumbu diarahkan agar tidak
-                menerpa blok teks di kiri. */}
-            <div
-              aria-hidden="true"
-              className="hero-sunmark pointer-events-none absolute bottom-0 right-0 h-[340px] w-[340px] md:h-[520px] md:w-[520px]"
-            />
-          </>
+        <div className="absolute inset-0 bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)]" />
+        {graphic ? (
+          /* Zoom halus mengikuti scroll (lihat .hero-media di globals.css). */
+          <div className="hero-media absolute inset-0">
+            <HeroGraphic name={graphic} className="h-full w-full" />
+          </div>
         ) : (
-          <>
-            <div className="absolute inset-0 bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)]" />
-            {Icon && (
-              <Icon className="absolute -right-8 -top-8 h-56 w-56 rotate-12 opacity-[0.06]" weight="fill" />
-            )}
-          </>
+          Icon && (
+            <Icon className="absolute -right-8 -top-8 h-56 w-56 rotate-12 opacity-[0.06]" weight="fill" />
+          )
         )}
+        {/* Aksen geometris melayang (dekoratif, di bawah blok teks). */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full border-2 border-white/10" />
+          <div className="absolute right-8 top-12 hidden h-16 w-16 rotate-12 rounded-2xl bg-white/5 md:block" />
+          <div className="absolute -bottom-8 right-1/4 h-10 w-28 rounded-full bg-[var(--brand-accent)]/40" />
+        </div>
         <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 md:py-12">
           <CSSFadeIn>
             <div className="max-w-2xl">
@@ -153,31 +136,18 @@ export default function PageHero({
 
           <CSSFadeIn delay={0.15}>
             <div className="relative mx-auto w-full max-w-md lg:max-w-none">
-              {/* Pelat aksen SOLID (bukan garis tipis) yang mengintip di sudut
-                  kanan-bawah. Bentuk arch (mihrab/jendela) jadi penanda
-                  geometris editorial, bukan bingkai kotak generik. */}
+              {/* Pelat aksen SOLID yang mengintip di sudut kanan-bawah, bentuk
+                  daun (radius diagonal berlawanan) mengikuti panel di atasnya. */}
               <div
                 aria-hidden="true"
-                className="absolute -bottom-3 -right-3 h-full w-full rounded-t-[999px] rounded-b-2xl bg-[var(--brand-accent)]/90 md:-bottom-4 md:-right-4"
+                className="absolute -bottom-3 -right-3 h-full w-full rounded-tl-[999px] rounded-br-[999px] rounded-tr-[0.75rem] rounded-bl-[0.75rem] bg-[var(--brand-accent)]/90 md:-bottom-4 md:-right-4"
               />
-              {image ? (
-                <div className="relative h-40 w-full overflow-hidden rounded-t-[999px] rounded-b-2xl border border-[#dce3ed] bg-white shadow-xl shadow-[var(--brand-primary)]/20 md:h-52">
-                  <Image
-                    src={image}
-                    alt={imageAlt || title}
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 45vw"
-                    priority
-                    className="object-cover saturate-[1.05] contrast-[1.05] brightness-[0.98]"
-                  />
-                  {/* Wash merek tipis supaya foto tetap sedarah. */}
-                  <div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-[var(--brand-primary)]/28 via-transparent to-transparent"
-                  />
+              {graphic ? (
+                <div className="relative h-40 w-full overflow-hidden rounded-tl-[999px] rounded-br-[999px] rounded-tr-[0.75rem] rounded-bl-[0.75rem] border border-[#dce3ed] bg-white shadow-xl shadow-[var(--brand-primary)]/20 md:h-52">
+                  <HeroGraphic name={graphic} className="absolute inset-0 h-full w-full" />
                 </div>
               ) : (
-                <div className="relative flex h-40 w-full items-center justify-center overflow-hidden rounded-t-[999px] rounded-b-2xl bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] shadow-lg shadow-[var(--brand-primary)]/10 md:h-52">
+                <div className="relative flex h-40 w-full items-center justify-center overflow-hidden rounded-tl-[999px] rounded-br-[999px] rounded-tr-[0.75rem] rounded-bl-[0.75rem] bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] shadow-lg shadow-[var(--brand-primary)]/10 md:h-52">
                   <div aria-hidden="true" className="absolute -left-16 -top-16 h-48 w-48 rounded-full bg-[var(--brand-accent)]/20 blur-[80px]" />
                   {Icon ? (
                     <Icon className="h-24 w-24 text-white/15" weight="fill" />
@@ -186,6 +156,16 @@ export default function PageHero({
                   )}
                 </div>
               )}
+              {/* Satelit multi-shape: lingkaran aksen + pill navy mengambang di
+                  luar panel, dengan ring sewarna latar supaya terbaca "cut-out". */}
+              <div
+                aria-hidden="true"
+                className="absolute -right-4 -top-4 h-12 w-12 rounded-full bg-[var(--brand-accent)] ring-[6px] ring-slate-50 md:-right-5 md:-top-5 md:h-14 md:w-14"
+              />
+              <div
+                aria-hidden="true"
+                className="absolute -bottom-4 -left-4 h-12 w-24 rounded-full bg-[var(--brand-primary)] ring-[6px] ring-slate-50 md:-bottom-5 md:-left-5 md:h-14 md:w-28"
+              />
             </div>
           </CSSFadeIn>
         </div>

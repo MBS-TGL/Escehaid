@@ -272,8 +272,7 @@ export default async function ActivitiesPage({
         eyebrow="Agenda Sekolah"
         title="Kegiatan"
         description="Kajian, perlombaan, upacara, dan aktivitas murid, dari ekstrakurikuler hingga acara besar sekolah."
-        image="/images/facilities/3d1d5c31-7639-413b-bbda-2f9c64abcfa8.jpg"
-        imageAlt="Fasilitas SMP Muhammadiyah 4 Tanggul"
+        graphic="kegiatan"
         icon={CalendarBlank}
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Kegiatan" }]}
       >

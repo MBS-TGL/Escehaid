@@ -46,8 +46,7 @@ export default async function ProfilPage() {
         eyebrow="Tentang Kami"
         title="Profil Sekolah"
         description={`Mengenal ${profil?.school_name || "SMP Muhammadiyah 4 Tanggul"} lebih dekat`}
-        image="/images/facilities/0a89d220-c694-4fe1-9b15-71de3d5204f9.jpg"
-        imageAlt="Fasilitas SMP Muhammadiyah 4 Tanggul"
+        graphic="profil"
         icon={GraduationCap}
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Profil" }]}
       />

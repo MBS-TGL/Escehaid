@@ -1,10 +1,9 @@
-import Link from "next/link";
-import Image from "next/image";
 import { BookOpen, Clock, Play, User } from "@/components/Icons";
 import { getArticleListPaginated, getArticleCategories } from "@/lib/queries";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import PageHero from "@/components/public/PageHero";
 import FilterBar, { type FilterChip } from "@/components/public/FilterBar";
+import ContentCard from "@/components/public/ContentCard";
 import FeaturedCard from "@/components/public/FeaturedCard";
 import EmptyState from "@/components/public/EmptyState";
 import Pagination from "@/components/public/Pagination";
@@ -82,15 +81,14 @@ export default async function ArtikelPage({
         eyebrow="Guru Menulis"
         title="Artikel"
         description="Tulisan dan pemikiran dari guru serta pegiat pendidikan: trik belajar, parenting, dan Islam terapan."
-        image="/images/Lab-Komputer.jpeg"
-        imageAlt="Laboratorium komputer SMP Muhammadiyah 4 Tanggul"
+        graphic="artikel"
         icon={BookOpen}
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Artikel" }]}
       >
         {q && <p className="text-sm font-medium text-slate-500">Hasil pencarian: &quot;{q}&quot;</p>}
       </PageHero>
 
-      <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6" style={{ contentVisibility: "auto" } as React.CSSProperties}>
         <FilterBar
           action="/articles"
           searchId="article-search"
@@ -150,61 +148,44 @@ export default async function ArtikelPage({
               </CSSFadeIn>
             )}
 
-            {/* Baris editorial — identitas artikel: foto kecil kiri + teks kanan,
-                silang dengan garis pemisah (bukan grid kotak identik) */}
-            <CSSStagger stagger={70} className="mt-10 divide-y divide-[#dce3ed] border-y border-[#dce3ed]">
-              {(currentPage === 1 ? articles.slice(1) : articles).map((item) => (
-                <Link
-                  key={item.id}
-                  href={`/articles/${item.slug}`}
-                  className="group flex gap-4 py-5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] sm:gap-6"
-                >
-                  <div className="relative aspect-[4/3] w-28 shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:w-44 md:w-52">
-                    {item.image_url ? (
-                      <Image
-                        src={item.image_url}
-                        alt={item.image_alt || item.title}
-                        fill
-                        sizes="(max-width: 640px) 112px, (max-width: 768px) 176px, 208px"
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-accent)]">
-                        <span className="text-2xl font-bold text-white/25">{item.title[0]}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1 py-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center rounded-md bg-[var(--brand-accent)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-accent)]">
-                        {item.category}
-                      </span>
-                      {item.video_url && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
-                          <Play weight="fill" className="h-3 w-3 text-[var(--brand-accent)]" /> Video
+            {/* Grid kartu — 3 kolom, gaya sama dengan /news */}
+            <div className={currentPage === 1 ? "mt-8" : ""}>
+              <CSSStagger stagger={60} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {(currentPage === 1 ? articles.slice(1) : articles).map((item) => (
+                  <div key={item.id}>
+                    <ContentCard
+                      href={`/articles/${item.slug}`}
+                      title={item.title}
+                      description={item.excerpt}
+                      imageUrl={item.image_url}
+                      imageAlt={item.image_alt || item.title}
+                      badges={
+                        <span className="inline-flex items-center rounded-md bg-[var(--brand-accent)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-accent)]">
+                          {item.category}
                         </span>
-                      )}
-                    </div>
-                    <h2 className="mt-1.5 text-base font-bold leading-snug text-[var(--brand-primary)] line-clamp-2 transition-colors group-hover:text-[var(--brand-accent)] sm:text-lg">
-                      {item.title}
-                    </h2>
-                    {item.excerpt && <p className="mt-1.5 text-sm leading-relaxed text-slate-500 line-clamp-2">{item.excerpt}</p>}
-                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-400">
-                      <span className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        {item.author_name ?? "Tim MBS"}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {new Date(item.published_at || item.created_at).toLocaleDateString("id-ID", {
-                          day: "numeric", month: "short", year: "numeric",
-                        })}
-                      </span>
-                    </div>
+                      }
+                      meta={
+                        <>
+                          <span className="flex items-center gap-1 text-[11px]">
+                            <User className="h-3 w-3" />
+                            {item.author_name ?? "Tim MBS"}
+                          </span>
+                          <span className="flex items-center gap-1 text-[11px]">
+                            <Clock className="h-3 w-3" />
+                            {new Date(item.published_at || item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                          </span>
+                          {item.video_url && (
+                            <span className="flex items-center gap-1 text-[11px] font-medium text-[var(--brand-accent)]">
+                              <Play weight="fill" className="h-3 w-3" /> Video
+                            </span>
+                          )}
+                        </>
+                      }
+                    />
                   </div>
-                </Link>
-              ))}
-            </CSSStagger>
+                ))}
+              </CSSStagger>
+            </div>
 
             <Pagination
               page={currentPage}

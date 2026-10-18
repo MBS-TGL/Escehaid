@@ -499,20 +499,3 @@ html.admin-thin-scrollbar::-webkit-scrollbar-thumb:hover {
     }
   }
 }
-
-/* Motif geometris merek pada hero full-bleed: pancaran matahari yang
-   diabstraksi dari sudut kanan-bawah. Murni CSS (repeating-conic-gradient),
-   tanpa SVG atau berkas gambar. `soft-light` + mask radial supaya pancaran
-   membaur ke foto tanpa tepi kotak yang keras, dan tidak menerpa blok teks
-   di sisi kiri. */
-.hero-sunmark {
-  background: repeating-conic-gradient(
-    from 0deg at 100% 100%,
-    var(--brand-accent) 0deg 2.5deg,
-    transparent 2.5deg 10deg
-  );
-  mix-blend-mode: soft-light;
-  opacity: 0.6;
-  -webkit-mask-image: radial-gradient(circle at 100% 100%, #000 0%, transparent 72%);
-  mask-image: radial-gradient(circle at 100% 100%, #000 0%, transparent 72%);
-}

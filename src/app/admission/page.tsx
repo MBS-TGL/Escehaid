@@ -131,8 +131,7 @@ export default async function SPMBPage() {
         eyebrow="SPMB Online"
         title="Penerimaan Murid Baru"
         description={`Jadwal gelombang, jalur pendaftaran, dan cara mendaftar ${SITE.spmb.academicYear}.`}
-        image="/images/Masjid.jpg"
-        imageAlt="Masjid SMP Muhammadiyah 4 Tanggul"
+        graphic="ppdb"
         icon={GraduationCap}
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "SPMB" }]}
       >
