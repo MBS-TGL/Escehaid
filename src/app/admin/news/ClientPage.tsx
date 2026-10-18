@@ -175,6 +175,9 @@ function autosaveKey(edit: News | null): string {
   return edit ? `news:edit:${edit.id}` : "news:new";
 }
 
+/** Jeda lepas Modal pratinjau → panel form dibuka kembali (≥ 200 ms unmount Modal). */
+const PREVIEW_HANDOFF_MS = 250;
+
 function formatSavedAt(ts: number): string {
   return new Date(ts).toLocaleString("id-ID", {
     day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
@@ -242,18 +245,30 @@ export default function AdminBeritaPage() {
   const [baseline, setBaseline] = useState<string>("");
   const [pendingDraft, setPendingDraft] = useState<{ key: string; savedAt: number; data: FormData } | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
-  // Tab mobile (<lg) dalam SlideOver form: "form" | "preview". Di lg+ kedua
-  // kolom tampil berdampingan (split-view), tab otomatis menghilang.
-  const [previewTab, setPreviewTab] = useState<"form" | "preview">("form");
+  // Device pratinjau di Modal ("desktop" | "mobile").
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [colSupport, setColSupport] = useState(false);
+
+  // Pratinjau MENGGANTIKAN panel form — hanya satu overlay aktif bersamaan.
+  function openPreview() {
+    setFormOpen(false);
+    setPreviewOpen(true);
+  }
+  function closePreview() {
+    setPreviewOpen(false);
+    // Buka ulang panel pada render pass berikutnya: bila formOpen & previewOpen
+    // berubah serentak, efek body-lock Modal (berjalan setelah SlideOver)
+    // pembersih terakhir dan halaman di belakang panel jadi bisa di-scroll.
+    setTimeout(() => setFormOpen(true), PREVIEW_HANDOFF_MS);
+  }
 
   // Probe kolom tahap 1 (image_alt/is_pinned/expires_at) — sekali per muat halaman
   useEffect(() => {
     let alive = true;
     newsHasScheduledColumns()
       .then((ok) => { if (alive) setColSupport(ok); })
-      .catch(() => {});
+      .catch(() => { });
     return () => { alive = false; };
   }, []);
 
@@ -283,7 +298,7 @@ export default function AdminBeritaPage() {
   useEffect(() => {
     (async () => {
       await fetchNews();
-    })().catch(() => {});
+    })().catch(() => { });
   }, [fetchNews]);
 
   // Paste image handler — kompres seperti handleImageChange
@@ -429,7 +444,6 @@ export default function AdminBeritaPage() {
     setSlugTouched(false);
     setSlugUnlocked(false);
     setAiAssisted(false);
-    setPreviewTab("form");
     checkPendingDraft(null);
     setFormOpen(true);
   }
@@ -464,7 +478,6 @@ export default function AdminBeritaPage() {
     setSlugTouched(false);
     setSlugUnlocked(false);
     setAiAssisted(false);
-    setPreviewTab("form");
     checkPendingDraft(item);
     setFormOpen(true);
   }
@@ -572,7 +585,6 @@ export default function AdminBeritaPage() {
     setSlugTouched(false);
     setSlugUnlocked(false);
     setAiAssisted(false);
-    setPreviewTab("form");
     checkPendingDraft(null);
     setFormOpen(true);
 
@@ -677,7 +689,7 @@ export default function AdminBeritaPage() {
 
       // Hapus file lama di storage jika gambar diganti atau dikosongkan
       // Gunakan folder-based cleanup: list semua file di news/<id>/, hapus semua kecuali keepUrl
-      cleanupNewsImageFolder(editItem.id, imageUrl || null).catch(() => {});
+      cleanupNewsImageFolder(editItem.id, imageUrl || null).catch(() => { });
     } else {
       // Berita hasil isi-otomatis AI ditandai sumbernya (kolom `source`,
       // tersedia setelah supabase/content_source.sql dijalankan).
@@ -726,7 +738,7 @@ export default function AdminBeritaPage() {
 
     // Revalidate cache: /, /news, /news/<slug> (slug lama bila slug berubah)
     const oldSlug = editItem && editItem.slug !== savedSlug ? editItem.slug : undefined;
-    revalidateNews(savedSlug, oldSlug).catch(() => {});
+    revalidateNews(savedSlug, oldSlug).catch(() => { });
   }
 
   async function handleDelete() {
@@ -737,7 +749,7 @@ export default function AdminBeritaPage() {
     setDeleteItem(null);
     setSelectedIds((s) => { const n = new Set(s); n.delete(deleteItem.id); return n; });
     fetchNews();
-    revalidateNews(slug).catch(() => {});
+    revalidateNews(slug).catch(() => { });
   }
 
   async function handleBulkDelete() {
@@ -750,7 +762,7 @@ export default function AdminBeritaPage() {
     exitPickMode();
     setBulkDelete(false);
     fetchNews();
-    slugs.forEach(slug => revalidateNews(slug).catch(() => {}));
+    slugs.forEach(slug => revalidateNews(slug).catch(() => { }));
   }
 
   async function handleBulkPublish(publish: boolean) {
@@ -761,21 +773,21 @@ export default function AdminBeritaPage() {
     toast(`${ids.length} berita ${publish ? "diterbitkan" : "draft"}`, "success");
     exitPickMode();
     fetchNews();
-    slugs.forEach(slug => revalidateNews(slug).catch(() => {}));
+    slugs.forEach(slug => revalidateNews(slug).catch(() => { }));
   }
 
   async function handleTogglePublish(item: News) {
     await togglePublishNews(item.id, !item.is_published);
     toast(`Berita ${!item.is_published ? "diterbitkan" : "draft"}`, "success");
     fetchNews();
-    revalidateNews(item.slug).catch(() => {});
+    revalidateNews(item.slug).catch(() => { });
   }
 
   /* Menu ⋯ mobile: Terbitkan = konfirmasi singkat (publikasi ke publik),
      Jadikan Draft = langsung (menurunkan dari publik tidak berisiko). */
   function requestPublish(item: News) {
     if (item.is_published) {
-      handleTogglePublish(item).catch(() => {});
+      handleTogglePublish(item).catch(() => { });
     } else {
       setPublishItem(item);
     }
@@ -1222,7 +1234,7 @@ export default function AdminBeritaPage() {
         onConfirm={() => {
           const it = publishItem;
           setPublishItem(null);
-          if (it) handleTogglePublish(it).catch(() => {});
+          if (it) handleTogglePublish(it).catch(() => { });
         }}
         title="Terbitkan Berita?"
         description={`"${publishItem?.title}" akan tampil di website untuk publik.`}
@@ -1240,57 +1252,36 @@ export default function AdminBeritaPage() {
       />
 
       {/* ── CREATE/EDIT FORM PANEL ──────────────────── */}
-      {/* Split-view desktop: form kiri + pratinjau live kanan (grid lg+).
-          Mobile (<lg): tab Form/Pratinjau via prop toolbar SlideOver. */}
+      {/* Pratinjau via Modal on-demand (tombol di footer) — pola sama Artikel. */}
       <SlideOver
         open={formOpen}
         onClose={requestClose}
         title={editItem ? "Edit Berita" : "Buat Berita Baru"}
         description={editItem ? "Perbarui informasi berita" : "Isi form untuk menerbitkan berita"}
-        wrapperClassName="md:max-w-4xl lg:max-w-6xl"
-        contentScroll={false}
-        toolbar={
-          <div className="flex rounded-xl bg-slate-100 p-1 lg:hidden" role="tablist" aria-label="Mode panel">
-            {(
-              [
-                { key: "form", label: "Form" },
-                { key: "preview", label: "Pratinjau" },
-              ] as const
-            ).map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                role="tab"
-                aria-selected={previewTab === tab.key}
-                onClick={() => setPreviewTab(tab.key)}
-                className={`flex-1 rounded-lg px-4 py-1.5 text-xs font-semibold transition-all ${
-                  previewTab === tab.key
-                    ? "bg-white text-[var(--brand-primary)] shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        }
+        wrapperClassName="md:max-w-4xl lg:max-w-3xl"
         footer={
           <div className="flex w-full items-center justify-between gap-2">
             <button onClick={requestClose} disabled={formSaving}
               className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
               Batal
             </button>
-            <button onClick={handleSave} disabled={formSaving}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-70">
-              {formSaving ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              ) : (
-                <>
-                  <FloppyDisk className="h-4 w-4" />
-                  {saveLabel()}
-                </>
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={openPreview} disabled={formSaving}
+                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                <Eye className="h-4 w-4" /> Pratinjau
+              </button>
+              <button onClick={handleSave} disabled={formSaving}
+                className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-70">
+                {formSaving ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <>
+                    <FloppyDisk className="h-4 w-4" />
+                    {saveLabel()}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         }
       >
@@ -1314,368 +1305,337 @@ export default function AdminBeritaPage() {
           </div>
         )}
 
-        <div className="h-full lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)] lg:gap-8">
-          {/* ── Kolom kiri: form — scroll mandiri (scrollbar terpisah) ── */}
-          <div className={`h-full min-h-0 space-y-5 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] lg:pr-2 ${previewTab === "form" ? "" : "hidden lg:block"}`}>
-          {/* Isi otomatis AI — tempel catatan mentah → field terisi; di mode
+        <div className="space-y-5">
+            {/* Isi otomatis AI — tempel catatan mentah → field terisi; di mode
               edit tampil juga (nimpa isi lama setelah konfirmasi, ada Undo). */}
-          <AiFillPanel
-            target="news"
-            current={{
-              title: form.title,
-              summary: form.summary,
-              content: form.content,
-              category: form.category,
-            }}
-            hasContent={
-              !!form.title.trim() || !!form.summary.trim() || !!form.content.trim()
-            }
-            onApply={applyAiFields}
-            onRestore={restoreAiSnapshot}
-            disabled={formSaving}
-          />
-
-          {/* Title */}
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Judul <span className="text-red-500">*</span></label>
-            <input type="text" value={form.title}
-              onChange={(e) => {
-                const title = e.target.value;
-                // Slug otomatis dari judul selama belum diedit manual (mode buat baru)
-                setForm((prev) => ({
-                  ...prev,
-                  title,
-                  slug: !editItem && !slugTouched ? slugify(title) : prev.slug,
-                }));
+            <AiFillPanel
+              target="news"
+              current={{
+                title: form.title,
+                summary: form.summary,
+                content: form.content,
+                category: form.category,
               }}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
-              placeholder="Judul berita" />
-          </div>
+              hasContent={
+                !!form.title.trim() || !!form.summary.trim() || !!form.content.trim()
+              }
+              onApply={applyAiFields}
+              onRestore={restoreAiSnapshot}
+              disabled={formSaving}
+            />
 
-          {/* Slug */}
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Slug</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={form.slug}
-                readOnly={slugLocked}
-                onChange={(e) => { setSlugTouched(true); setForm({ ...form, slug: e.target.value }); }}
-                onBlur={() => { if (form.slug) setForm((f) => ({ ...f, slug: slugify(f.slug) })); }}
-                className={`w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 ${slugLocked ? "bg-slate-50 text-slate-500" : ""}`}
-                placeholder="otomatis dari judul"
-              />
-              {slugLocked && (
-                <button type="button" onClick={() => setSlugUnlocked(true)}
-                  className="shrink-0 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs font-semibold text-amber-700 hover:bg-amber-100">
-                  Ubah slug
-                </button>
-              )}
-            </div>
-            {editItem?.is_published && (
-              <p className="mt-1.5 text-xs text-amber-600">
-                Tautan lama akan mati — tidak ada redirect otomatis.
-              </p>
-            )}
-            <p className="mt-1 break-all text-xs text-slate-400">
-              {SITE_URL}/news/<span className={form.slug ? "text-slate-500" : "text-slate-300"}>{form.slug || "…"}</span>
-            </p>
-          </div>
-
-          {/* Category */}
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Kategori</label>
-            <div className="flex gap-2">
-              {Object.entries(categoryConfig).map(([key, cfg]) => (
-                <button key={key} type="button" onClick={() => setForm({ ...form, category: key })}
-                  className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
-                    form.category === key
-                      ? `${cfg.color} border-current shadow-sm`
-                      : "border-slate-200 text-slate-500 hover:border-slate-300"
-                  }`}>
-                  {cfg.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Image */}
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Gambar Sampul</label>
-            {imagePreview ? (
-              <div className="mb-3">
-                <div className="relative overflow-hidden rounded-xl border border-slate-200">
-                  <Image src={imagePreview} alt="Preview" width={640} height={160} sizes="100%" unoptimized className="h-40 w-full object-cover" style={{
-                    objectPosition: form.cover_image_position === "top" ? "center 20%" : form.cover_image_position === "bottom" ? "center 80%" : "center center"
-                  }} />
-                  <button onClick={() => { setImageFile(null); setImagePreview(""); setForm({ ...form, image_url: "" }); }}
-                    className="absolute right-2 top-2 rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                {/* Focal point selector */}
-                <div className="mt-2.5 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-semibold text-slate-700">Focal Point Gambar</p>
-                      <p className="text-[11px] text-slate-400">Atur posisi fokus saat gambar ditampilkan</p>
-                    </div>
-                  </div>
-                  <div className="mt-2 flex gap-2">
-                    {[
-                      { value: "top", label: "Atas", icon: "▲" },
-                      { value: "center", label: "Tengah", icon: "◆" },
-                      { value: "bottom", label: "Bawah", icon: "▼" },
-                    ].map((opt) => (
-                      <button key={opt.value} type="button"
-                        onClick={() => setForm({ ...form, cover_image_position: opt.value })}
-                        className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
-                          form.cover_image_position === opt.value
-                            ? "border-[var(--brand-accent)] bg-[var(--brand-accent)]/10 text-[var(--brand-accent)] shadow-sm"
-                            : "border-slate-200 text-slate-500 hover:border-slate-300"
-                        }`}>
-                        <span className="text-[10px]">{opt.icon}</span>
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <label
-                htmlFor="cover-image-input"
-                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add("border-[var(--brand-accent)]", "bg-[var(--brand-accent)]/5"); }}
-                onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("border-[var(--brand-accent)]", "bg-[var(--brand-accent)]/5"); }}
-                onDrop={async (e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  e.currentTarget.classList.remove("border-[var(--brand-accent)]", "bg-[var(--brand-accent)]/5");
-                  const file = e.dataTransfer.files?.[0];
-                  if (file && file.type.startsWith("image/")) {
-                    setImageUploading(true);
-                    try {
-                      const compressed = await compressImage(file);
-                      setImageFile(compressed);
-                      setImagePreview(URL.createObjectURL(compressed));
-                    } finally {
-                      setImageUploading(false);
-                    }
-                  }
+            {/* Title */}
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Judul <span className="text-red-500">*</span></label>
+              <input type="text" value={form.title}
+                onChange={(e) => {
+                  const title = e.target.value;
+                  // Slug otomatis dari judul selama belum diedit manual (mode buat baru)
+                  setForm((prev) => ({
+                    ...prev,
+                    title,
+                    slug: !editItem && !slugTouched ? slugify(title) : prev.slug,
+                  }));
                 }}
-                className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[var(--brand-accent)]/40 hover:bg-slate-50"
-              >
-                {imageUploading ? (
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--brand-accent)] border-t-transparent" />
-                ) : (
-                  <ImageIcon className="h-8 w-8 text-slate-300" />
-                )}
-                <span className="text-xs text-slate-400">
-                  {imageUploading ? "Mengkompresi gambar..." : "Klik, seret & lepas, atau Ctrl+V untuk paste gambar"}
-                </span>
-                <input id="cover-image-input" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-              </label>
-            )}
-            <p className="mt-2 text-xs text-slate-400">
-              Disarankan rasio 16:9 (mis. 1280×720) agar tidak terpotong.
-            </p>
-            {colSupport && (
-              <div className="mt-3">
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Teks alternatif gambar</label>
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
+                placeholder="Judul berita" />
+            </div>
+
+            {/* Slug */}
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Slug</label>
+              <div className="flex gap-2">
                 <input
                   type="text"
-                  maxLength={125}
-                  value={form.image_alt}
-                  onChange={(e) => setForm({ ...form, image_alt: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
-                  placeholder="Deskripsi singkat isi gambar"
+                  value={form.slug}
+                  readOnly={slugLocked}
+                  onChange={(e) => { setSlugTouched(true); setForm({ ...form, slug: e.target.value }); }}
+                  onBlur={() => { if (form.slug) setForm((f) => ({ ...f, slug: slugify(f.slug) })); }}
+                  className={`w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 ${slugLocked ? "bg-slate-50 text-slate-500" : ""}`}
+                  placeholder="otomatis dari judul"
                 />
-                <div className="mt-1 flex items-center justify-between gap-3">
-                  <p className="text-xs text-slate-400">Untuk poster yang berisi teks, tuliskan isi pentingnya di sini.</p>
-                  <span className={`text-[11px] ${form.image_alt.length >= 125 ? "text-amber-600" : "text-slate-400"}`}>
-                    {form.image_alt.length}/125
-                  </span>
-                </div>
+                {slugLocked && (
+                  <button type="button" onClick={() => setSlugUnlocked(true)}
+                    className="shrink-0 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs font-semibold text-amber-700 hover:bg-amber-100">
+                    Ubah slug
+                  </button>
+                )}
               </div>
-            )}
-          </div>
+              {editItem?.is_published && (
+                <p className="mt-1.5 text-xs text-amber-600">
+                  Tautan lama akan mati — tidak ada redirect otomatis.
+                </p>
+              )}
+              <p className="mt-1 break-all text-xs text-slate-400">
+                {SITE_URL}/news/<span className={form.slug ? "text-slate-500" : "text-slate-300"}>{form.slug || "…"}</span>
+              </p>
+            </div>
 
-          {/* Video eksternal (opsional) */}
-          <VideoUrlField
-            value={form.video_url}
-            onChange={(v) => setForm((f) => ({ ...f, video_url: v }))}
-            hint="Opsional — tautan YouTube, Vimeo, TikTok, Instagram, atau Google Drive."
-          />
+            {/* Category */}
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Kategori</label>
+              <div className="flex gap-2">
+                {Object.entries(categoryConfig).map(([key, cfg]) => (
+                  <button key={key} type="button" onClick={() => setForm({ ...form, category: key })}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${form.category === key
+                      ? `${cfg.color} border-current shadow-sm`
+                      : "border-slate-200 text-slate-500 hover:border-slate-300"
+                      }`}>
+                    {cfg.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          {/* Attachment (lampiran file) */}
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Lampiran File</label>
-            <p className="mb-2 text-xs text-slate-400">
-              Opsional — dokumen pendukung, mis. surat pengumuman (PDF/Word/Excel/TXT/ZIP, maks 10 MB).
-            </p>
-            {attachmentFile || form.attachment_url ? (
-              <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--brand-primary)]/10 text-[10px] font-black text-[var(--brand-primary)]">
-                  {attachmentKind(attachmentFile?.name || form.attachment_name)}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-slate-700">
-                    {attachmentFile ? attachmentFile.name : form.attachment_name || "Lampiran"}
-                  </p>
-                  <p className="text-[11px] text-slate-400">
-                    {attachmentFile
-                      ? `${Math.max(1, Math.round(attachmentFile.size / 1024))} KB · akan diunggah saat disimpan`
-                      : "Tersimpan · klik Ganti untuk mengganti"}
-                  </p>
+            {/* Image */}
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Gambar Sampul</label>
+              {imagePreview ? (
+                <div className="mb-3">
+                  <div className="relative overflow-hidden rounded-xl border border-slate-200">
+                    <Image src={imagePreview} alt="Preview" width={640} height={160} sizes="100%" unoptimized className="h-40 w-full object-cover" style={{
+                      objectPosition: form.cover_image_position === "top" ? "center 20%" : form.cover_image_position === "bottom" ? "center 80%" : "center center"
+                    }} />
+                    <button onClick={() => { setImageFile(null); setImagePreview(""); setForm({ ...form, image_url: "" }); }}
+                      className="absolute right-2 top-2 rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {/* Focal point selector */}
+                  <div className="mt-2.5 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-semibold text-slate-700">Focal Point Gambar</p>
+                        <p className="text-[11px] text-slate-400">Atur posisi fokus saat gambar ditampilkan</p>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex gap-2">
+                      {[
+                        { value: "top", label: "Atas", icon: "▲" },
+                        { value: "center", label: "Tengah", icon: "◆" },
+                        { value: "bottom", label: "Bawah", icon: "▼" },
+                      ].map((opt) => (
+                        <button key={opt.value} type="button"
+                          onClick={() => setForm({ ...form, cover_image_position: opt.value })}
+                          className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${form.cover_image_position === opt.value
+                            ? "border-[var(--brand-accent)] bg-[var(--brand-accent)]/10 text-[var(--brand-accent)] shadow-sm"
+                            : "border-slate-200 text-slate-500 hover:border-slate-300"
+                            }`}>
+                          <span className="text-[10px]">{opt.icon}</span>
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <label className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">
-                  Ganti
+              ) : (
+                <label
+                  htmlFor="cover-image-input"
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add("border-[var(--brand-accent)]", "bg-[var(--brand-accent)]/5"); }}
+                  onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("border-[var(--brand-accent)]", "bg-[var(--brand-accent)]/5"); }}
+                  onDrop={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.currentTarget.classList.remove("border-[var(--brand-accent)]", "bg-[var(--brand-accent)]/5");
+                    const file = e.dataTransfer.files?.[0];
+                    if (file && file.type.startsWith("image/")) {
+                      setImageUploading(true);
+                      try {
+                        const compressed = await compressImage(file);
+                        setImageFile(compressed);
+                        setImagePreview(URL.createObjectURL(compressed));
+                      } finally {
+                        setImageUploading(false);
+                      }
+                    }
+                  }}
+                  className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 transition-colors hover:border-[var(--brand-accent)]/40 hover:bg-slate-50"
+                >
+                  {imageUploading ? (
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--brand-accent)] border-t-transparent" />
+                  ) : (
+                    <ImageIcon className="h-8 w-8 text-slate-300" />
+                  )}
+                  <span className="text-xs text-slate-400">
+                    {imageUploading ? "Mengkompresi gambar..." : "Klik, seret & lepas, atau Ctrl+V untuk paste gambar"}
+                  </span>
+                  <input id="cover-image-input" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                </label>
+              )}
+              <p className="mt-2 text-xs text-slate-400">
+                Disarankan rasio 16:9 (mis. 1280×720) agar tidak terpotong.
+              </p>
+              {colSupport && (
+                <div className="mt-3">
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Teks alternatif gambar</label>
+                  <input
+                    type="text"
+                    maxLength={125}
+                    value={form.image_alt}
+                    onChange={(e) => setForm({ ...form, image_alt: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
+                    placeholder="Deskripsi singkat isi gambar"
+                  />
+                  <div className="mt-1 flex items-center justify-between gap-3">
+                    <p className="text-xs text-slate-400">Untuk poster yang berisi teks, tuliskan isi pentingnya di sini.</p>
+                    <span className={`text-[11px] ${form.image_alt.length >= 125 ? "text-amber-600" : "text-slate-400"}`}>
+                      {form.image_alt.length}/125
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Video eksternal (opsional) */}
+            <VideoUrlField
+              value={form.video_url}
+              onChange={(v) => setForm((f) => ({ ...f, video_url: v }))}
+              hint="Opsional — tautan YouTube, Vimeo, TikTok, Instagram, atau Google Drive."
+            />
+
+            {/* Attachment (lampiran file) */}
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Lampiran File</label>
+              <p className="mb-2 text-xs text-slate-400">
+                Opsional — dokumen pendukung, mis. surat pengumuman (PDF/Word/Excel/TXT/ZIP, maks 10 MB).
+              </p>
+              {attachmentFile || form.attachment_url ? (
+                <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--brand-primary)]/10 text-[10px] font-black text-[var(--brand-primary)]">
+                    {attachmentKind(attachmentFile?.name || form.attachment_name)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-slate-700">
+                      {attachmentFile ? attachmentFile.name : form.attachment_name || "Lampiran"}
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      {attachmentFile
+                        ? `${Math.max(1, Math.round(attachmentFile.size / 1024))} KB · akan diunggah saat disimpan`
+                        : "Tersimpan · klik Ganti untuk mengganti"}
+                    </p>
+                  </div>
+                  <label className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">
+                    Ganti
+                    <input type="file" accept={ATTACHMENT_ACCEPT} className="hidden" onChange={handleAttachmentChange} />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={removeAttachment}
+                    className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                    title="Hapus lampiran"
+                  >
+                    <Trash className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-5 transition-colors hover:border-[var(--brand-accent)]/40 hover:bg-slate-50">
+                  <Paperclip className="h-7 w-7 text-slate-300" />
+                  <span className="text-center text-xs text-slate-400">
+                    Klik untuk memilih file lampiran
+                  </span>
                   <input type="file" accept={ATTACHMENT_ACCEPT} className="hidden" onChange={handleAttachmentChange} />
                 </label>
-                <button
-                  type="button"
-                  onClick={removeAttachment}
-                  className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                  title="Hapus lampiran"
-                >
-                  <Trash className="h-4 w-4" />
+              )}
+            </div>
+
+            {/* Summary */}
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Ringkasan</label>
+              <textarea value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })}
+                rows={3}
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 resize-none"
+                placeholder="Ringkasan singkat berita (opsional)" />
+            </div>
+
+            {/* Writer & Editor */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Penulis</label>
+                <input type="text" value={form.writer_name} onChange={(e) => setForm({ ...form, writer_name: e.target.value })}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
+                  placeholder="Nama penulis" />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Editor</label>
+                <input type="text" value={form.editor_name} onChange={(e) => setForm({ ...form, editor_name: e.target.value })}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
+                  placeholder="Nama editor" />
+              </div>
+            </div>
+
+            {/* Content */}
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Konten</label>
+              <RichTextEditor value={form.content} onChange={(val) => setForm({ ...form, content: val })} />
+            </div>
+
+            {/* Publish toggle + Date + Sematan + Masa tampil */}
+            <div className="rounded-xl border border-slate-200 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-slate-700">Terbitkan</p>
+                  <p className="text-xs text-slate-400">
+                    {!form.is_published
+                      ? "Berita disimpan sebagai draft"
+                      : wibInputToUtc(form.published_at) && new Date(wibInputToUtc(form.published_at)!).getTime() > now
+                        ? "Belum tampil — menunggu jadwal tayang"
+                        : "Berita akan langsung tampil di website"}
+                  </p>
+                </div>
+                <button type="button" onClick={() => setForm({ ...form, is_published: !form.is_published })}
+                  aria-label="Terbitkan berita"
+                  className={`relative h-6 w-11 rounded-full transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[""] ${form.is_published ? "bg-[var(--brand-accent)]" : "bg-slate-300"}`}>
+                  <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_published ? "left-[22px]" : "left-0.5"}`} />
                 </button>
               </div>
-            ) : (
-              <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-5 transition-colors hover:border-[var(--brand-accent)]/40 hover:bg-slate-50">
-                <Paperclip className="h-7 w-7 text-slate-300" />
-                <span className="text-center text-xs text-slate-400">
-                  Klik untuk memilih file lampiran
-                </span>
-                <input type="file" accept={ATTACHMENT_ACCEPT} className="hidden" onChange={handleAttachmentChange} />
-              </label>
-            )}
-          </div>
-
-          {/* Summary */}
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Ringkasan</label>
-            <textarea value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })}
-              rows={3}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 resize-none"
-              placeholder="Ringkasan singkat berita (opsional)" />
-          </div>
-
-          {/* Writer & Editor */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Penulis</label>
-              <input type="text" value={form.writer_name} onChange={(e) => setForm({ ...form, writer_name: e.target.value })}
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
-                placeholder="Nama penulis" />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Editor</label>
-              <input type="text" value={form.editor_name} onChange={(e) => setForm({ ...form, editor_name: e.target.value })}
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
-                placeholder="Nama editor" />
-            </div>
-          </div>
-
-          {/* Content */}
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Konten</label>
-            <RichTextEditor value={form.content} onChange={(val) => setForm({ ...form, content: val })} />
-          </div>
-
-          {/* Publish toggle + Date + Sematan + Masa tampil */}
-          <div className="rounded-xl border border-slate-200 p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-slate-700">Terbitkan</p>
-                <p className="text-xs text-slate-400">
-                  {!form.is_published
-                    ? "Berita disimpan sebagai draft"
-                    : wibInputToUtc(form.published_at) && new Date(wibInputToUtc(form.published_at)!).getTime() > now
-                      ? "Belum tampil — menunggu jadwal tayang"
-                      : "Berita akan langsung tampil di website"}
-                </p>
-              </div>
-              <button type="button" onClick={() => setForm({ ...form, is_published: !form.is_published })}
-                aria-label="Terbitkan berita"
-                className={`relative h-6 w-11 rounded-full transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[""] ${form.is_published ? "bg-[var(--brand-accent)]" : "bg-slate-300"}`}>
-                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_published ? "left-[22px]" : "left-0.5"}`} />
-              </button>
-            </div>
-            {/* flex-wrap + min-w-[180px] pada input: datetime-local punya
+              {/* flex-wrap + min-w-[180px] pada input: datetime-local punya
                 lebar intrinsik ±180px. Tanpa keduanya baris ini tidak bisa
                 menyusut dan SlideOver-nya (overflow-hidden) memotong input.
                 min-width dipakai saat menghitung wrap, jadi input pindah ke
                 baris penuh alih-alih diperas sampai tanggalnya tak terbaca. */}
-            <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3">
-              <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Tanggal Publish (WIB)</label>
-              <input type="datetime-local" value={form.published_at} onChange={(e) => setForm({ ...form, published_at: e.target.value })}
-                className="min-w-[180px] flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-base md:text-xs text-slate-700 focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
-              {form.published_at && (
-                <button type="button" onClick={() => setForm({ ...form, published_at: "" })}
-                  className="text-[11px] text-slate-400 hover:text-slate-600">Reset</button>
+              <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3">
+                <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Tanggal Publish (WIB)</label>
+                <input type="datetime-local" value={form.published_at} onChange={(e) => setForm({ ...form, published_at: e.target.value })}
+                  className="min-w-[180px] flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-base md:text-xs text-slate-700 focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
+                {form.published_at && (
+                  <button type="button" onClick={() => setForm({ ...form, published_at: "" })}
+                    className="text-[11px] text-slate-400 hover:text-slate-600">Reset</button>
+                )}
+              </div>
+              {form.is_published && wibInputToUtc(form.published_at) && new Date(wibInputToUtc(form.published_at)!).getTime() > now && (
+                <p className="flex items-center gap-1.5 rounded-lg border border-[#f4d21f]/50 bg-[#f4d21f]/15 px-2.5 py-1.5 text-xs font-medium text-[#7a6600]">
+                  <Clock className="h-3.5 w-3.5 shrink-0" />
+                  Akan tayang otomatis pada {formatWibInput(form.published_at)} WIB
+                </p>
+              )}
+              {colSupport && (
+                <div className="space-y-3 border-t border-slate-100 pt-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+                        <BookmarkSimple weight="fill" className="h-4 w-4 text-[#f4d21f]" /> Sematkan di atas
+                      </p>
+                      <p className="text-xs text-slate-400">Tampil lebih awal di /news &amp; beranda (maks {MAX_PINNED} aktif).</p>
+                    </div>
+                    <button type="button" onClick={togglePin}
+                      aria-pressed={form.is_pinned}
+                      className={`relative h-6 w-11 rounded-full transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[""] ${form.is_pinned ? "bg-[var(--brand-accent)]" : "bg-slate-300"}`}>
+                      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_pinned ? "left-[22px]" : "left-0.5"}`} />
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Tampil sampai (WIB)</label>
+                    <input type="datetime-local" value={form.expires_at} onChange={(e) => setForm({ ...form, expires_at: e.target.value })}
+                      className="min-w-[180px] flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-base md:text-xs text-slate-700 focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
+                    {form.expires_at && (
+                      <button type="button" onClick={() => setForm({ ...form, expires_at: "" })}
+                        className="text-[11px] text-slate-400 hover:text-slate-600">Reset</button>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-400">Opsional — berita berhenti tampil otomatis setelah waktu ini.</p>
+                </div>
               )}
             </div>
-            {form.is_published && wibInputToUtc(form.published_at) && new Date(wibInputToUtc(form.published_at)!).getTime() > now && (
-              <p className="flex items-center gap-1.5 rounded-lg border border-[#f4d21f]/50 bg-[#f4d21f]/15 px-2.5 py-1.5 text-xs font-medium text-[#7a6600]">
-                <Clock className="h-3.5 w-3.5 shrink-0" />
-                Akan tayang otomatis pada {formatWibInput(form.published_at)} WIB
-              </p>
-            )}
-            {colSupport && (
-              <div className="space-y-3 border-t border-slate-100 pt-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-                      <BookmarkSimple weight="fill" className="h-4 w-4 text-[#f4d21f]" /> Sematkan di atas
-                    </p>
-                    <p className="text-xs text-slate-400">Tampil lebih awal di /news &amp; beranda (maks {MAX_PINNED} aktif).</p>
-                  </div>
-                  <button type="button" onClick={togglePin}
-                    aria-pressed={form.is_pinned}
-                    className={`relative h-6 w-11 rounded-full transition-colors before:absolute before:inset-x-0 before:-inset-y-2 before:content-[""] ${form.is_pinned ? "bg-[var(--brand-accent)]" : "bg-slate-300"}`}>
-                    <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_pinned ? "left-[22px]" : "left-0.5"}`} />
-                  </button>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Tampil sampai (WIB)</label>
-                  <input type="datetime-local" value={form.expires_at} onChange={(e) => setForm({ ...form, expires_at: e.target.value })}
-                    className="min-w-[180px] flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-base md:text-xs text-slate-700 focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
-                  {form.expires_at && (
-                    <button type="button" onClick={() => setForm({ ...form, expires_at: "" })}
-                      className="text-[11px] text-slate-400 hover:text-slate-600">Reset</button>
-                  )}
-                </div>
-                <p className="text-[11px] text-slate-400">Opsional — berita berhenti tampil otomatis setelah waktu ini.</p>
-              </div>
-            )}
-          </div>
-          </div>
-
-          {/* ── Kolom kanan: pratinjau live — scroll mandiri, header terpaku ── */}
-          <div className={`h-full min-h-0 min-w-0 flex-col ${previewTab === "preview" ? "flex" : "hidden lg:flex"}`}>
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="text-sm font-bold text-[var(--brand-primary)]">Pratinjau Langsung</p>
-                <p className="text-[11px] text-slate-400">Mengikuti isi form secara real-time — draft & terjadwal</p>
-              </div>
-              <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
-                <button type="button" onClick={() => setPreviewDevice("desktop")}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "desktop" ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-                  <Desktop className="h-3.5 w-3.5" /> Desktop
-                </button>
-                <button type="button" onClick={() => setPreviewDevice("mobile")}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "mobile" ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-                  <DeviceMobile className="h-3.5 w-3.5" /> Mobile
-                </button>
-              </div>
-            </div>
-            {/* Kartu pratinjau: bingkai tetap, isinya yang scroll */}
-            <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-slate-200 bg-white">
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] p-4 md:p-6">
-                <NewsPreview form={form} imagePreview={imagePreview} device={previewDevice} />
-              </div>
-            </div>
-          </div>
         </div>
       </SlideOver>
 
@@ -1694,13 +1654,42 @@ export default function AdminBeritaPage() {
         cancelLabel="Lanjut mengedit"
         confirmLabel="Buang"
       />
+
+      {/* ── PRATINJAU (draft/terjadwal) — tanpa route baru, pola Artikel ── */}
+      <Modal
+        open={previewOpen}
+        onClose={closePreview}
+        size={previewDevice === "mobile" ? "sm" : "xl"}
+        title="Pratinjau Berita"
+        description="Tampilan seperti halaman publik — berlaku untuk draft & terjadwal"
+        footer={
+          <>
+            <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
+              <button type="button" onClick={() => setPreviewDevice("desktop")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "desktop" ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                <Desktop className="h-3.5 w-3.5" /> Desktop
+              </button>
+              <button type="button" onClick={() => setPreviewDevice("mobile")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${previewDevice === "mobile" ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                <DeviceMobile className="h-3.5 w-3.5" /> Mobile
+              </button>
+            </div>
+            <button onClick={closePreview}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              Tutup
+            </button>
+          </>
+        }
+      >
+        <NewsPreview form={form} imagePreview={imagePreview} device={previewDevice} />
+      </Modal>
     </div>
   );
 }
 
 /** Markup pratinjau berita — duplikat render halaman publik /news/[slug]
  *  (meta, judul, sampul, ringkasan, konten via RichContent bersama).
- *  Dipakai ulang di kolom split-view desktop dan tab Pratinjau mobile. */
+ *  Dipakai di Modal Pratinjau (tombol footer form). */
 function NewsPreview({
   form,
   imagePreview,

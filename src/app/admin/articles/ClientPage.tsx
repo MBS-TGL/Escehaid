@@ -113,6 +113,9 @@ const emptyForm: FormData = {
 
 /** Domain pratinjau URL/OG — sama dengan BASE_URL di src/app/sitemap.ts. */
 const SITE_URL = "https://www.smpmuh4tanggul.sch.id";
+
+/** Jeda lepas Modal pratinjau → panel form dibuka kembali (≥ 200 ms unmount Modal). */
+const PREVIEW_HANDOFF_MS = 250;
 const MAX_PINNED = 3;
 const AUTOSAVE_DELAY_MS = 5000;
 
@@ -260,6 +263,19 @@ export default function AdminArticlesPage() {
   const [pendingDraft, setPendingDraft] = useState<{ key: string; savedAt: number; data: FormData } | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
+
+  // Pratinjau MENGGANTIKAN panel form — hanya satu overlay aktif bersamaan.
+  function openPreview() {
+    setFormOpen(false);
+    setPreviewOpen(true);
+  }
+  function closePreview() {
+    setPreviewOpen(false);
+    // Buka ulang panel pada render pass berikutnya: bila formOpen & previewOpen
+    // berubah serentak, efek body-lock Modal (berjalan setelah SlideOver)
+    // pembersih terakhir dan halaman di belakang panel jadi bisa di-scroll.
+    setTimeout(() => setFormOpen(true), PREVIEW_HANDOFF_MS);
+  }
 
   // Probe kolom tahap 1 (image_alt/is_pinned/expires_at) + video — sekali per muat halaman
   useEffect(() => {
@@ -1353,7 +1369,7 @@ export default function AdminArticlesPage() {
               Batal
             </button>
             <div className="flex items-center gap-2">
-              <button onClick={() => setPreviewOpen(true)} disabled={formSaving}
+              <button onClick={openPreview} disabled={formSaving}
                 className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
                 <Eye className="h-4 w-4" /> Pratinjau
               </button>
@@ -1690,7 +1706,7 @@ export default function AdminArticlesPage() {
       {/* ── PRATINJAU (draft/terjadwal) — tanpa route baru ── */}
       <Modal
         open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
+        onClose={closePreview}
         size={previewDevice === "mobile" ? "sm" : "xl"}
         title="Pratinjau Artikel"
         description="Tampilan seperti halaman publik — berlaku untuk draft & terjadwal"
@@ -1706,7 +1722,7 @@ export default function AdminArticlesPage() {
                 <DeviceMobile className="h-3.5 w-3.5" /> Mobile
               </button>
             </div>
-            <button onClick={() => setPreviewOpen(false)}
+            <button onClick={closePreview}
               className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
               Tutup
             </button>
