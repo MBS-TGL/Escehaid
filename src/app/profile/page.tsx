@@ -40,14 +40,12 @@ export default async function ProfilPage() {
           ],
         })
       }} />
-      {/* Hero — foto lingkungan sekolah dari galeri */}
+      {/* Hero — compact */}
       <PageHero
-        variant="photo"
+        variant="compact"
         eyebrow="Tentang Kami"
         title="Profil Sekolah"
         description={`Mengenal ${profil?.school_name || "SMP Muhammadiyah 4 Tanggul"} lebih dekat`}
-        graphic="profil"
-        icon={GraduationCap}
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Profil" }]}
       />
 

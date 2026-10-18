@@ -68,18 +68,12 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
       }} />
       {/* Hero */}
       <PageHero
-        variant="split"
+        variant="compact"
         eyebrow="Kabar Terbaru"
         title="Berita"
         description="Informasi terkini dari SMP Muhammadiyah 4 Tanggul. Kegiatan, pengumuman, dan agenda sekolah."
-        graphic="berita"
-        icon={Newspaper}
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Berita" }]}
       >
-        {q && <p className="text-sm font-medium text-slate-500">Hasil pencarian: &quot;{q}&quot;</p>}
-      </PageHero>
-
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6" style={{ contentVisibility: "auto" } as React.CSSProperties}>
         {/* Pencarian + filter kategori (GET tanpa JS; ?search sudah didukung metadata SearchAction) */}
         <FilterBar
           action="/news"
@@ -87,8 +81,12 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
           searchValue={q}
           searchPlaceholder="Cari berita..."
           hiddenFields={category ? { category } : {}}
-          chips={[{ key: "", label: "Semua", href: buildHref(1, ""), active: !category }, ...categoryChips.slice(1).map((c) => ({ key: c.key, label: c.label, href: buildHref(1, c.key), active: category === c.key }))]}
+          chips={categoryChips.map((c) => ({ key: c.key, label: c.label, href: buildHref(1, c.key), active: category === c.key }))}
         />
+        {q && <p className="mt-3 text-sm font-medium text-slate-500">Hasil pencarian: &quot;{q}&quot;</p>}
+      </PageHero>
+
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6" style={{ contentVisibility: "auto" } as React.CSSProperties}>
 
         {berita.length === 0 ? (
           <EmptyState

@@ -125,14 +125,12 @@ export default async function SPMBPage() {
           })),
         })
       }} />
-      {/* Hero — foto sekolah, teks rata kiri */}
+      {/* Hero — compact */}
       <PageHero
-        variant="photo"
+        variant="compact"
         eyebrow="SPMB Online"
         title="Penerimaan Murid Baru"
         description={`Jadwal gelombang, jalur pendaftaran, dan cara mendaftar ${SITE.spmb.academicYear}.`}
-        graphic="ppdb"
-        icon={GraduationCap}
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "SPMB" }]}
       >
         {registerHref && (

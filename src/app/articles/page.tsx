@@ -75,20 +75,14 @@ export default async function ArtikelPage({
         }}
       />
 
-      {/* Hero — editorial split, khas dari /news */}
+      {/* Hero — compact */}
       <PageHero
-        variant="split"
+        variant="compact"
         eyebrow="Guru Menulis"
         title="Artikel"
         description="Tulisan dan pemikiran dari guru serta pegiat pendidikan: trik belajar, parenting, dan Islam terapan."
-        graphic="artikel"
-        icon={BookOpen}
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Artikel" }]}
       >
-        {q && <p className="text-sm font-medium text-slate-500">Hasil pencarian: &quot;{q}&quot;</p>}
-      </PageHero>
-
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6" style={{ contentVisibility: "auto" } as React.CSSProperties}>
         <FilterBar
           action="/articles"
           searchId="article-search"
@@ -97,6 +91,10 @@ export default async function ArtikelPage({
           hiddenFields={category ? { category } : {}}
           chips={chips}
         />
+        {q && <p className="mt-3 text-sm font-medium text-slate-500">Hasil pencarian: &quot;{q}&quot;</p>}
+      </PageHero>
+
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6" style={{ contentVisibility: "auto" } as React.CSSProperties}>
 
         {articles.length === 0 ? (
           <EmptyState

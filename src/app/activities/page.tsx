@@ -266,24 +266,14 @@ export default async function ActivitiesPage({
         })
       }} />
 
-      {/* Hero — editorial split, visual dari kegiatan unggulan */}
+      {/* Hero — compact */}
       <PageHero
-        variant="split"
+        variant="compact"
         eyebrow="Agenda Sekolah"
         title="Kegiatan"
         description="Kajian, perlombaan, upacara, dan aktivitas murid, dari ekstrakurikuler hingga acara besar sekolah."
-        graphic="kegiatan"
-        icon={CalendarBlank}
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Kegiatan" }]}
       >
-        <>
-          {q && <p className="text-sm font-medium text-slate-500">Hasil pencarian: &quot;{q}&quot;</p>}
-          {tipe && <p className="text-sm font-medium text-slate-500">Tipe: {tipeLabel}</p>}
-        </>
-      </PageHero>
-
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6" style={{ contentVisibility: "auto" } as React.CSSProperties}>
-        {/* Pencarian + filter tipe (GET tanpa JS; ?q & ?tipe bisa di-share) */}
         <FilterBar
           action="/activities"
           searchName="q"
@@ -293,6 +283,11 @@ export default async function ActivitiesPage({
           hiddenFields={tipe ? { tipe } : {}}
           chips={chips}
         />
+        {q && <p className="mt-3 text-sm font-medium text-slate-500">Hasil pencarian: &quot;{q}&quot;</p>}
+        {tipe && <p className="mt-3 text-sm font-medium text-slate-500">Tipe: {tipeLabel}</p>}
+      </PageHero>
+
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6" style={{ contentVisibility: "auto" } as React.CSSProperties}>
 
         {activities.length === 0 ? (
           /* Empty state berbeda: "belum ada" vs "tidak ada hasil" */

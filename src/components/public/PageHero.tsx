@@ -175,20 +175,29 @@ export default function PageHero({
 
   /* ── COMPACT: pita terang ramping untuk halaman fungsional ───────── */
   return (
-    <section className={`border-b border-[#dce3ed] bg-white ${className}`}>
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 md:py-8">
+    <section className={`relative overflow-hidden border-b border-[#dce3ed] bg-slate-50 ${className}`}>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-20 -top-28 hidden h-80 w-80 rounded-full border-[36px] border-[var(--brand-accent)]/[0.06] md:block"
+      />
+      <div className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 md:py-8">
         <CSSFadeIn>
           <div className="max-w-3xl">
             <Breadcrumb items={crumbs} tone="dark" />
-            <h1 className="mt-2 text-xl font-black leading-tight tracking-tight text-[var(--brand-primary)] md:text-2xl text-balance">
+            {eyebrow && (
+              <p className="mt-3 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">
+                <span className="h-px w-6 bg-[var(--brand-accent)]" aria-hidden="true" />
+                {eyebrow}
+              </p>
+            )}
+            <h1 className="mt-2 text-2xl font-black leading-tight tracking-tight text-[var(--brand-primary)] md:text-3xl text-balance">
               {title}
             </h1>
-            <div aria-hidden="true" className="mt-2 h-1 w-8 rounded-full bg-[var(--brand-accent)]" />
             {description && (
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500">{description}</p>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600 md:text-base">{description}</p>
             )}
-            {children && <div className="mt-4">{children}</div>}
           </div>
+          {children && <div className="mt-5">{children}</div>}
         </CSSFadeIn>
       </div>
     </section>
