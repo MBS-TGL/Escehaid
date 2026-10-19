@@ -63,7 +63,7 @@ async function logSystem(
 
 /** Klien admin (service role) bila env tersedia; null bila tidak. */
 function serviceRoleClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return null;
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
@@ -111,7 +111,7 @@ export async function inviteUser(input: {
 
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { full_name: fullName },
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/admin/login`,
+    redirectTo: `${process.env.SITE_URL ?? ""}/admin/login`,
   });
 
   if (error || !data?.user) {
@@ -318,7 +318,7 @@ export async function resetUserPassword(userId: string): Promise<ActionResult> {
 
   // Kirim tautan reset (memakai klien sesi; Supabase mengirim email sendiri).
   const { error: resetErr } = await supabase.auth.resetPasswordForEmail(target.email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/admin/login`,
+    redirectTo: `${process.env.SITE_URL ?? ""}/admin/login`,
   });
 
   // Walaupun email reset gagal (SMTP belum dikonfigurasi), flag sudah disetel

@@ -179,7 +179,7 @@ export default async function Home() {
 
           <div className="relative">
             <div className="absolute -inset-4 hidden rounded-3xl bg-gradient-to-br from-[var(--brand-highlight)]/20 to-[var(--brand-highlight)]/20 blur-2xl md:block" />
-            <HeroCarousel />
+            <HeroCarousel ytId={process.env.HERO_VIDEO_YT ?? ""} videoUrl={process.env.HERO_VIDEO_URL || undefined} />
           </div>
         </div>
       </section>

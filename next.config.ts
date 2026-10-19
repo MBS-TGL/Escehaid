@@ -9,6 +9,15 @@ import { setDefaultResultOrder } from "node:dns";
 setDefaultResultOrder("ipv4first");
 
 const nextConfig: NextConfig = {
+  // Supabase berhenti jadi env publik (pemisahan Fase 4): URL & anon key hanya
+  // dibaca server. Nilai di-inject lewat `env` supaya proxy.ts (Edge, sebagai
+  // bagian build) tetap bisa membacanya di dev & self-host — TIDAK memakai
+  // prefix NEXT_PUBLIC lagi. Anon key ini tetap kunci publik (dilindungi RLS);
+  // kunci service-role TIDAK ikut di sini dan hanya dibaca Node runtime.
+  env: {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+  },
   // Error TypeScript tidak boleh lolos ke production. `npx tsc --noEmit`
   // (dan CI) jadi gerbang wajib sebelum build/deploy.
   typescript: {

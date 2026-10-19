@@ -7,11 +7,11 @@ import { Play } from "@/components/Icons";
 /**
  * Video hero.
  *
- * Default: video MP4 di Supabase Storage (52 MB → menyedot egress tiap kunjungan).
+ * Default: video MP4 lokal /public/videos (52 MB → hanya diunduh saat diputar).
  * Setelah video di-upload ke channel YouTube (@MBSTANGGUL), cukup set env
- *   NEXT_PUBLIC_HERO_VIDEO_YT=<id video>
- * di Vercel/.env.local — halaman otomatis memakai embed YouTube (egress Supabase nol).
- * NEXT_PUBLIC_HERO_VIDEO_URL dipakai kalau mau menunjuk URL video lain
+ *   HERO_VIDEO_YT=<id video>
+ * di Vercel/.env.local — page.tsx membacanya di server dan mengirim lewat props.
+ * HERO_VIDEO_URL dipakai kalau mau menunjuk URL video lain
  * (mis. /videos/Profile.mp4 setelah dipindah ke /public).
  *
  * Di HP (< 768px) video TIDAK autoplay: yang tampil poster + tombol play, dan
@@ -19,10 +19,6 @@ import { Play } from "@/components/Icons";
  * decode/streaming 52 MB di device kelas menengah. Desktop tetap autoplay malas
  * (src dipasang via IntersectionObserver, preload="none").
  */
-const YT_ID = process.env.NEXT_PUBLIC_HERO_VIDEO_YT || "";
-const VIDEO_URL =
-  process.env.NEXT_PUBLIC_HERO_VIDEO_URL ||
-  "/videos/Profile.mp4";
 /** Poster saat video belum berjalan (HP: sampai tombol play ditekan). */
 const POSTER_URL = "/images/Ruang-Kelas.jpg";
 const SEGMENTS = [
@@ -48,7 +44,15 @@ function useIsMobile(): boolean {
   );
 }
 
-export default function HeroCarousel() {
+export default function HeroCarousel({
+  ytId = "",
+  videoUrl = "/videos/Profile.mp4",
+}: {
+  /** ID video YouTube (bila hero memakai embed) — dibaca server di page.tsx. */
+  ytId?: string;
+  /** Override URL video MP4 saat video YouTube belum dipakai. */
+  videoUrl?: string;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [current, setCurrent] = useState(0);
@@ -68,7 +72,7 @@ export default function HeroCarousel() {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          video.src = VIDEO_URL;
+          video.src = videoUrl;
           video.load();
           setLoaded(true);
         }
@@ -78,7 +82,7 @@ export default function HeroCarousel() {
 
     observer.observe(container);
     return () => observer.disconnect();
-  }, [autoplay, loaded]);
+  }, [autoplay, loaded, videoUrl]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -122,9 +126,9 @@ export default function HeroCarousel() {
       {/* Video/iframe hanya dirender saat autoplay diizinkan — di HP sebelum
           ditekan play, tidak ada elemen video sama sekali (nol byte). */}
       {autoplay ? (
-        YT_ID ? (
+        ytId ? (
           <iframe
-            src={`https://www.youtube-nocookie.com/embed/${YT_ID}?autoplay=1&mute=1&controls=0&loop=1&playlist=${YT_ID}&playsinline=1&rel=0&modestbranding=1`}
+            src={`https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${ytId}&playsinline=1&rel=0&modestbranding=1`}
             title="Video profil SMP Muhammadiyah 4 Tanggul"
             className="absolute inset-0 h-full w-full border-0"
             allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
@@ -161,7 +165,7 @@ export default function HeroCarousel() {
 
       {/* dots (hanya mode segment MP4, tampil setelah video berjalan) —
           tombol bisa diklik lompat ke segmen */}
-      {!YT_ID && autoplay && (
+      {!ytId && autoplay && (
         <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 gap-2">
           {SEGMENTS.map((_, i) => (
             <button

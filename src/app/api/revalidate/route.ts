@@ -53,8 +53,8 @@ export async function POST(req: NextRequest) {
   // terautentikasi sebagai pemilik token → RLS "Users read own profile"
   // (id = auth.uid()) terpenuhi dan baris profilnya terbaca.
   const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_ANON_KEY!,
     {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
       global: { headers: { Authorization: `Bearer ${token}` } },

@@ -15,8 +15,8 @@ setDefaultResultOrder("ipv4first");
  */
 const getMaintenanceMode = unstable_cache(
   async function getMaintenanceMode(): Promise<boolean> {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const url = process.env.SUPABASE_URL!;
+    const key = process.env.SUPABASE_ANON_KEY!;
     const { createClient } = await import("@supabase/supabase-js");
     const supabase = createClient(url, key, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -103,8 +103,8 @@ export async function proxy(request: NextRequest) {
   }
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
