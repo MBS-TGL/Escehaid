@@ -206,33 +206,34 @@ h3 {
   display: none;
 }
 
-/* Admin: scrollbar viewport tipis & nyaris tak terlihat — scroll tetap terbaca.
-   Kelas diatur via DashboardLayout (tambah/hapus saat masuk/keluar /admin) agar
-   halaman publik tak tersentuh; scrollbar konten dalam (tabel/karosel) tidak
-   ikut diubah. */
-html.admin-thin-scrollbar,
-html.admin-thin-scrollbar body {
+/* Scrollbar viewport tipis & elegan untuk SELURUH situs (publik + admin).
+   Firefox: scrollbar-width/color; Chromium/Safari: ::-webkit-scrollbar.
+   Track transparan, thumb bulat semi-transparan supaya menyatu di tema
+   terang maupun gelap. Scrollbar konten dalam (tabel/karosel) tetap bisa
+   disembunyikan dengan .scrollbar-hide. */
+html,
+html body {
   -ms-overflow-style: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(100, 116, 139, 0.45) transparent;
+  scrollbar-color: rgba(100, 116, 139, 0.4) transparent;
 }
 
-html.admin-thin-scrollbar::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+html::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
 }
 
-html.admin-thin-scrollbar::-webkit-scrollbar-track {
+html::-webkit-scrollbar-track {
   background: transparent;
 }
 
-html.admin-thin-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.45);
+html::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
   border-radius: 9999px;
 }
 
-html.admin-thin-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.7);
+html::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.65);
 }
 
 /* TipTap Editor */
