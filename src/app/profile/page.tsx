@@ -145,7 +145,7 @@ export default async function ProfilPage() {
             <CSSFadeIn>
               <div className="h-full rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-8">
                 <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--brand-primary)] shadow-lg shadow-[var(--brand-primary)]/20">
-                  <Eye className="h-5 w-5 text-[var(--brand-accent)]" weight="bold" />
+                  <Eye className="h-5 w-5 text-[var(--brand-highlight)]" weight="bold" />
                 </div>
                 <h3 className="text-xl font-semibold text-[var(--brand-primary)]">Visi</h3>
                 {profil?.vision ? (
@@ -163,7 +163,7 @@ export default async function ProfilPage() {
             <CSSFadeIn delay={0.1}>
               <div className="h-full rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-8">
                 <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--brand-primary)] shadow-lg shadow-[var(--brand-primary)]/20">
-                  <Checks className="h-5 w-5 text-[var(--brand-accent)]" weight="bold" />
+                  <Checks className="h-5 w-5 text-[var(--brand-highlight)]" weight="bold" />
                 </div>
                 <h3 className="text-xl font-semibold text-[var(--brand-primary)]">Misi</h3>
                 {profil?.mission ? (
@@ -281,7 +281,7 @@ export default async function ProfilPage() {
               <div className="flex flex-col items-center justify-between gap-6 rounded-2xl border border-[#dce3ed] bg-white p-6 sm:flex-row">
                 <div className="flex items-center gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--brand-primary)] shadow-lg shadow-[var(--brand-primary)]/20">
-                    <Trophy className="h-6 w-6 text-[var(--brand-accent)]" weight="fill" />
+                    <Trophy className="h-6 w-6 text-[var(--brand-highlight)]" weight="fill" />
                   </div>
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Pencapaian</p>
@@ -373,7 +373,7 @@ export default async function ProfilPage() {
             <div className="flex flex-col items-center justify-between gap-6 rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-6 sm:flex-row">
               <div className="flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--brand-primary)] shadow-lg shadow-[var(--brand-primary)]/20">
-                  <MapPin className="h-6 w-6 text-[var(--brand-accent)]" />
+                  <MapPin className="h-6 w-6 text-[var(--brand-highlight)]" />
                 </div>
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Lokasi Kami</p>
@@ -391,14 +391,14 @@ export default async function ProfilPage() {
       </section>
 
       {/* CTA SPMB */}
-      <section className="relative overflow-hidden border-t-8 border-[var(--brand-accent)] bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)]">
+      <section className="relative overflow-hidden border-t-8 border-[var(--brand-highlight)] bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)]">
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[var(--brand-accent)] blur-[120px]" />
+          <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[var(--brand-highlight)] blur-[120px]" />
         </div>
         <div className="relative mx-auto flex max-w-7xl flex-col items-center gap-7 px-6 py-16 text-center md:flex-row md:justify-between md:text-left">
           <CSSFadeIn>
             <div className="max-w-xl">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Penerimaan Peserta Didik Baru</p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-highlight)]">Penerimaan Peserta Didik Baru</p>
               <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white md:text-4xl">Mulai langkah baru bersama kami.</h2>
               <p className="mt-3 text-sm text-white/60">Bergabunglah menjadi bagian dari keluarga besar SMP Muhammadiyah 4 Tanggul.</p>
             </div>
