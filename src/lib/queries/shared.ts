@@ -1,4 +1,5 @@
 import { supabase } from "../supabase";
+import { storageFrom } from "../storage";
 
 // ============ PROBE KOLOM OPSIONAL (memoized per proses) ============
 /**
@@ -24,13 +25,13 @@ export function tableHasColumn(table: string, column: string): Promise<boolean> 
 }
 
 export async function cleanupOldFiles(folder: string, id: string) {
-  const { data } = await supabase.storage.from("images").list(folder);
+  const { data } = await storageFrom("images").list(folder);
   if (data) {
     const oldFiles = data
       .filter((f) => f.name.startsWith(id + "."))
       .map((f) => `${folder}/${f.name}`);
     if (oldFiles.length > 0) {
-      await supabase.storage.from("images").remove(oldFiles);
+      await storageFrom("images").remove(oldFiles);
     }
   }
 }
@@ -57,7 +58,7 @@ export async function deleteStorageFileByUrl(url: string): Promise<void> {
   try {
     const filePath = storagePathFromUrl(url);
     if (!filePath) return;
-    const { data, error } = await supabase.storage.from("images").remove([filePath]);
+    const { data, error } = await storageFrom("images").remove([filePath]);
     if (error) {
       console.warn("[deleteStorageFileByUrl] remove failed:", error.message);
     } else if (!data || data.length === 0) {

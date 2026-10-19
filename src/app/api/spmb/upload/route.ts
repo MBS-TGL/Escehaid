@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { storageFrom } from "@/lib/storage";
 
 /**
  * Endpoint upload dokumen SPMB untuk pendaftar publik. Pengganti akses
@@ -122,7 +123,7 @@ export async function POST(req: Request) {
   }
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  const { data, error } = await supabase.storage.from("spmb-documents").upload(path, bytes, {
+  const { data, error } = await storageFrom("spmb-documents", supabase).upload(path, bytes, {
     contentType: file.type || "application/octet-stream",
     upsert: true,
   });
@@ -147,5 +148,5 @@ export async function POST(req: Request) {
     );
   }
 
-  return NextResponse.json({ path: data.path });
+  return NextResponse.json({ path: data?.path ?? null });
 }

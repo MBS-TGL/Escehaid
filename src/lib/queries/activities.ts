@@ -2,6 +2,7 @@ import { supabase } from "../supabase";
 import type { Activity } from "../supabase";
 import { tryCompressImage } from "../compress-image";
 import { cleanupOldFiles, deleteStorageFileByUrl, sanitizeSearchTerm } from "./shared";
+import { storageFrom } from "../storage";
 
 export interface ActivityListOptions {
   /** Filter tipe kegiatan (key ACTIVITY_TYPES, mis. "lomba"). */
@@ -361,14 +362,15 @@ export async function uploadActivityImage(
 
   await cleanupOldFiles("activities", activityId);
 
-  const { error: uploadError } = await supabase.storage
-    .from("images")
-    .upload(path, compressed, { upsert: true, cacheControl: "31536000" });
+  const { error: uploadError } = await storageFrom("images").upload(path, compressed, {
+    upsert: true,
+    cacheControl: "31536000",
+  });
   if (uploadError) {
     console.error("Error uploading activity image:", uploadError);
     return { url: null, error: uploadError.message };
   }
-  const { data } = supabase.storage.from("images").getPublicUrl(path);
+  const { data } = storageFrom("images").getPublicUrl(path);
   return { url: `${data.publicUrl}?v=${Date.now()}` };
 }
 

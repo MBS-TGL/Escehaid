@@ -1,4 +1,5 @@
 import { supabase } from "../supabase";
+import { storageFrom } from "../storage";
 
 /**
  * Media library — inventarisasi & pengelolaan file Storage.
@@ -101,7 +102,7 @@ function isTransientStorageError(
  */
 async function listWithRetry(bucket: MediaBucket, prefix: string, attempts = 3) {
   for (let attempt = 1; ; attempt += 1) {
-    const { data, error } = await supabase.storage.from(bucket).list(prefix, {
+    const { data, error } = await storageFrom(bucket).list(prefix, {
       limit: 1000,
       sortBy: { column: "created_at", order: "desc" },
     });
@@ -231,16 +232,14 @@ export function isMediaReferenced(file: MediaFile, refs: Set<string>): boolean {
 /** URL publik file (null untuk bucket privat `spmb-documents`). */
 export function mediaPublicUrl(file: MediaFile): string | null {
   if (file.bucket === "spmb-documents") return null;
-  return supabase.storage.from(file.bucket).getPublicUrl(file.path).data.publicUrl;
+  return storageFrom(file.bucket).getPublicUrl(file.path).data.publicUrl;
 }
 
 /** URL bertanda tangan (1 jam) untuk bucket privat — untuk pratinjau/buka SPMB. */
 export async function mediaSignedUrl(file: MediaFile): Promise<string | null> {
-  const { data, error } = await supabase.storage
-    .from(file.bucket)
-    .createSignedUrl(file.path, 3600);
-  if (error) {
-    console.error("Error creating signed URL:", JSON.stringify(error), error.message);
+  const { data, error } = await storageFrom(file.bucket).createSignedUrl(file.path, 3600);
+  if (error || !data?.signedUrl) {
+    console.error("Error creating signed URL:", JSON.stringify(error), error?.message);
     return null;
   }
   return data.signedUrl;
@@ -253,7 +252,7 @@ export async function mediaSignedUrl(file: MediaFile): Promise<string | null> {
 export async function deleteMediaFile(
   file: MediaFile
 ): Promise<{ ok: boolean; error: string | null }> {
-  const { error } = await supabase.storage.from(file.bucket).remove([file.path]);
+  const { error } = await storageFrom(file.bucket).remove([file.path]);
   if (error) {
     console.error("Error deleting media file:", JSON.stringify(error), error.message);
     return { ok: false, error: error.message || "Gagal menghapus file" };

@@ -3,6 +3,7 @@ import type { Article } from "../supabase";
 import { tryCompressImage } from "../compress-image";
 import { FilterMethods, newsNowIso } from "./news";
 import { cleanupOldFiles, deleteStorageFileByUrl, generateUniqueArticleSlug, sanitizeSearchTerm, slugify, tableHasColumn } from "./shared";
+import { storageFrom } from "../storage";
 
 export interface ArticleWithAuthor extends Article {
   author_name?: string | null;
@@ -631,14 +632,15 @@ export async function uploadArticleImage(
 
   await cleanupOldFiles("articles", articleId);
 
-  const { error: uploadError } = await supabase.storage
-    .from("images")
-    .upload(path, compressed, { upsert: true, cacheControl: "31536000" });
+  const { error: uploadError } = await storageFrom("images").upload(path, compressed, {
+    upsert: true,
+    cacheControl: "31536000",
+  });
   if (uploadError) {
     console.error("Error uploading article image:", uploadError);
     return { url: null, error: uploadError.message };
   }
-  const { data } = supabase.storage.from("images").getPublicUrl(path);
+  const { data } = storageFrom("images").getPublicUrl(path);
   return { url: `${data.publicUrl}?v=${Date.now()}` };
 }
 

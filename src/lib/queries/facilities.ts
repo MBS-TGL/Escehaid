@@ -2,6 +2,7 @@ import { supabase } from "../supabase";
 import type { Facility } from "../supabase";
 import { tryCompressImage } from "../compress-image";
 import { deleteStorageFileByUrl, storagePathFromUrl } from "./shared";
+import { storageFrom } from "../storage";
 
 /**
  * Daftar fasilitas aktif (urut `sort_order`).
@@ -181,14 +182,15 @@ export async function uploadFacilityImage(
   const rand = Math.random().toString(36).slice(2, 8);
   const path = `facilities/${facilityId}/${Date.now()}-${rand}.${ext}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from("images")
-    .upload(path, compressed, { upsert: false, cacheControl: "31536000" });
+  const { error: uploadError } = await storageFrom("images").upload(path, compressed, {
+    upsert: false,
+    cacheControl: "31536000",
+  });
   if (uploadError) {
     console.error("Error uploading facility image:", uploadError);
     return { url: null, error: `Gagal mengunggah gambar: ${uploadError.message}` };
   }
-  const { data } = supabase.storage.from("images").getPublicUrl(path);
+  const { data } = storageFrom("images").getPublicUrl(path);
   return { url: `${data.publicUrl}?v=${Date.now()}` };
 }
 
@@ -204,9 +206,7 @@ export async function cleanupFacilityImageFolder(
 ): Promise<void> {
   try {
     const prefix = `facilities/${facilityId}`;
-    const { data: files, error: listError } = await supabase.storage
-      .from("images")
-      .list(prefix);
+    const { data: files, error: listError } = await storageFrom("images").list(prefix);
 
     if (listError) {
       console.warn("[cleanupFacilityImageFolder] list failed:", listError.message);
@@ -222,9 +222,7 @@ export async function cleanupFacilityImageFolder(
 
     if (toDelete.length === 0) return;
 
-    const { data, error: removeError } = await supabase.storage
-      .from("images")
-      .remove(toDelete);
+    const { data, error: removeError } = await storageFrom("images").remove(toDelete);
 
     if (removeError) {
       console.warn("[cleanupFacilityImageFolder] remove failed:", removeError.message);

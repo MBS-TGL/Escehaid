@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { forbiddenResponseIfLacks } from "@/lib/rbac/server";
+import { storageFrom } from "@/lib/storage";
 
 /**
  * Signed URL dokumen SPMB dikelola admin (pratinjau di pendaftar)
@@ -21,9 +22,7 @@ export async function POST(req: Request) {
   if (denied) return NextResponse.json(denied.body, { status: denied.status });
 
   const supabase = await createClient();
-  const { data, error } = await supabase.storage
-    .from("spmb-documents")
-    .createSignedUrl(path, 3600);
+  const { data, error } = await storageFrom("spmb-documents", supabase).createSignedUrl(path, 3600);
 
   if (error || !data?.signedUrl) {
     return NextResponse.json(

@@ -1,5 +1,6 @@
 import { supabase } from "../supabase";
 import type { Download } from "../supabase";
+import { storageFrom } from "../storage";
 
 // ============================================================================
 // UNDUHAN (Area Download publik)
@@ -162,7 +163,7 @@ async function removeDownloadFile(url?: string | null): Promise<void> {
   const path = url ? documentsPathFromUrl(url) : null;
   if (!path) return;
   try {
-    const { error } = await supabase.storage.from("documents").remove([path]);
+    const { error } = await storageFrom("documents").remove([path]);
     if (error) console.warn("[removeDownloadFile] remove failed:", error.message);
   } catch (e) {
     console.warn("[removeDownloadFile] error:", e);
@@ -214,7 +215,7 @@ export async function uploadDownloadFile(
 
   const safeName = file.name.replace(/[^\w.\-]+/g, "_").slice(-100);
   const path = `downloads/${Date.now()}-${safeName}`;
-  const storage = supabase.storage.from("documents");
+  const storage = storageFrom("documents");
 
   const { error: uploadError } = await storage.upload(path, file, {
     upsert: false,

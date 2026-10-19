@@ -43,14 +43,18 @@ jangan pernah meng-commit rahasia apa pun):
 
 | Variabel | Wajib | Fungsi |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | URL project Supabase |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Anon key Supabase (RLS yang membatasi) |
-| `NEXT_PUBLIC_APP_NAME` | – | Nama situs (default: SMP Muhammadiyah 4 Tanggul) |
-| `NEXT_PUBLIC_HERO_VIDEO_YT` | – | ID video YouTube untuk hero |
-| `NEXT_PUBLIC_HERO_VIDEO_URL` | – | URL video hero (kalau bukan YouTube) |
+| `SUPABASE_URL` | ✅ | URL project Supabase |
+| `SUPABASE_ANON_KEY` | ✅ | Anon key Supabase (RLS yang membatasi) |
 | `RESEND_API_KEY` | – | Aktifkan pengiriman email (Resend) |
 | `RESEND_FROM_EMAIL` | – | Alamat pengirim email |
 | `ADMIN_EMAIL` | – | Tujuan notifikasi pesan/pendaftar ke admin |
+| `STORAGE_DRIVER` | – | `supabase` (default) atau `r2` — lihat bawah |
+| `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_PUBLIC_BASE_URL` | – | Kredensial Cloudflare R2 (wajib saat `STORAGE_DRIVER=r2`) |
+
+Catatan storage: semua operasi berkas (upload/unduh/hapus/list/signed URL)
+melewati `src/lib/storage.ts`. Memasang `STORAGE_DRIVER=r2` memindahkan
+seluruh operasi berkas ke Cloudflare R2 (S3-compatible, egress nol) tanpa
+perubahan kode; default tetap Supabase Storage.
 
 ## Perintah
 

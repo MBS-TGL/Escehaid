@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { forbiddenResponseIfLacks } from "@/lib/rbac/server";
+import { storageFrom, type StorageBucket } from "@/lib/storage";
 
 /**
  * Storage admin sisi server — menggantikan akses storage langsung dari
@@ -92,7 +93,7 @@ export async function POST(req: Request) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.storage.from(bucket).upload(path, file, {
+  const { error } = await storageFrom(bucket as StorageBucket, supabase).upload(path, file, {
     contentType,
     upsert: false,
   });
@@ -133,7 +134,7 @@ export async function DELETE(req: Request) {
   if (denied) return NextResponse.json(denied.body, { status: denied.status });
 
   const supabase = await createClient();
-  const { error } = await supabase.storage.from(bucket).remove(paths);
+  const { error } = await storageFrom(bucket as StorageBucket, supabase).remove(paths);
 
   if (error) {
     return NextResponse.json(

@@ -1,6 +1,6 @@
-import { supabase } from "../supabase";
 import { tryCompressImage } from "../compress-image";
 import { storagePathFromUrl } from "./shared";
+import { storageFrom } from "../storage";
 
 export async function uploadNewsImage(
   file: File,
@@ -13,16 +13,17 @@ export async function uploadNewsImage(
   const { file: compressed, error: compressError } = await tryCompressImage(file);
   if (!compressed) return { url: null, error: compressError };
 
-  const { error: uploadError } = await supabase.storage
-    .from("images")
-    .upload(path, compressed, { upsert: false, cacheControl: "31536000" });
+  const { error: uploadError } = await storageFrom("images").upload(path, compressed, {
+    upsert: false,
+    cacheControl: "31536000",
+  });
 
   if (uploadError) {
     console.error("Error uploading image:", uploadError);
     return { url: null, error: `Gagal mengunggah gambar: ${uploadError.message}` };
   }
 
-  const { data } = supabase.storage.from("images").getPublicUrl(path);
+  const { data } = storageFrom("images").getPublicUrl(path);
   const url = `${data.publicUrl}?v=${Date.now()}`;
   return { url };
 }
@@ -38,9 +39,7 @@ export async function cleanupNewsImageFolder(
 ): Promise<void> {
   try {
     const prefix = `news/${newsId}`;
-    const { data: files, error: listError } = await supabase.storage
-      .from("images")
-      .list(prefix);
+    const { data: files, error: listError } = await storageFrom("images").list(prefix);
 
     if (listError) {
       console.warn("[cleanupNewsImageFolder] list failed:", listError.message);
@@ -57,9 +56,7 @@ export async function cleanupNewsImageFolder(
 
     if (toDelete.length === 0) return;
 
-    const { data, error: removeError } = await supabase.storage
-      .from("images")
-      .remove(toDelete);
+    const { data, error: removeError } = await storageFrom("images").remove(toDelete);
 
     if (removeError) {
       console.warn("[cleanupNewsImageFolder] remove failed:", removeError.message);
@@ -120,7 +117,7 @@ export async function uploadNewsAttachment(
   if (invalid) return { url: null, error: invalid };
 
   const folder = `news/${newsId}`;
-  const storage = supabase.storage.from("documents");
+  const storage = storageFrom("documents");
 
   // Nama file aman untuk URL (tanpa spasi/karakter aneh); nama asli tetap disimpan
   // di attachment_name untuk ditampilkan.
@@ -159,7 +156,7 @@ export async function uploadNewsAttachment(
 /** Hapus semua lampiran milik sebuah berita (dipanggil saat berita dihapus). */
 export async function cleanupNewsAttachments(newsId: string) {
   try {
-    const storage = supabase.storage.from("documents");
+    const storage = storageFrom("documents");
     const { data } = await storage.list(`news/${newsId}`);
     if (data && data.length > 0) {
       await storage.remove(data.map((f) => `news/${newsId}/${f.name}`));
