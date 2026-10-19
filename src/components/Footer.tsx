@@ -126,7 +126,7 @@ export default function Footer({
                 {accreditation && (
                   <li className={badge}>
                     <Certificate className="h-4 w-4 text-[var(--brand-highlight)]" aria-hidden="true" />
-                    {accreditation}
+                    Terakreditasi: {accreditation}
                   </li>
                 )}
                 {npsn && (
