@@ -1,4 +1,5 @@
 import { supabase } from "../supabase";
+import { removeViaRoute, listViaRoute, signedUrlViaRoute, type RemoteStorageEntry } from "../storage-remote";
 import { storageFrom } from "../storage";
 
 /**
@@ -97,15 +98,13 @@ function isTransientStorageError(
 }
 
 /**
- * `list()` folder dengan retry — maks. 3 percobaan, jeda 400ms × nomor
- * percobaan. Error permanen (403 RLS, 404, dst.) langsung dikembalikan.
+ * `list()` satu folder — SELALU lewat route server (S3 kredensial tak boleh
+ * di browser). Dengan retry: maks. 3 percobaan, jeda 400ms × nomor percobaan.
+ * Error permanen (403 RBAC, 404, dst.) langsung dikembalikan.
  */
 async function listWithRetry(bucket: MediaBucket, prefix: string, attempts = 3) {
   for (let attempt = 1; ; attempt += 1) {
-    const { data, error } = await storageFrom(bucket).list(prefix, {
-      limit: 1000,
-      sortBy: { column: "created_at", order: "desc" },
-    });
+    const { data, error } = await listViaRoute(bucket, prefix);
     if (!error || attempt >= attempts || !isTransientStorageError(error)) {
       return { data, error };
     }
@@ -142,7 +141,7 @@ export async function getMediaFiles(bucket: MediaBucket): Promise<MediaFile[]> {
     for (const entry of data ?? []) {
       const path = prefix ? `${prefix}/${entry.name}` : entry.name;
       const meta = entry.metadata as { size?: number; mimetype?: string } | null;
-      // Folder: id & metadata null (konvensi list Storage Supabase).
+      // Folder: id & metadata null (konvensi list adapter Storage).
       const isFolder = entry.id === null && meta === null;
       if (isFolder) {
         await walk(path, depth + 1, false);
@@ -153,9 +152,9 @@ export async function getMediaFiles(bucket: MediaBucket): Promise<MediaFile[]> {
           name: entry.name,
           folder: prefix,
           size: typeof meta?.size === "number" ? meta.size : null,
-          mimetype: meta?.mimetype ?? null,
-          createdAt: entry.created_at ?? null,
-          isImage: (meta?.mimetype ?? "").startsWith("image/"),
+          mimetype: (meta?.mimetype ?? "").toString() || null,
+          createdAt: (entry as RemoteStorageEntry).created_at ?? entry.created_at ?? null,
+          isImage: ((meta?.mimetype ?? "") as string).startsWith("image/"),
         });
       }
     }
@@ -235,24 +234,21 @@ export function mediaPublicUrl(file: MediaFile): string | null {
   return storageFrom(file.bucket).getPublicUrl(file.path).data.publicUrl;
 }
 
-/** URL bertanda tangan (1 jam) untuk bucket privat — untuk pratinjau/buka SPMB. */
+/** URL bertanda tangan (1 jam) untuk bucket privat — lewat route server. */
 export async function mediaSignedUrl(file: MediaFile): Promise<string | null> {
-  const { data, error } = await storageFrom(file.bucket).createSignedUrl(file.path, 3600);
-  if (error || !data?.signedUrl) {
-    console.error("Error creating signed URL:", JSON.stringify(error), error?.message);
-    return null;
-  }
-  return data.signedUrl;
+  const url = await signedUrlViaRoute(file.path);
+  if (!url) console.error("Error creating signed URL:", file.path);
+  return url;
 }
 
 /**
- * Hapus file. Kesalahan (mis. RLS storage belum mengizinkan DELETE) dikembalikan
+ * Hapus file — lewat route server (auth + RBAC). Kesalahan dikembalikan
  * apa adanya ke UI — jangan pernah senyap.
  */
 export async function deleteMediaFile(
   file: MediaFile
 ): Promise<{ ok: boolean; error: string | null }> {
-  const { error } = await storageFrom(file.bucket).remove([file.path]);
+  const { error } = await removeViaRoute(file.bucket, [file.path]);
   if (error) {
     console.error("Error deleting media file:", JSON.stringify(error), error.message);
     return { ok: false, error: error.message || "Gagal menghapus file" };

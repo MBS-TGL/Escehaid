@@ -1,6 +1,6 @@
 import { supabase } from "../supabase";
 import type { SpmbRegistration } from "../supabase";
-import { storageFrom } from "../storage";
+import { removeViaRoute } from "../storage-remote";
 import { notifyAllAdmins } from "./users";
 import { getPublishedWaves, getWaveStatus } from "./waves";
 import { isFeatureEnabled } from "@/lib/flags";
@@ -148,7 +148,7 @@ function collectRegDocPaths(documents: Record<string, unknown> | null | undefine
 async function removeRegDocFiles(paths: string[]): Promise<void> {
   if (paths.length === 0) return;
   try {
-    const { error } = await storageFrom("spmb-documents").remove(paths);
+    const { error } = await removeViaRoute("spmb-documents", paths);
     if (error) console.warn("[removeRegDocFiles] remove failed:", error.message);
   } catch (e) {
     console.warn("[removeRegDocFiles] error:", e);

@@ -17,6 +17,14 @@ const nextConfig: NextConfig = {
   env: {
     SUPABASE_URL: process.env.SUPABASE_URL,
     SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+    // Driver & konfigurasi storage NON-rahasia — dibaca juga oleh bundel klien
+    // (media library admin memanggil getPublicUrl di browser). Kredensial R2
+    // (ACCOUNT_ID/ACCESS_KEY/SECRET) TIDAK pernah masuk sini: semua operasi
+    // S3 lewat route API server (/api/admin/storage).
+    STORAGE_DRIVER: process.env.STORAGE_DRIVER,
+    R2_PUBLIC_BASE_URL: process.env.R2_PUBLIC_BASE_URL,
+    R2_BUCKET: process.env.R2_BUCKET,
+    R2_PRIVATE_BUCKET: process.env.R2_PRIVATE_BUCKET,
   },
   // Error TypeScript tidak boleh lolos ke production. `npx tsc --noEmit`
   // (dan CI) jadi gerbang wajib sebelum build/deploy.
@@ -53,6 +61,12 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "picsum.photos",
+      },
+      {
+        // CDN Cloudflare R2 (driver r2: URL publik gambar/dokumen memakai domain ini)
+        protocol: "https",
+        hostname: "cdn.smpmuh4tanggul.sch.id",
+        pathname: "/**",
       },
     ],
   },

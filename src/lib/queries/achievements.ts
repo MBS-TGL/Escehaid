@@ -2,7 +2,7 @@ import { supabase } from "../supabase";
 import type { Achievement } from "../supabase";
 import { tryCompressImage } from "../compress-image";
 import { deleteStorageFileByUrl, sanitizeSearchTerm, storagePathFromUrl, tableHasColumn } from "./shared";
-import { storageFrom } from "../storage";
+import { uploadFileViaRoute } from "../storage-remote";
 
 /** Probe kolom `video_url` (migrasi supabase/content_video.sql) — memoized. */
 export function achievementsHasVideoColumn(): Promise<boolean> {
@@ -191,14 +191,14 @@ export async function uploadAchievementImage(
   const rand = Math.random().toString(36).slice(2, 8);
   const path = `achievements/${achievementId}-${Date.now()}-${rand}.jpg`;
 
-  const { error: uploadError } = await storageFrom("images").upload(path, compressed, {
+  const uploaded = await uploadFileViaRoute("images", path, compressed, {
     upsert: true,
     cacheControl: "31536000",
+    contentType: "image/jpeg",
   });
-  if (uploadError) {
-    console.error("Error uploading achievement image:", uploadError);
-    return { url: null, error: uploadError.message };
+  if (uploaded.error) {
+    console.error("Error uploading achievement image:", uploaded.error);
+    return { url: null, error: uploaded.error };
   }
-  const { data } = storageFrom("images").getPublicUrl(path);
-  return { url: `${data.publicUrl}?v=${Date.now()}` };
+  return { url: `${uploaded.url}?v=${Date.now()}` };
 }

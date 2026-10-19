@@ -19,9 +19,33 @@ export const runtime = "nodejs";
 const MAX_BYTES = 10 * 1024 * 1024;
 const BUCKETS = new Set(["images", "documents", "spmb-documents"]);
 
+/** Per-bucket izin list (GET) — Media Library boleh melihat isi ketiganya. */
+const LIST_PERM: Record<string, string> = {
+  images: "media:read",
+  documents: "media:read",
+  "spmb-documents": "spmb:read",
+};
+
 const MIME: Record<string, Set<string>> = {
   images: new Set(["image/jpeg", "image/png", "image/webp"]),
-  documents: new Set(["application/pdf"]),
+  // documents menerima universe sama dengan checkDownloadFile + lampiran berita
+  // (office/arsip/teks/gambar) — klien yang memvalidasi akhirnya juga.
+  documents: new Set([
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/zip",
+    "application/x-rar-compressed",
+    "text/plain",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "application/octet-stream",
+  ]),
   "spmb-documents": new Set([
     "application/pdf",
     "image/jpeg",
@@ -32,6 +56,11 @@ const MIME: Record<string, Set<string>> = {
 
 const IMAGE_EXT = new Set(["jpg", "jpeg", "png", "webp"]);
 const PDF_EXT = new Set(["pdf"]);
+/** Universe ekstensi bucket documents (lampiran berita + berkas downloads). */
+const DOC_EXT = new Set([
+  "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+  "zip", "rar", "txt", "jpg", "jpeg", "png", "webp",
+]);
 
 const PATH_RE = /^[\w][\w./ -]{0,238}$/;
 
@@ -42,6 +71,60 @@ function pathValid(path: string): boolean {
 
 const sizeError = (name: string) =>
   NextResponse.json({ error: `File "${name}" terlalu besar. Maksimal 10 MB.` }, { status: 413 });
+
+/** Perkiraan Content-Type dari ekstensi — dipakai bila klien tak mengirim type. */
+const EXT_MIME: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ppt: "application/vnd.ms-powerpoint",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  zip: "application/zip",
+  rar: "application/x-rar-compressed",
+  txt: "text/plain",
+};
+
+/**
+ * GET: daftar entri bucket untuk Media Library. Bentuk respons meniru hasil
+ * adapter `list()` ({ data: StorageEntry[] , error }) agar logika walk sisi
+ * klien tidak berubah. Metadata mimetype diisi dari ekstensi (ListObjectsV2
+ * tidak menyediakan Content-Type per objek).
+ */
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const bucket = url.searchParams.get("bucket") || "";
+  const prefix = url.searchParams.get("prefix") || "";
+
+  if (!BUCKETS.has(bucket)) {
+    return NextResponse.json({ data: null, error: { message: "Bucket tidak valid.", status: 400 } });
+  }
+  const denied = await forbiddenResponseIfLacks(LIST_PERM[bucket]);
+  if (denied) {
+    return NextResponse.json({ data: null, error: { message: denied.body?.error ?? "Akses ditolak.", status: denied.status } });
+  }
+
+  const { data, error } = await storageFrom(bucket as StorageBucket).list(prefix, { limit: 1000 });
+
+  if (error) {
+    return NextResponse.json({ data: null, error });
+  }
+
+  // Lengkapi mimetype tiap entri file dari ekstensinya.
+  const entries = (data ?? []).map((entry) => {
+    if (entry.id === null || entry.metadata === null) return entry; // folder
+    const ext = (entry.name.split(".").pop() || "").toLowerCase();
+    const mimetype = EXT_MIME[ext] ?? "";
+    return { ...entry, metadata: { ...entry.metadata, mimetype } };
+  });
+
+  return NextResponse.json({ data: entries, error: null });
+}
 
 export async function POST(req: Request) {
   const form = await req.formData().catch(() => null);
@@ -70,7 +153,9 @@ export async function POST(req: Request) {
   }
 
   const ext = String(form.get("ext") || (file.name.split(".").pop() || "")).toLowerCase();
-  const contentType = (file.type || "").toLowerCase();
+  const contentType = (file.type || EXT_MIME[ext] || "").toLowerCase();
+  const upsert = (form.get("upsert") || "") === "true";
+  const cacheControl = String(form.get("cacheControl") || "") || undefined;
   const bought = bucket === "images";
 
   // Verifikasi sederhana: bucket images trafik dari input <input type="file"
@@ -78,14 +163,16 @@ export async function POST(req: Request) {
   const extOk = bought
     ? IMAGE_EXT.has(ext)
     : bucket === "documents"
-      ? PDF_EXT.has(ext)
+      ? DOC_EXT.has(ext)
       : PDF_EXT.has(ext) || IMAGE_EXT.has(ext);
-  const mimeOk = contentType ? MIME[bucket].has(contentType) : false;
+  // octet-stream: nilai aman bila peramban tak mengirim tipe (mis. .rar).
+  const safeType = contentType || "application/octet-stream";
+  const mimeOk = MIME[bucket].has(safeType);
   if (!mimeOk || !extOk) {
     return NextResponse.json(
       {
         error:
-          `Format "${contentType || ext}" tidak didukung untuk bucket "${bucket}". ` +
+          `Format "${safeType || ext}" tidak didukung untuk bucket "${bucket}". ` +
           "Gunakan PDF, JPG, PNG, atau WEBP.",
       },
       { status: 415 }
@@ -94,8 +181,9 @@ export async function POST(req: Request) {
 
   const supabase = await createClient();
   const { error } = await storageFrom(bucket as StorageBucket, supabase).upload(path, file, {
-    contentType,
-    upsert: false,
+    contentType: contentType || undefined,
+    cacheControl,
+    upsert,
   });
   if (error) {
     const msg = error.message || "";
@@ -114,7 +202,10 @@ export async function POST(req: Request) {
     );
   }
 
-  return NextResponse.json({ success: true, path });
+  // URL publik dihitung di server (driver apa pun) supaya klien tak perlu
+  // mengubah path → URL sendiri.
+  const { data: pub } = storageFrom(bucket as StorageBucket).getPublicUrl(path);
+  return NextResponse.json({ success: true, path, url: pub?.publicUrl ?? null, upsert });
 }
 
 export async function DELETE(req: Request) {

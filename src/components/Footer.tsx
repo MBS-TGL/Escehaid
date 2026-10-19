@@ -225,9 +225,9 @@ export default function Footer({
         </div>
       </div>
 
-      {/* Rata kiri agar tidak tertutup tombol chat melayang di kanan bawah */}
+      {/* Kiri: copyright. Kanan: tautan legal. */}
       <div className="border-t border-white/10">
-        <div className="mx-auto flex max-w-[1296px] flex-col gap-2 px-6 py-6 text-sm text-white/60 md:flex-row md:flex-wrap md:items-center md:gap-x-8 md:px-10">
+        <div className="mx-auto flex max-w-[1296px] flex-col gap-2 px-6 py-6 text-sm text-white/60 md:flex-row md:items-center md:justify-between md:px-10 md:pr-20">
           <p>
             &copy; {new Date().getFullYear()} {brand.name}. {brand.copyright}
           </p>

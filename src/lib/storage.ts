@@ -134,6 +134,11 @@ function createSupabaseDriver(client: StorageClient, bucket: string): StorageApi
  * domain R2 memetakan URL path langsung ke key, jadi key fisik di dalam bucket
  * adalah `<bucketSupabase>/<path>` TANPA prefix nama bucket R2. Pemisahan
  * publik/privat lewat bucket berbeda (spmb-documents tidak pernah bocor ke CDN).
+ *
+ * Kredensial (ACCOUNT_ID/KEY) hanya dipakai di server. Var non-rahasia
+ * (STORAGE_DRIVER, R2_PUBLIC_BASE_URL, R2_BUCKET, R2_PRIVATE_BUCKET) di-inline
+ * lewat next.config.ts `env` agar kode klien (getPublicUrl) mengenalinya;
+ * operasi S3 (upload/list/remove/sign) SELALU lewat route API server.
  */
 
 type R2Module = typeof import("@aws-sdk/client-s3");
@@ -260,8 +265,14 @@ function createR2Driver(supabaseBucket: string): StorageApi {
       }
     },
     getPublicUrl(path) {
-      const env = requireR2Env();
-      return { data: { publicUrl: `${env.publicBase}/${supabaseBucket}/${path.replace(/^\/+/, "")}` } };
+      // URL publik TIDAK butuh kredensial — hanya base publik (non-rahasia,
+      // di-inline ke bundel klien lewat next.config.ts `env`). Import helper
+      // ini pun boleh dipanggil dari browser (media library admin).
+      const publicBase = process.env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, "") || "";
+      const cleanPath = path.replace(/^\/+/, "");
+      return {
+        data: { publicUrl: publicBase ? `${publicBase}/${supabaseBucket}/${cleanPath}` : "" },
+      };
     },
     async remove(paths) {
       if (paths.length === 0) return { data: [], error: null };

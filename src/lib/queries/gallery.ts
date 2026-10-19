@@ -2,7 +2,7 @@ import { supabase } from "../supabase";
 import type { Gallery } from "../supabase";
 import { tryCompressImage } from "../compress-image";
 import { cleanupOldFiles, deleteStorageFileByUrl } from "./shared";
-import { storageFrom } from "../storage";
+import { uploadFileViaRoute } from "../storage-remote";
 
 export async function getGalleryList(limit?: number): Promise<Gallery[]> {
   let query = supabase
@@ -211,16 +211,16 @@ export async function uploadGalleryImage(
 
   await cleanupOldFiles("gallery", galleryId);
 
-  const { error: uploadError } = await storageFrom("images").upload(path, compressed, {
+  const uploaded = await uploadFileViaRoute("images", path, compressed, {
     upsert: true,
     cacheControl: "31536000",
+    contentType: "image/jpeg",
   });
-  if (uploadError) {
-    console.error("Error uploading gallery image:", uploadError);
-    return { url: null, error: uploadError.message };
+  if (uploaded.error) {
+    console.error("Error uploading gallery image:", uploaded.error);
+    return { url: null, error: uploaded.error };
   }
-  const { data } = storageFrom("images").getPublicUrl(path);
-  return { url: `${data.publicUrl}?v=${Date.now()}` };
+  return { url: `${uploaded.url}?v=${Date.now()}` };
 }
 
 // ============ ACHIEVEMENTS ============

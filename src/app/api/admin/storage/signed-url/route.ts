@@ -9,7 +9,10 @@ import { storageFrom } from "@/lib/storage";
  */
 export const runtime = "nodejs";
 
-const RE = /^spmb-\d{4}\/[\w.-]{1,80}\/[\w.-]{1,80}$/;
+// Path berkas SPMB di bucket privat: awalan "spmb-..." — Media Library juga
+// memakai ini untuk pratinjau dokumen pendaftar (path bisa lebih dalam dari
+// struktur <spmb-<reg>/<folder>/<file>), jadi langkah dibebaskan.
+const RE = /^spmb-[\w./-]{1,240}$/;
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as { path?: string } | null;

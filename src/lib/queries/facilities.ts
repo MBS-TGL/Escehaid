@@ -2,7 +2,7 @@ import { supabase } from "../supabase";
 import type { Facility } from "../supabase";
 import { tryCompressImage } from "../compress-image";
 import { deleteStorageFileByUrl, storagePathFromUrl } from "./shared";
-import { storageFrom } from "../storage";
+import { removeViaRoute, listViaRoute, uploadFileViaRoute } from "../storage-remote";
 
 /**
  * Daftar fasilitas aktif (urut `sort_order`).
@@ -182,16 +182,16 @@ export async function uploadFacilityImage(
   const rand = Math.random().toString(36).slice(2, 8);
   const path = `facilities/${facilityId}/${Date.now()}-${rand}.${ext}`;
 
-  const { error: uploadError } = await storageFrom("images").upload(path, compressed, {
+  const uploaded = await uploadFileViaRoute("images", path, compressed, {
     upsert: false,
     cacheControl: "31536000",
+    contentType: compressed.type ? undefined : "image/jpeg",
   });
-  if (uploadError) {
-    console.error("Error uploading facility image:", uploadError);
-    return { url: null, error: `Gagal mengunggah gambar: ${uploadError.message}` };
+  if (uploaded.error) {
+    console.error("Error uploading facility image:", uploaded.error);
+    return { url: null, error: `Gagal mengunggah gambar: ${uploaded.error}` };
   }
-  const { data } = storageFrom("images").getPublicUrl(path);
-  return { url: `${data.publicUrl}?v=${Date.now()}` };
+  return { url: `${uploaded.url}?v=${Date.now()}` };
 }
 
 /**
@@ -206,7 +206,7 @@ export async function cleanupFacilityImageFolder(
 ): Promise<void> {
   try {
     const prefix = `facilities/${facilityId}`;
-    const { data: files, error: listError } = await storageFrom("images").list(prefix);
+    const { data: files, error: listError } = await listViaRoute("images", prefix);
 
     if (listError) {
       console.warn("[cleanupFacilityImageFolder] list failed:", listError.message);
@@ -222,14 +222,13 @@ export async function cleanupFacilityImageFolder(
 
     if (toDelete.length === 0) return;
 
-    const { data, error: removeError } = await storageFrom("images").remove(toDelete);
+    const { data, error: removeError } = await removeViaRoute("images", toDelete);
 
     if (removeError) {
       console.warn("[cleanupFacilityImageFolder] remove failed:", removeError.message);
     } else if (!data || data.length === 0) {
       console.warn(
-        `[cleanupFacilityImageFolder] remove returned empty data untuk ${toDelete.length} file di ${prefix}/`,
-        "— kemungkinan policy DELETE belum dikonfigurasi di bucket 'images'."
+        `[cleanupFacilityImageFolder] remove returned empty data untuk ${toDelete.length} file di ${prefix}/`
       );
     }
   } catch (e) {

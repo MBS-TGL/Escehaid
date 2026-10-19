@@ -1,5 +1,5 @@
 import { supabase } from "../supabase";
-import { storageFrom } from "../storage";
+import { removeViaRoute, listViaRoute } from "../storage-remote";
 
 // ============ PROBE KOLOM OPSIONAL (memoized per proses) ============
 /**
@@ -25,14 +25,15 @@ export function tableHasColumn(table: string, column: string): Promise<boolean> 
 }
 
 export async function cleanupOldFiles(folder: string, id: string) {
-  const { data } = await storageFrom("images").list(folder);
-  if (data) {
-    const oldFiles = data
-      .filter((f) => f.name.startsWith(id + "."))
-      .map((f) => `${folder}/${f.name}`);
-    if (oldFiles.length > 0) {
-      await storageFrom("images").remove(oldFiles);
-    }
+  // Operasi S3 (list/remove) harus lewat route server — kredensial R2 tidak
+  // pernah ada di bundel klien.
+  const { data, error } = await listViaRoute("images", folder);
+  if (error || !data) return;
+  const oldFiles = data
+    .filter((f) => f.id !== null && f.name.startsWith(id + "."))
+    .map((f) => `${folder}/${f.name}`);
+  if (oldFiles.length > 0) {
+    await removeViaRoute("images", oldFiles);
   }
 }
 
@@ -44,26 +45,46 @@ export async function cleanupOldFiles(folder: string, id: string) {
  * passthrough — aman dipanggil dari komponen client.)
  */
 
-export function storagePathFromUrl(url: string): string | null {
-  // URL format: https://<project>.supabase.co/storage/v1/object/public/<bucket>/<path>
-  const match = url.split("?")[0].match(/\/storage\/v1\/object\/public\/images\/(.+)$/);
-  return match ? match[1] : null;
+export function storagePathFromUrl(url: string, bucket = "images"): string | null {
+  // Dua format yang sah:
+  //   Supabase : https://<project>.supabase.co/storage/v1/object/public/<b>/<path>
+  //   R2 (CDN) : https://cdn.<domain>/<targetBucket>/<b>/<path>  → bucket R2 diabaikan
+  const supabase = url
+    .split("?")[0]
+    .match(new RegExp(`/storage/v1/object/public/${bucket}/(.+)$`));
+  if (supabase) return supabase[1];
+  // URL absolut CDN: host harus sama dengan R2_PUBLIC_BASE_URL (in-line build).
+  if (/^https:\/\//.test(url)) {
+    try {
+      const base = process.env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, "");
+      if (base) {
+        const u = new URL(url);
+        if (u.origin === new URL(base).origin) {
+          const m = u.pathname.match(new RegExp(`/${bucket}/(.+)$`));
+          if (m) return m[1];
+        }
+      }
+    } catch {
+      return null;
+    }
+  }
+  return null;
 }
 
 /**
  * Hapus file dari bucket "images" berdasarkan publicUrl.
- * Abaikan URL yang bukan dari bucket ini.
+ * Abaikan URL yang bukan dari bucket ini. Selalu lewat route server
+ * (.deleteStorageFileByUrl dipanggil dari kode klien admin).
  */
 export async function deleteStorageFileByUrl(url: string): Promise<void> {
   try {
     const filePath = storagePathFromUrl(url);
     if (!filePath) return;
-    const { data, error } = await storageFrom("images").remove([filePath]);
+    const { data, error } = await removeViaRoute("images", [filePath]);
     if (error) {
       console.warn("[deleteStorageFileByUrl] remove failed:", error.message);
     } else if (!data || data.length === 0) {
-      console.warn("[deleteStorageFileByUrl] remove returned empty data for", filePath,
-        "— kemungkinan policy DELETE belum dikonfigurasi di bucket 'images'.");
+      console.warn("[deleteStorageFileByUrl] remove returned empty data for", filePath);
     }
   } catch (e) {
     console.warn("[deleteStorageFileByUrl] error:", e);

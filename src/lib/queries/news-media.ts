@@ -1,6 +1,10 @@
 import { tryCompressImage } from "../compress-image";
 import { storagePathFromUrl } from "./shared";
-import { storageFrom } from "../storage";
+import {
+  uploadFileViaRoute,
+  listViaRoute,
+  removeViaRoute,
+} from "../storage-remote";
 
 export async function uploadNewsImage(
   file: File,
@@ -13,19 +17,17 @@ export async function uploadNewsImage(
   const { file: compressed, error: compressError } = await tryCompressImage(file);
   if (!compressed) return { url: null, error: compressError };
 
-  const { error: uploadError } = await storageFrom("images").upload(path, compressed, {
+  const uploaded = await uploadFileViaRoute("images", path, compressed, {
     upsert: false,
     cacheControl: "31536000",
   });
 
-  if (uploadError) {
-    console.error("Error uploading image:", uploadError);
-    return { url: null, error: `Gagal mengunggah gambar: ${uploadError.message}` };
+  if (uploaded.error) {
+    console.error("Error uploading image:", uploaded.error);
+    return { url: null, error: `Gagal mengunggah gambar: ${uploaded.error}` };
   }
 
-  const { data } = storageFrom("images").getPublicUrl(path);
-  const url = `${data.publicUrl}?v=${Date.now()}`;
-  return { url };
+  return { url: `${uploaded.url}?v=${Date.now()}` };
 }
 
 /**
@@ -39,7 +41,7 @@ export async function cleanupNewsImageFolder(
 ): Promise<void> {
   try {
     const prefix = `news/${newsId}`;
-    const { data: files, error: listError } = await storageFrom("images").list(prefix);
+    const { data: files, error: listError } = await listViaRoute("images", prefix);
 
     if (listError) {
       console.warn("[cleanupNewsImageFolder] list failed:", listError.message);
@@ -56,16 +58,13 @@ export async function cleanupNewsImageFolder(
 
     if (toDelete.length === 0) return;
 
-    const { data, error: removeError } = await storageFrom("images").remove(toDelete);
+    const { data, error: removeError } = await removeViaRoute("images", toDelete);
 
     if (removeError) {
       console.warn("[cleanupNewsImageFolder] remove failed:", removeError.message);
     } else if (!data || data.length === 0) {
       console.warn(
-        `[cleanupNewsImageFolder] remove returned empty data untuk ${toDelete.length} file di ${prefix}/`,
-        "— kemungkinan policy DELETE belum dikonfigurasi di bucket 'images'.",
-        "Tambahkan SQL policy berikut di Supabase Dashboard → Storage → Policies:",
-        `CREATE POLICY \"Allow authenticated delete\" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'images');`
+        `[cleanupNewsImageFolder] remove returned empty data untuk ${toDelete.length} file di ${prefix}/`
       );
     }
   } catch (e) {
@@ -117,49 +116,44 @@ export async function uploadNewsAttachment(
   if (invalid) return { url: null, error: invalid };
 
   const folder = `news/${newsId}`;
-  const storage = storageFrom("documents");
 
   // Nama file aman untuk URL (tanpa spasi/karakter aneh); nama asli tetap disimpan
   // di attachment_name untuk ditampilkan.
   const safeName = file.name.replace(/[^\w.\-]+/g, "_").slice(-100);
   const path = `${folder}/${safeName}`;
 
-  const { error: uploadError } = await storage.upload(path, file, {
+  const uploaded = await uploadFileViaRoute("documents", path, file, {
     upsert: true,
     contentType: file.type,
     cacheControl: "31536000",
   });
 
-  if (uploadError) {
-    console.error("Error uploading attachment:", uploadError);
-    return { url: null, error: uploadError.message };
+  if (uploaded.error) {
+    console.error("Error uploading attachment:", uploaded.error);
+    return { url: null, error: uploaded.error };
   }
-
-  const { data } = storage.getPublicUrl(path);
-  const publicUrl = data.publicUrl;
 
   // Satu berita = satu file → buang file lama SETELAH upload sukses
   // (kalau gagal, lampiran lama tetap utuh).
   try {
-    const { data: listing } = await storage.list(folder);
+    const { data: listing } = await listViaRoute("documents", folder);
     const stale = (listing || [])
       .map((f) => `${folder}/${f.name}`)
       .filter((p) => p !== path);
-    if (stale.length > 0) await storage.remove(stale);
+    if (stale.length > 0) await removeViaRoute("documents", stale);
   } catch {
     /* best-effort */
   }
 
-  return { url: `${publicUrl}?v=${Date.now()}` };
+  return { url: `${uploaded.url}?v=${Date.now()}` };
 }
 
 /** Hapus semua lampiran milik sebuah berita (dipanggil saat berita dihapus). */
 export async function cleanupNewsAttachments(newsId: string) {
   try {
-    const storage = storageFrom("documents");
-    const { data } = await storage.list(`news/${newsId}`);
+    const { data } = await listViaRoute("documents", `news/${newsId}`);
     if (data && data.length > 0) {
-      await storage.remove(data.map((f) => `news/${newsId}/${f.name}`));
+      await removeViaRoute("documents", data.map((f) => `news/${newsId}/${f.name}`));
     }
   } catch {
     /* best-effort */

@@ -1,6 +1,7 @@
 import { supabase } from "../supabase";
 import type { Download } from "../supabase";
-import { storageFrom } from "../storage";
+import { removeViaRoute, uploadFileViaRoute } from "../storage-remote";
+import { storagePathFromUrl } from "./shared";
 
 // ============================================================================
 // UNDUHAN (Area Download publik)
@@ -154,8 +155,8 @@ export async function updateDownload(
 
 /** Path berkas "documents" dari URL publiknya; null bila bukan URL storage itu. */
 function documentsPathFromUrl(url: string): string | null {
-  const match = url.split("?")[0].match(/\/storage\/v1\/object\/public\/documents\/(.+)$/);
-  return match ? match[1] : null;
+  // Pakai parser bersama (Supabase maupun URL CDN R2) dengan bucket "documents".
+  return storagePathFromUrl(url, "documents");
 }
 
 /** Hapus berkas di bucket documents (best-effort — tidak menggagalkan delete baris). */
@@ -163,7 +164,7 @@ async function removeDownloadFile(url?: string | null): Promise<void> {
   const path = url ? documentsPathFromUrl(url) : null;
   if (!path) return;
   try {
-    const { error } = await storageFrom("documents").remove([path]);
+    const { error } = await removeViaRoute("documents", [path]);
     if (error) console.warn("[removeDownloadFile] remove failed:", error.message);
   } catch (e) {
     console.warn("[removeDownloadFile] error:", e);
@@ -215,18 +216,16 @@ export async function uploadDownloadFile(
 
   const safeName = file.name.replace(/[^\w.\-]+/g, "_").slice(-100);
   const path = `downloads/${Date.now()}-${safeName}`;
-  const storage = storageFrom("documents");
 
-  const { error: uploadError } = await storage.upload(path, file, {
+  const uploaded = await uploadFileViaRoute("documents", path, file, {
     upsert: false,
     contentType: file.type || "application/octet-stream",
     cacheControl: "31536000",
   });
-  if (uploadError) {
-    console.error("Error uploading download file:", uploadError);
-    return { url: null, name: null, size: null, error: uploadError.message };
+  if (uploaded.error) {
+    console.error("Error uploading download file:", uploaded.error);
+    return { url: null, name: null, size: null, error: uploaded.error };
   }
 
-  const { data } = storage.getPublicUrl(path);
-  return { url: data.publicUrl, name: file.name, size: file.size };
+  return { url: uploaded.url, name: file.name, size: file.size };
 }

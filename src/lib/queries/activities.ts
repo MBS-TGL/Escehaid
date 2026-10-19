@@ -2,7 +2,7 @@ import { supabase } from "../supabase";
 import type { Activity } from "../supabase";
 import { tryCompressImage } from "../compress-image";
 import { cleanupOldFiles, deleteStorageFileByUrl, sanitizeSearchTerm } from "./shared";
-import { storageFrom } from "../storage";
+import { uploadFileViaRoute } from "../storage-remote";
 
 export interface ActivityListOptions {
   /** Filter tipe kegiatan (key ACTIVITY_TYPES, mis. "lomba"). */
@@ -362,16 +362,16 @@ export async function uploadActivityImage(
 
   await cleanupOldFiles("activities", activityId);
 
-  const { error: uploadError } = await storageFrom("images").upload(path, compressed, {
+  const uploaded = await uploadFileViaRoute("images", path, compressed, {
     upsert: true,
     cacheControl: "31536000",
+    contentType: "image/jpeg",
   });
-  if (uploadError) {
-    console.error("Error uploading activity image:", uploadError);
-    return { url: null, error: uploadError.message };
+  if (uploaded.error) {
+    console.error("Error uploading activity image:", uploaded.error);
+    return { url: null, error: uploaded.error };
   }
-  const { data } = storageFrom("images").getPublicUrl(path);
-  return { url: `${data.publicUrl}?v=${Date.now()}` };
+  return { url: `${uploaded.url}?v=${Date.now()}` };
 }
 
 // ============ GALLERY CRUD ============

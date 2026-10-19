@@ -2,7 +2,7 @@ import { supabase } from "../supabase";
 import type { Teacher } from "../supabase";
 import { tryCompressImage, TEACHER_PHOTO } from "../compress-image";
 import { cleanupOldFiles, deleteStorageFileByUrl } from "./shared";
-import { storageFrom } from "../storage";
+import { uploadFileViaRoute } from "../storage-remote";
 
 /**
  * Daftar guru aktif (urut `sort_order`).
@@ -39,18 +39,18 @@ export async function uploadTeacherPhoto(
 
   await cleanupOldFiles("teachers", teacherId);
 
-  const { error: uploadError } = await storageFrom("images").upload(path, compressed, {
+  const uploaded = await uploadFileViaRoute("images", path, compressed, {
     upsert: true,
     cacheControl: "31536000",
+    contentType: "image/jpeg",
   });
 
-  if (uploadError) {
-    console.error("Error uploading teacher photo:", uploadError);
-    return { url: null, error: uploadError.message };
+  if (uploaded.error) {
+    console.error("Error uploading teacher photo:", uploaded.error);
+    return { url: null, error: uploaded.error };
   }
 
-  const { data } = storageFrom("images").getPublicUrl(path);
-  return { url: `${data.publicUrl}?v=${Date.now()}` };
+  return { url: `${uploaded.url}?v=${Date.now()}` };
 }
 
 // ============ CONTACT MESSAGES CRUD ============
