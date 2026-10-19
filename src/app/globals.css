@@ -11,6 +11,10 @@
      sehingga tampilan tidak pernah kosong/terang. */
   --brand-primary: #082b59;
   --brand-accent: #1767b1;
+  /* Kuning sembat Muhammadiyah — HANYA untuk penanda dekoratif kecil (garis,
+     garis bawah judul, border tipis) atau teks di atas bidang warna utama.
+     Jangan dipakai sebagai warna teks di atas putih atau background tombol. */
+  --brand-highlight: #f4d21f;
   /* Perhentian gradien: dihitung dari warna utama (lihat root layout) supaya
      gradien tetap serasi walau admin mengganti warna merek. */
   --brand-primary-mid: #0a3570;

@@ -136,11 +136,11 @@ export default async function Home() {
           <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-[var(--brand-accent)] blur-[180px]" />
         </div>
         <div className="absolute inset-0 hidden opacity-[0.03] md:block" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--brand-accent)]/30 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--brand-highlight)]/30 to-transparent" />
 
         <div className="relative mx-auto grid max-w-[1296px] gap-12 px-6 pb-20 pt-16 md:px-10 md:pb-28 md:pt-24 lg:grid-cols-[1.1fr_.9fr] lg:items-center">
           <div className="text-white">
-            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-[var(--brand-accent)]/30 bg-[var(--brand-accent)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">
+            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-[var(--brand-highlight)]/30 bg-[var(--brand-highlight)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-highlight)]">
               Pusat Kaderisasi Da&apos;i &amp; Ulama Hafidz &middot; {brand.tagline}
             </div>
 
@@ -149,7 +149,7 @@ export default async function Home() {
               <span className="relative inline-block">
                 <span className="gradient-text">ilmu, iman,</span>
                 <svg className="absolute -bottom-1 left-0 w-full" viewBox="0 0 200 12" fill="none">
-                  <path d="M2 8C40 2 80 2 100 6C120 10 160 10 198 4" stroke="var(--brand-accent)" strokeWidth="3" strokeLinecap="round" />
+                  <path d="M2 8C40 2 80 2 100 6C120 10 160 10 198 4" stroke="var(--brand-highlight)" strokeWidth="3" strokeLinecap="round" />
                 </svg>
               </span>{" "}
               dan keberanian.
@@ -243,7 +243,7 @@ export default async function Home() {
               <div className="flex h-full flex-col">
                 <div className="mb-4">
                   <h3 className="text-lg font-bold text-[var(--brand-primary)]">Berita</h3>
-                  <div className="mt-1.5 h-1 w-10 rounded-full bg-[var(--brand-accent)]" />
+                  <div className="mt-1.5 h-1 w-10 rounded-full bg-[var(--brand-highlight)]" />
                 </div>
                 {/* Tanpa flex-1: sisa ruang kolom jatuh SETELAH tombol, bukan
                     memecah jarak antara kartu berita dan "Selengkapnya". */}
@@ -324,7 +324,7 @@ export default async function Home() {
               <div className="flex h-full flex-col">
                 <div className="mb-4">
                   <h3 className="text-lg font-bold text-[var(--brand-primary)]">Kegiatan Sekolah</h3>
-                  <div className="mt-1.5 h-1 w-10 rounded-full bg-[var(--brand-accent)]" />
+                  <div className="mt-1.5 h-1 w-10 rounded-full bg-[var(--brand-highlight)]" />
                 </div>
                 <div className="flex flex-1 flex-col">
                   {activities.length === 0 ? (
@@ -384,7 +384,7 @@ export default async function Home() {
               <div className="flex h-full flex-col">
                 <div className="mb-4">
                   <h3 className="text-lg font-bold text-[var(--brand-primary)]">Fasilitas</h3>
-                  <div className="mt-1.5 h-1 w-10 rounded-full bg-[var(--brand-accent)]" />
+                  <div className="mt-1.5 h-1 w-10 rounded-full bg-[var(--brand-highlight)]" />
                 </div>
                 <div className="flex flex-1 flex-col">
                   {dbFacilities.length === 0 ? (
@@ -440,7 +440,7 @@ export default async function Home() {
               <div className="flex h-full flex-col">
                 <div className="mb-4">
                   <h3 className="text-lg font-bold text-[var(--brand-primary)]">Prestasi</h3>
-                  <div className="mt-1.5 h-1 w-10 rounded-full bg-[var(--brand-accent)]" />
+                  <div className="mt-1.5 h-1 w-10 rounded-full bg-[var(--brand-highlight)]" />
                 </div>
                 <div className="flex flex-1 flex-col">
                   {achievementsSorted.length === 0 ? (
@@ -613,7 +613,7 @@ export default async function Home() {
         <div className="relative mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
           <CSSFadeIn>
             <div className="mx-auto max-w-2xl text-center">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Mengapa MUH4TA</p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-highlight)]">Mengapa MUH4TA</p>
               <h2 className="mt-4 text-3xl font-semibold leading-tight md:text-4xl">
                 Sekolah yang dekat, terarah, dan terus bergerak maju.
               </h2>
@@ -642,7 +642,7 @@ export default async function Home() {
       <FAQ />
 
       {/* ── FINAL CTA ─────────────────────────────────────── */}
-      <section className="relative overflow-hidden border-t-8 border-[var(--brand-accent)] bg-white">
+      <section className="relative overflow-hidden border-t-8 border-[var(--brand-highlight)] bg-white">
         <div className="absolute -right-20 -top-20 hidden h-64 w-64 rounded-full bg-[var(--brand-accent)]/10 blur-[100px] md:block" />
         <div className="relative mx-auto flex max-w-[1296px] flex-col gap-7 px-6 py-16 md:flex-row md:items-center md:justify-between md:px-10">
           <CSSFadeIn>

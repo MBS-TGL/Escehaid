@@ -91,8 +91,8 @@ export default function PageHero({
             <div className="max-w-2xl">
               <Breadcrumb items={crumbs} tone="light" />
               {eyebrow && (
-                <p className="mt-3 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">
-                  <span className="h-px w-6 bg-[var(--brand-accent)]" aria-hidden="true" />
+                <p className="mt-3 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--brand-highlight)]">
+                  <span className="h-px w-6 bg-[var(--brand-highlight)]" aria-hidden="true" />
                   {eyebrow}
                 </p>
               )}

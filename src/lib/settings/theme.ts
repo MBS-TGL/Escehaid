@@ -62,9 +62,13 @@ export const THEME_PRESETS: ThemePreset[] = [
   },
 ];
 
+/** Kuning sembat — dekorasi highlight publik; tidak ikut dalam preset warna. */
+export const DEFAULT_HIGHLIGHT = "#f4d21f";
+
 export const DEFAULT_THEME = {
   primary: THEME_PRESETS[0].primary,
   accent: THEME_PRESETS[0].accent,
+  highlight: DEFAULT_HIGHLIGHT,
 };
 
 /** Cari preset yang persis cocok dengan pasangan warna terpilih (null bila custom). */

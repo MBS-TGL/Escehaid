@@ -36,7 +36,7 @@ export interface SiteSettings {
   /** Hanya override yang benar-benar tersimpan di database. */
   overrides: Record<string, string>;
   /** Tema ternormalisasi (#rrggbb); selalu valid meski ada input rusak. */
-  theme: { primary: string; accent: string };
+  theme: { primary: string; accent: string; highlight: string };
 }
 
 /**
@@ -118,8 +118,9 @@ export const getSiteSettings = cache(async function getSiteSettings(): Promise<S
   // berisi heksadesimal valid (site_settings bisa saja diedit langsung di DB).
   const primary = normalizeHex(values.theme_primary) ?? DEFAULT_THEME.primary;
   const accent = normalizeHex(values.theme_accent) ?? DEFAULT_THEME.accent;
+  const highlight = normalizeHex(values.theme_highlight) ?? DEFAULT_THEME.highlight;
 
-  return { values, sources, overrides, theme: { primary, accent } };
+  return { values, sources, overrides, theme: { primary, accent, highlight } };
 });
 
 /** Nilai efektif satu kunci (dengan default sebagai jaring pengaman). */

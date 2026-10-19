@@ -344,6 +344,15 @@ export const SETTING_FIELDS: SettingField[] = [
     default: "#1767b1",
     validate: validateColor,
   },
+  {
+    key: "theme_highlight",
+    group: "tema",
+    type: "color",
+    label: "Warna highlight",
+    help: "Dipakai untuk penanda dekoratif kecil — garis, garis bawah judul, dan aksen di atas bidang warna gelap.",
+    default: "#f4d21f",
+    validate: validateColor,
+  },
 ];
 
 /** Peta kunci → definisinya (lookup cepat). */

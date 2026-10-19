@@ -187,7 +187,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <style
           id="brand-theme"
           dangerouslySetInnerHTML={{
-            __html: `:root{--brand-primary:${theme.primary};--brand-accent:${theme.accent};${
+            __html: `:root{--brand-primary:${theme.primary};--brand-accent:${theme.accent};--brand-highlight:${theme.highlight};${
               theme.primary === DEFAULT_THEME.primary
                 ? ""
                 : `--brand-primary-mid:color-mix(in oklab,${theme.primary} 82%,white);--brand-primary-light:color-mix(in oklab,${theme.primary} 62%,white);`

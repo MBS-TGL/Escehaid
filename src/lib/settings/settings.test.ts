@@ -42,6 +42,7 @@ describe("Settings Registry: skema & validasi", () => {
   it("defaultFor mengembalikan default dari registry", () => {
     expect(defaultFor("site_name")).toBe("SMP Muhammadiyah 4 Tanggul");
     expect(defaultFor("theme_primary")).toBe("#082b59");
+    expect(defaultFor("theme_highlight")).toBe("#f4d21f");
     expect(defaultFor("tidak_ada")).toBe("");
   });
 
