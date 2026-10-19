@@ -126,16 +126,30 @@ function createSupabaseDriver(client: StorageClient, bucket: string): StorageApi
  *   R2_ACCESS_KEY_ID    — S3 credentials dari Cloudflare dashboard
  *   R2_SECRET_ACCESS_KEY — (pasangan di atas)
  *   R2_PUBLIC_BASE_URL  — custom domain publik bucket, mis. https://cdn.domain.sch.id
- *   R2_BUCKET           — nama bucket (default "school-assets")
+ *   R2_BUCKET           — bucket PUBLIK: images + documents (default "esceha-cdn")
+ *   R2_PRIVATE_BUCKET   — bucket PRIVAT: spmb-documents (default "esceha-private"),
+ *                         diakses hanya via presigned URL — tidak di-bind domain publik
  *
- * In-protocol objek dilayani sebagai `<R2_PUBLIC_BASE_URL>/<bucket>/<path>`;
- * bucket privat `spmb-documents` mengikuti perilaku Supabase (publicUrl tidak
- * bisa dibuka, akses hanya via signed URL).
+ * Objek dilayani sebagai `<R2_PUBLIC_BASE_URL>/<bucketSupabase>/<path>` — custom
+ * domain R2 memetakan URL path langsung ke key, jadi key fisik di dalam bucket
+ * adalah `<bucketSupabase>/<path>` TANPA prefix nama bucket R2. Pemisahan
+ * publik/privat lewat bucket berbeda (spmb-documents tidak pernah bocor ke CDN).
  */
 
 type R2Module = typeof import("@aws-sdk/client-s3");
 
-const R2_BUCKET = () => process.env.R2_BUCKET || "school-assets";/** Env R2 wajib lengkap; lempar error jelas bila belum diset. */
+const R2_BUCKETS = {
+  "images": () => process.env.R2_BUCKET || "esceha-cdn",
+  "documents": () => process.env.R2_BUCKET || "esceha-cdn",
+  "spmb-documents": () => process.env.R2_PRIVATE_BUCKET || process.env.R2_BUCKET || "esceha-private",
+} as const;
+
+/** Bucket R2 tujuan untuk sebuah bucket Supabase (publik vs privat). */
+function r2BucketFor(bucket: StorageBucket): string {
+  return (R2_BUCKETS[bucket] ?? R2_BUCKETS.images)();
+}
+
+/** Env R2 wajib lengkap; lempar error jelas bila belum diset. */
 function requireR2Env(): { accountId: string; accessKeyId: string; secretAccessKey: string; publicBase: string } {
   const accountId = process.env.R2_ACCOUNT_ID;
   const accessKeyId = process.env.R2_ACCESS_KEY_ID;
@@ -149,13 +163,21 @@ function requireR2Env(): { accountId: string; accessKeyId: string; secretAccessK
   return { accountId, accessKeyId, secretAccessKey, publicBase };
 }
 
-/** Kanonikalisasi badan unggah → Uint8Array (Bisa dipakai PutObjectCommand). */
+/** Kanonikalisasi badan unggah → Uint8Array (isian aman PutObjectCommand). */
 async function toUploadBody(
   body: File | Buffer | ArrayBuffer | Uint8Array | Blob
 ): Promise<Uint8Array> {
-  if (body instanceof Uint8Array) return body; // Buffer turunan Uint8Array
-  if (body instanceof ArrayBuffer) return new Uint8Array(body);
-  return new Uint8Array(await body.arrayBuffer()); // Blob/File
+  // ArrayBuffer.isView() memeriksa brand internal (aman lintas realm) —
+  // penting di env test jsdom di mana instanceof Uint8Array bisa salah tem.
+  if (ArrayBuffer.isView(body)) {
+    const view = body as ArrayBufferView;
+    return new Uint8Array(view.buffer, view.byteOffset, view.byteLength);
+  }
+  if (Object.prototype.toString.call(body) === "[object ArrayBuffer]") {
+    return new Uint8Array(body as ArrayBuffer);
+  }
+  // Blob/File tersisa
+  return new Uint8Array(await (body as Blob).arrayBuffer());
 }
 
 let r2LibPromise: Promise<{ client: R2Client; R2Module: R2Module }> | null = null;
@@ -193,8 +215,10 @@ function toR2Error(e: unknown): StorageError {
   return { message: err?.message || "Gagal mengakses R2.", status, statusCode: err?.$serverError?.code };
 }
 
-function createR2Driver(bucket: string): StorageApi {
-  const keyOf = (path: string) => `${R2_BUCKET()}/${bucket}/${path.replace(/^\/+/, "")}`;
+function createR2Driver(supabaseBucket: string): StorageApi {
+  const r2Bucket = r2BucketFor(supabaseBucket as StorageBucket);
+  // Custom domain R2: URL path === key. Nama bucket R2 TIDAK ikut ke key.
+  const keyOf = (path: string) => `${supabaseBucket}/${path.replace(/^\/+/, "")}`;
 
   return {
     async upload(path, fileBody, options) {
@@ -206,11 +230,11 @@ function createR2Driver(bucket: string): StorageApi {
         // Semantik upsert:false ala Supabase: 409 bila objek sudah ada.
         if (!options?.upsert) {
           try {
-            await client.send(new R2Module.HeadObjectCommand({ Bucket: R2_BUCKET(), Key: keyOf(path) }));
+            await client.send(new R2Module.HeadObjectCommand({ Bucket: r2Bucket, Key: keyOf(path) }));
             return {
               data: null,
               error: {
-                message: `Objek ${path} sudah ada di bucket "${bucket}".`,
+                message: `Objek ${path} sudah ada di bucket "${supabaseBucket}".`,
                 status: 409,
                 statusCode: "Duplicate",
               },
@@ -223,7 +247,7 @@ function createR2Driver(bucket: string): StorageApi {
 
         await client.send(
           new R2Module.PutObjectCommand({
-            Bucket: R2_BUCKET(),
+            Bucket: r2Bucket,
             Key: keyOf(path),
             Body: await toUploadBody(fileBody),
             ContentType: options?.contentType,
@@ -237,7 +261,7 @@ function createR2Driver(bucket: string): StorageApi {
     },
     getPublicUrl(path) {
       const env = requireR2Env();
-      return { data: { publicUrl: `${env.publicBase}/${bucket}/${path.replace(/^\/+/, "")}` } };
+      return { data: { publicUrl: `${env.publicBase}/${supabaseBucket}/${path.replace(/^\/+/, "")}` } };
     },
     async remove(paths) {
       if (paths.length === 0) return { data: [], error: null };
@@ -250,9 +274,9 @@ function createR2Driver(bucket: string): StorageApi {
         try {
           const res = await client.send(
             new R2Module.DeleteObjectsCommand({
-              Bucket: R2_BUCKET(),
+              Bucket: r2Bucket,
               Delete: {
-                Objects: chunk.map((p) => ({ Key: `${R2_BUCKET()}/${bucket}/${p.replace(/^\/+/, "")}` })),
+                Objects: chunk.map((p) => ({ Key: `${supabaseBucket}/${p.replace(/^\/+/, "")}` })),
                 Quiet: true,
               },
             })
@@ -293,8 +317,8 @@ function createR2Driver(bucket: string): StorageApi {
         do {
           const res = await client.send(
             new R2Module.ListObjectsV2Command({
-              Bucket: R2_BUCKET(),
-              Prefix: `${R2_BUCKET()}/${bucket}/${cleanPrefix}${cleanPrefix ? "/" : ""}`,
+              Bucket: r2Bucket,
+              Prefix: `${supabaseBucket}/${cleanPrefix}${cleanPrefix ? "/" : ""}`,
               Delimiter: delimiter,
               MaxKeys: Math.min(1000, limit - walked),
               ContinuationToken: token,
@@ -341,7 +365,7 @@ function createR2Driver(bucket: string): StorageApi {
         const { getSignedUrl } = await import("@aws-sdk/s3-request-presigner");
         const signedUrl = await getSignedUrl(
           client,
-          new R2Module.GetObjectCommand({ Bucket: R2_BUCKET(), Key: keyOf(path) }),
+          new R2Module.GetObjectCommand({ Bucket: r2Bucket, Key: keyOf(path) }),
           { expiresIn }
         );
         return { data: { signedUrl }, error: null };

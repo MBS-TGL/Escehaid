@@ -3,7 +3,9 @@
  * MIGRASI Storage Supabase → Cloudflare R2 (Tahap B).
  *
  * Menyalin SEMUA objek dari bucket Supabase ke bucket R2 dengan struktur key
- * yang sama dengan konvensi src/lib/storage.ts: <R2_BUCKET>/<bucket>/<path>.
+ * yang sama dengan konvensi src/lib/storage.ts: key fisik = `<bucketSupabase>/<path>`
+ * (custom domain R2 memetakan URL path langsung ke key) — bucket Supabase publik
+ * (images/documents) masuk R2_BUCKET, privat (spmb-documents) ke R2_PRIVATE_BUCKET.
  *
  *   node scripts/migrate-storage-r2.mjs                          # 3 bucket app
  *   node scripts/migrate-storage-r2.mjs images documents         # bucket custom
@@ -20,7 +22,8 @@
  *                                        (spmb-documents) via signed URL
  *   R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY — tujuan
  *   R2_PUBLIC_BASE_URL                 — domain publik (divalidasi ada)
- *   R2_BUCKET                          — default "school-assets"
+ *   R2_BUCKET        — bucket PUBLIK, default "esceha-cdn"
+ *   R2_PRIVATE_BUCKET — bucket PRIVAT (spmb-documents), default "esceha-private"
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -54,7 +57,12 @@ const R2_ACCOUNT_ID = env.R2_ACCOUNT_ID;
 const R2_ACCESS_KEY_ID = env.R2_ACCESS_KEY_ID;
 const R2_SECRET_ACCESS_KEY = env.R2_SECRET_ACCESS_KEY;
 const R2_PUBLIC_BASE_URL = (env.R2_PUBLIC_BASE_URL || "").replace(/\/+$/, "");
-const R2_BUCKET = env.R2_BUCKET || "school-assets";
+const R2_BUCKET = env.R2_BUCKET || "esceha-cdn";
+const R2_PRIVATE_BUCKET = env.R2_PRIVATE_BUCKET || "esceha-private";
+
+/** Bucket R2 tujuan: spmb-documents (privat) → R2_PRIVATE_BUCKET, sisanya publik. */
+const r2BucketFor = (supabaseBucket) =>
+  supabaseBucket === "spmb-documents" ? R2_PRIVATE_BUCKET : R2_BUCKET;
 
 if (!SUPABASE_URL || !ANON_KEY) {
   console.error("SUPABASE_URL / SUPABASE_ANON_KEY tidak ditemukan di .env.local.");
@@ -157,7 +165,7 @@ async function r2Imports() {
   return import("@aws-sdk/client-s3");
 }
 
-const r2Key = (bucket, objPath) => `${R2_BUCKET}/${bucket}/${objPath}`;
+const r2Key = (bucket, objPath) => `${bucket}/${objPath}`;
 
 /** HeadObject → { exists, size } (null bila kredensial tidak tersedia). */
 async function r2Head(bucket, objPath) {
@@ -165,7 +173,7 @@ async function r2Head(bucket, objPath) {
     const client = await getS3();
     const { HeadObjectCommand } = await r2Imports();
     const res = await client.send(
-      new HeadObjectCommand({ Bucket: R2_BUCKET, Key: r2Key(bucket, objPath) })
+      new HeadObjectCommand({ Bucket: r2BucketFor(bucket), Key: r2Key(bucket, objPath) })
     );
     return { exists: true, size: res.ContentLength ?? 0 };
   } catch (e) {
@@ -181,7 +189,7 @@ async function r2Put(bucket, objPath, buf, contentType) {
   const { PutObjectCommand } = await r2Imports();
   await client.send(
     new PutObjectCommand({
-      Bucket: R2_BUCKET,
+      Bucket: r2BucketFor(bucket),
       Key: r2Key(bucket, objPath),
       Body: buf,
       ContentType: contentType || undefined,
@@ -271,7 +279,8 @@ async function main() {
       generatedAt: new Date().toISOString(),
       from: SUPABASE_URL,
       to: `${R2_PUBLIC_BASE_URL || "(R2_PUBLIC_BASE_URL belum diset)"}`,
-      bucket: R2_BUCKET,
+      bucketPublik: R2_BUCKET,
+      bucketPrivat: R2_PRIVATE_BUCKET,
       manifest,
       failures,
       total,
