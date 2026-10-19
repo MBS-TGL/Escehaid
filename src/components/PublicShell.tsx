@@ -30,7 +30,8 @@ export default function PublicShell({
       <Footer
         profile={profile}
         brand={brand}
-        accreditation={profile?.accreditation || undefined}
+        accreditation={brand.accreditation.trim() || undefined}
+        npsn={brand.npsn.trim() || undefined}
       />
       <MobileBottomNav />
     </>

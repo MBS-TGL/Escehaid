@@ -93,6 +93,9 @@ const validateEmail = (v: string): string | null =>
 const validateColor = (v: string): string | null =>
   normalizeHex(v) ? null : "Warna harus berupa heksadesimal, mis. #082b59.";
 
+const validateNpsn = (v: string): string | null =>
+  /^\d{8,10}$/.test(v) ? null : "NPSN harus 8-10 digit angka.";
+
 /**
  * Seluruh kunci pengaturan. Urutan menentukan urutan tampil di tiap tab.
  * Nilai `default` = nilai yang berlaku saat tidak ada override & tidak ada
@@ -156,6 +159,27 @@ export const SETTING_FIELDS: SettingField[] = [
     default: "https://www.smpmuh4tanggul.sch.id",
     profileField: "website",
     validate: validateUrl,
+  },
+  {
+    key: "site_accreditation",
+    group: "identitas",
+    type: "text",
+    label: "Akreditasi sekolah",
+    help: "Nilai akreditasi untuk badge footer, mis. “A”.",
+    default: "A",
+    profileField: "accreditation",
+    maxLength: 20,
+  },
+  {
+    key: "site_npsn",
+    group: "identitas",
+    type: "text",
+    label: "NPSN",
+    help: "Nomor Pokok Sekolah Nasional (8-10 digit). Kosong → badge NPSN disembunyikan.",
+    default: "",
+    profileField: "npsn",
+    validate: validateNpsn,
+    maxLength: 12,
   },
 
   // ── Kontak ──────────────────────────────────────────────────────────────

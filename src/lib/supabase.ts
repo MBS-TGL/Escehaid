@@ -42,6 +42,7 @@ export interface SchoolProfile {
   total_students: number;
   total_classes: number;
   accreditation: string;
+  npsn: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -154,6 +154,10 @@ export interface PublicBrand {
   whatsapp: string;
   social: { instagram: string; youtube: string; facebook: string; tiktok: string; x: string };
   copyright: string;
+  /** Nilai akreditasi sekolah; kosong → Footer menyembunyikan badge. */
+  accreditation: string;
+  /** NPSN sekolah; kosong → Footer menyembunyikan badge. */
+  npsn: string;
 }
 
 /** Fungsi murni — dipisah dari akses database supaya bisa diuji unit test. */
@@ -179,6 +183,8 @@ export function toPublicBrand(settings: SiteSettings): PublicBrand {
       x: v.social_x,
     },
     copyright: v.footer_copyright,
+    accreditation: v.site_accreditation.trim(),
+    npsn: v.site_npsn.trim(),
   };
 }
 
