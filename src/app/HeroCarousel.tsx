@@ -22,7 +22,7 @@ import { Play } from "@/components/Icons";
 const YT_ID = process.env.NEXT_PUBLIC_HERO_VIDEO_YT || "";
 const VIDEO_URL =
   process.env.NEXT_PUBLIC_HERO_VIDEO_URL ||
-  "https://ljobjrlhaifafvroapeq.supabase.co/storage/v1/object/public/videos/Profile.mp4";
+  "/videos/Profile.mp4";
 /** Poster saat video belum berjalan (HP: sampai tombol play ditekan). */
 const POSTER_URL = "/images/Ruang-Kelas.jpg";
 const SEGMENTS = [
@@ -171,7 +171,7 @@ export default function HeroCarousel() {
               aria-current={i === current ? "true" : undefined}
               onClick={() => setCurrent(i)}
               className={`h-2 cursor-pointer rounded-full transition-all duration-300 ${
-                i === current ? "w-6 bg-[var(--brand-accent)]" : "w-2 bg-white/40"
+                i === current ? "w-6 bg-[var(--brand-highlight)]" : "w-2 bg-white/40"
               }`}
             />
           ))}

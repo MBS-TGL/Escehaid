@@ -132,8 +132,8 @@ export default async function Home() {
           style={{ backgroundImage: "radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--brand-accent) 14%, transparent), transparent 45%), radial-gradient(circle at 100% 100%, color-mix(in srgb, var(--brand-accent) 35%, transparent), transparent 55%)" }}
         />
         <div className="absolute inset-0 hidden opacity-20 md:block">
-          <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[var(--brand-accent)] blur-[150px]" />
-          <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-[var(--brand-accent)] blur-[180px]" />
+          <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[var(--brand-highlight)] blur-[150px]" />
+          <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-[var(--brand-highlight)] blur-[180px]" />
         </div>
         <div className="absolute inset-0 hidden opacity-[0.03] md:block" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--brand-highlight)]/30 to-transparent" />
@@ -162,14 +162,14 @@ export default async function Home() {
             <div className="mt-9 flex flex-wrap items-center gap-5">
               <Link
                 href="/admission"
-                className="group inline-flex items-center gap-2 rounded-xl bg-[var(--brand-accent)] px-6 py-3.5 text-sm font-bold text-[var(--brand-primary)] transition-all hover:bg-white hover:shadow-lg hover:shadow-[var(--brand-accent)]/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+                className="group inline-flex items-center gap-2 rounded-xl bg-[var(--brand-accent)] px-6 py-3.5 text-sm font-bold text-white transition-all hover:bg-white hover:text-[var(--brand-primary)] hover:shadow-lg hover:shadow-[var(--brand-accent)]/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
               >
                 Daftar
                 <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </Link>
               <Link
                 href="/profile"
-                className="group inline-flex items-center gap-1.5 text-sm font-semibold text-white/80 transition-colors hover:text-[var(--brand-accent)]"
+                className="group inline-flex items-center gap-1.5 text-sm font-semibold text-white/80 transition-colors hover:text-[var(--brand-highlight)]"
               >
                 Kenali sekolah
                 <CaretRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -178,7 +178,7 @@ export default async function Home() {
           </div>
 
           <div className="relative">
-            <div className="absolute -inset-4 hidden rounded-3xl bg-gradient-to-br from-[var(--brand-accent)]/20 to-[var(--brand-accent)]/20 blur-2xl md:block" />
+            <div className="absolute -inset-4 hidden rounded-3xl bg-gradient-to-br from-[var(--brand-highlight)]/20 to-[var(--brand-highlight)]/20 blur-2xl md:block" />
             <HeroCarousel />
           </div>
         </div>
@@ -608,7 +608,7 @@ export default async function Home() {
       {/* ── WHY MUH4TA ────────────────────────────────── */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] text-white" style={CV}>
         <div className="absolute inset-0 hidden opacity-10 md:block">
-          <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[var(--brand-accent)] blur-[120px]" />
+          <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[var(--brand-highlight)] blur-[120px]" />
         </div>
         <div className="relative mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
           <CSSFadeIn>

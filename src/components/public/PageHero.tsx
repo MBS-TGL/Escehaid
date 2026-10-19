@@ -84,7 +84,7 @@ export default function PageHero({
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full border-2 border-white/10" />
           <div className="absolute right-8 top-12 hidden h-16 w-16 rotate-12 rounded-2xl bg-white/5 md:block" />
-          <div className="absolute -bottom-8 right-1/4 h-10 w-28 rounded-full bg-[var(--brand-accent)]/40" />
+          <div className="absolute -bottom-8 right-1/4 h-10 w-28 rounded-full bg-[var(--brand-highlight)]/40" />
         </div>
         <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 md:py-12">
           <CSSFadeIn>

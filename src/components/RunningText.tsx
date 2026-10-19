@@ -137,7 +137,7 @@ export function RunningText() {
           blend with the text color and produce a muddy/grey glyph as it
           passes through, instead of a clean fade. */}
       <div className="absolute left-0 top-0 z-10 flex h-full items-center bg-[var(--brand-primary)] pl-4 pr-8">
-        <Megaphone className="h-3.5 w-3.5 text-[var(--brand-accent)]" weight="fill" />
+        <Megaphone className="h-3.5 w-3.5 text-[var(--brand-highlight)]" weight="fill" />
       </div>
       <div
         ref={containerRef}
@@ -171,7 +171,7 @@ export function RunningText() {
               {items.map((t, j) => (
                 <span key={j} className="flex items-center">
                   {t}
-                  <span className="mx-6 text-[var(--brand-accent)]">•</span>
+                  <span className="mx-6 text-[var(--brand-highlight)]">•</span>
                 </span>
               ))}
             </span>

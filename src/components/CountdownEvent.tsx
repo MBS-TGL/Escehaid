@@ -71,8 +71,8 @@ export default function CountdownEvent() {
     <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] py-14 md:py-20">
       {/* Decorative elements */}
       <div className="absolute inset-0">
-        <div className="absolute -left-32 -top-32 hidden h-80 w-80 rounded-full bg-[var(--brand-accent)]/8 blur-[100px] md:block" />
-        <div className="absolute -bottom-20 -right-20 hidden h-60 w-60 rounded-full bg-[var(--brand-accent)]/20 blur-[80px] md:block" />
+        <div className="absolute -left-32 -top-32 hidden h-80 w-80 rounded-full bg-[var(--brand-highlight)]/8 blur-[100px] md:block" />
+        <div className="absolute -bottom-20 -right-20 hidden h-60 w-60 rounded-full bg-[var(--brand-highlight)]/20 blur-[80px] md:block" />
         <div className="absolute left-1/2 top-0 h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         <div className="absolute bottom-0 left-1/2 h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         <CalendarBlank className="absolute -right-8 -top-8 h-48 w-48 rotate-12 text-white/[0.03]" weight="fill" />
@@ -80,7 +80,7 @@ export default function CountdownEvent() {
       </div>
 
       <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--brand-accent)]/30 bg-[var(--brand-accent)]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--brand-accent)]">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--brand-highlight)]/30 bg-[var(--brand-highlight)]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--brand-highlight)]">
           <CalendarBlank className="h-3 w-3" weight="fill" />
           Agenda Penting
         </span>
@@ -111,7 +111,7 @@ export default function CountdownEvent() {
               <button
                 key={i}
                 onClick={() => setActive(i)}
-                className={`h-2 rounded-full transition-all ${i === active ? "w-6 bg-[var(--brand-accent)]" : "w-2 bg-white/30"}`}
+                className={`h-2 rounded-full transition-all ${i === active ? "w-6 bg-[var(--brand-highlight)]" : "w-2 bg-white/30"}`}
               />
             ))}
           </div>
