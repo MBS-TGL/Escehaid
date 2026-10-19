@@ -27,7 +27,6 @@ import {
 import { SlideOver, SkeletonBlock } from "@/components/ui";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import type { SpmbRegistration, SpmbWave, SpmbFormField, SpmbFieldType } from "@/lib/supabase";
-import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/Toast";
 import {
   MagnifyingGlass,
@@ -558,8 +557,13 @@ export default function AdminSPMBPage() {
       const needSign = paths.filter((p) => !/^https?:\/\//i.test(p.path));
       paths.filter((p) => /^https?:\/\//i.test(p.path)).forEach(({ key, path }) => { urls[key] = path; });
       await Promise.all(needSign.map(async ({ key, path }) => {
-        const { data } = await supabase.storage.from("spmb-documents").createSignedUrl(path, 3600);
-        if (data?.signedUrl) urls[key] = data.signedUrl;
+        const res = await fetch("/api/admin/storage/signed-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path }),
+        });
+        const j = (await res.json().catch(() => ({}))) as { signedUrl?: string };
+        if (res.ok && j.signedUrl) urls[key] = j.signedUrl;
       }));
       setSignedUrls(urls);
     })();

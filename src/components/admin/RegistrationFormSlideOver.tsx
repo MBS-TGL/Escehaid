@@ -11,7 +11,6 @@ import {
   spmbAnswerKey,
   type SpmbRegistrationDuplicate,
 } from "@/lib/queries";
-import { supabase } from "@/lib/supabase";
 import {
   KOTA_KABUPATEN,
   SPMB_PROGRAMS,
@@ -287,17 +286,16 @@ export function RegistrationFormSlideOver({
           continue;
         }
         const path = `${folder}/${base}.${file.name.split(".").pop()}`;
-        const { error } = await supabase.storage
-          .from("spmb-documents")
-          .upload(path, file, { contentType: file.type, upsert: false });
-        if (error) {
-          throw new Error(
-            error.message?.includes("file_size")
-              ? `File "${file.name}" terlalu besar. Maksimal 10 MB.`
-              : error.message?.includes("mime")
-                ? `Format file "${file.name}" tidak didukung. Gunakan PDF, JPG, atau PNG.`
-                : `Gagal upload "${file.name}". ${error.message}`
-          );
+        // Upload via server (ikonis: /api/admin/storage) — sesi admin tak pernah
+        // menyentuh storage dari browser langsung.
+        const fd = new FormData();
+        fd.append("bucket", "spmb-documents");
+        fd.append("path", path);
+        fd.append("file", file);
+        const res = await fetch("/api/admin/storage", { method: "POST", body: fd });
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        if (!res.ok) {
+          throw new Error(j.error || `Gagal upload "${file.name}".`);
         }
         uploaded.push(path);
         filePaths[key] = path;
@@ -362,7 +360,11 @@ export function RegistrationFormSlideOver({
     } catch (err) {
       // Insert/upload gagal → bersihkan berkas yang sudah terunggah (best-effort).
       if (uploaded.length > 0) {
-        supabase.storage.from("spmb-documents").remove(uploaded).catch(() => {});
+        fetch("/api/admin/storage", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bucket: "spmb-documents", paths: uploaded }),
+        }).catch(() => {});
       }
       setSubmitError(err instanceof Error && err.message ? err.message : "Terjadi kesalahan saat menyimpan.");
     } finally {
