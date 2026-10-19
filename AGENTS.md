@@ -18,3 +18,9 @@ In repositories indexed by CodeGraph (a `.codegraph/` directory exists at the re
 
 If there is no `.codegraph/` directory, skip CodeGraph entirely — indexing is the user's decision.
 <!-- CODEGRAPH_END -->
+
+## Workflow pemilik repo (preferensi eksplisit)
+
+- Setiap kali satu fase/tahap pekerjaan selesai → langsung `git commit` lalu `git push` ke `origin/main`.
+- Sertakan blok auto-generated AGENTS.md dalam commit agar tree tetap bersih.
+- Verifikasi wajib sebelum commit: `npx tsc --noEmit`, `npm run lint`, `npm test`, dan (bila pekerjaan menyentuh build) `npm run build`.
