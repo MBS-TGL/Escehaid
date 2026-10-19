@@ -46,6 +46,7 @@ jangan pernah meng-commit rahasia apa pun):
 | `SUPABASE_ANON_KEY` | ✅ | Anon key Supabase (RLS yang membatasi) |
 | `STORAGE_DRIVER` | – | `supabase` (default) atau `r2` — lihat bawah |
 | `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_PUBLIC_BASE_URL` | – | Kredensial Cloudflare R2 (wajib saat `STORAGE_DRIVER=r2`) |
+| `R2_BUCKET` / `R2_PRIVATE_BUCKET` | – | Nama bucket R2: publik (`esceha-cdn`, domain `cdn.`) dan privat (`esceha-private`, presigned URL saja) |
 
 Catatan storage: semua operasi berkas (upload/unduh/hapus/list/signed URL)
 melewati `src/lib/storage.ts`. Memasang `STORAGE_DRIVER=r2` memindahkan
