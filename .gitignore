@@ -53,6 +53,9 @@ opencode.json
 
 # typescript
 *.tsbuildinfo
+
+# backup database supabase (berisi PII pendaftar + hash password) — jangan di-commit
+/supabase_backup/
 next-env.d.ts
 nul
 NUL
