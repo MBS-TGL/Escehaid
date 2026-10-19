@@ -6,9 +6,8 @@
  * melanjutkan. Setelah berhasil, flag dibersihkan dan user diarahkan ke
  * dashboard.
  */
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { Key, Eye, EyeSlash, CheckCircle } from "@/components/Icons";
@@ -22,18 +21,6 @@ export default function ChangePasswordPage() {
   const [confirm, setConfirm] = useState("");
   const [show, setShow] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    supabase.auth
-      .getUser()
-      .then(({ data }) => setUserId(data.user?.id ?? null))
-      .catch(() => setUserId(null));
-  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,31 +33,24 @@ export default function ChangePasswordPage() {
       return;
     }
     setSaving(true);
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
 
-    const { error } = await supabase.auth.updateUser({ password });
-    if (error) {
+    // Ganti password di server — flag must_change_password ikut dibersihkan
+    // di sana (best-effort; bila policy belum ada, proxy tetap akan melempar
+    // lagi, tapi user sudah bisa login).
+    const res = await fetch("/api/auth/change-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { error?: string };
+
+    if (!res.ok) {
       setSaving(false);
-      toast(error.message || "Gagal mengganti password.", "error");
+      toast(json.error || "Gagal mengganti password.", "error");
       return;
     }
 
-    // Bersihkan flag must_change_password (best-effort; bila policy belum ada
-    // biarkan — proxy tetap akan melempar lagi, tapi user sudah bisa login).
-    if (userId) {
-      try {
-        await supabase
-          .from("user_profiles")
-          .update({ must_change_password: false })
-          .eq("id", userId);
-      } catch {
-        // Abaikan — tidak menjatuhkan proses ganti password.
-      }
-    }
-
+    setSaving(false);
     toast("Password berhasil diganti.", "success");
     router.push("/admin?success=login");
   }

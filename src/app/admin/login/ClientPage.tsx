@@ -4,7 +4,6 @@ import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { createBrowserClient } from "@supabase/ssr";
 import { Eye, EyeSlash, Warning, ArrowRight, ArrowLeft, GraduationCap, Users, BookOpen, CheckCircle } from "@/components/Icons";
 
 function LoginForm() {
@@ -23,11 +22,6 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const errorParam = searchParams.get("error");
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   useEffect(() => {
     const timer = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(timer);
@@ -38,12 +32,14 @@ function LoginForm() {
     setLoading(true);
     setError("");
 
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    // Auth lewat server — sesi disimpan di cookie httpOnly.
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
     });
 
-    if (authError) {
+    if (!res.ok) {
       setError("Email atau password salah.");
       setLoading(false);
       return;
@@ -58,11 +54,13 @@ function LoginForm() {
     setResetLoading(true);
     setError("");
 
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-      redirectTo: `${window.location.origin}/admin/login`,
+    const res = await fetch("/api/auth/reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: resetEmail, redirectTo: window.location.origin }),
     });
 
-    if (resetError) {
+    if (!res.ok) {
       setError("Gagal mengirim email reset password.");
       setResetLoading(false);
       return;

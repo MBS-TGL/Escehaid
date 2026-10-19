@@ -10,7 +10,6 @@
  * nonaktif untuk akun sendiri).
  */
 import { useEffect, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
 import { UsersTab } from "./UsersTab";
 import { RolesTab } from "./RolesTab";
 import { UsersThree, ShieldCheck } from "@/components/Icons";
@@ -27,13 +26,12 @@ export default function AdminUsersPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    supabase.auth
-      .getUser()
-      .then(({ data }) => setCurrentUserId(data.user?.id ?? null))
+    // userId untuk menyaring halaman tab sendiri (tombol nonaktif).
+    fetch("/api/auth/session", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j: { session?: { userId?: string } | null }) =>
+        setCurrentUserId(j?.session?.userId ?? null)
+      )
       .catch(() => setCurrentUserId(null));
   }, []);
 

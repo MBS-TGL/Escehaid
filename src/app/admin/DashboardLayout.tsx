@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
 import AdminSidebar from "./Sidebar";
 import AdminTopbar from "./Topbar";
 import AdminMobileNav from "./MobileNav";
 import { PermissionsProvider } from "./PermissionsProvider";
 import { useToast } from "@/components/ui/Toast";
+import type { PermissionSubject } from "@/lib/rbac";
 
 interface UserProfile {
   full_name: string;
@@ -23,16 +23,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [subject, setSubject] = useState<PermissionSubject | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = useMemo(
-    () =>
-      createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      ),
-    []
-  );
 
   useEffect(() => {
     // Halaman login tidak perlu fetch profil. Tidak perlu setLoading(false) di sini:
@@ -42,38 +34,42 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
 
     const fetchProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      // Sesi, profil, dan izin dalam SATU panggilan server.
+      const res = await fetch("/api/auth/session", { cache: "no-store" });
+      const json = (await res.json().catch(() => null)) as {
+        session: {
+          userId: string;
+          profile: UserProfile;
+          subject: PermissionSubject;
+        } | null;
+      } | null;
+
+      const session = json?.session;
+      if (!session) {
         // Tidak ada sesi valid di browser — bersihkan cookie Supabase yang
         // mungkin masih tersisa agar proxy tidak melihat sesi lama (loop).
-        await supabase.auth.signOut();
+        await fetch("/api/auth/logout", { method: "POST" });
         router.replace("/admin/login");
         return;
       }
 
-      const { data } = await supabase
-        .from("user_profiles")
-        .select("full_name, role, system_role, is_active")
-        .eq("id", user.id)
-        .single();
-
-      if (!data || !data.is_active) {
-        await supabase.auth.signOut();
+      if (!session.profile.is_active) {
+        await fetch("/api/auth/logout", { method: "POST" });
         router.replace("/admin/login?error=inactive");
         return;
       }
 
-      setUserId(user.id);
-      setProfile(data);
+      setSubject(session.subject);
+      setProfile(session.profile);
       setLoading(false);
     };
 
     fetchProfile();
     // Bergantung pada `isLogin`, BUKAN `pathname`: layout ini tetap terpasang saat
     // pindah antar halaman admin. Dengan [pathname], setiap klik menu mengulang
-    // getUser() + query user_profiles dari browser (dua panggilan jaringan yang
-    // sia-sia, karena proxy.ts sudah memeriksa sesi di server).
-  }, [isLogin, router, supabase]);
+    // pemeriksaan sesi dari browser (panggilan jaringan yang sia-sia, karena
+    // proxy.ts sudah memeriksa sesi di server).
+  }, [isLogin, router]);
 
   // Scrollbar viewport tipis hanya saat di area admin (efek berjalan di semua
   // rute, termasuk /admin/login & layar pemuatan). Keluar dari /admin →
@@ -117,7 +113,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <PermissionsProvider userId={userId}>
+    <PermissionsProvider subject={subject}>
       <div className="min-h-screen bg-slate-50">
         <AdminSidebar />
 

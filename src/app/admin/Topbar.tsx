@@ -1,7 +1,6 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
 import Link from "next/link";
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
@@ -120,11 +119,6 @@ export default function AdminTopbar({
     return () => clearInterval(id);
   }, []);
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   const filteredNav = searchQuery
     ? navSearchItems.filter(
       (item) =>
@@ -225,7 +219,8 @@ export default function AdminTopbar({
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    // Logout di server — cookies sesi httpOnly dihapus di sana.
+    await fetch("/api/auth/logout", { method: "POST" });
     router.push("/admin/login");
     router.refresh();
   };

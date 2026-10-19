@@ -4,6 +4,10 @@
  * Konteks izin sisi klien — menyediakan `can(perm)` untuk menyaring menu
  * sidebar, bottom-nav mobile, dan pencarian topbar berdasarkan izin.
  *
+ * Bukan lagi penyedia fetch: `subject` dikirim dari DashboardLayout yang
+ * menariknya sekali via /api/auth/session. Refactor Fase 2 — tidak ada
+ * supabase-js di browser lagi.
+ *
  * PENYARINGAN INI HANYA KENYAMANAN UI. Penegakan sesungguhnya ada di:
  *   • proxy.ts (gate per-rute → halaman 403),
  *   • server action (`requirePermission`),
@@ -12,8 +16,7 @@
  * Bila tabel RBAC belum dibuat, `system_role` null dan izin di-resolve dari
  * pemetaan legacy sehingga admin lama tetap melihat menunya (degradasi anggun).
  */
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { createContext, useContext, useMemo } from "react";
 import { can, type PermissionSubject } from "@/lib/rbac";
 
 interface PermissionsContextType {
@@ -33,51 +36,11 @@ export function usePermissions() {
 
 export function PermissionsProvider({
   children,
-  userId,
+  subject,
 }: {
   children: React.ReactNode;
-  userId: string | null;
+  subject: PermissionSubject | null;
 }) {
-  const [subject, setSubject] = useState<PermissionSubject | null>(null);
-
-  useEffect(() => {
-    if (!userId) {
-      // Reset lewat microtask agar bukan setState sinkron langsung di effect
-      // (subjek memang sudah null pada saat mount).
-      queueMicrotask(() => setSubject(null));
-      return;
-    }
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    (async () => {
-      const { data: profile } = await supabase
-        .from("user_profiles")
-        .select("system_role, role, is_active")
-        .eq("id", userId)
-        .single();
-      if (!profile) {
-        setSubject(null);
-        return;
-      }
-      let permissions: string[] = [];
-      if (profile.system_role) {
-        const { data: rows } = await supabase
-          .from("role_permissions")
-          .select("permission")
-          .eq("role_key", profile.system_role);
-        permissions = (rows ?? []).map((r) => r.permission as string);
-      }
-      setSubject({
-        system_role: profile.system_role,
-        role: profile.role,
-        is_active: profile.is_active,
-        permissions,
-      });
-    })().catch(() => setSubject(null));
-  }, [userId]);
-
   const value = useMemo<PermissionsContextType>(
     () => ({
       can: (perm: string) => can(subject, perm),
