@@ -12,10 +12,13 @@ export default function PublicShell({
   children,
   profile,
   brand,
+  spmbOpen = false,
 }: {
   children: React.ReactNode;
   profile: SchoolProfile | null;
   brand: PublicBrand;
+  /** Status pendaftaran SPMB (feature flag) — meneruskan ke Footer. */
+  spmbOpen?: boolean;
 }) {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/admin");
@@ -27,7 +30,12 @@ export default function PublicShell({
       <RunningText />
       <Navbar brand={brand} />
       <main className="flex-1">{children}</main>
-      <Footer profile={profile} brand={brand} />
+      <Footer
+        profile={profile}
+        brand={brand}
+        spmbOpen={spmbOpen}
+        accreditation={profile?.accreditation || undefined}
+      />
       <MobileBottomNav />
     </>
   );

@@ -8,6 +8,7 @@ import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { DEFAULT_THEME } from "@/lib/settings/theme";
 import { getSchoolProfile } from "@/lib/queries/profile";
+import { isFeatureEnabled } from "@/lib/flags";
 
 const jakartaSans = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -96,8 +97,13 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Dibagi dengan pembacaan di dalam getSiteSettings (React `cache`) — tetap
   // satu query profil per request. Diteruskan ke PublicShell → Footer
-  // (nomor WhatsApp panitia SPMB di footer).
-  const [settings, profile] = await Promise.all([getSiteSettings(), getSchoolProfile()]);
+  // (nomor WhatsApp panitia SPMB + badge akreditasi). Flag SPMB ter-cache
+  // dengan tag "feature-flags" sehingga tidak menambah beban query nyata.
+  const [settings, profile, spmbOpen] = await Promise.all([
+    getSiteSettings(),
+    getSchoolProfile(),
+    isFeatureEnabled("spmb_registration_open"),
+  ]);
   const { values, theme } = settings;
 
   const schoolName = values.site_name.trim() || "SMP Muhammadiyah 4 Tanggul";
@@ -229,7 +235,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           `}
         </Script>
         <ToastProvider>
-          <PublicShell profile={profile} brand={toPublicBrand(settings)}>
+          <PublicShell profile={profile} brand={toPublicBrand(settings)} spmbOpen={spmbOpen}>
             {children}
           </PublicShell>
         </ToastProvider>
