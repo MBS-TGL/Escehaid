@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { CheckCircle, ArrowLeft, ArrowRight, FileText } from "@/components/Icons";
-import { supabase } from "@/lib/supabase";
 import type { SpmbFormField } from "@/lib/supabase";
 import { submitRegistration, spmbAnswerKey } from "@/lib/queries";
 import { Input, InputRupiah, Select, DatePicker, FileUpload } from "@/components/ui";
@@ -262,22 +261,24 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
   }
 
   async function uploadFile(file: File, path: string): Promise<string | null> {
-    const { data: uploadData, error } = await supabase.storage
-      .from("spmb-documents")
-      .upload(path, file, { contentType: file.type, upsert: true });
-
-    if (error) {
-      console.error("Upload error:", error);
-      if (error.message?.includes("file_size")) {
-        setErrors({ submit: `File "${file.name}" terlalu besar. Maksimal 10 MB.` });
-      } else if (error.message?.includes("mime")) {
-        setErrors({ submit: `Format file "${file.name}" tidak didukung. Gunakan PDF, JPG, atau PNG.` });
-      } else {
-        setErrors({ submit: `Gagal upload "${file.name}". ${error.message}` });
+    // Upload lewat server (IP server yang menganggil Supabase) — kredensial
+    // storage tidak pernah dikirim ke browser pendaftar.
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("path", path);
+      const res = await fetch("/api/spmb/upload", { method: "POST", body: fd });
+      const json = (await res.json().catch(() => ({}))) as { path?: string; error?: string };
+      if (!res.ok || !json.path) {
+        setErrors({ submit: json.error || `Gagal upload "${file.name}". Coba lagi.` });
+        return null;
       }
+      return json.path;
+    } catch (e) {
+      console.error("Upload error:", e);
+      setErrors({ submit: `Gagal upload "${file.name}". Periksa koneksi lalu coba lagi.` });
       return null;
     }
-    return uploadData.path;
   }
 
   async function handleSubmit() {
