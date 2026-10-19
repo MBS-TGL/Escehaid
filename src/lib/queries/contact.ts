@@ -65,10 +65,6 @@ export async function submitContactMessage(message: {
     return { success: false, error: error.message };
   }
 
-  // Email notifications —暂时 DISABLED (belum diverifikasi domain Resend)
-  // sendContactEmail(message).catch(() => {});
-  // sendContactAdminEmail(message).catch(() => {});
-
   // In-app notification to admins
   notifyAllAdmins(
     "Pesan Baru dari Website",

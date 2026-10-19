@@ -59,23 +59,6 @@ export async function submitRegistration(registration: {
     return { success: false, error: error.message };
   }
 
-  // Email notifications —暂时 DISABLED (belum diverifikasi domain Resend)
-  // Aktifkan lagi setelah custom domain ter-verify di Resend
-  // sendRegistrationEmail({
-  //   full_name: registration.full_name,
-  //   email: registration.email,
-  //   registration_path: registration.registration_path,
-  //   parent_name: registration.parent_name,
-  // }).catch(() => {});
-  // sendRegistrationAdminEmail({
-  //   full_name: registration.full_name,
-  //   parent_name: registration.parent_name,
-  //   phone: registration.phone,
-  //   email: registration.email,
-  //   registration_path: registration.registration_path,
-  //   previous_school: registration.previous_school,
-  // }).catch(() => {});
-
   // In-app notification to admins
   const pathLabel = registration.registration_path === "prestasi" ? "Prestasi" : registration.registration_path === "beasiswa" ? "Beasiswa" : "Reguler";
   notifyAllAdmins(
