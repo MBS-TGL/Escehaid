@@ -81,15 +81,12 @@ const socialBtn = `flex h-9 w-9 items-center justify-center rounded-md border bo
 export default function Footer({
   profile,
   brand,
-  spmbOpen = false,
   description = DEFAULT_DESCRIPTION,
   accreditation,
   npsn,
 }: {
   profile: SchoolProfile | null;
   brand: PublicBrand;
-  /** true saat pendaftaran SPMB sedang dibuka; menampilkan ajakan daftar di atas footer. */
-  spmbOpen?: boolean;
   /** Paragraf singkat tentang sekolah (2-3 kalimat). */
   description?: string;
   /** Contoh: 'Terakreditasi "A"'. Kosongkan jika tidak ingin ditampilkan. */
@@ -109,26 +106,6 @@ export default function Footer({
 
   return (
     <footer className="print:hidden bg-[var(--brand-primary)] pb-[calc(env(safe-area-inset-bottom)_+_76px)] text-white md:pb-0">
-      {/* Satu aksi terpenting bagi calon wali murid; hanya tampil saat SPMB dibuka */}
-      {spmbOpen && (
-        <div className="border-b border-white/10">
-          <div className="mx-auto flex max-w-[1296px] flex-col gap-4 px-6 py-7 md:flex-row md:items-center md:justify-between md:px-10">
-            <div>
-              <p className="text-base font-semibold text-white md:text-lg">Penerimaan murid baru sedang dibuka</p>
-              <p className="mt-1 text-sm text-white/70">
-                Daftar online, pantau status pendaftaran, dan unduh berkas dari satu tempat.
-              </p>
-            </div>
-            <Link
-              href="/admission"
-              className="inline-flex w-fit items-center rounded-md bg-[var(--brand-highlight)] px-5 py-2.5 text-sm font-semibold text-[var(--brand-primary)] transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-            >
-              Daftar SPMB online
-            </Link>
-          </div>
-        </div>
-      )}
-
       <div className="mx-auto max-w-[1296px] px-6 py-10 md:px-10 md:py-12">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-10">
           {/* Identitas */}
