@@ -418,7 +418,7 @@ export default function AdminGalleryPage() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {paginated.map((item) => {
+            {paginated.map((item, index) => {
               const isSelected = selectedIds.has(item.id);
               const menuActions: RowAction[] = [
                 { key: "view", label: "Lihat", icon: <Eye className="h-4 w-4" />, run: () => setViewItem(item) },
@@ -455,7 +455,7 @@ export default function AdminGalleryPage() {
                   >
                     <div className="aspect-[4/3] bg-slate-100 flex items-center justify-center md:aspect-square">
                       {galleryThumb(item) ? (
-                        <Image src={galleryThumb(item)} alt={item.title} width={400} height={300} loading="lazy" className="h-full w-full object-cover" />
+                        <Image src={galleryThumb(item)} alt={item.title} width={400} height={300} loading={index === 0 ? "eager" : "lazy"} className="h-full w-full object-cover" />
                       ) : item.media_type === "video" ? (
                         <Video className="h-10 w-10 text-slate-300 sm:h-12 sm:w-12" />
                       ) : (

@@ -1,7 +1,20 @@
-# Cutover R2 — langkah manual terakhir (±5 menit)
+# Cutover R2 — langkah manual (SELESAI)
 
-Semua sudah siap di sisi kode & Cloudflare. Yang tersisa butuh login dashboard
-Vercel/Cloudflare yang tidak bisa diotomasi dari repo ini.
+Cutover ke Cloudflare R2 sudah selesai dijalankan (20 Oktober 2026). Dokumen ini
+dipertahankan sebagai arsip langkah manual. Ringkasan status:
+
+| Langkah | Status |
+|---|---|
+| 1. Env Production di Vercel (7 variabel, 2 sensitive) | ✅ via dashboard |
+| 2. Redeploy | ✅ |
+| 3. Verifikasi upload → URL `cdn.smpmuh4tanggul.sch.id` + Objek muncul di R2 | ✅ (galeri `e797670f-…jpg`) |
+| 4. Hapus bucket lama `school-assets` (akun salah) | ✅ dihapus |
+| 5. Migrasi objek lama Supabase → R2 | ✅ 1 file (`cca4137b-…jpg`, 194 KB) via `scripts/migrate-storage-r2.mjs` — tersalin (bukan dipindah); traffic baru tidak lagi melewati Supabase Storage |
+| 6. Badge akreditasi & NPSN footer (bonus, commit `84fcabd`) | ✅ editable dari `/admin/settings` |
+
+Setelah cutover: semua traffic file publik dilayani CDN Cloudflare (zero egress),
+operasi admin (upload/list/remove/sign) lewat route server `/api/admin/storage`,
+Supabase tetap DB + Auth.
 
 ## 1. Set env di Vercel (Production)
 
