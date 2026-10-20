@@ -31,7 +31,8 @@ import { ConfirmModal, SlideOver } from "@/components/ui";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useFloatingPanel } from "@/components/ui/useFloatingPanel";
 import { useToast } from "@/components/ui/Toast";
-import { SquaresFour, Plus, FloppyDisk, Info, MagnifyingGlass, ArrowSquareOut, Checks, CheckCircle, Clock, EyeSlash } from "@/components/Icons";
+import { usePermissions } from "@/app/admin/PermissionsProvider";
+import { SquaresFour, Plus, FloppyDisk, Info, MagnifyingGlass, XCircle, ArrowSquareOut, Checks, CheckCircle, Clock, EyeSlash } from "@/components/Icons";
 import {
   PORTAL_ICONS,
   PORTAL_ICON_LABELS,
@@ -626,8 +627,14 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (key: strin
 
 export default function AdminPortalPage() {
   const { toast } = useToast();
-  const [items, setItems] = useState<PortalAppAdmin[]>([]);
+  const { can } = usePermissions();
+  // Gate UI aksi — penegakan sesungguhnya di proxy.ts/RLS (lihat PermissionsProvider).
+  const permCreate = can("portal:create");
+  const permUpdate = can("portal:update");
+  const permDelete = can("portal:delete");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [items, setItems] = useState<PortalAppAdmin[]>([]);
   const [deleteItem, setDeleteItem] = useState<PortalAppAdmin | null>(null);
   // Item yang akan diduplikat — duplikasi menulis langsung ke server, jadi
   // sama seperti hapus: minta konfirmasi dulu (dialog varian warning/kuning).
@@ -683,9 +690,16 @@ export default function AdminPortalPage() {
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
-    const data = await getPortalAppsAdmin();
-    setItems(data);
-    setLoading(false);
+    setLoadError("");
+    try {
+      const data = await getPortalAppsAdmin();
+      setItems(data);
+    } catch {
+      // Query gagal → tampil EmptyState "Gagal memuat", BUKAN daftar kosong palsu.
+      setLoadError("Gagal memuat aplikasi portal.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -1045,11 +1059,13 @@ export default function AdminPortalPage() {
             <ArrowSquareOut className="h-4 w-4 shrink-0" />
             <span className="truncate">Lihat di portal</span>
           </a>
-          <button onClick={openCreate}
-            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-3 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] sm:flex-none sm:px-4 md:py-2.5">
-            <Plus className="h-4 w-4 shrink-0" />
-            <span className="truncate">Tambah Aplikasi</span>
-          </button>
+          {permCreate && (
+            <button onClick={openCreate}
+              className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-3 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] sm:flex-none sm:px-4 md:py-2.5">
+              <Plus className="h-4 w-4 shrink-0" />
+              <span className="truncate">Tambah Aplikasi</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1131,13 +1147,15 @@ export default function AdminPortalPage() {
                 {act.label}
               </button>
             ))}
-            <button
-              type="button"
-              onClick={() => setConfirmBulkDelete(true)}
-              className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-            >
-              Hapus
-            </button>
+            {permDelete && (
+              <button
+                type="button"
+                onClick={() => setConfirmBulkDelete(true)}
+                className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+              >
+                Hapus
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setSelected(new Set())}
@@ -1217,6 +1235,19 @@ export default function AdminPortalPage() {
                       <p className="text-sm text-slate-500">Memuat data aplikasi portal...</p>
                     </div>
                   </div>
+                ) : loadError ? (
+                  <div className="px-4 py-16 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                        <XCircle className="h-6 w-6 text-red-400" />
+                      </div>
+                      <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
+                      <p className="mt-0.5 text-xs text-slate-500">{loadError}</p>
+                      <button onClick={() => fetchItems()} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                        Coba lagi
+                      </button>
+                    </div>
+                  </div>
                 ) : items.length === 0 ? (
                   <div className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
@@ -1269,6 +1300,10 @@ export default function AdminPortalPage() {
                       onSetStatus={async (it, status) => {
                         await applyStatus([it], status);
                       }}
+                      canEdit={permUpdate}
+                      canCreate={permCreate}
+                      canDelete={permDelete}
+                      canUpdate={permUpdate}
                     />
                   ))
                 )}
@@ -1281,10 +1316,10 @@ export default function AdminPortalPage() {
       {/* Bar aksi massal sticky (mobile, mode pilih) — MobileSelectBar:
           di atas bottom nav admin, safe-area-inset-bottom diperhitungkan;
           daftar diberi pb-20 supaya baris terakhir tidak tertutup. */}
-      {pickMode && (
+      {pickMode && (permDelete || permUpdate) && (
         <MobileSelectBar
           count={selectedItems.length}
-          onDelete={() => setConfirmBulkDelete(true)}
+          onDelete={permDelete ? () => setConfirmBulkDelete(true) : undefined}
           onCancel={exitPickMode}
         >
           {([

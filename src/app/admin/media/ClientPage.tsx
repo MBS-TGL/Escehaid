@@ -14,6 +14,7 @@ import {
 import type { MediaBucket, MediaFile, MediaReferenceScan } from "@/lib/queries";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useToast } from "@/components/ui/Toast";
+import { usePermissions } from "@/app/admin/PermissionsProvider";
 import {
   ArrowSquareOut,
   Copy,
@@ -73,6 +74,9 @@ const EMPTY_LIST: MediaFile[] = [];
  */
 export default function AdminMediaPage() {
   const { toast } = useToast();
+  const { can } = usePermissions();
+  // Gate UI aksi — penegakan sesungguhnya di proxy.ts/RLS (lihat PermissionsProvider).
+  const permDelete = can("media:delete");
 
   const [bucket, setBucket] = useState<MediaBucket>("images");
   // `listing` null = belum termuat; loading di-derive dari ini (bukan setState
@@ -174,6 +178,7 @@ export default function AdminMediaPage() {
 
   /** File boleh dihapus hanya setelah pemindaian lengkap dan file tidak terpakai (orphan). */
   function canDeleteFile(file: MediaFile): boolean {
+    if (!permDelete) return false;
     return scanComplete && refs !== null && !isMediaReferenced(file, refs);
   }
 
@@ -504,24 +509,29 @@ export default function AdminMediaPage() {
               const actions: RowAction[] = [
                 { key: "open", label: "Buka", icon: <ArrowSquareOut className="h-4 w-4" />, run: () => void handleOpen(file) },
                 { key: "copy", label: "Salin tautan", icon: <Copy className="h-4 w-4" />, run: () => void handleCopyLink(file) },
-                {
-                  key: "delete",
-                  label: canDelete ? "Hapus" : "Tidak bisa dihapus",
-                  icon: <Trash className="h-4 w-4" />,
-                  danger: canDelete,
-                  run: () => {
-                    if (!canDelete) {
-                      toast(
-                        !scanComplete
-                          ? "Pemindaian referensi belum lengkap — hapus dinonaktifkan"
-                          : "File masih dipakai konten — tidak boleh dihapus",
-                        "error"
-                      );
-                      return;
-                    }
-                    setConfirmDelete(file);
-                  },
-                },
+                // Tanpa izin media:delete → aksi hapus tidak ditampilkan sama sekali;
+                // dengan izin tapi tak bisa hapus (masih dipakai/scan belum selesai)
+                // tampil sebagai aksi yang menolak dengan penjelasan.
+                ...(permDelete
+                  ? [{
+                      key: "delete",
+                      label: canDelete ? "Hapus" : "Tidak bisa dihapus",
+                      icon: <Trash className="h-4 w-4" />,
+                      danger: canDelete,
+                      run: () => {
+                        if (!canDelete) {
+                          toast(
+                            !scanComplete
+                              ? "Pemindaian referensi belum lengkap — hapus dinonaktifkan"
+                              : "File masih dipakai konten — tidak boleh dihapus",
+                            "error"
+                          );
+                          return;
+                        }
+                        setConfirmDelete(file);
+                      },
+                    } as RowAction]
+                  : []),
               ];
 
               return (
@@ -602,7 +612,7 @@ export default function AdminMediaPage() {
       )}
 
       {/* Bar aksi massal sticky (mobile, mode pilih) — di atas bottom nav admin */}
-      {pickMode && (
+      {pickMode && permDelete && (
         <MobileSelectBar
           count={selectedPaths.size}
           onDelete={() => setBulkDeleteOpen(true)}

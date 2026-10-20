@@ -182,12 +182,18 @@ function RowActionsMenu({
   onEdit,
   onDuplicate,
   onDelete,
+  canEdit,
+  canCreate,
+  canDelete,
   disabled = false,
 }: {
   item: PortalAppAdmin;
   onEdit: (item: PortalAppAdmin) => void;
   onDuplicate: (item: PortalAppAdmin) => void;
   onDelete: (item: PortalAppAdmin) => void;
+  canEdit: boolean;
+  canCreate: boolean;
+  canDelete: boolean;
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -276,13 +282,12 @@ function RowActionsMenu({
 
   const entries: { key: string; label: string; icon: ReactNode; danger?: boolean; run: () => void }[] =
     [
-      { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) },
-      {
-        key: "duplicate",
-        label: "Duplikat",
-        icon: <Copy className="h-4 w-4" />,
-        run: () => onDuplicate(item),
-      },
+      ...(canEdit
+        ? [{ key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) }]
+        : []),
+      ...(canCreate
+        ? [{ key: "duplicate", label: "Duplikat", icon: <Copy className="h-4 w-4" />, run: () => onDuplicate(item) }]
+        : []),
       ...(hasLink
         ? [
           {
@@ -293,13 +298,15 @@ function RowActionsMenu({
           },
         ]
         : []),
-      {
-        key: "delete",
-        label: "Hapus",
-        icon: <Trash className="h-4 w-4" />,
-        danger: true,
-        run: () => onDelete(item),
-      },
+      ...(canDelete
+        ? [{
+            key: "delete",
+            label: "Hapus",
+            icon: <Trash className="h-4 w-4" />,
+            danger: true,
+            run: () => onDelete(item),
+          }]
+        : []),
     ];
 
   // Flip horizontal: rapatkan tepi kanan menu ke tepi kanan trigger, clamp ke
@@ -399,6 +406,10 @@ type RowProps = {
   onDelete: (item: PortalAppAdmin) => void;
   onDuplicate: (item: PortalAppAdmin) => void;
   onSetStatus: (item: PortalAppAdmin, status: PortalStatus) => Promise<void> | void;
+  canEdit: boolean;
+  canCreate: boolean;
+  canDelete: boolean;
+  canUpdate: boolean;
 };
 
 export function SortableRow({
@@ -413,6 +424,10 @@ export function SortableRow({
   onDelete,
   onDuplicate,
   onSetStatus,
+  canEdit,
+  canCreate,
+  canDelete,
+  canUpdate,
 }: RowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id, disabled: dragDisabled || selectMode });
@@ -427,6 +442,7 @@ export function SortableRow({
     <StatusPill
       value={statusOf(item)}
       onChange={(status) => onSetStatus(item, status)}
+      disabled={!canUpdate}
       label={`Status ${item.label}`}
     />
   );
@@ -471,37 +487,46 @@ export function SortableRow({
 
   const actions = (
     <div className="flex items-center gap-1">
-      <button
-        type="button"
-        onClick={() => onEdit(item)}
-        aria-label={`Edit ${item.label}`}
-        title="Edit"
-        className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-blue-50 hover:text-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-      >
-        <PencilSimple className="h-4 w-4" />
-      </button>
-      <button
-        type="button"
-        onClick={() => onDuplicate(item)}
-        aria-label={`Duplikat ${item.label}`}
-        title="Duplikat"
-        className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-emerald-50 hover:text-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-      >
-        <Copy className="h-4 w-4" />
-      </button>
+      {canEdit && (
+        <button
+          type="button"
+          onClick={() => onEdit(item)}
+          aria-label={`Edit ${item.label}`}
+          title="Edit"
+          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-blue-50 hover:text-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+        >
+          <PencilSimple className="h-4 w-4" />
+        </button>
+      )}
+      {canCreate && (
+        <button
+          type="button"
+          onClick={() => onDuplicate(item)}
+          aria-label={`Duplikat ${item.label}`}
+          title="Duplikat"
+          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-emerald-50 hover:text-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+        >
+          <Copy className="h-4 w-4" />
+        </button>
+      )}
       {/* Pemisah aksi destruktif — hapus tak bersebelahan langsung dengan
           duplikat. Tak ada undo: sekali konfirmasi, data hilang, jadi jarak +
           garis tipis menurunkan risiko klik salah di tengah deretan ikon serupa. */}
-      <span aria-hidden="true" className="mx-0.5 h-5 w-px bg-slate-200" />
-      <button
-        type="button"
-        onClick={() => onDelete(item)}
-        aria-label={`Hapus ${item.label}`}
-        title="Hapus"
-        className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-      >
-        <Trash className="h-4 w-4" />
-      </button>
+      {canDelete && <span aria-hidden="true" className="mx-0.5 h-5 w-px bg-slate-200" />}
+      {canDelete && (
+        <button
+          type="button"
+          onClick={() => onDelete(item)}
+          aria-label={`Hapus ${item.label}`}
+          title="Hapus"
+          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+        >
+          <Trash className="h-4 w-4" />
+        </button>
+      )}
+      {(canEdit || canCreate || canDelete) ? null : (
+        <span className="text-xs text-slate-300" title="Tidak memiliki izin penyuntingan">—</span>
+      )}
     </div>
   );
 
@@ -705,7 +730,7 @@ export function SortableRow({
             onChange={(status) => onSetStatus(item, status)}
             label={`Status ${item.label}`}
             compact
-            disabled={selectMode}
+            disabled={selectMode || !canUpdate}
           />
         </span>
 
@@ -714,6 +739,9 @@ export function SortableRow({
           onEdit={onEdit}
           onDuplicate={onDuplicate}
           onDelete={onDelete}
+          canEdit={canEdit}
+          canCreate={canCreate}
+          canDelete={canDelete}
           disabled={selectMode}
         />
       </div>

@@ -43,7 +43,9 @@ export async function getPortalAppsAdmin(): Promise<PortalAppAdmin[]> {
     .order("sort_order", { ascending: true });
   if (error) {
     console.error("Error fetching portal apps (admin):", error);
-    return [];
+    // Melempar error agar panel admin bisa membedakan "kosong" vs "gagal
+    // memuat" — pemanggil (panel portal, satu-satunya) menampilkan retry.
+    throw new Error(error.message);
   }
   return data ?? [];
 }

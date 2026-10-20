@@ -7,6 +7,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
+import { usePermissions } from "@/app/admin/PermissionsProvider";
 import { ConfirmModal } from "@/components/ui/Modal";
 import { saveFlagSettings, resetFlagSettings } from "./actions";
 import { getFlagsByCategory, FLAG_CATEGORIES, type FeatureFlagKey, FEATURE_FLAG_MAP } from "@/lib/flags/registry";
@@ -26,6 +27,9 @@ import {
 export function FlagsList({ initialFlags, initialOverrides }: { initialFlags: Record<FeatureFlagKey, FlagEvaluation>; initialOverrides: Record<FeatureFlagKey, { enabled: boolean; startAt: string | null; endAt: string | null }> }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { can } = usePermissions();
+  // Gate UI aksi — penegakan sesungguhnya di proxy + requirePermission di actions.ts.
+  const permManage = can("flags:manage");
 
   const [flags] = useState(initialFlags);
   const [overrides] = useState(initialOverrides);
@@ -190,6 +194,7 @@ export function FlagsList({ initialFlags, initialOverrides }: { initialFlags: Re
                     </span>
 
                     {/* Actions */}
+                    {permManage && (
                     <div className="flex items-center gap-1">
                       {!isEditing ? (
                         <>
@@ -252,6 +257,7 @@ export function FlagsList({ initialFlags, initialOverrides }: { initialFlags: Re
                         </div>
                       )}
                     </div>
+                    )}
                   </div>
                 );
               })}

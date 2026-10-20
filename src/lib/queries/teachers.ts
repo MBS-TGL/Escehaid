@@ -60,7 +60,12 @@ export async function getAllTeachers(): Promise<Teacher[]> {
     .from("teachers")
     .select("*")
     .order("sort_order", { ascending: true });
-  if (error) return [];
+  if (error) {
+    // Melempar error agar panel admin bisa membedakan "kosong" vs "gagal
+    // memuat" — pemanggil (panel guru, satu-satunya) menampilkan retry.
+    console.error("Error fetching teachers:", error);
+    throw new Error(error.message);
+  }
   return data || [];
 }
 

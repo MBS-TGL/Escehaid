@@ -16,6 +16,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
+import { usePermissions } from "@/app/admin/PermissionsProvider";
 import { ConfirmModal } from "@/components/ui/Modal";
 import { MediaPicker } from "./MediaPicker";
 import { resetGroupSettings, saveGroupSettings } from "./actions";
@@ -54,6 +55,9 @@ const GROUP_ICONS: Record<SettingGroup, typeof Buildings> = {
 export function SettingsForm({ initial }: { initial: SiteSettings }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { can } = usePermissions();
+  // Gate UI aksi — penegakan sesungguhnya di proxy + requirePermission di actions.ts.
+  const permManage = can("settings:manage");
 
   const [tab, setTab] = useState<SettingGroup>("identitas");
   const [drafts, setDrafts] = useState<Record<string, string>>({ ...initial.values });
@@ -234,7 +238,8 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
           <button
             type="button"
             onClick={() => void handleSave()}
-            disabled={saving || tabDirtyCount(tab) === 0}
+            disabled={saving || tabDirtyCount(tab) === 0 || !permManage}
+            title={permManage ? undefined : "Tidak berizin menyimpan pengaturan"}
             className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-primary-mid)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             <FloppyDisk className="h-4 w-4" />

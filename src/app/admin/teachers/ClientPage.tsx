@@ -15,6 +15,8 @@ import type { Teacher } from "@/lib/supabase";
 import { ConfirmModal, SlideOver, SkeletonBlock } from "@/components/ui";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useToast } from "@/components/ui/Toast";
+import { usePermissions } from "@/app/admin/PermissionsProvider";
+import { normalizeName } from "@/lib/format-name";
 import {
   Users,
   Plus,
@@ -51,8 +53,15 @@ const PAGE_SIZE = 10;
 
 export default function AdminTeachersPage() {
   const { toast } = useToast();
+  const { can } = usePermissions();
+  // Gate UI aksi — penegakan sesungguhnya di proxy.ts/RLS (lihat PermissionsProvider).
+  const permCreate = can("guru:create");
+  const permUpdate = can("guru:update");
+  const permDelete = can("guru:delete");
+  const permPublish = can("guru:publish");
   const [items, setItems] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterTab>("all");
   const [page, setPage] = useState(1);
@@ -74,9 +83,16 @@ export default function AdminTeachersPage() {
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
-    const data = await getAllTeachers();
-    setItems(data);
-    setLoading(false);
+    setLoadError("");
+    try {
+      const data = await getAllTeachers();
+      setItems(data);
+    } catch {
+      // Query gagal → tampil EmptyState "Gagal memuat", BUKAN daftar kosong palsu.
+      setLoadError("Gagal memuat data guru.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -277,10 +293,12 @@ export default function AdminTeachersPage() {
             <p className="text-sm text-slate-500">Kelola data guru dan tenaga kependidikan</p>
           </div>
         </div>
-        <button onClick={openCreate}
-          className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] md:py-2.5">
-          <Plus className="h-4 w-4" /> Tambah Guru
-        </button>
+        {permCreate && (
+          <button onClick={openCreate}
+            className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] md:py-2.5">
+            <Plus className="h-4 w-4" /> Tambah Guru
+          </button>
+        )}
       </div>
 
       {/* Stats — StatPillGroup: pill kompak satu baris */}
@@ -295,10 +313,12 @@ export default function AdminTeachersPage() {
         <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex">
           <Checks className="h-4 w-4 text-[var(--brand-primary)]" />
           <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
-          <button onClick={() => setBulkDelete(true)}
-            className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">
-            Hapus
-          </button>
+          {permDelete && (
+            <button onClick={() => setBulkDelete(true)}
+              className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">
+              Hapus
+            </button>
+          )}
           <button onClick={() => setSelectedIds(new Set())}
             aria-label="Hapus pilihan" title="Hapus pilihan"
             className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600">
@@ -378,6 +398,19 @@ export default function AdminTeachersPage() {
                     <p className="text-sm text-slate-500">Memuat data guru...</p>
                   </div>
                 </td></tr>
+              ) : loadError ? (
+                <tr><td colSpan={8} className="px-4 py-16 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                      <XCircle className="h-6 w-6 text-red-400" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{loadError}</p>
+                    <button onClick={() => fetchItems()} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                      Coba lagi
+                    </button>
+                  </div>
+                </td></tr>
               ) : paginated.length === 0 ? (
                 <tr><td colSpan={8} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
@@ -388,7 +421,7 @@ export default function AdminTeachersPage() {
                       <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
                       <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada data guru"}</p>
                     </div>
-                    {!search && filter === "all" && (
+                    {!search && filter === "all" && permCreate && (
                       <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
                         <Plus className="h-3.5 w-3.5" /> Tambah Guru Pertama
                       </button>
@@ -430,12 +463,13 @@ export default function AdminTeachersPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className="text-sm font-medium text-slate-700">{item.name}</span>
+                      <span className="text-sm font-medium text-slate-700">{normalizeName(item.name)}</span>
                     </td>
                     <td className="px-4 py-3.5 text-sm text-slate-500">{item.position}</td>
                     <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => handleToggle(item)}
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                      <button onClick={() => handleToggle(item)} disabled={!permPublish}
+                        title={permPublish ? "Klik untuk ubah status" : "Tidak berizin mengubah status"}
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:cursor-default disabled:opacity-70 ${
                           item.is_active
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
                             : "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200"
@@ -445,14 +479,18 @@ export default function AdminTeachersPage() {
                     </td>
                     <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => openEdit(item)} aria-label={`Edit ${item.name}`}
-                          className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
-                          <PencilSimple className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => setDeleteItem(item)} aria-label={`Hapus ${item.name}`}
-                          className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
-                          <Trash className="h-4 w-4" />
-                        </button>
+                        {permUpdate && (
+                          <button onClick={() => openEdit(item)} aria-label={`Edit ${item.name}`}
+                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
+                            <PencilSimple className="h-4 w-4" />
+                          </button>
+                        )}
+                        {permDelete && (
+                          <button onClick={() => setDeleteItem(item)} aria-label={`Hapus ${item.name}`}
+                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
+                            <Trash className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -503,6 +541,17 @@ export default function AdminTeachersPage() {
                 </div>
               ))}
             </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                <XCircle className="h-6 w-6 text-red-400" />
+              </div>
+              <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
+              <p className="mt-0.5 text-xs text-slate-500">{loadError}</p>
+              <button onClick={() => fetchItems()} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                Coba lagi
+              </button>
+            </div>
           ) : paginated.length === 0 ? (
             <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
@@ -512,7 +561,7 @@ export default function AdminTeachersPage() {
                 <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
                 <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada data guru"}</p>
               </div>
-              {!search && filter === "all" && (
+              {!search && filter === "all" && permCreate && (
                 <button onClick={openCreate} className="mt-1 flex min-h-10 items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
                   <Plus className="h-3.5 w-3.5" /> Tambah Guru Pertama
                 </button>
@@ -535,6 +584,9 @@ export default function AdminTeachersPage() {
                 onReorder={handleReorder}
                 canGoUp={index > 0}
                 canGoDown={index < paginated.length - 1}
+                canEdit={permUpdate}
+                canDelete={permDelete}
+                canToggle={permPublish}
               />
             ))
           )}
@@ -558,7 +610,7 @@ export default function AdminTeachersPage() {
       {pickMode && (
         <MobileSelectBar
           count={selectedIds.size}
-          onDelete={() => setBulkDelete(true)}
+          onDelete={permDelete ? () => setBulkDelete(true) : undefined}
           onCancel={exitPickMode}
         />
       )}
@@ -670,6 +722,9 @@ function TeacherMobileRow({
   onReorder,
   canGoUp,
   canGoDown,
+  canEdit,
+  canDelete,
+  canToggle,
 }: {
   item: Teacher;
   index: number;
@@ -684,22 +739,31 @@ function TeacherMobileRow({
   onReorder: (id: string, direction: "up" | "down") => void;
   canGoUp: boolean;
   canGoDown: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canToggle: boolean;
 }) {
   const actions: RowAction[] = [
-    { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) },
-    {
-      key: "toggle",
-      label: item.is_active ? "Nonaktifkan" : "Aktifkan",
-      icon: item.is_active ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
-      run: () => onToggle(item),
-    },
+    ...(canEdit
+      ? [{ key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) } as RowAction]
+      : []),
+    ...(canToggle
+      ? [{
+          key: "toggle",
+          label: item.is_active ? "Nonaktifkan" : "Aktifkan",
+          icon: item.is_active ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
+          run: () => onToggle(item),
+        } as RowAction]
+      : []),
     ...(canGoUp
       ? [{ key: "up", label: "Naik", icon: <ArrowUp className="h-4 w-4" />, run: () => onReorder(item.id, "up") }]
       : []),
     ...(canGoDown
       ? [{ key: "down", label: "Turun", icon: <ArrowDown className="h-4 w-4" />, run: () => onReorder(item.id, "down") }]
       : []),
-    { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) },
+    ...(canDelete
+      ? [{ key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) } as RowAction]
+      : []),
   ];
 
   return (
@@ -737,7 +801,7 @@ function TeacherMobileRow({
             }}
           />
         }
-        title={item.name}
+        title={normalizeName(item.name)}
         badge={!item.is_active ? <QuietBadge>Nonaktif</QuietBadge> : undefined}
         subtitle={
           item.position ? (
