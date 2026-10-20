@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { detectPrincipalGreeting } from "./principal-quote";
+import { detectPrincipalGreeting, keepTogether } from "./principal-quote";
 
 describe("detectPrincipalGreeting", () => {
   it("kutipan polos: tidak ada salam", () => {
@@ -39,5 +39,28 @@ describe("detectPrincipalGreeting", () => {
     const quote = `Wassalamu'alaikum Warahmatullahi Wabarakatuh. ${filler.repeat(2)}`;
     const r = detectPrincipalGreeting(quote);
     expect(r.endsWithGreeting).toBe(false);
+  });
+});
+
+describe("keepTogether", () => {
+  it("angka di tengah nama sekolah tidak terpecah", () => {
+    expect(keepTogether("SMP Muhammadiyah 4 Tanggul")).toBe("SMP Muhammadiyah\u00a04\u00a0Tanggul");
+  });
+
+  it("teks tanpa angka tidak berubah", () => {
+    const t = "Kami berkomitmen mencerdaskan kehidupan bangsa melalui pendidikan berkualitas.";
+    expect(keepTogether(t)).toBe(t);
+  });
+
+  it("angka di awal dan akhir kalimat tetap menyatu", () => {
+    expect(keepTogether("4 juz sejak usia dini, tandanya latihan sejak kelas 7")).toBe(
+      "4\u00a0juz sejak usia dini, tandanya latihan sejak kelas\u00a07"
+    );
+  });
+
+  it("angka bertitik/koma ikut disempelkan", () => {
+    expect(keepTogether("Lebih dari 1.500 siswa dan 4,5 poin")).toBe(
+      "Lebih dari\u00a01.500\u00a0siswa dan\u00a04,5\u00a0poin"
+    );
   });
 });

@@ -2,9 +2,9 @@ import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import type { Metadata } from "next";
-import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock, Quotes } from "@/components/Icons";
+import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock } from "@/components/Icons";
 import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList } from "@/lib/queries";
-import { detectPrincipalGreeting } from "@/lib/principal-quote";
+import { detectPrincipalGreeting, keepTogether } from "@/lib/principal-quote";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import { faqs } from "./faq-data";
@@ -69,7 +69,6 @@ const SALAM_BUKA = "Assalamu'alaikum Warahmatullahi Wabarakatuh.";
 const SALAM_TUTUP = "Wassalamu'alaikum Warahmatullahi Wabarakatuh.";
 const PRINCIPAL_QUOTE_FALLBACK =
   "Selamat datang di SMP Muhammadiyah 4 Tanggul. Kami berkomitmen mencerdaskan kehidupan bangsa melalui pendidikan berkualitas yang memadukan keunggulan akademik dan pembentukan karakter Islami.";
-const PRINCIPAL_HEADLINE_FALLBACK = "Berilmu, Berakhlak, Berkemajuan.";
 
 export async function generateMetadata(): Promise<Metadata> {
   // Judul beranda memakai `absolute` agar TIDAK ikut template `%s | <nama>`
@@ -110,6 +109,12 @@ export default async function Home() {
 
   const principalQuote = (profile?.principal_quote || PRINCIPAL_QUOTE_FALLBACK).trim();
   const { startsWithGreeting, endsWithGreeting } = detectPrincipalGreeting(principalQuote);
+  const quoteTypeClass =
+    principalQuote.length <= 140
+      ? "text-2xl md:text-3xl text-balance"
+      : principalQuote.length <= 320
+        ? "text-xl md:text-2xl text-pretty"
+        : "text-lg md:text-xl text-pretty";
 
   // Urutan prestasi di beranda disamakan dengan halaman /achievements:
   // unggulan dulu, lalu tahun menurun, lalu terbit menurun. Urutan yang sama
@@ -198,81 +203,55 @@ export default async function Home() {
       <CountdownEvent />
 
       {/* ── SAMBUTAN ──────────────────────────────────────── */}
-      <section
-        className="relative overflow-hidden"
-        style={{
-          ...CV,
-          backgroundColor: "var(--surface-muted)",
-          backgroundImage:
-            "radial-gradient(circle at 100% 100%, color-mix(in srgb, var(--brand-gold) 12%, transparent), transparent 55%)",
-        }}
-      >
-        <svg
-          viewBox="0 0 100 100"
-          fill="none"
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-14 -right-14 h-56 w-56 stroke-[var(--brand-gold)] opacity-[0.08] md:h-72 md:w-72"
-        >
-          <rect x="24" y="24" width="52" height="52" strokeWidth="2.25" />
-          <rect x="24" y="24" width="52" height="52" transform="rotate(45 50 50)" strokeWidth="2.25" />
-        </svg>
-        <div className="relative z-10 mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
+      <section className="bg-[var(--surface-muted)]" style={CV}>
+        <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
           <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.3fr] lg:gap-16">
             <CSSFadeIn>
               <div className="flex justify-center lg:justify-end">
-                <div className="relative">
-                  <div className="absolute -inset-4 hidden rounded-full bg-gradient-to-br from-[var(--brand-accent)]/30 to-[var(--brand-accent)]/20 blur-xl md:block" />
-                  <div className="relative h-56 w-56 overflow-hidden rounded-full border-4 border-[var(--brand-accent)] ring-2 ring-[var(--brand-gold)]/60 ring-offset-4 ring-offset-[var(--surface-muted)] md:h-72 md:w-72">
-                    <Image
-                      src={profile?.principal_photo_url || "/images/Kepala-Sekolah.jpg"}
-                      alt={`${profile?.principal_name || "Kepala Sekolah"} - Kepala Sekolah`}
-                      fill
-                      sizes="288px"
-                      className="object-cover object-[center_15%]"
-                    />
-                  </div>
-                  <div
-                    className="absolute -bottom-2 -right-2 flex h-11 w-11 items-center justify-center rounded-full border-4 border-white bg-[var(--brand-primary)] shadow-lg"
-                    aria-hidden="true"
-                  >
-                    <svg viewBox="0 0 24 24" className="h-6 w-6">
-                      <rect x="5" y="5" width="14" height="14" fill="var(--brand-highlight)" strokeLinejoin="round" strokeWidth="2" />
-                      <rect x="5" y="5" width="14" height="14" fill="var(--brand-highlight)" strokeLinejoin="round" strokeWidth="2" transform="rotate(45 12 12)" />
-                    </svg>
-                  </div>
+                <div className="relative h-56 w-56 overflow-hidden rounded-full border border-[#dce3ed] md:h-64 md:w-64">
+                  <Image
+                    src={profile?.principal_photo_url || "/images/Kepala-Sekolah.jpg"}
+                    alt={`${profile?.principal_name || "Kepala Sekolah"} - Kepala Sekolah`}
+                    fill
+                    sizes="288px"
+                    className="object-cover object-[center_15%]"
+                  />
                 </div>
               </div>
             </CSSFadeIn>
 
             <CSSFadeIn delay={0.1}>
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Sambutan Kepala Sekolah</p>
-                <h2 className="mt-4 text-3xl font-semibold leading-tight tracking-tight text-[var(--brand-primary)] md:text-4xl">
-                  {PRINCIPAL_HEADLINE_FALLBACK}
-                </h2>
-                {!startsWithGreeting && (
-                  <p className="mt-6 pl-6 text-sm font-medium italic text-[var(--brand-accent)] md:text-[15px]">
-                    {SALAM_BUKA}
-                  </p>
-                )}
-                <blockquote className="relative mt-4 border-l-2 border-[var(--brand-accent)] pl-6">
-                  <div className="absolute -left-3.5 top-0 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[var(--brand-accent)] bg-white" aria-hidden="true">
-                    <Quotes weight="fill" className="h-3.5 w-3.5 text-[var(--brand-gold)]" />
+                <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Sambutan Kepala Sekolah</h2>
+                <blockquote className="mt-6">
+                  {!startsWithGreeting && (
+                    <p className="mb-5 text-sm tracking-wide text-slate-600">{SALAM_BUKA}</p>
+                  )}
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none mb-2 block select-none font-serif text-5xl leading-none text-[var(--brand-gold)]/35 lg:hidden"
+                  >
+                    &ldquo;
+                  </span>
+                  <div className="relative">
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute -left-14 -top-2 hidden select-none font-serif text-[4rem] leading-none text-[var(--brand-gold)]/35 lg:block"
+                    >
+                      &ldquo;
+                    </span>
+                    <p className={`${quoteTypeClass} max-w-[38em] font-medium leading-relaxed text-[var(--brand-primary)]`}>
+                      {keepTogether(principalQuote)}
+                    </p>
                   </div>
-                  <p className="text-base leading-relaxed text-slate-700 md:text-lg">
-                    {principalQuote}
-                  </p>
+                  {!endsWithGreeting && (
+                    <p className="mt-5 text-sm tracking-wide text-slate-600">{SALAM_TUTUP}</p>
+                  )}
                 </blockquote>
-                {!endsWithGreeting && (
-                  <p className="mt-4 pl-6 text-sm font-medium italic text-[var(--brand-accent)]">
-                    {SALAM_TUTUP}
-                  </p>
-                )}
-                <footer className="mt-6 pl-6">
-                  <div className="border-t border-[var(--brand-gold)]/40 pt-4">
-                    <p className="text-sm font-semibold text-[var(--brand-primary)]">{profile?.principal_name || "Khoirul Anwar, S.Pd"}</p>
-                    <p className="text-xs text-slate-600">Kepala {schoolName}</p>
-                  </div>
+                <footer className="mt-6">
+                  <div className="h-0.5 w-10 bg-[var(--brand-gold)]" />
+                  <p className="mt-4 text-[17px] font-semibold text-[var(--brand-primary)]">{profile?.principal_name || "Khoirul Anwar, S.Pd"}</p>
+                  <p className="text-sm text-slate-600">Kepala {schoolName}</p>
                 </footer>
               </div>
             </CSSFadeIn>
