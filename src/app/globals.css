@@ -4,6 +4,7 @@
 :root {
   --background: #ffffff;
   --foreground: #172033;
+  --surface-muted: #f4f7fb;
   --radius: 12px;
 
   /* Warna merek — DIOVERRIDE oleh Pengaturan Situs (admin) lewat <style>
