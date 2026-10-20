@@ -27,6 +27,9 @@ import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { sanitize } from "@/lib/sanitize";
 import CoverImage from "@/components/CoverImage";
 import { compressImage } from "@/lib/compress-image";
+import { usePermissions } from "@/app/admin/PermissionsProvider";
+import { normalizeName } from "@/lib/format-name";
+import { formatRelativeTime } from "@/lib/admin-display";
 import {
   Note,
   Eye,
@@ -206,8 +209,15 @@ function toEditorContent(text: string): string {
 
 export default function AdminArticlesPage() {
   const { toast } = useToast();
+  const { can } = usePermissions();
+  // Gate UI aksi — penegakan sesungguhnya di proxy.ts/RLS (lihat PermissionsProvider).
+  const permCreate = can("artikel:create");
+  const permUpdate = can("artikel:update");
+  const permDelete = can("artikel:delete");
+  const permPublish = can("artikel:publish");
   const [articles, setArticles] = useState<ArticleWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -290,9 +300,17 @@ export default function AdminArticlesPage() {
   }, []);
 
   const fetchArticles = useCallback(async () => {
-    const data = await getArticleListAll();
-    setArticles(data);
-    setLoading(false);
+    setLoading(true);
+    setLoadError("");
+    try {
+      const data = await getArticleListAll();
+      setArticles(data);
+    } catch {
+      // Query gagal → tampil EmptyState "Gagal memuat", BUKAN daftar kosong palsu.
+      setLoadError("Gagal memuat data artikel.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -873,9 +891,11 @@ export default function AdminArticlesPage() {
             <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">Artikel, tips, dan edukasi</p>
           </div>
         </div>
-        <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] md:py-2.5">
-          <Plus className="h-4 w-4" /> Buat Baru
-        </button>
+        {permCreate && (
+          <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] md:py-2.5">
+            <Plus className="h-4 w-4" /> Buat Baru
+          </button>
+        )}
       </div>
 
       {/* Stats — StatPillGroup: pill kompak satu baris */}
@@ -891,9 +911,15 @@ export default function AdminArticlesPage() {
         <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex">
           <Checks className="h-4 w-4 text-[var(--brand-primary)]" />
           <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
-          <button onClick={() => handleBulkPublish(true)} aria-label={`Terbitkan ${selectedIds.size} artikel terpilih`} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Publish</button>
-          <button onClick={() => handleBulkPublish(false)} aria-label={`Kembalikan ${selectedIds.size} artikel ke draft`} className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-600">Unpublish</button>
-          <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} artikel terpilih`} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
+          {permPublish && (
+            <>
+              <button onClick={() => handleBulkPublish(true)} aria-label={`Terbitkan ${selectedIds.size} artikel terpilih`} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Publish</button>
+              <button onClick={() => handleBulkPublish(false)} aria-label={`Kembalikan ${selectedIds.size} artikel ke draft`} className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-600">Unpublish</button>
+            </>
+          )}
+          {permDelete && (
+            <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} artikel terpilih`} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
+          )}
           <button onClick={() => setSelectedIds(new Set())} aria-label="Hapus pilihan" title="Hapus pilihan" className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
         </div>
       )}
@@ -988,6 +1014,19 @@ export default function AdminArticlesPage() {
                     <p className="text-sm text-slate-500">Memuat data artikel...</p>
                   </div>
                 </td></tr>
+              ) : loadError ? (
+                <tr><td colSpan={8} className="px-4 py-16 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                      <Warning className="h-6 w-6 text-red-400" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{loadError}</p>
+                    <button onClick={() => fetchArticles()} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                      Coba lagi
+                    </button>
+                  </div>
+                </td></tr>
               ) : paginated.length === 0 ? (
                 <tr><td colSpan={8} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
@@ -998,7 +1037,7 @@ export default function AdminArticlesPage() {
                       <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
                       <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada artikel"}</p>
                     </div>
-                    {!search && filter === "all" && (
+                    {!search && filter === "all" && permCreate && (
                       <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
                         <Plus className="h-3.5 w-3.5" /> Buat Artikel Pertama
                       </button>
@@ -1043,28 +1082,33 @@ export default function AdminArticlesPage() {
                         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100">
                           <User className="h-3 w-3 text-slate-400" />
                         </div>
-                        <span className="text-xs text-slate-500">{item.author_name || "-"}</span>
+                        <span className="text-xs text-slate-500">{normalizeName(item.author_name) || "-"}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => handleTogglePublish(item)}
-                        aria-label={`${item.is_published ? "Jadikan draft" : "Terbitkan"} ${item.title}`}
-                        title={item.is_published ? "Jadikan draft" : "Terbitkan sekarang"}
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${STATUS_BADGE_CLS[articleStatus(item)]}`}>
-                        {articleStatus(item) === "live" ? (
-                          <CheckCircle className="h-3 w-3" />
-                        ) : articleStatus(item) === "expired" ? (
-                          <Warning className="h-3 w-3" />
-                        ) : (
-                          <Clock className="h-3 w-3" />
-                        )}
-                        {articleStatus(item) === "scheduled" && item.published_at
-                          ? `Terjadwal · ${new Date(item.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}`
-                          : STATUS_TEXT[articleStatus(item)]}
-                      </button>
+                      {permPublish && (
+                        <button onClick={() => handleTogglePublish(item)}
+                          aria-label={`${item.is_published ? "Jadikan draft" : "Terbitkan"} ${item.title}`}
+                          title={item.is_published ? "Jadikan draft" : "Terbitkan sekarang"}
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${STATUS_BADGE_CLS[articleStatus(item)]}`}>
+                          {articleStatus(item) === "live" ? (
+                            <CheckCircle className="h-3 w-3" />
+                          ) : articleStatus(item) === "expired" ? (
+                            <Warning className="h-3 w-3" />
+                          ) : (
+                            <Clock className="h-3 w-3" />
+                          )}
+                          {articleStatus(item) === "scheduled" && item.published_at
+                            ? `Terjadwal · ${new Date(item.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}`
+                            : STATUS_TEXT[articleStatus(item)]}
+                        </button>
+                      )}
                     </td>
-                    <td className="hidden px-4 py-3.5 text-sm text-slate-500 lg:table-cell">
-                      {new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                    <td
+                      className="hidden whitespace-nowrap px-4 py-3.5 text-sm text-slate-500 lg:table-cell"
+                      title={new Date(item.created_at).toLocaleString("id-ID", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" })}
+                    >
+                      {formatRelativeTime(item.created_at)}
                     </td>
                     <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
@@ -1080,12 +1124,16 @@ export default function AdminArticlesPage() {
                         <button onClick={() => openEdit(item)} aria-label={`Edit ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
                           <PencilSimple className="h-4 w-4" />
                         </button>
-                        <button onClick={() => openDuplicate(item)} aria-label={`Duplikat ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-purple-50 hover:text-purple-600" title="Duplikat">
-                          <Files className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => setDeleteItem(item)} aria-label={`Hapus ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
-                          <Trash className="h-4 w-4" />
-                        </button>
+                        {permCreate && (
+                          <button onClick={() => openDuplicate(item)} aria-label={`Duplikat ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-purple-50 hover:text-purple-600" title="Duplikat">
+                            <Files className="h-4 w-4" />
+                          </button>
+                        )}
+                        {permDelete && (
+                          <button onClick={() => setDeleteItem(item)} aria-label={`Hapus ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
+                            <Trash className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1137,6 +1185,17 @@ export default function AdminArticlesPage() {
                 </div>
               ))}
             </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                <Warning className="h-6 w-6 text-red-400" />
+              </div>
+              <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
+              <p className="mt-0.5 text-xs text-slate-500">{loadError}</p>
+              <button onClick={() => fetchArticles()} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                Coba lagi
+              </button>
+            </div>
           ) : paginated.length === 0 ? (
             <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
@@ -1146,7 +1205,7 @@ export default function AdminArticlesPage() {
                 <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
                 <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada artikel"}</p>
               </div>
-              {!search && filter === "all" && (
+              {!search && filter === "all" && permCreate && (
                 <button onClick={openCreate} className="mt-1 flex min-h-10 items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
                   <Plus className="h-3.5 w-3.5" /> Buat Artikel Pertama
                 </button>
@@ -1159,6 +1218,9 @@ export default function AdminArticlesPage() {
                 item={item}
                 selected={selectedIds.has(item.id)}
                 selectMode={pickMode}
+                canCreate={permCreate}
+                canDelete={permDelete}
+                canPublish={permPublish}
                 onEnterPickMode={enterPickMode}
                 onToggleSelect={toggleSelect}
                 onView={setViewItem}
@@ -1189,25 +1251,29 @@ export default function AdminArticlesPage() {
       {pickMode && (
         <MobileSelectBar
           count={selectedIds.size}
-          onDelete={() => setBulkDelete(true)}
+          onDelete={permDelete ? () => setBulkDelete(true) : undefined}
           onCancel={exitPickMode}
         >
-          <button
-            type="button"
-            onClick={() => handleBulkPublish(true)}
-            disabled={selectedIds.size === 0}
-            className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Terbitkan
-          </button>
-          <button
-            type="button"
-            onClick={() => handleBulkPublish(false)}
-            disabled={selectedIds.size === 0}
-            className="min-h-10 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Draft
-          </button>
+          {permPublish && (
+            <>
+              <button
+                type="button"
+                onClick={() => handleBulkPublish(true)}
+                disabled={selectedIds.size === 0}
+                className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Terbitkan
+              </button>
+              <button
+                type="button"
+                onClick={() => handleBulkPublish(false)}
+                disabled={selectedIds.size === 0}
+                className="min-h-10 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Draft
+              </button>
+            </>
+          )}
         </MobileSelectBar>
       )}
 
@@ -1248,7 +1314,7 @@ export default function AdminArticlesPage() {
             </div>
             <div className="max-h-[50vh] overflow-y-auto px-6 py-5">
               <div className="mb-4 flex items-center gap-4 text-xs text-slate-500">
-                <span>Oleh: {viewItem.author_name || "Tidak diketahui"}</span>
+                <span>Oleh: {normalizeName(viewItem.author_name) || "Tidak diketahui"}</span>
                 <span>{viewItem.published_at ? new Date(viewItem.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"}</span>
               </div>
               {viewItem.excerpt && <p className="mb-4 text-sm text-slate-600 italic border-l-2 border-[#f4d21f] pl-3">{viewItem.excerpt}</p>}
@@ -1264,14 +1330,18 @@ export default function AdminArticlesPage() {
               )}
             </div>
             <div className="flex flex-wrap gap-3 border-t border-slate-100 px-4 py-4 md:px-6">
-              <button onClick={() => { const v = viewItem; setViewItem(null); openDuplicate(v); }}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 md:flex-none">
-                <Files className="h-4 w-4" /> Duplikat
-              </button>
-              <button onClick={() => { setViewItem(null); openEdit(viewItem); }}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 md:flex-none">
-                <PencilSimple className="h-4 w-4" /> Edit
-              </button>
+              {permCreate && (
+                <button onClick={() => { const v = viewItem; setViewItem(null); openDuplicate(v); }}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 md:flex-none">
+                  <Files className="h-4 w-4" /> Duplikat
+                </button>
+              )}
+              {permUpdate && (
+                <button onClick={() => { setViewItem(null); openEdit(viewItem); }}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 md:flex-none">
+                  <PencilSimple className="h-4 w-4" /> Edit
+                </button>
+              )}
               {articleStatus(viewItem) === "live" ? (
                 <a href={`/articles/${viewItem.slug}`} target="_blank" rel="noopener noreferrer"
                   className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] md:flex-none">
@@ -1810,6 +1880,9 @@ function ArticleMobileRow({
   item,
   selected,
   selectMode,
+  canCreate,
+  canDelete,
+  canPublish,
   onEnterPickMode,
   onToggleSelect,
   onView,
@@ -1821,6 +1894,10 @@ function ArticleMobileRow({
   item: ArticleWithAuthor;
   selected: boolean;
   selectMode: boolean;
+  /** Gate UI menu ⋯ — aksi tanpa izin tidak ditawarkan (RLS tetap penegak akhir). */
+  canCreate: boolean;
+  canDelete: boolean;
+  canPublish: boolean;
   onEnterPickMode: (id: string) => void;
   onToggleSelect: (id: string) => void;
   onView: (a: ArticleWithAuthor) => void;
@@ -1847,14 +1924,18 @@ function ArticleMobileRow({
         }]
       : []),
     { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) },
-    {
-      key: "publish",
-      label: item.is_published ? "Jadikan Draft" : "Terbitkan",
-      icon: item.is_published ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
-      run: () => onPublish(item),
-    },
-    { key: "duplicate", label: "Duplikat", icon: <Files className="h-4 w-4" />, run: () => onDuplicate(item) },
-    { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) },
+    ...(canPublish
+      ? [
+          {
+            key: "publish",
+            label: item.is_published ? "Jadikan Draft" : "Terbitkan",
+            icon: item.is_published ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
+            run: () => onPublish(item),
+          },
+        ]
+      : []),
+    ...(canCreate ? [{ key: "duplicate", label: "Duplikat", icon: <Files className="h-4 w-4" />, run: () => onDuplicate(item) }] : []),
+    ...(canDelete ? [{ key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) }] : []),
   ];
 
   return (
@@ -1901,9 +1982,11 @@ function ArticleMobileRow({
             <span className="inline-flex shrink-0 items-center rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700">
               {item.category || "-"}
             </span>
+            <span className="shrink-0 whitespace-nowrap" title={new Date(item.created_at).toLocaleString("id-ID", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" })}>
+              {formatRelativeTime(item.created_at)}
+            </span>
             <span className="min-w-0 truncate">
-              {new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-              {item.author_name ? ` · ${item.author_name}` : ""}
+              {item.author_name ? ` · ${normalizeName(item.author_name)}` : ""}
               {status === "scheduled" && item.published_at
                 ? ` · Terjadwal ${new Date(item.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}`
                 : ""}

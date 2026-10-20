@@ -21,6 +21,9 @@ import {
 } from "@/lib/queries";
 import type { NewsWithAuthor } from "@/lib/queries";
 import { compressImage } from "@/lib/compress-image";
+import { usePermissions } from "@/app/admin/PermissionsProvider";
+import { normalizeName } from "@/lib/format-name";
+import { formatRelativeTime } from "@/lib/admin-display";
 import { RichContent } from "@/components/RichContent";
 import CoverImage from "@/components/CoverImage";
 import { Modal, ConfirmModal, SlideOver, RichTextEditor, SkeletonBlock } from "@/components/ui";
@@ -197,8 +200,15 @@ function formatWibInput(value: string): string {
 
 export default function AdminBeritaPage() {
   const { toast } = useToast();
+  const { can } = usePermissions();
+  // Gate UI aksi — penegakan sesungguhnya di proxy.ts/RLS (lihat PermissionsProvider).
+  const permCreate = can("berita:create");
+  const permUpdate = can("berita:update");
+  const permDelete = can("berita:delete");
+  const permPublish = can("berita:publish");
   const [news, setNews] = useState<NewsWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -290,9 +300,16 @@ export default function AdminBeritaPage() {
   // Fetch
   const fetchNews = useCallback(async () => {
     setLoading(true);
-    const data = await getNewsListAll();
-    setNews(data);
-    setLoading(false);
+    setLoadError("");
+    try {
+      const data = await getNewsListAll();
+      setNews(data);
+    } catch {
+      // Query gagal → tampil EmptyState "Gagal memuat", BUKAN daftar kosong palsu.
+      setLoadError("Gagal memuat data berita.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -813,9 +830,11 @@ export default function AdminBeritaPage() {
             <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">Berita, pengumuman, dan agenda sekolah</p>
           </div>
         </div>
-        <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] md:py-2.5">
-          <Plus className="h-4 w-4" /> Buat Baru
-        </button>
+        {permCreate && (
+          <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] md:py-2.5">
+            <Plus className="h-4 w-4" /> Buat Baru
+          </button>
+        )}
       </div>
 
       {/* Stats — StatPillGroup: pill kompak satu baris */}
@@ -831,9 +850,15 @@ export default function AdminBeritaPage() {
         <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex">
           <Checks className="h-4 w-4 text-[var(--brand-primary)]" />
           <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
-          <button onClick={() => handleBulkPublish(true)} aria-label={`Terbitkan ${selectedIds.size} berita terpilih`} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Publish</button>
-          <button onClick={() => handleBulkPublish(false)} aria-label={`Kembalikan ${selectedIds.size} berita ke draft`} className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-600">Unpublish</button>
-          <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} berita terpilih`} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
+          {permPublish && (
+            <>
+              <button onClick={() => handleBulkPublish(true)} aria-label={`Terbitkan ${selectedIds.size} berita terpilih`} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Publish</button>
+              <button onClick={() => handleBulkPublish(false)} aria-label={`Kembalikan ${selectedIds.size} berita ke draft`} className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-600">Unpublish</button>
+            </>
+          )}
+          {permDelete && (
+            <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} berita terpilih`} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
+          )}
           <button onClick={() => setSelectedIds(new Set())} aria-label="Hapus pilihan" title="Hapus pilihan" className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
         </div>
       )}
@@ -928,6 +953,19 @@ export default function AdminBeritaPage() {
                     <p className="text-sm text-slate-500">Memuat data berita...</p>
                   </div>
                 </td></tr>
+              ) : loadError ? (
+                <tr><td colSpan={8} className="px-4 py-16 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                      <Warning className="h-6 w-6 text-red-400" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{loadError}</p>
+                    <button onClick={() => fetchNews()} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                      Coba lagi
+                    </button>
+                  </div>
+                </td></tr>
               ) : paginated.length === 0 ? (
                 <tr><td colSpan={8} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
@@ -938,7 +976,7 @@ export default function AdminBeritaPage() {
                       <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
                       <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada berita"}</p>
                     </div>
-                    {!search && filter === "all" && (
+                    {!search && filter === "all" && permCreate && (
                       <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
                         <Plus className="h-3.5 w-3.5" /> Buat Berita Pertama
                       </button>
@@ -986,28 +1024,33 @@ export default function AdminBeritaPage() {
                         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100">
                           <User className="h-3 w-3 text-slate-400" />
                         </div>
-                        <span className="text-xs text-slate-500">{item.author_name || "-"}</span>
+                        <span className="text-xs text-slate-500">{normalizeName(item.author_name) || "-"}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => handleTogglePublish(item)}
-                        aria-label={`${item.is_published ? "Jadikan draft" : "Terbitkan"} ${item.title}`}
-                        title={item.is_published ? "Jadikan draft" : "Terbitkan sekarang"}
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${STATUS_BADGE_CLS[newsStatus(item)]}`}>
-                        {newsStatus(item) === "live" ? (
-                          <CheckCircle className="h-3 w-3" />
-                        ) : newsStatus(item) === "expired" ? (
-                          <Warning className="h-3 w-3" />
-                        ) : (
-                          <Clock className="h-3 w-3" />
-                        )}
-                        {newsStatus(item) === "scheduled" && item.published_at
-                          ? `Terjadwal · ${new Date(item.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}`
-                          : STATUS_TEXT[newsStatus(item)]}
-                      </button>
+                      {permPublish && (
+                        <button onClick={() => handleTogglePublish(item)}
+                          aria-label={`${item.is_published ? "Jadikan draft" : "Terbitkan"} ${item.title}`}
+                          title={item.is_published ? "Jadikan draft" : "Terbitkan sekarang"}
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${STATUS_BADGE_CLS[newsStatus(item)]}`}>
+                          {newsStatus(item) === "live" ? (
+                            <CheckCircle className="h-3 w-3" />
+                          ) : newsStatus(item) === "expired" ? (
+                            <Warning className="h-3 w-3" />
+                          ) : (
+                            <Clock className="h-3 w-3" />
+                          )}
+                          {newsStatus(item) === "scheduled" && item.published_at
+                            ? `Terjadwal · ${new Date(item.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}`
+                            : STATUS_TEXT[newsStatus(item)]}
+                        </button>
+                      )}
                     </td>
-                    <td className="hidden px-4 py-3.5 text-center text-sm text-slate-500 lg:table-cell">
-                      {new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                    <td
+                      className="hidden whitespace-nowrap px-4 py-3.5 text-center text-sm text-slate-500 lg:table-cell"
+                      title={new Date(item.created_at).toLocaleString("id-ID", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" })}
+                    >
+                      {formatRelativeTime(item.created_at)}
                     </td>
                     <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-1">
@@ -1017,12 +1060,16 @@ export default function AdminBeritaPage() {
                         <button onClick={() => openEdit(item)} aria-label={`Edit ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
                           <PencilSimple className="h-4 w-4" />
                         </button>
-                        <button onClick={() => openDuplicate(item)} aria-label={`Duplikat ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-purple-50 hover:text-purple-600" title="Duplikat">
-                          <Files className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => setDeleteItem(item)} aria-label={`Hapus ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
-                          <Trash className="h-4 w-4" />
-                        </button>
+                        {permCreate && (
+                          <button onClick={() => openDuplicate(item)} aria-label={`Duplikat ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-purple-50 hover:text-purple-600" title="Duplikat">
+                            <Files className="h-4 w-4" />
+                          </button>
+                        )}
+                        {permDelete && (
+                          <button onClick={() => setDeleteItem(item)} aria-label={`Hapus ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
+                            <Trash className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1074,6 +1121,17 @@ export default function AdminBeritaPage() {
                 </div>
               ))}
             </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                <Warning className="h-6 w-6 text-red-400" />
+              </div>
+              <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
+              <p className="mt-0.5 text-xs text-slate-500">{loadError}</p>
+              <button onClick={() => fetchNews()} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                Coba lagi
+              </button>
+            </div>
           ) : paginated.length === 0 ? (
             <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
@@ -1083,7 +1141,7 @@ export default function AdminBeritaPage() {
                 <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
                 <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada berita"}</p>
               </div>
-              {!search && filter === "all" && (
+              {!search && filter === "all" && permCreate && (
                 <button onClick={openCreate} className="mt-1 flex min-h-10 items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
                   <Plus className="h-3.5 w-3.5" /> Buat Berita Pertama
                 </button>
@@ -1093,6 +1151,9 @@ export default function AdminBeritaPage() {
             paginated.map((item) => (
               <NewsMobileRow
                 key={item.id}
+                canCreate={permCreate}
+                canDelete={permDelete}
+                canPublish={permPublish}
                 item={item}
                 selected={selectedIds.has(item.id)}
                 selectMode={pickMode}
@@ -1126,25 +1187,29 @@ export default function AdminBeritaPage() {
       {pickMode && (
         <MobileSelectBar
           count={selectedIds.size}
-          onDelete={() => setBulkDelete(true)}
+          onDelete={permDelete ? () => setBulkDelete(true) : undefined}
           onCancel={exitPickMode}
         >
-          <button
-            type="button"
-            onClick={() => handleBulkPublish(true)}
-            disabled={selectedIds.size === 0}
-            className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Terbitkan
-          </button>
-          <button
-            type="button"
-            onClick={() => handleBulkPublish(false)}
-            disabled={selectedIds.size === 0}
-            className="min-h-10 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Draft
-          </button>
+          {permPublish && (
+            <>
+              <button
+                type="button"
+                onClick={() => handleBulkPublish(true)}
+                disabled={selectedIds.size === 0}
+                className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Terbitkan
+              </button>
+              <button
+                type="button"
+                onClick={() => handleBulkPublish(false)}
+                disabled={selectedIds.size === 0}
+                className="min-h-10 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Draft
+              </button>
+            </>
+          )}
         </MobileSelectBar>
       )}
 
@@ -1158,14 +1223,18 @@ export default function AdminBeritaPage() {
         footer={
           <>
             <div className="flex items-center gap-2">
-              <button onClick={() => { const v = viewItem; setViewItem(null); if (v) openDuplicate(v); }}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 md:flex-none">
-                <Files className="h-4 w-4" /> Duplikat
-              </button>
-              <button onClick={() => { setViewItem(null); openEdit(viewItem!); }}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 md:flex-none">
-                <PencilSimple className="h-4 w-4" /> Edit
-              </button>
+              {permCreate && (
+                <button onClick={() => { const v = viewItem; setViewItem(null); if (v) openDuplicate(v); }}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 md:flex-none">
+                  <Files className="h-4 w-4" /> Duplikat
+                </button>
+              )}
+              {permUpdate && (
+                <button onClick={() => { setViewItem(null); openEdit(viewItem!); }}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 md:flex-none">
+                  <PencilSimple className="h-4 w-4" /> Edit
+                </button>
+              )}
             </div>
             {viewItem && newsStatus(viewItem) === "live" ? (
               <a href={`/news/${viewItem.slug}`} target="_blank" rel="noopener noreferrer"
@@ -1192,7 +1261,7 @@ export default function AdminBeritaPage() {
         {viewItem && (
           <>
             <div className="mb-4 flex items-center gap-4 text-xs text-slate-500">
-              <span>Oleh: {viewItem?.author_name || "Tidak diketahui"}</span>
+              <span>Oleh: {normalizeName(viewItem?.author_name) || "Tidak diketahui"}</span>
               <span>{viewItem.published_at ? new Date(viewItem.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"}</span>
             </div>
             {viewItem.summary && <p className="mb-4 text-sm text-slate-600 italic border-l-2 border-[#f4d21f] pl-3">{viewItem.summary}</p>}
@@ -1766,6 +1835,9 @@ function NewsMobileRow({
   item,
   selected,
   selectMode,
+  canCreate,
+  canDelete,
+  canPublish,
   onEnterPickMode,
   onToggleSelect,
   onView,
@@ -1777,6 +1849,10 @@ function NewsMobileRow({
   item: NewsWithAuthor;
   selected: boolean;
   selectMode: boolean;
+  /** Gate UI menu ⋯ — aksi tanpa izin tidak ditawarkan (RLS tetap penegak akhir). */
+  canCreate: boolean;
+  canDelete: boolean;
+  canPublish: boolean;
   onEnterPickMode: (id: string) => void;
   onToggleSelect: (id: string) => void;
   onView: (n: NewsWithAuthor) => void;
@@ -1795,14 +1871,18 @@ function NewsMobileRow({
   const actions: RowAction[] = [
     { key: "view", label: "Lihat", icon: <Eye className="h-4 w-4" />, run: () => onView(item) },
     { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) },
-    {
-      key: "publish",
-      label: item.is_published ? "Jadikan Draft" : "Terbitkan",
-      icon: item.is_published ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
-      run: () => onPublish(item),
-    },
-    { key: "duplicate", label: "Duplikat", icon: <Files className="h-4 w-4" />, run: () => onDuplicate(item) },
-    { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) },
+    ...(canPublish
+      ? [
+          {
+            key: "publish",
+            label: item.is_published ? "Jadikan Draft" : "Terbitkan",
+            icon: item.is_published ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
+            run: () => onPublish(item),
+          },
+        ]
+      : []),
+    ...(canCreate ? [{ key: "duplicate", label: "Duplikat", icon: <Files className="h-4 w-4" />, run: () => onDuplicate(item) }] : []),
+    ...(canDelete ? [{ key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) }] : []),
   ];
 
   return (
@@ -1852,9 +1932,11 @@ function NewsMobileRow({
             <span className={`inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${categoryConfig[item.category]?.color || "bg-slate-100 text-slate-600 border-slate-200"}`}>
               {categoryConfig[item.category]?.label || item.category}
             </span>
+            <span className="shrink-0 whitespace-nowrap" title={new Date(item.created_at).toLocaleString("id-ID", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" })}>
+              {formatRelativeTime(item.created_at)}
+            </span>
             <span className="min-w-0 truncate">
-              {new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-              {item.author_name ? ` · ${item.author_name}` : ""}
+              {item.author_name ? ` · ${normalizeName(item.author_name)}` : ""}
               {status === "scheduled" && item.published_at
                 ? ` · Terjadwal ${new Date(item.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}`
                 : ""}

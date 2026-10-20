@@ -223,7 +223,9 @@ export async function getNewsListAll(): Promise<NewsWithAuthor[]> {
 
   if (error) {
     console.error("Error fetching all news:", error);
-    return [];
+    // Melempar error agar panel admin bisa membedakan "kosong" vs "gagal
+    // memuat" — pemanggil (panel berita) menangkap dan menampilkan retry.
+    throw new Error(error.message);
   }
   return (data || []).map((item: NewsRow) => ({
     ...item,

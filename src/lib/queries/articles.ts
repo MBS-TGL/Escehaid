@@ -349,7 +349,9 @@ export async function getArticleListAll(): Promise<ArticleWithAuthor[]> {
 
   if (error) {
     console.error("Error fetching all articles:", error);
-    return [];
+    // Melempar error agar panel admin bisa membedakan "kosong" vs "gagal
+    // memuat" — pemanggil (panel artikel) menangkap dan menampilkan retry.
+    throw new Error(error.message);
   }
   return (data || []).map((item: ArticleRow) => ({
     ...item,
