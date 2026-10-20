@@ -31,6 +31,7 @@ export function StatCard({
   value,
   variant = "brand",
   icon,
+  children,
   className = "",
 }: StatCardProps) {
   const v = variantStyles[variant];
@@ -54,6 +55,10 @@ export function StatCard({
             <span className={`inline-block h-1.5 w-1.5 rounded-full ${v.dot}`} />
             {label}
           </p>
+          {/* Slot rincian status di bawah angka utama (opsional), mis.
+              "34 menunggu · 1 diterima". Render tersyarat agar kartu lain
+              yang tak memberi children tidak berubah tinggi. */}
+          {children && <div className="mt-2 text-[11px] leading-snug text-slate-400 tabular-nums">{children}</div>}
         </div>
 
         {icon && (
