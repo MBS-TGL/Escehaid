@@ -111,10 +111,10 @@ export default async function Home() {
   const { startsWithGreeting, endsWithGreeting } = detectPrincipalGreeting(principalQuote);
   const quoteTypeClass =
     principalQuote.length <= 140
-      ? "text-2xl md:text-3xl text-balance"
+      ? "text-2xl md:text-[28px]"
       : principalQuote.length <= 320
-        ? "text-xl md:text-2xl text-pretty"
-        : "text-lg md:text-xl text-pretty";
+        ? "text-lg md:text-[22px]"
+        : "text-base md:text-lg";
 
   // Urutan prestasi di beranda disamakan dengan halaman /achievements:
   // unggulan dulu, lalu tahun menurun, lalu terbit menurun. Urutan yang sama
@@ -204,17 +204,17 @@ export default async function Home() {
 
       {/* ── SAMBUTAN ──────────────────────────────────────── */}
       <section className="bg-[var(--surface-muted)]" style={CV}>
-        <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
-          <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.3fr] lg:gap-16">
+        <div className="mx-auto max-w-5xl px-6 py-14 md:px-10 md:py-20">
+          <div className="grid items-center gap-10 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-16">
             <CSSFadeIn>
-              <div className="flex justify-center lg:justify-end">
-                <div className="relative h-56 w-56 overflow-hidden rounded-full border border-[#dce3ed] md:h-64 md:w-64">
+              <div className="mx-auto w-52 lg:w-full lg:max-w-[300px]">
+                <div className="relative aspect-[4/5] overflow-hidden rounded-2xl ring-1 ring-black/5">
                   <Image
                     src={profile?.principal_photo_url || "/images/Kepala-Sekolah.jpg"}
                     alt={`${profile?.principal_name || "Kepala Sekolah"} - Kepala Sekolah`}
                     fill
-                    sizes="288px"
-                    className="object-cover object-[center_15%]"
+                    sizes="300px"
+                    className="object-cover object-[center_20%]"
                   />
                 </div>
               </div>
@@ -222,28 +222,22 @@ export default async function Home() {
 
             <CSSFadeIn delay={0.1}>
               <div>
-                <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Sambutan Kepala Sekolah</h2>
-                <blockquote className="mt-6">
-                  {!startsWithGreeting && (
-                    <p className="mb-5 font-serif text-sm tracking-wide text-slate-600">{SALAM_BUKA}</p>
-                  )}
-                  <span
-                    aria-hidden="true"
-                    className="pointer-events-none -mb-4 block select-none font-serif text-4xl leading-none text-[var(--brand-gold)]/35 md:text-5xl"
-                  >
-                    &ldquo;
-                  </span>
-                  <p className={`${quoteTypeClass} max-w-[38em] font-serif font-medium leading-relaxed text-[var(--brand-primary)]`}>
+                <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand-accent)]">Sambutan Kepala Sekolah</h2>
+                {!startsWithGreeting && (
+                  <p className="mt-5 mb-3 text-sm text-slate-600">{SALAM_BUKA}</p>
+                )}
+                <blockquote className={startsWithGreeting ? "" : "mt-5"}>
+                  <p className={`${quoteTypeClass} max-w-[34em] font-normal leading-[1.65] tracking-normal text-slate-800`}>
                     {keepTogether(principalQuote)}
                   </p>
-                  {!endsWithGreeting && (
-                    <p className="mt-5 font-serif text-sm tracking-wide text-slate-600">{SALAM_TUTUP}</p>
-                  )}
                 </blockquote>
-                <footer className="mt-6">
+                {!endsWithGreeting && (
+                  <p className="mt-4 text-sm text-slate-600">{SALAM_TUTUP}</p>
+                )}
+                <footer className="mt-8">
                   <div className="h-0.5 w-10 bg-[var(--brand-gold)]" />
-                  <p className="mt-4 font-serif text-[17px] font-semibold text-[var(--brand-primary)]">{profile?.principal_name || "Khoirul Anwar, S.Pd"}</p>
-                  <p className="text-sm text-slate-600">Kepala {schoolName} &middot; {brand.tagline}</p>
+                  <p className="mt-4 text-base font-semibold text-[var(--brand-primary)]">{profile?.principal_name || "Khoirul Anwar, S.Pd"}</p>
+                  <p className="text-sm text-slate-600">Kepala {schoolName}</p>
                 </footer>
               </div>
             </CSSFadeIn>
