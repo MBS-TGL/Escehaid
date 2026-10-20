@@ -27,6 +27,7 @@ import { RbacSqlNotice } from "./RolesTab";
 import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useToast } from "@/components/ui/Toast";
+import { ConfirmModal } from "@/components/ui";
 import { Input } from "@/components/ui/Input";
 import {
   User,
@@ -719,45 +720,16 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
       )}
 
       {/* ── HAPUS PENGGUNA ──────────────────────────── */}
-      {deleteItem && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
-          onClick={() => setDeleteItem(null)}
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-              <Warning className="h-6 w-6 text-red-600" />
-            </div>
-            <h3 className="text-center text-lg font-bold text-slate-800">Hapus Pengguna?</h3>
-            <p className="mt-2 text-center text-sm text-slate-500">
-              &ldquo;{deleteItem.full_name}&rdquo; akan dihapus permanen.
-            </p>
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={() => setDeleteItem(null)}
-                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={busyId === deleteItem.id}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
-              >
-                {busyId === deleteItem.id ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <Trash className="h-4 w-4" />
-                )}
-                Ya, Hapus
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={!!deleteItem}
+        onClose={() => setDeleteItem(null)}
+        onConfirm={handleDelete}
+        title="Hapus Pengguna?"
+        description={`"${deleteItem?.full_name}" akan dihapus permanen.`}
+        confirmLabel="Ya, Hapus"
+        variant="danger"
+        loading={busyId === deleteItem?.id}
+      />
     </div>
   );
 }

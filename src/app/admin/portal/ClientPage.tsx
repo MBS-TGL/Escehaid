@@ -1054,14 +1054,14 @@ export default function AdminPortalPage() {
             target="_blank"
             rel="noopener noreferrer"
             title="Buka /portal di tab baru"
-            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] sm:flex-none sm:px-4 md:py-2.5"
+            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] sm:flex-none sm:px-4"
           >
             <ArrowSquareOut className="h-4 w-4 shrink-0" />
             <span className="truncate">Lihat di portal</span>
           </a>
           {permCreate && (
             <button onClick={openCreate}
-              className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-3 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] sm:flex-none sm:px-4 md:py-2.5">
+              className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] sm:flex-none sm:px-4">
               <Plus className="h-4 w-4 shrink-0" />
               <span className="truncate">Tambah Aplikasi</span>
             </button>

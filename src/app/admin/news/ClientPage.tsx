@@ -831,7 +831,7 @@ export default function AdminBeritaPage() {
           </div>
         </div>
         {permCreate && (
-          <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] md:py-2.5">
+          <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)]">
             <Plus className="h-4 w-4" /> Buat Baru
           </button>
         )}

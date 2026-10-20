@@ -14,6 +14,7 @@ import {
 import type { MediaBucket, MediaFile, MediaReferenceScan } from "@/lib/queries";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useToast } from "@/components/ui/Toast";
+import { ConfirmModal } from "@/components/ui";
 import { usePermissions } from "@/app/admin/PermissionsProvider";
 import {
   ArrowSquareOut,
@@ -621,50 +622,32 @@ export default function AdminMediaPage() {
       )}
 
       {/* ── KONFIRMASI HAPUS (baris mobile) ─────────── */}
-      {confirmDelete && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => !deleting && setConfirmDelete(null)}>
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto">
-              <Warning className="h-6 w-6 text-red-600" />
-            </div>
-            <h3 className="text-center text-lg font-bold text-slate-800">Hapus File?</h3>
-            <p className="mt-2 break-all text-center text-sm text-slate-500">&ldquo;{confirmDelete.name}&rdquo; akan dihapus permanen dari Storage.</p>
-            <div className="mt-6 flex gap-3">
-              <button onClick={() => setConfirmDelete(null)} disabled={deleting} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">Batal</button>
-              <button
-                onClick={() => {
-                  const f = confirmDelete;
-                  setConfirmDelete(null);
-                  void handleDelete(f);
-                }}
-                disabled={deleting}
-                className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
-              >
-                {deleting ? "Menghapus…" : "Ya, Hapus"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={!!confirmDelete}
+        onClose={() => { if (!deleting) setConfirmDelete(null); }}
+        onConfirm={() => {
+          const f = confirmDelete;
+          setConfirmDelete(null);
+          if (f) void handleDelete(f);
+        }}
+        title="Hapus File?"
+        description={`"${confirmDelete?.name}" akan dihapus permanen dari Storage.`}
+        confirmLabel="Ya, Hapus"
+        variant="danger"
+        loading={deleting}
+      />
 
       {/* ── KONFIRMASI HAPUS MASSAL (mobile) ────────── */}
-      {bulkDeleteOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => !deleting && setBulkDeleteOpen(false)}>
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto">
-              <Warning className="h-6 w-6 text-red-600" />
-            </div>
-            <h3 className="text-center text-lg font-bold text-slate-800">Hapus {selectedPaths.size} File?</h3>
-            <p className="mt-2 text-center text-sm text-slate-500">File yang dipakai konten akan dilewati.</p>
-            <div className="mt-6 flex gap-3">
-              <button onClick={() => setBulkDeleteOpen(false)} disabled={deleting} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">Batal</button>
-              <button onClick={() => void handleBulkDelete()} disabled={deleting} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
-                {deleting ? "Menghapus…" : "Ya, Hapus"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={bulkDeleteOpen}
+        onClose={() => { if (!deleting) setBulkDeleteOpen(false); }}
+        onConfirm={() => void handleBulkDelete()}
+        title={`Hapus ${selectedPaths.size} File?`}
+        description="File yang dipakai konten akan dilewati."
+        confirmLabel="Ya, Hapus"
+        variant="danger"
+        loading={deleting}
+      />
     </div>
   );
 }

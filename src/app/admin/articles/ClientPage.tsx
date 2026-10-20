@@ -892,7 +892,7 @@ export default function AdminArticlesPage() {
           </div>
         </div>
         {permCreate && (
-          <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] md:py-2.5">
+          <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)]">
             <Plus className="h-4 w-4" /> Buat Baru
           </button>
         )}
@@ -1362,38 +1362,26 @@ export default function AdminArticlesPage() {
       )}
 
       {/* ── DELETE CONFIRM ──────────────────────────── */}
-      {deleteItem && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setDeleteItem(null)}>
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto">
-              <Warning className="h-6 w-6 text-red-600" />
-            </div>
-            <h3 className="text-center text-lg font-bold text-slate-800">Hapus Artikel?</h3>
-            <p className="mt-2 text-center text-sm text-slate-500">&ldquo;{deleteItem.title}&rdquo; akan dihapus permanen.</p>
-            <div className="mt-6 flex gap-3">
-              <button onClick={() => setDeleteItem(null)} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Batal</button>
-              <button onClick={handleDelete} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700">Ya, Hapus</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={!!deleteItem}
+        onClose={() => setDeleteItem(null)}
+        onConfirm={handleDelete}
+        title="Hapus Artikel?"
+        description={`"${deleteItem?.title}" akan dihapus permanen.`}
+        confirmLabel="Ya, Hapus"
+        variant="danger"
+      />
 
       {/* ── BULK DELETE CONFIRM ─────────────────────── */}
-      {bulkDelete && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setBulkDelete(false)}>
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto">
-              <Warning className="h-6 w-6 text-red-600" />
-            </div>
-            <h3 className="text-center text-lg font-bold text-slate-800">Hapus {selectedIds.size} Artikel?</h3>
-            <p className="mt-2 text-center text-sm text-slate-500">Semua artikel yang dipilih akan dihapus permanen.</p>
-            <div className="mt-6 flex gap-3">
-              <button onClick={() => setBulkDelete(false)} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Batal</button>
-              <button onClick={handleBulkDelete} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700">Ya, Hapus</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={bulkDelete}
+        onClose={() => setBulkDelete(false)}
+        onConfirm={handleBulkDelete}
+        title={`Hapus ${selectedIds.size} Artikel?`}
+        description="Semua artikel yang dipilih akan dihapus permanen."
+        confirmLabel="Ya, Hapus"
+        variant="danger"
+      />
 
       {/* ── PUBLISH CONFIRM (menu ⋯ mobile) ─────────── */}
       <ConfirmModal

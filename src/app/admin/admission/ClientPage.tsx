@@ -24,7 +24,7 @@ import {
   GOOGLE_FORM_URL,
   revalidatePaths,
 } from "@/lib/queries";
-import { SlideOver, SkeletonBlock } from "@/components/ui";
+import { SlideOver, SkeletonBlock, ConfirmModal } from "@/components/ui";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { normalizeName, normalizeSchool } from "@/lib/format-name";
 import { formatRelativeTime, daysSince, PENDING_SLA_DAYS } from "@/lib/admin-display";
@@ -970,7 +970,7 @@ export default function AdminSPMBPage() {
             Atur gelombang pendaftaran yang tampil di halaman Penerimaan Santri Baru.
           </p>
           <button onClick={() => openWaveForm()}
-            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] md:py-2.5">
+            className="flex min-h-11 sm:min-h-0 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]">
             <Plus className="h-4 w-4" />
             Tambah Gelombang
           </button>
@@ -2232,15 +2232,15 @@ function PageHeader({ active, onSelect, onExport, onAdd, onImport }: { active: M
         </div>
         {active === "registrations" && (
           <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-            <button onClick={onAdd} className="flex min-h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] sm:flex-none md:py-2.5">
+            <button onClick={onAdd} className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] sm:flex-none">
               <Plus className="h-4 w-4" />
               Tambah Pendaftar
             </button>
-            <button onClick={onImport} className="flex min-h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:flex-none md:py-2.5">
+            <button onClick={onImport} className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:flex-none">
               <Upload className="h-4 w-4" />
               Import
             </button>
-            <button onClick={onExport} className="flex min-h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:flex-none md:py-2.5">
+            <button onClick={onExport} className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:flex-none">
               <Download className="h-4 w-4" />
               Export CSV
             </button>
@@ -2252,8 +2252,8 @@ function PageHeader({ active, onSelect, onExport, onAdd, onImport }: { active: M
       <div className="mb-6 flex w-fit flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
         {tabs.map((t) => (
           <button key={t.key} onClick={() => onSelect(t.key)}
-            className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all ${active === t.key ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-            <t.icon className="h-3.5 w-3.5" />
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all ${active === t.key ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+            <t.icon className="h-4 w-4" />
             {t.label}
           </button>
         ))}
