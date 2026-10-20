@@ -204,7 +204,7 @@ export default async function Home() {
           ...CV,
           backgroundColor: "var(--surface-muted)",
           backgroundImage:
-            "radial-gradient(circle at 100% 100%, color-mix(in srgb, var(--brand-gold) 8%, transparent), transparent 60%)",
+            "radial-gradient(circle at 100% 100%, color-mix(in srgb, var(--brand-gold) 12%, transparent), transparent 55%)",
         }}
       >
         <svg
@@ -222,7 +222,7 @@ export default async function Home() {
               <div className="flex justify-center lg:justify-end">
                 <div className="relative">
                   <div className="absolute -inset-4 hidden rounded-full bg-gradient-to-br from-[var(--brand-accent)]/30 to-[var(--brand-accent)]/20 blur-xl md:block" />
-                  <div className="relative h-56 w-56 overflow-hidden rounded-full border-4 border-[var(--brand-accent)] md:h-72 md:w-72">
+                  <div className="relative h-56 w-56 overflow-hidden rounded-full border-4 border-[var(--brand-accent)] ring-2 ring-[var(--brand-gold)]/60 ring-offset-4 ring-offset-[var(--surface-muted)] md:h-72 md:w-72">
                     <Image
                       src={profile?.principal_photo_url || "/images/Kepala-Sekolah.jpg"}
                       alt={`${profile?.principal_name || "Kepala Sekolah"} - Kepala Sekolah`}
@@ -235,9 +235,9 @@ export default async function Home() {
                     className="absolute -bottom-2 -right-2 flex h-11 w-11 items-center justify-center rounded-full border-4 border-white bg-[var(--brand-primary)] shadow-lg"
                     aria-hidden="true"
                   >
-                    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-                      <rect x="5" y="5" width="14" height="14" stroke="var(--brand-highlight)" strokeWidth="1.75" />
-                      <rect x="5" y="5" width="14" height="14" stroke="var(--brand-highlight)" strokeWidth="1.75" transform="rotate(45 12 12)" />
+                    <svg viewBox="0 0 24 24" className="h-6 w-6">
+                      <rect x="5" y="5" width="14" height="14" fill="var(--brand-highlight)" strokeLinejoin="round" strokeWidth="2" />
+                      <rect x="5" y="5" width="14" height="14" fill="var(--brand-highlight)" strokeLinejoin="round" strokeWidth="2" transform="rotate(45 12 12)" />
                     </svg>
                   </div>
                 </div>
@@ -268,8 +268,8 @@ export default async function Home() {
                     {SALAM_TUTUP}
                   </p>
                 )}
-                <footer className="mt-6 flex items-center gap-3 border-t border-[var(--brand-gold)]/30 pt-4 pl-6">
-                  <div>
+                <footer className="mt-6 pl-6">
+                  <div className="border-t border-[var(--brand-gold)]/40 pt-4">
                     <p className="text-sm font-semibold text-[var(--brand-primary)]">{profile?.principal_name || "Khoirul Anwar, S.Pd"}</p>
                     <p className="text-xs text-slate-600">Kepala {schoolName}</p>
                   </div>
