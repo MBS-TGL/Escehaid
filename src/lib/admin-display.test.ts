@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toTitleCase, formatRelativeTime, daysSince } from "./admin-display";
+import { toTitleCase, formatRelativeTime, daysSince, PENDING_SLA_DAYS } from "./admin-display";
 
 const NOW = new Date("2026-10-20T04:00:00.000Z"); // 11:00 WIB
 
@@ -55,5 +55,18 @@ describe("daysSince", () => {
 
   it("di bawah satu hari → 0", () => {
     expect(daysSince("2026-10-20T01:00:00.000Z", NOW)).toBe(0);
+  });
+
+  it("batas hari mengikuti kalender Asia/Jakarta (bukan blok 24 jam)", () => {
+    // 18:00 UTC = 01:00 WIB 20 Okt — hari kalender yang sama dengan NOW.
+    expect(daysSince("2026-10-19T18:00:00.000Z", NOW)).toBe(0);
+    // 17:00 UTC = 00:00 WIB 20 Okt — masih hari yang sama.
+    expect(daysSince("2026-10-19T17:00:00.000Z", NOW)).toBe(0);
+    // 16:59 UTC = 23:59 WIB 19 Okt — sudah hari sebelumnya.
+    expect(daysSince("2026-10-19T16:59:00.000Z", NOW)).toBe(1);
+  });
+
+  it("konstanta ambang lewat bersama dashboard & tabel", () => {
+    expect(PENDING_SLA_DAYS).toBe(3);
   });
 });

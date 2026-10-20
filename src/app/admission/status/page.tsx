@@ -13,6 +13,7 @@ import PageHero from "@/components/public/PageHero";
 import { checkSpmbStatus } from "@/lib/queries/spmb-status";
 import { getSchoolProfile } from "@/lib/queries/profile";
 import { waLink } from "@/lib/site-config";
+import { normalizeName } from "@/lib/format-name";
 import PrintButton from "./PrintButton";
 import type { Metadata } from "next";
 
@@ -202,7 +203,7 @@ export default async function CekStatusPage({
                 <div className="overflow-hidden rounded-2xl border border-[#dce3ed] bg-white shadow-sm">
                   <div className="border-b border-[#dce3ed] bg-[#f4f7fb] px-5 py-4">
                     <p className="text-xs font-bold uppercase tracking-wider text-[var(--brand-accent)]">Data Pendaftaran</p>
-                    <h2 className="mt-1 text-lg font-bold text-[var(--brand-primary)]">{found.full_name}</h2>
+                    <h2 className="mt-1 text-lg font-bold text-[var(--brand-primary)]">{normalizeName(found.full_name)}</h2>
                   </div>
                   <dl className="grid gap-x-6 gap-y-3 px-5 py-5 text-sm sm:grid-cols-2">
                     <div>
@@ -259,7 +260,7 @@ export default async function CekStatusPage({
                   <dl className="grid gap-x-6 gap-y-3 px-5 py-5 text-sm sm:grid-cols-2">
                     <div>
                       <dt className="text-xs font-semibold text-slate-400">Nama</dt>
-                      <dd className="mt-1 font-semibold text-[var(--brand-primary)]">{found.full_name}</dd>
+                      <dd className="mt-1 font-semibold text-[var(--brand-primary)]">{normalizeName(found.full_name)}</dd>
                     </div>
                     <div>
                       <dt className="text-xs font-semibold text-slate-400">Gelombang</dt>

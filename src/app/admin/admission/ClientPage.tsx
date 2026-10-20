@@ -26,6 +26,8 @@ import {
 } from "@/lib/queries";
 import { SlideOver, SkeletonBlock } from "@/components/ui";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
+import { normalizeName, normalizeSchool } from "@/lib/format-name";
+import { formatRelativeTime, daysSince, PENDING_SLA_DAYS } from "@/lib/admin-display";
 import type { SpmbRegistration, SpmbWave, SpmbFormField, SpmbFieldType } from "@/lib/supabase";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -670,22 +672,35 @@ export default function AdminSPMBPage() {
       "Jalur", "Gelombang", "Status", "Tanggal Daftar",
       ...customCols.map((c) => c.label),
     ];
-    const cell = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const lines = [headers.map(cell).join(";")];
+    /**
+     * Sel CSV:
+     * - CSV injection: sel yang diawali = + - @ diberi awalan `'` agar
+     *   tidak dieksekusi sebagai formula oleh Excel/Sheets.
+     * - forceText (telepon): awalan `'` menahan angka sebagai teks supaya
+     *   0 di depan tidak hilang saat dibuka di Excel.
+     */
+    const cell = (v: unknown, forceText = false) => {
+      let s = String(v ?? "");
+      if (forceText || /^[=+\-@]/.test(s)) s = `'${s}`;
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+    const lines = [headers.map((h) => cell(h)).join(";")];
     filtered.forEach((r, i) => {
       lines.push(
         [
           i + 1,
-          r.full_name,
+          normalizeName(r.full_name),
           r.email,
-          r.phone,
-          r.previous_school,
+          cell(r.phone, true),
+          normalizeSchool(r.previous_school),
           pathLabels[r.registration_path] || r.registration_path,
           waveLabel(r.wave_id) || "-",
           statusConfig[r.status]?.label || r.status,
           new Date(r.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
-          ...customCols.map((c) => r.documents?.[c.key] || ""),
-        ].map(cell).join(";")
+          ...customCols.map((c) => (r.documents?.[c.key] ?? "").toString()),
+        ]
+          .map((v) => cell(v))
+          .join(";")
       );
     });
     // BOM agar Excel membaca UTF-8; pemisah ";" mengikuti lokalitas Excel Indonesia.
@@ -1698,8 +1713,12 @@ export default function AdminSPMBPage() {
                 </td></tr>
               ) : (
                 paginated.map((item, index) => {
-                  const st = statusConfig[item.status] || statusConfig.pending;
-                  const StatusIcon = st.icon;
+                    const st = statusConfig[item.status] || statusConfig.pending;
+                    const StatusIcon = st.icon;
+                    // Nama & asal sekolah judul dinormalisasi untuk tampilan — data DB tidak diubah saat render.
+                    const name = normalizeName(item.full_name);
+                    const pendingDays = item.status === "pending" ? daysSince(item.created_at) : 0;
+                    const late = pendingDays >= PENDING_SLA_DAYS;
                   return (
                     <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[var(--brand-primary)]/[0.03]" : ""}`}>
                       <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
@@ -1709,7 +1728,7 @@ export default function AdminSPMBPage() {
                       <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
                       <td className="px-4 py-3.5 cursor-pointer" onClick={() => openDetail(item)}>
                         <p className="text-sm font-medium text-slate-800">
-                          {item.full_name}
+                          {name}
                           {item.documents?.input_source === "admin" && (
                             <span className="ml-1.5 inline-block rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-500" title="Ditambahkan manual oleh admin">
                               Manual
@@ -1723,7 +1742,7 @@ export default function AdminSPMBPage() {
                         </p>
                         {item.email && <p className="mt-0.5 text-xs text-slate-400">{item.email}</p>}
                       </td>
-                      <td className="hidden px-4 py-3.5 text-sm text-slate-600 md:table-cell">{item.previous_school || "-"}</td>
+                      <td className="hidden px-4 py-3.5 text-sm text-slate-600 md:table-cell">{normalizeSchool(item.previous_school) || "-"}</td>
                       <td className="hidden px-4 py-3.5 sm:table-cell">
                         <span className={`inline-block rounded-md px-2 py-0.5 text-[11px] font-semibold ${pathColors[item.registration_path] || "bg-slate-100 text-slate-600"}`}>
                           {pathLabels[item.registration_path] || item.registration_path}
@@ -1736,18 +1755,26 @@ export default function AdminSPMBPage() {
                           {st.label}
                         </button>
                       </td>
-                      <td className="hidden px-4 py-3.5 text-sm text-slate-500 lg:table-cell">
-                        {new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                      <td
+                        className="hidden whitespace-nowrap px-4 py-3.5 text-sm text-slate-500 lg:table-cell"
+                        title={new Date(item.created_at).toLocaleString("id-ID", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" })}
+                      >
+                        {formatRelativeTime(item.created_at)}
+                        {late && (
+                          <span className="ml-2 rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-amber-700" title={`Menunggu ${pendingDays} hari`}>
+                            Lewat {PENDING_SLA_DAYS} hari
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => openDetail(item)} aria-label={`Lihat detail ${item.full_name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Detail">
+                          <button onClick={() => openDetail(item)} aria-label={`Lihat detail ${name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Detail">
                             <Eye className="h-4 w-4" />
                           </button>
-                          <button onClick={() => setEditItem(item)} aria-label={`Edit data ${item.full_name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit Data">
+                          <button onClick={() => setEditItem(item)} aria-label={`Edit data ${name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit Data">
                             <PencilSimple className="h-4 w-4" />
                           </button>
-                          <button onClick={() => setDeleteItem(item)} aria-label={`Hapus pendaftaran ${item.full_name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
+                          <button onClick={() => setDeleteItem(item)} aria-label={`Hapus pendaftaran ${name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
                             <Trash className="h-4 w-4" />
                           </button>
                         </div>
@@ -1885,10 +1912,10 @@ export default function AdminSPMBPage() {
             <div className="bg-gradient-to-r from-[var(--brand-primary)] via-[var(--brand-primary-light)] to-[var(--brand-accent)] px-6 py-5 text-white">
               <div className="flex items-center gap-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-xl font-bold">
-                  {viewItem.full_name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                  {normalizeName(viewItem.full_name).split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-lg font-bold truncate">{viewItem.full_name}</h2>
+                  <h2 className="text-lg font-bold truncate">{normalizeName(viewItem.full_name)}</h2>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-white/70">
                     {viewItem.documents?.nisn && <span className="flex items-center gap-1"><FileText className="h-3 w-3" />{viewItem.documents.nisn}</span>}
                     {viewItem.documents?.nisn && viewItem.phone && <span>&middot;</span>}
@@ -1959,7 +1986,7 @@ export default function AdminSPMBPage() {
                   </div>
                   <div className="my-3 h-px bg-slate-100" />
                   <div className="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
-                    <InfoRow icon={Users} label="Nama Panggilan" value={viewItem.documents?.nickname || "-"} />
+                    <InfoRow icon={Users} label="Nama Panggilan" value={normalizeName(viewItem.documents?.nickname) || "-"} />
                     <InfoRow icon={CheckCircle} label="Golongan Darah" value={viewItem.documents?.blood_type || "-"} />
                     <InfoRow icon={FileText} label="NISN" value={viewItem.documents?.nisn || "-"} />
                     <InfoRow icon={FileText} label="NIK" value={viewItem.documents?.nik || "-"} />
@@ -1980,13 +2007,13 @@ export default function AdminSPMBPage() {
                   <InfoRow icon={Phone} label="Telepon" value={viewItem.phone || "-"} />
                   <InfoRow icon={Envelope} label="Email" value={viewItem.email || "-"} />
                   <div className="my-3 h-px bg-slate-100" />
-                  <InfoRow icon={GraduationCap} label="Asal Sekolah" value={viewItem.previous_school || "-"} />
+                  <InfoRow icon={GraduationCap} label="Asal Sekolah" value={normalizeSchool(viewItem.previous_school) || "-"} />
                 </div>
               )}
 
               {viewTab === "ayah" && (
                 <div className="space-y-1">
-                  <InfoRow icon={Users} label="Nama" value={viewItem.parent_name?.split(" / ")[0] || "-"} />
+                  <InfoRow icon={Users} label="Nama" value={normalizeName(viewItem.parent_name?.split(" / ")[0]) || "-"} />
                   <InfoRow icon={MapPin} label="Tempat Lahir" value={viewItem.documents?.father_birth_place || "-"} />
                   <InfoRow icon={CalendarIcon} label="Tanggal Lahir" value={viewItem.documents?.father_birth_date ? new Date(viewItem.documents.father_birth_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"} />
                   <InfoRow icon={GraduationCap} label="Pendidikan Terakhir" value={viewItem.documents?.father_education || "-"} />
@@ -1997,7 +2024,7 @@ export default function AdminSPMBPage() {
 
               {viewTab === "ibu" && (
                 <div className="space-y-1">
-                  <InfoRow icon={Users} label="Nama" value={viewItem.parent_name?.split(" / ")[1] || "-"} />
+                  <InfoRow icon={Users} label="Nama" value={normalizeName(viewItem.parent_name?.split(" / ")[1]) || "-"} />
                   <InfoRow icon={MapPin} label="Tempat Lahir" value={viewItem.documents?.mother_birth_place || "-"} />
                   <InfoRow icon={CalendarIcon} label="Tanggal Lahir" value={viewItem.documents?.mother_birth_date ? new Date(viewItem.documents.mother_birth_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"} />
                   <InfoRow icon={GraduationCap} label="Pendidikan Terakhir" value={viewItem.documents?.mother_education || "-"} />
@@ -2116,7 +2143,7 @@ export default function AdminSPMBPage() {
               <Warning className="h-6 w-6 text-red-600" />
             </div>
             <h3 className="text-center text-lg font-bold text-slate-800">Hapus Pendaftar?</h3>
-            <p className="mt-2 text-center text-sm text-slate-500">&ldquo;{deleteItem.full_name}&rdquo; akan dihapus permanen.</p>
+            <p className="mt-2 text-center text-sm text-slate-500">&ldquo;{normalizeName(deleteItem.full_name)}&rdquo; akan dihapus permanen.</p>
             <div className="mt-6 flex gap-3">
               <button onClick={() => setDeleteItem(null)} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Batal</button>
               <button onClick={handleDelete} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700">Ya, Hapus</button>
@@ -2366,6 +2393,11 @@ function RegistrationMobileRow({
   onDelete: (r: SpmbRegistration) => void;
 }) {
   const st = statusConfig[item.status] || statusConfig.pending;
+  // Nama & asal sekolah judul dinormalisasi hanya untuk tampilan.
+  const name = normalizeName(item.full_name);
+  const school = normalizeSchool(item.previous_school);
+  const pendingDays = item.status === "pending" ? daysSince(item.created_at) : 0;
+  const late = pendingDays >= PENDING_SLA_DAYS;
   const actions: RowAction[] = [
     { key: "detail", label: "Detail", icon: <Eye className="h-4 w-4" />, run: () => onDetail(item) },
     { key: "edit", label: "Edit Data", icon: <PencilSimple className="h-4 w-4" />, run: () => onEditData(item) },
@@ -2418,14 +2450,14 @@ function RegistrationMobileRow({
                 type="checkbox"
                 checked={selected}
                 onChange={() => onToggleSelect(item.id)}
-                aria-label={`Pilih ${item.full_name}`}
+                aria-label={`Pilih ${name}`}
                 className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
               />
             </span>
           ) : (
             <span className="relative flex h-10 w-10 shrink-0 items-center justify-center">
               <span aria-hidden="true" className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-primary)]/10 text-[11px] font-bold text-[var(--brand-primary)]">
-                {item.full_name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                {name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
               </span>
               <StatusDot
                 tone={DOT_TONE[item.status] ?? "pending"}
@@ -2435,12 +2467,13 @@ function RegistrationMobileRow({
             </span>
           )
         }
-        title={item.full_name}
+        title={name}
         badge={
-          item.status === "rejected" || item.documents?.input_source === "admin" || item.documents?.input_source === "import" ? (
+          item.status === "rejected" || late || item.documents?.input_source === "admin" || item.documents?.input_source === "import" ? (
             <>
               {item.documents?.input_source === "admin" && <QuietBadge>Manual</QuietBadge>}
               {item.documents?.input_source === "import" && <QuietBadge>Impor</QuietBadge>}
+              {late && <QuietBadge>Lewat {PENDING_SLA_DAYS} hari</QuietBadge>}
               {item.status === "rejected" && <QuietBadge>Ditolak</QuietBadge>}
             </>
           ) : undefined
@@ -2450,15 +2483,18 @@ function RegistrationMobileRow({
             <span className={`inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${pathColors[item.registration_path] || "bg-slate-100 text-slate-600"}`}>
               {pathLabels[item.registration_path] || item.registration_path}
             </span>
-            {(item.previous_school || item.email) && (
-              <span className="min-w-0 truncate">{item.previous_school || item.email}</span>
+            {(school || item.email) && (
+              <span className="min-w-0 truncate">{school || item.email}</span>
             )}
-            <span className="shrink-0">
-              {new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+            <span
+              className="shrink-0 whitespace-nowrap"
+              title={new Date(item.created_at).toLocaleString("id-ID", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" })}
+            >
+              {formatRelativeTime(item.created_at)}
             </span>
           </>
         }
-        actions={<RowActionsMenu label={item.full_name} actions={actions} disabled={selectMode} />}
+        actions={<RowActionsMenu label={name} actions={actions} disabled={selectMode} />}
         selected={selected}
         onClick={() => {
           if (selectMode) onToggleSelect(item.id);

@@ -3,18 +3,18 @@
  * akses database — mudah diuji unit test).
  */
 
+import { normalizeName } from "./format-name";
+
+/** Ambang penekanan SPMB pending — dipakai dashboard DAN daftar pendaftar. */
+export const PENDING_SLA_DAYS = 3;
+
 /**
  * Normalisasi nama ke Title Case untuk TAMPILAN SAJA (data di database
- * tidak diubah). "siti azizah" → "Siti Azizah", "MUHAMMAD RIZKI" →
- * "Muhammad Rizki".
+ * tidak diubah). Delegasi ke helper bersama format-name.ts — normalisasi
+ * saat simpan memakai fungsi yang sama, jadi tampilan dan data konsisten.
  */
 export function toTitleCase(input: string): string {
-  const trimmed = (input ?? "").trim();
-  if (!trimmed) return "";
-  return trimmed
-    .split(/\s+/)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
+  return normalizeName(input);
 }
 
 /**
@@ -41,9 +41,25 @@ export function formatRelativeTime(value: string, now: Date = new Date()): strin
   return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Jakarta" }).format(then);
 }
 
-/** Berapa hari penuh sejak `value` — untuk penekanan SPMB pending > 3 hari. */
+/** Berapa hari penuh sejak `value`, dihitung dengan batas hari zona Asia/Jakarta. */
 export function daysSince(value: string, now: Date = new Date()): number {
   const then = new Date(value);
   if (Number.isNaN(then.getTime())) return 0;
-  return Math.floor((now.getTime() - then.getTime()) / 86_400_000);
+  return Math.round((jakartaDayEpoch(now) - jakartaDayEpoch(then)) / 86_400_000);
+}
+
+/**
+ * Epoch "tengah malam" dari tanggal yang sama di zona Asia/Jakarta — untuk
+ * perhitungan selisih hari berbasis kalender (bukan blok 24 jam mentah),
+ * sesuai zona waktu panitia.
+ */
+function jakartaDayEpoch(date: Date): number {
+  const iso = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+  const [y, m, d] = iso.split("-").map(Number);
+  return Date.UTC(y, m - 1, d);
 }

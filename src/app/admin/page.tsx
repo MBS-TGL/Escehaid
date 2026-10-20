@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import type { ComponentType, ReactNode } from "react";
 import { createClient } from "@/lib/supabase-server";
 import { getWaveStatus } from "@/lib/queries/waves";
-import { toTitleCase, formatRelativeTime, daysSince } from "@/lib/admin-display";
+import { toTitleCase, formatRelativeTime, daysSince, PENDING_SLA_DAYS } from "@/lib/admin-display";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -344,7 +344,7 @@ export default async function AdminPage() {
             <EmptyState icon={Users} title="Belum ada pendaftar" hint="Pendaftar yang masuk lewat formulir SPMB akan muncul di sini." />
           ) : (
             (recentSpmb.data || []).map((item) => {
-              const late = item.status === "pending" && daysSince(item.created_at, now) > 3;
+              const late = item.status === "pending" && daysSince(item.created_at, now) >= PENDING_SLA_DAYS;
               return (
                 <Row
                   key={item.id}
@@ -363,7 +363,7 @@ export default async function AdminPage() {
                 >
                   <p className="line-clamp-1 text-sm font-medium text-slate-800">
                     {toTitleCase(item.full_name) || "Tanpa nama"}
-                    {late && <span className="ml-1.5 font-bold text-amber-600" title="Menunggu verifikasi lebih dari 3 hari">!</span>}
+                    {late && <span className="ml-1.5 font-bold text-amber-600" title={`Menunggu verifikasi ${PENDING_SLA_DAYS} hari atau lebih`}>!</span>}
                   </p>
                   <p className="mt-0.5 text-xs text-slate-500" title={item.created_at}>
                     {formatRelativeTime(item.created_at, now)}

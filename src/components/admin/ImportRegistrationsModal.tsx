@@ -16,6 +16,7 @@ import {
 } from "@/components/Icons";
 import { adminCreateRegistration } from "@/lib/queries/registrations";
 import { readSpreadsheetFile } from "@/lib/spmb-import-file";
+import { normalizeName } from "@/lib/format-name";
 import {
   STATUS_LABEL, FIELD_LABELS, buildImportPayload, buildImportResult, detectDuplicates, rowStatus,
   updateRowField, type ImportResult, type ImportRow, type RawKey,
@@ -353,6 +354,8 @@ export function ImportRegistrationsModal({
           {rows.map((row) => {
             const status = rowStatus(row);
             const editableIssues = new Set(row.issues.map((i) => i.field));
+            // Judul tampilan dinormalisasi — file tidak diubah saat preview.
+            const displayName = normalizeName(row.data.full_name);
             return (
               <div key={row.index} className={`rounded-xl border p-3 transition-colors ${row.include ? "border-[var(--brand-primary)]/25 bg-[var(--brand-primary)]/[0.03]" : "border-slate-200"}`}>
                 <div className="flex items-start gap-3">
@@ -361,13 +364,13 @@ export function ImportRegistrationsModal({
                     checked={row.include}
                     disabled={status === "error"}
                     onChange={() => toggleRow(row.index)}
-                    aria-label={`Pilih baris ${row.index} (${row.data.full_name})`}
+                    aria-label={`Pilih baris ${row.index} (${displayName})`}
                     className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 accent-[var(--brand-accent)] disabled:opacity-40"
                   />
                   <FileText className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-800">{row.data.full_name}</span>
+                      <span className="text-sm font-semibold text-slate-800">{displayName}</span>
                       <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLE[status]}`}>
                         {STATUS_LABEL[status]}
                       </span>
