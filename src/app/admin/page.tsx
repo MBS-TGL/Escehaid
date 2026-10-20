@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Suspense, cache } from "react";
 import type { ComponentType, ReactNode } from "react";
 import { createClient } from "@/lib/supabase-server";
 import { getWaveStatus } from "@/lib/queries/waves";
@@ -27,17 +28,13 @@ import { StatCard, StatCardGroup } from "@/components/ui";
 
 type IconType = ComponentType<{ className?: string }>;
 
+/** Klien Supabase server yang dibuat sekali di AdminPage lalu dioper ke seksi. */
+type Sb = Awaited<ReturnType<typeof createClient>>;
+
 /** Bentuk minimum hasil supabase yang dipakai dashboard (count / list). */
 type Err = { message: string } | null;
 type CountRes = { count: number | null; error: Err };
 type ListRes<T> = { data: T[] | null; error: Err };
-
-/**
- * Pengganti query bagi role yang izinnya tidak mencakup tabel itu:
- * shape sama, tanpa panggilan jaringan — Promise.all tetap satu array.
- */
-const skipCount = (): Promise<CountRes> => Promise.resolve({ count: null, error: null });
-const skipList = <T,>(): Promise<ListRes<T>> => Promise.resolve({ data: null, error: null });
 
 /** count null saat query error ≠ 0. null → "—" (gagal memuat). */
 const countValue = (r: CountRes): number | null => (r.error ? null : (r.count ?? 0));
@@ -166,93 +163,115 @@ type MessageRow = { id: string; name: string; subject: string; message: string; 
 type WaveRow = { name: string; start_date: string; end_date: string };
 type AgendaRow = { id: string; title: string; event_date: string };
 
-export default async function AdminPage() {
-  const supabase = await createClient();
+/* ────────────────────────────────────────────────────────────────────────
+ * Query ber-cache (react cache): dedupe PER REQUEST — kartu "Perlu
+ * perhatian" dan kartu statistik memakai count yang sama tanpa round-trip
+ * ganda. Tiap seksi async berjalan sendiri sehingga halaman di-STREAM:
+ * banner langsung tampil, kartu menyusul begitu query-nya selesai.
+ * ──────────────────────────────────────────────────────────────────────── */
 
-  // getClaims(): verifikasi JWT lokal (tanpa panggilan Auth). proxy.ts sudah
-  // memeriksa sesi, jadi di sini cukup mengambil id user.
-  const { data: claimsData } = await supabase.auth.getClaims();
-  const userId = claimsData?.claims?.sub;
-  if (!userId) redirect("/admin/login");
+const getNewsCount = cache(async (sb: Sb): Promise<CountRes> => {
+  const { count, error } = await sb.from("news").select("id", { count: "exact", head: true });
+  return { count, error };
+});
+const getDraftNewsCount = cache(async (sb: Sb): Promise<CountRes> => {
+  const { count, error } = await sb.from("news").select("id", { count: "exact", head: true }).eq("is_published", false);
+  return { count, error };
+});
+const getArticlesCount = cache(async (sb: Sb): Promise<CountRes> => {
+  const { count, error } = await sb.from("articles").select("id", { count: "exact", head: true });
+  return { count, error };
+});
+const getGalleryCount = cache(async (sb: Sb): Promise<CountRes> => {
+  const { count, error } = await sb.from("gallery").select("id", { count: "exact", head: true });
+  return { count, error };
+});
+const getAchievementsCount = cache(async (sb: Sb): Promise<CountRes> => {
+  const { count, error } = await sb.from("achievements").select("id", { count: "exact", head: true });
+  return { count, error };
+});
+const getSpmbCount = cache(async (sb: Sb): Promise<CountRes> => {
+  const { count, error } = await sb.from("spmb_registrations").select("id", { count: "exact", head: true });
+  return { count, error };
+});
+const getSpmbPending = cache(async (sb: Sb): Promise<CountRes> => {
+  const { count, error } = await sb.from("spmb_registrations").select("id", { count: "exact", head: true }).eq("status", "pending");
+  return { count, error };
+});
+const getSpmbAccepted = cache(async (sb: Sb): Promise<CountRes> => {
+  const { count, error } = await sb.from("spmb_registrations").select("id", { count: "exact", head: true }).eq("status", "accepted");
+  return { count, error };
+});
+const getSpmbRejected = cache(async (sb: Sb): Promise<CountRes> => {
+  const { count, error } = await sb.from("spmb_registrations").select("id", { count: "exact", head: true }).eq("status", "rejected");
+  return { count, error };
+});
+const getContactCount = cache(async (sb: Sb): Promise<CountRes> => {
+  const { count, error } = await sb.from("contact_messages").select("id", { count: "exact", head: true });
+  return { count, error };
+});
+const getUnreadCount = cache(async (sb: Sb): Promise<CountRes> => {
+  const { count, error } = await sb.from("contact_messages").select("id", { count: "exact", head: true }).eq("is_read", false);
+  return { count, error };
+});
 
-  // Profil dulu (select minim) supaya query berikutnya bisa DIFILTER ROLE —
-  // publisher tidak perlu menyentuh spmb_registrations / contact_messages.
-  const profileRes = await supabase
-    .from("user_profiles")
-    .select("full_name, role, is_active")
-    .eq("id", userId)
-    .single();
-  if (!profileRes.data || !profileRes.data.is_active) {
-    await supabase.auth.signOut();
-    redirect("/admin/login?error=inactive");
-  }
+const getSpmbWaves = cache(async (sb: Sb): Promise<ListRes<WaveRow>> => {
+  const { data, error } = await sb
+    .from("spmb_waves")
+    .select("name, start_date, end_date")
+    .eq("is_published", true)
+    .order("start_date", { ascending: false })
+    .limit(8);
+  return { data, error };
+});
 
-  const profile = profileRes.data as { full_name: string; role: string; is_active: boolean };
-  const role: string = profile.role;
-  const isAdmin = ADMIN_ROLES.includes(role);
-  const canPublish = CONTENT_ROLES.includes(role);
+const getRecentSpmb = cache(async (sb: Sb): Promise<ListRes<SpmbRow>> => {
+  const { data, error } = await sb
+    .from("spmb_registrations")
+    .select("id, full_name, status, created_at")
+    .order("created_at", { ascending: false })
+    .limit(5);
+  return { data, error };
+});
 
-  // Semua query berjalan bersamaan (1 round-trip). Slot query yang tak relevan
-  // untuk role digantikan placeholder skip*() tanpa panggilan jaringan; RLS
-  // Supabase tetap penegakan akhir untuk tabel sensitif.
-  const [
-    newsCount,
-    articlesCount,
-    galleryCount,
-    achievementsCount,
-    draftNews,
-    spmbCount,
-    spmbPending,
-    spmbAccepted,
-    spmbRejected,
-    spmbWaves,
-    contactCount,
-    unreadMsgs,
-    recentNews,
-    recentSpmb,
-    recentMessages,
-    nextAgenda,
-  ] = await Promise.all([
-    canPublish ? supabase.from("news").select("id", { count: "exact", head: true }) : skipCount(),
-    canPublish ? supabase.from("articles").select("id", { count: "exact", head: true }) : skipCount(),
-    canPublish ? supabase.from("gallery").select("id", { count: "exact", head: true }) : skipCount(),
-    canPublish ? supabase.from("achievements").select("id", { count: "exact", head: true }) : skipCount(),
-    canPublish ? supabase.from("news").select("id", { count: "exact", head: true }).eq("is_published", false) : skipCount(),
-    isAdmin ? supabase.from("spmb_registrations").select("id", { count: "exact", head: true }) : skipCount(),
-    isAdmin ? supabase.from("spmb_registrations").select("id", { count: "exact", head: true }).eq("status", "pending") : skipCount(),
-    isAdmin ? supabase.from("spmb_registrations").select("id", { count: "exact", head: true }).eq("status", "accepted") : skipCount(),
-    isAdmin ? supabase.from("spmb_registrations").select("id", { count: "exact", head: true }).eq("status", "rejected") : skipCount(),
-    isAdmin
-      ? supabase.from("spmb_waves").select("name, start_date, end_date").eq("is_published", true).order("start_date", { ascending: false }).limit(8)
-      : skipList<WaveRow>(),
-    isAdmin ? supabase.from("contact_messages").select("id", { count: "exact", head: true }) : skipCount(),
-    isAdmin ? supabase.from("contact_messages").select("id", { count: "exact", head: true }).eq("is_read", false) : skipCount(),
-    canPublish
-      ? supabase.from("news").select("id, title, is_published, created_at").order("created_at", { ascending: false }).limit(5)
-      : skipList<NewsRow>(),
-    isAdmin
-      ? supabase.from("spmb_registrations").select("id, full_name, status, created_at").order("created_at", { ascending: false }).limit(5)
-      : skipList<SpmbRow>(),
-    isAdmin
-      ? supabase.from("contact_messages").select("id, name, subject, message, is_read, created_at").order("created_at", { ascending: false }).limit(5)
-      : skipList<MessageRow>(),
-    canPublish
-      ? supabase.from("agenda_events").select("id, title, event_date").eq("is_active", true).gte("event_date", new Date().toISOString().slice(0, 10)).order("event_date", { ascending: true }).limit(1)
-      : skipList<AgendaRow>(),
+const getRecentMessages = cache(async (sb: Sb): Promise<ListRes<MessageRow>> => {
+  const { data, error } = await sb
+    .from("contact_messages")
+    .select("id, name, subject, message, is_read, created_at")
+    .order("created_at", { ascending: false })
+    .limit(5);
+  return { data, error };
+});
+
+const getRecentNews = cache(async (sb: Sb): Promise<ListRes<NewsRow>> => {
+  const { data, error } = await sb
+    .from("news")
+    .select("id, title, is_published, created_at")
+    .order("created_at", { ascending: false })
+    .limit(5);
+  return { data, error };
+});
+
+const getNextAgenda = cache(async (sb: Sb): Promise<ListRes<AgendaRow>> => {
+  const { data, error } = await sb
+    .from("agenda_events")
+    .select("id, title, event_date")
+    .eq("is_active", true)
+    .gte("event_date", new Date().toISOString().slice(0, 10))
+    .order("event_date", { ascending: true })
+    .limit(1);
+  return { data, error };
+});
+
+/* ── Seksi async (tiap seksi = satu unit Suspense) ────────────────────── */
+
+/** Baris "Perlu perhatian" — memakai count ber-cache yang sama dengan statistik. */
+async function TodoRail({ supabase, isAdmin, canPublish }: { supabase: Sb; isAdmin: boolean; canPublish: boolean }) {
+  const [unreadMsgs, spmbPending, draftNews] = await Promise.all([
+    isAdmin ? getUnreadCount(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
+    isAdmin ? getSpmbPending(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
+    canPublish ? getDraftNewsCount(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
   ]);
-
-  const now = new Date();
-  const today = new Intl.DateTimeFormat("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: TZ,
-  }).format(now);
-  const firstName = profile.full_name?.split(" ")[0] ?? "Admin";
-
-  const actions = quickActions.filter((a) => a.roles.includes(role));
-  const mobileActionCount = actions.filter((a) => a.mobile).length;
 
   // ── Perlu perhatian: hanya jumlah yang sah (>0) dan relevan untuk role.
   // Query gagal (error) dijauhkan dari todo supaya tidak memicu false alarm.
@@ -261,6 +280,59 @@ export default async function AdminPage() {
     { label: "Pendaftar menunggu verifikasi", res: spmbPending, href: "/admin/admission", show: isAdmin },
     { label: "Berita masih draft", res: draftNews, href: "/admin/news", show: canPublish },
   ].filter((t) => t.show && countValue(t.res) !== null && (t.res.count ?? 0) > 0);
+
+  if (todo.length === 0) {
+    return (
+      <p className="mb-4 flex items-center gap-1.5 px-1 text-xs font-medium text-emerald-700">
+        <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" />
+        Semua beres, tidak ada yang perlu ditindaklanjuti.
+      </p>
+    );
+  }
+
+  return (
+    <section aria-labelledby="todo-title" className="mb-4">
+      <h2 id="todo-title" className="mb-2 text-sm font-bold text-slate-800">
+        Perlu perhatian
+      </h2>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {todo.map((t) => (
+          <Link
+            key={t.label}
+            href={t.href}
+            className="group flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
+          >
+            <span className="flex h-9 min-w-9 items-center justify-center rounded-lg bg-amber-500 px-2 text-sm font-bold text-white">
+              {t.res.count}
+            </span>
+            <span className="flex-1 text-sm font-medium text-slate-800">{t.label}</span>
+            <ArrowRight className="h-4 w-4 text-amber-700 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Grid statistik (mobile padat + desktop StatCard) — count ber-cache + gelombang SPMB. */
+async function StatsSection({ supabase, isAdmin, canPublish }: { supabase: Sb; isAdmin: boolean; canPublish: boolean }) {
+  const [newsCount, articlesCount, galleryCount, achievementsCount, draftNews, spmbCount, spmbPending, spmbAccepted, spmbRejected, spmbWaves, contactCount, unreadMsgs] =
+    await Promise.all([
+      canPublish ? getNewsCount(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
+      canPublish ? getArticlesCount(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
+      canPublish ? getGalleryCount(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
+      canPublish ? getAchievementsCount(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
+      canPublish ? getDraftNewsCount(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
+      isAdmin ? getSpmbCount(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
+      isAdmin ? getSpmbPending(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
+      isAdmin ? getSpmbAccepted(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
+      isAdmin ? getSpmbRejected(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
+      isAdmin ? getSpmbWaves(supabase) : Promise.resolve({ data: null, error: null } as ListRes<WaveRow>),
+      isAdmin ? getContactCount(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
+      isAdmin ? getUnreadCount(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
+    ]);
+
+  const now = new Date();
 
   // Status SPMB paling relevan saat ini (gelombang dibuka/akan dibuka/ditutup).
   const waveStates = (spmbWaves.data || []).map((w) => ({ ...w, state: getWaveStatus({ start_date: w.start_date, end_date: w.end_date }, now) }));
@@ -329,142 +401,268 @@ export default async function AdminPage() {
   ];
 
   const stats = allStats.filter((s) => s.show);
+  if (stats.length === 0) return null;
 
-  // ── Card daftar terbaru (urutan = prioritas pemakaian) ──
-  const sections: { key: string; node: ReactNode }[] = [];
+  return (
+    <>
+      {/* Mobile: grid padat, semua angka terlihat tanpa scroll panjang.
+          Rincian status sengaja disembunyikan di HP (grid tetap padat). */}
+      <div className={`grid gap-2 md:hidden ${stats.length === 4 ? "grid-cols-2" : stats.length % 3 === 0 ? "grid-cols-3" : "grid-cols-2"}`}>
+        {stats.map((stat) => (
+          <Link
+            key={stat.label}
+            href={stat.href}
+            aria-label={`${stat.label}: ${stat.value === null ? "gagal memuat" : stat.value}`}
+            className="flex flex-col gap-1 rounded-xl border border-slate-200/80 bg-white p-3 shadow-sm active:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xl font-bold leading-none text-slate-900">{stat.value === null ? "—" : stat.value}</span>
+              {stat.icon}
+            </div>
+            <span className="text-xs text-slate-500">{stat.label}</span>
+          </Link>
+        ))}
+      </div>
 
-  if (isAdmin) {
-    sections.push({
-      key: "spmb",
-      node: (
-        <ListCard title="Pendaftar SPMB terbaru" href="/admin/admission">
-          {recentSpmb.error ? (
-            <EmptyState icon={Users} title="Gagal memuat" hint="Pendaftar tidak sementara tampil. Coba muat ulang halaman." />
-          ) : (recentSpmb.data || []).length === 0 ? (
-            <EmptyState icon={Users} title="Belum ada pendaftar" hint="Pendaftar yang masuk lewat formulir SPMB akan muncul di sini." />
-          ) : (
-            (recentSpmb.data || []).map((item) => {
-              const late = item.status === "pending" && daysSince(item.created_at, now) >= PENDING_SLA_DAYS;
-              return (
-                <Row
-                  key={item.id}
-                  href="/admin/admission"
-                  leading={
-                    <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${late ? "bg-amber-100 ring-2 ring-amber-300" : "bg-[var(--brand-primary)]/10"}`}>
-                      <Users className={`h-4 w-4 ${late ? "text-amber-600" : "text-[var(--brand-primary)]"}`} />
-                    </div>
-                  }
-                  trailing={
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${spmbStatusColor[item.status] || "bg-slate-50 text-slate-700"}`}>
-                      {spmbStatusLabel[item.status] || item.status}
-                      {late && " · lewat"}
-                    </span>
-                  }
-                >
-                  <p className="line-clamp-1 text-sm font-medium text-slate-800">
-                    {toTitleCase(item.full_name) || "Tanpa nama"}
-                    {late && <span className="ml-1.5 font-bold text-amber-600" title={`Menunggu verifikasi ${PENDING_SLA_DAYS} hari atau lebih`}>!</span>}
-                  </p>
-                  <p className="mt-0.5 text-xs text-slate-500" title={item.created_at}>
-                    {formatRelativeTime(item.created_at, now)}
-                  </p>
-                </Row>
-              );
-            })
-          )}
-        </ListCard>
-      ),
-    });
+      {/* Tablet & desktop: StatCard bawaan + rincian status */}
+      <div className="hidden md:block">
+        <StatCardGroup>
+          {stats.map((stat) => (
+            <Link
+              key={stat.label}
+              href={stat.href}
+              aria-label={`${stat.label}: ${stat.value === null ? "gagal memuat" : stat.value}`}
+              className="block h-full rounded-2xl transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+            >
+              <StatCard label={stat.label} value={stat.value === null ? "—" : stat.value} icon={stat.icon} variant={stat.variant}>
+                {stat.detail}
+              </StatCard>
+            </Link>
+          ))}
+        </StatCardGroup>
+      </div>
+    </>
+  );
+}
 
-    sections.push({
-      key: "messages",
-      node: (
-        <ListCard title="Pesan masuk terbaru" href="/admin/contact">
-          {recentMessages.error ? (
-            <EmptyState icon={Envelope} title="Gagal memuat" hint="Pesan tidak sementara tampil. Coba muat ulang halaman." />
-          ) : (recentMessages.data || []).length === 0 ? (
-            <EmptyState icon={Envelope} title="Belum ada pesan" hint="Pesan dari formulir kontak website akan muncul di sini." />
-          ) : (
-            (recentMessages.data || []).map((item) => (
-              <Row
-                key={item.id}
-                href="/admin/contact"
-                leading={
-                  <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${item.is_read ? "bg-slate-100" : "bg-[var(--brand-primary)]/10"}`}>
-                    <Envelope className={`h-4 w-4 ${item.is_read ? "text-slate-400" : "text-[var(--brand-primary)]"}`} />
-                  </div>
-                }
-                trailing={
-                  !item.is_read ? (
-                    <span className="inline-flex items-center rounded-full bg-[var(--brand-accent)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--brand-accent)]">Baru</span>
-                  ) : null
-                }
-              >
-                <p className={`line-clamp-1 text-sm text-slate-800 ${item.is_read ? "font-medium" : "font-semibold"}`}>
-                  {toTitleCase(item.name) || "Tanpa nama"}
-                </p>
-                <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">
-                  {item.subject || "Tanpa subjek"} &middot; {formatRelativeTime(item.created_at, now)}
-                </p>
-                {item.message && <p className="mt-0.5 line-clamp-1 text-[11px] text-slate-400">{item.message}</p>}
-              </Row>
-            ))
-          )}
-        </ListCard>
-      ),
-    });
-  }
-
-  if (canPublish) {
-    sections.push({
-      key: "news",
-      node: (
-        <ListCard title="Berita terbaru" href="/admin/news">
-          {recentNews.error ? (
-            <EmptyState icon={Megaphone} title="Gagal memuat" hint="Berita tidak sementara tampil. Coba muat ulang halaman." />
-          ) : (recentNews.data || []).length === 0 ? (
-            <EmptyState icon={Megaphone} title="Belum ada berita" hint="Berita yang Anda tulis akan muncul di sini." />
-          ) : (
-            (recentNews.data || []).map((item) => (
-              <Row key={item.id} href="/admin/news">
-                <p className="line-clamp-2 text-sm font-medium text-slate-800">{item.title}</p>
-                <div className="mt-1 flex items-center gap-2">
-                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${item.is_published ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                    {item.is_published ? "Publish" : "Draft"}
-                  </span>
-                  <span className="text-xs text-slate-500">{formatRelativeTime(item.created_at, now)}</span>
+/** Kartu "Pendaftar SPMB terbaru". */
+async function RecentSpmbCard({ supabase }: { supabase: Sb }) {
+  const recentSpmb = await getRecentSpmb(supabase);
+  const now = new Date();
+  return (
+    <ListCard title="Pendaftar SPMB terbaru" href="/admin/admission">
+      {recentSpmb.error ? (
+        <EmptyState icon={Users} title="Gagal memuat" hint="Pendaftar tidak sementara tampil. Coba muat ulang halaman." />
+      ) : (recentSpmb.data || []).length === 0 ? (
+        <EmptyState icon={Users} title="Belum ada pendaftar" hint="Pendaftar yang masuk lewat formulir SPMB akan muncul di sini." />
+      ) : (
+        (recentSpmb.data || []).map((item) => {
+          const late = item.status === "pending" && daysSince(item.created_at, now) >= PENDING_SLA_DAYS;
+          return (
+            <Row
+              key={item.id}
+              href="/admin/admission"
+              leading={
+                <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${late ? "bg-amber-100 ring-2 ring-amber-300" : "bg-[var(--brand-primary)]/10"}`}>
+                  <Users className={`h-4 w-4 ${late ? "text-amber-600" : "text-[var(--brand-primary)]"}`} />
                 </div>
-              </Row>
-            ))
-          )}
-        </ListCard>
-      ),
-    });
-
-    // Kartu agenda terdekat — hanya bila ada event aktif yang akan datang.
-    const agenda = nextAgenda.error ? null : (nextAgenda.data || [])[0];
-    if (agenda) {
-      sections.push({
-        key: "agenda",
-        node: (
-          <ListCard title="Agenda terdekat" href="/admin/agenda">
-            <Row href="/admin/agenda">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--brand-accent)]/10">
-                <CalendarCheck className="h-4 w-4 text-[var(--brand-accent)]" />
-              </div>
-              <div className="min-w-0">
-                <p className="line-clamp-1 text-sm font-medium text-slate-800">{agenda.title}</p>
-                <p className="mt-0.5 text-xs text-slate-500">{fmtWIBDate(agenda.event_date)}</p>
-              </div>
+              }
+              trailing={
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${spmbStatusColor[item.status] || "bg-slate-50 text-slate-700"}`}>
+                  {spmbStatusLabel[item.status] || item.status}
+                  {late && " · lewat"}
+                </span>
+              }
+            >
+              <p className="line-clamp-1 text-sm font-medium text-slate-800">
+                {toTitleCase(item.full_name) || "Tanpa nama"}
+                {late && <span className="ml-1.5 font-bold text-amber-600" title={`Menunggu verifikasi ${PENDING_SLA_DAYS} hari atau lebih`}>!</span>}
+              </p>
+              <p className="mt-0.5 text-xs text-slate-500" title={item.created_at}>
+                {formatRelativeTime(item.created_at, now)}
+              </p>
             </Row>
-          </ListCard>
-        ),
-      });
-    }
+          );
+        })
+      )}
+    </ListCard>
+  );
+}
+
+/** Kartu "Pesan masuk terbaru". */
+async function RecentMessagesCard({ supabase }: { supabase: Sb }) {
+  const recentMessages = await getRecentMessages(supabase);
+  const now = new Date();
+  return (
+    <ListCard title="Pesan masuk terbaru" href="/admin/contact">
+      {recentMessages.error ? (
+        <EmptyState icon={Envelope} title="Gagal memuat" hint="Pesan tidak sementara tampil. Coba muat ulang halaman." />
+      ) : (recentMessages.data || []).length === 0 ? (
+        <EmptyState icon={Envelope} title="Belum ada pesan" hint="Pesan dari formulir kontak website akan muncul di sini." />
+      ) : (
+        (recentMessages.data || []).map((item) => (
+          <Row
+            key={item.id}
+            href="/admin/contact"
+            leading={
+              <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${item.is_read ? "bg-slate-100" : "bg-[var(--brand-primary)]/10"}`}>
+                <Envelope className={`h-4 w-4 ${item.is_read ? "text-slate-400" : "text-[var(--brand-primary)]"}`} />
+              </div>
+            }
+            trailing={
+              !item.is_read ? (
+                <span className="inline-flex items-center rounded-full bg-[var(--brand-accent)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--brand-accent)]">Baru</span>
+              ) : null
+            }
+          >
+            <p className={`line-clamp-1 text-sm text-slate-800 ${item.is_read ? "font-medium" : "font-semibold"}`}>
+              {toTitleCase(item.name) || "Tanpa nama"}
+            </p>
+            <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">
+              {item.subject || "Tanpa subjek"} &middot; {formatRelativeTime(item.created_at, now)}
+            </p>
+            {item.message && <p className="mt-0.5 line-clamp-1 text-[11px] text-slate-400">{item.message}</p>}
+          </Row>
+        ))
+      )}
+    </ListCard>
+  );
+}
+
+/** Kartu "Berita terbaru". */
+async function RecentNewsCard({ supabase }: { supabase: Sb }) {
+  const recentNews = await getRecentNews(supabase);
+  const now = new Date();
+  return (
+    <ListCard title="Berita terbaru" href="/admin/news">
+      {recentNews.error ? (
+        <EmptyState icon={Megaphone} title="Gagal memuat" hint="Berita tidak sementara tampil. Coba muat ulang halaman." />
+      ) : (recentNews.data || []).length === 0 ? (
+        <EmptyState icon={Megaphone} title="Belum ada berita" hint="Berita yang Anda tulis akan muncul di sini." />
+      ) : (
+        (recentNews.data || []).map((item) => (
+          <Row key={item.id} href="/admin/news">
+            <p className="line-clamp-2 text-sm font-medium text-slate-800">{item.title}</p>
+            <div className="mt-1 flex items-center gap-2">
+              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${item.is_published ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                {item.is_published ? "Publish" : "Draft"}
+              </span>
+              <span className="text-xs text-slate-500">{formatRelativeTime(item.created_at, now)}</span>
+            </div>
+          </Row>
+        ))
+      )}
+    </ListCard>
+  );
+}
+
+/** Kartu "Agenda terdekat" — render null bila tidak ada event aktif. */
+async function AgendaCard({ supabase }: { supabase: Sb }) {
+  const nextAgenda = await getNextAgenda(supabase);
+  const agenda = nextAgenda.error ? null : (nextAgenda.data || [])[0];
+  if (!agenda) return null;
+  return (
+    <ListCard title="Agenda terdekat" href="/admin/agenda">
+      <Row href="/admin/agenda">
+        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--brand-accent)]/10">
+          <CalendarCheck className="h-4 w-4 text-[var(--brand-accent)]" />
+        </div>
+        <div className="min-w-0">
+          <p className="line-clamp-1 text-sm font-medium text-slate-800">{agenda.title}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{fmtWIBDate(agenda.event_date)}</p>
+        </div>
+      </Row>
+    </ListCard>
+  );
+}
+
+/* ── Skeleton (fallback Suspense) — aria-hidden, tanpa konten palsu ───── */
+
+function TodoSkeleton() {
+  return <div className="mb-4 h-9 animate-pulse rounded-xl bg-slate-100" aria-hidden="true" />;
+}
+
+function StatsSkeleton() {
+  return (
+    <div aria-hidden="true">
+      <div className="grid grid-cols-2 gap-2 md:hidden">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="h-[72px] animate-pulse rounded-xl bg-slate-100" />
+        ))}
+      </div>
+      <div className="hidden gap-4 md:grid md:grid-cols-3">
+        {Array.from({ length: 3 }, (_, i) => (
+          <div key={i} className="h-28 animate-pulse rounded-2xl bg-slate-100" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ListCardSkeleton() {
+  return (
+    <section className="rounded-xl border border-slate-200/80 bg-white shadow-sm" aria-hidden="true">
+      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+        <div className="h-4 w-40 animate-pulse rounded bg-slate-100" />
+        <div className="h-3 w-20 animate-pulse rounded bg-slate-100" />
+      </div>
+      <div className="divide-y divide-slate-50">
+        {Array.from({ length: 3 }, (_, i) => (
+          <div key={i} className="flex items-center gap-3 px-5 py-3">
+            <div className="h-8 w-8 flex-shrink-0 animate-pulse rounded-full bg-slate-100" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-3.5 w-3/4 animate-pulse rounded bg-slate-100" />
+              <div className="h-3 w-1/3 animate-pulse rounded bg-slate-100" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export default async function AdminPage() {
+  const supabase = await createClient();
+
+  // getClaims(): verifikasi JWT lokal (tanpa panggilan Auth). proxy.ts sudah
+  // memeriksa sesi, jadi di sini cukup mengambil id user.
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const userId = claimsData?.claims?.sub;
+  if (!userId) redirect("/admin/login");
+
+  // Profil dulu (select minim) supaya query berikutnya bisa DIFILTER ROLE —
+  // publisher tidak perlu menyentuh spmb_registrations / contact_messages.
+  const profileRes = await supabase
+    .from("user_profiles")
+    .select("full_name, role, is_active")
+    .eq("id", userId)
+    .single();
+  if (!profileRes.data || !profileRes.data.is_active) {
+    await supabase.auth.signOut();
+    redirect("/admin/login?error=inactive");
   }
 
-  const gridClass =
-    sections.length >= 3 ? "lg:grid-cols-2 xl:grid-cols-3" : sections.length === 2 ? "lg:grid-cols-2" : "";
+  const profile = profileRes.data as { full_name: string; role: string; is_active: boolean };
+  const role: string = profile.role;
+  const isAdmin = ADMIN_ROLES.includes(role);
+  const canPublish = CONTENT_ROLES.includes(role);
+
+  const now = new Date();
+  const today = new Intl.DateTimeFormat("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: TZ,
+  }).format(now);
+  const firstName = profile.full_name?.split(" ")[0] ?? "Admin";
+
+  const actions = quickActions.filter((a) => a.roles.includes(role));
+  const mobileActionCount = actions.filter((a) => a.mobile).length;
+
+  // Jumlah kolom grid daftar ditentukan role (tanpa menunggu query) — kartu
+  // agenda bisa muncul/hilang saat streaming tanpa menggeser layout dasar.
+  const listGridClass = isAdmin && canPublish ? "lg:grid-cols-2 xl:grid-cols-3" : "lg:grid-cols-2";
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -494,84 +692,41 @@ export default async function AdminPage() {
         </nav>
       </header>
 
-      {/* Perlu perhatian: satu baris kecil saat kosong, kartu hanya bila ada tugas */}
-      {(isAdmin || canPublish) &&
-        (todo.length === 0 ? (
-          <p className="mb-4 flex items-center gap-1.5 px-1 text-xs font-medium text-emerald-700">
-            <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" />
-            Semua beres, tidak ada yang perlu ditindaklanjuti.
-          </p>
-        ) : (
-          <section aria-labelledby="todo-title" className="mb-4">
-            <h2 id="todo-title" className="mb-2 text-sm font-bold text-slate-800">
-              Perlu perhatian
-            </h2>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {todo.map((t) => (
-                <Link
-                  key={t.label}
-                  href={t.href}
-                  className="group flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
-                >
-                  <span className="flex h-9 min-w-9 items-center justify-center rounded-lg bg-amber-500 px-2 text-sm font-bold text-white">
-                    {t.res.count}
-                  </span>
-                  <span className="flex-1 text-sm font-medium text-slate-800">{t.label}</span>
-                  <ArrowRight className="h-4 w-4 text-amber-700 transition-transform group-hover:translate-x-0.5" />
-                </Link>
-              ))}
-            </div>
-          </section>
-        ))}
-
-      {/* Statistik */}
-      {stats.length > 0 && (
-        <>
-          {/* Mobile: grid padat, semua angka terlihat tanpa scroll panjang.
-              Rincian status sengaja disembunyikan di HP (grid tetap padat). */}
-          <div className={`grid gap-2 md:hidden ${stats.length === 4 ? "grid-cols-2" : stats.length % 3 === 0 ? "grid-cols-3" : "grid-cols-2"}`}>
-            {stats.map((stat) => (
-              <Link
-                key={stat.label}
-                href={stat.href}
-                aria-label={`${stat.label}: ${stat.value === null ? "gagal memuat" : stat.value}`}
-                className="flex flex-col gap-1 rounded-xl border border-slate-200/80 bg-white p-3 shadow-sm active:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xl font-bold leading-none text-slate-900">{stat.value === null ? "—" : stat.value}</span>
-                  {stat.icon}
-                </div>
-                <span className="text-xs text-slate-500">{stat.label}</span>
-              </Link>
-            ))}
-          </div>
-
-          {/* Tablet & desktop: StatCard bawaan + rincian status */}
-          <div className="hidden md:block">
-            <StatCardGroup>
-              {stats.map((stat) => (
-                <Link
-                  key={stat.label}
-                  href={stat.href}
-                  aria-label={`${stat.label}: ${stat.value === null ? "gagal memuat" : stat.value}`}
-                  className="block h-full rounded-2xl transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-                >
-                  <StatCard label={stat.label} value={stat.value === null ? "—" : stat.value} icon={stat.icon} variant={stat.variant}>
-                    {stat.detail}
-                  </StatCard>
-                </Link>
-              ))}
-            </StatCardGroup>
-          </div>
-        </>
+      {/* Perlu perhatian — stream sendiri (count di-cache, dipakai juga statistik) */}
+      {(isAdmin || canPublish) && (
+        <Suspense fallback={<TodoSkeleton />}>
+          <TodoRail supabase={supabase} isAdmin={isAdmin} canPublish={canPublish} />
+        </Suspense>
       )}
 
-      {/* Daftar terbaru */}
-      {sections.length > 0 && (
-        <div className={`mt-5 grid items-start gap-4 lg:mt-6 lg:gap-6 ${gridClass}`}>
-          {sections.map((s) => (
-            <div key={s.key}>{s.node}</div>
-          ))}
+      {/* Statistik — stream sendiri */}
+      <Suspense fallback={<StatsSkeleton />}>
+        <StatsSection supabase={supabase} isAdmin={isAdmin} canPublish={canPublish} />
+      </Suspense>
+
+      {/* Daftar terbaru — tiap kartu stream independen */}
+      {(isAdmin || canPublish) && (
+        <div className={`mt-5 grid items-start gap-4 lg:mt-6 lg:gap-6 ${listGridClass}`}>
+          {isAdmin && (
+            <Suspense fallback={<ListCardSkeleton />}>
+              <RecentSpmbCard supabase={supabase} />
+            </Suspense>
+          )}
+          {isAdmin && (
+            <Suspense fallback={<ListCardSkeleton />}>
+              <RecentMessagesCard supabase={supabase} />
+            </Suspense>
+          )}
+          {canPublish && (
+            <Suspense fallback={<ListCardSkeleton />}>
+              <RecentNewsCard supabase={supabase} />
+            </Suspense>
+          )}
+          {canPublish && (
+            <Suspense fallback={null}>
+              <AgendaCard supabase={supabase} />
+            </Suspense>
+          )}
         </div>
       )}
     </div>
