@@ -111,10 +111,10 @@ export default async function Home() {
   const { startsWithGreeting, endsWithGreeting } = detectPrincipalGreeting(principalQuote);
   const quoteTypeClass =
     principalQuote.length <= 140
-      ? "text-2xl md:text-[32px]"
+      ? "text-2xl md:text-[28px]"
       : principalQuote.length <= 320
-        ? "text-xl md:text-2xl"
-        : "text-lg md:text-xl";
+        ? "text-lg md:text-[22px]"
+        : "text-base md:text-lg";
 
   // Kata terakhir kutipan dipisahkan untuk merapatkan glyph petik penutup
   // [&rdquo;] pada kata itu sendiri (span whitespace-nowrap), hanya dipakai
@@ -214,33 +214,43 @@ export default async function Home() {
 
       {/* ── SAMBUTAN ──────────────────────────────────────── */}
       <section className="bg-[var(--surface-muted)]" style={CV}>
-        <div className="mx-auto max-w-[1296px] lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:items-stretch">
-          {/* Slab navy: sel kanan penuh tinggi di desktop, kartu rounded di HP.
-              Foto mihrab melayang di dalamnya tanpa backdrop/bayangan apa pun. */}
-          <CSSFadeIn className="order-first lg:order-none">
-            <div className="mx-6 mb-12 flex items-center justify-center rounded-3xl bg-[var(--brand-primary)] px-10 py-12 lg:h-full lg:rounded-none lg:mx-0">
-              <figure className="relative w-56 lg:w-[280px]">
-                <div className="relative aspect-[4/5] overflow-hidden rounded-t-full rounded-b-2xl ring-1 ring-white/15">
+        <div className="mx-auto max-w-5xl px-6 py-14 md:px-10 md:py-20">
+          <div className="grid items-center gap-12 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-20">
+            <CSSFadeIn>
+              {/* Bingkai mihrab: lengkung di atas (rounded-t-full) tepi lurus di
+                  bawah, dibayangkan satu blok datar navy dengan offset 12px
+                  (8px di HP) ke kanan-bawah — tanpa gradien/blur/shadow. */}
+              <figure className="relative mx-auto w-52 lg:w-full lg:max-w-[300px]">
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 translate-x-2 translate-y-2 rounded-t-full rounded-b-2xl bg-[var(--brand-primary)] lg:translate-x-3 lg:translate-y-3"
+                />
+                <div className="relative aspect-[4/5] overflow-hidden rounded-t-full rounded-b-2xl ring-1 ring-black/5">
                   <Image
                     src={profile?.principal_photo_url || "/images/Kepala-Sekolah.jpg"}
                     alt={`${profile?.principal_name || "Kepala Sekolah"} - Kepala Sekolah`}
                     fill
-                    sizes="400px"
+                    sizes="300px"
                     className="object-cover object-[center_18%]"
                   />
                 </div>
               </figure>
-            </div>
-          </CSSFadeIn>
+            </CSSFadeIn>
 
-          <CSSFadeIn delay={0.1}>
-            <div className="flex h-full flex-col justify-center px-6 pb-16 pt-2 md:px-10 lg:pb-24 lg:pr-16 lg:pl-10 lg:pt-0">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand-accent)]">Sambutan Kepala Sekolah</h2>
-              {!startsWithGreeting && <p className="mb-3 mt-7 text-sm text-slate-600">{SALAM_BUKA}</p>}
-              <figure className={startsWithGreeting ? "mt-7" : ""}>
-                <blockquote>
-                  <p className={`${quoteTypeClass} max-w-[32em] font-serif font-normal leading-[1.55] tracking-normal text-slate-900 text-pretty`}>
-                    <span aria-hidden="true" className="font-bold text-[var(--brand-gold)]">&ldquo;&nbsp;</span>
+            <CSSFadeIn delay={0.1}>
+              <figure>
+                <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand-accent)]">Sambutan Kepala Sekolah</h2>
+                {/* Satu elemen fokus: petik pembuka besar. Margin negatif
+                    menarik baris konten berikutnya menempel ke glyph. */}
+                <span
+                  aria-hidden="true"
+                  className="-ml-1 -mb-4 block text-[64px] font-bold leading-none text-[var(--brand-gold)] md:-mb-6 md:text-[88px] lg:-mb-7 lg:text-[104px]"
+                >
+                  &ldquo;
+                </span>
+                {!startsWithGreeting && <p className="text-sm text-slate-600">{SALAM_BUKA}</p>}
+                <blockquote className={startsWithGreeting ? "" : "mt-3"}>
+                  <p className={`${quoteTypeClass} max-w-[34em] font-normal leading-[1.65] tracking-normal text-slate-800 text-pretty`}>
                     {endsWithGreeting ? (
                       <>
                         {keepTogether(principalQuoteWords.head)}
@@ -254,18 +264,18 @@ export default async function Home() {
                   </p>
                 </blockquote>
                 {!endsWithGreeting && (
-                  <p className="mt-5 text-sm text-slate-600">
+                  <p className="mt-4 text-sm text-slate-600">
                     {SALAM_TUTUP} <span aria-hidden="true" className="font-bold text-[var(--brand-gold)]">&rdquo;</span>
                   </p>
                 )}
-                <figcaption className="mt-9">
+                <figcaption className="mt-8">
                   <div className="h-0.5 w-10 bg-[var(--brand-gold)]" />
                   <p className="mt-4 text-base font-semibold text-[var(--brand-primary)]">{profile?.principal_name || "Khoirul Anwar, S.Pd"}</p>
                   <p className="text-sm text-slate-600">Kepala {schoolName}</p>
                 </figcaption>
               </figure>
-            </div>
-          </CSSFadeIn>
+            </CSSFadeIn>
+          </div>
         </div>
       </section>
 
