@@ -30,12 +30,15 @@ import AiFillPanel from "@/components/admin/AiFillPanel";
 import type { RefineData } from "@/lib/queries/ai";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import type { Activity } from "@/lib/supabase";
+import { usePermissions } from "@/app/admin/PermissionsProvider";
+import { normalizeName } from "@/lib/format-name";
 import {
   CalendarBlank,
   Eye,
   CheckCircle,
   Clock,
   X,
+  XCircle,
   MapPin,
   CaretLeft,
   CaretRight,
@@ -112,8 +115,15 @@ const emptyForm: FormData = {
 
 export default function AdminActivitiesPage() {
   const { toast } = useToast();
+  const { can } = usePermissions();
+  // Gate UI aksi — penegakan sesungguhnya di proxy.ts/RLS (lihat PermissionsProvider).
+  const permCreate = can("kegiatan:create");
+  const permUpdate = can("kegiatan:update");
+  const permDelete = can("kegiatan:delete");
+  const permPublish = can("kegiatan:publish");
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -149,9 +159,16 @@ export default function AdminActivitiesPage() {
   // Fetch
   const fetchActivities = useCallback(async () => {
     setLoading(true);
-    const data = await getActivityListAll();
-    setActivities(data as Activity[]);
-    setLoading(false);
+    setLoadError("");
+    try {
+      const data = await getActivityListAll();
+      setActivities(data as Activity[]);
+    } catch {
+      // Query gagal → tampil EmptyState "Gagal memuat", BUKAN daftar kosong palsu.
+      setLoadError("Gagal memuat kegiatan.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -523,9 +540,11 @@ export default function AdminActivitiesPage() {
             <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">Kegiatan sekolah (kajian, peringatan, lomba, dll)</p>
           </div>
         </div>
-        <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] md:py-2.5">
-          <Plus className="h-4 w-4" /> Buat Baru
-        </button>
+        {permCreate && (
+          <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] md:py-2.5">
+            <Plus className="h-4 w-4" /> Buat Baru
+          </button>
+        )}
       </div>
 
       {/* Stats — StatPillGroup: pill kompak satu baris */}
@@ -544,7 +563,7 @@ export default function AdminActivitiesPage() {
           <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
           <button onClick={() => handleBulkPublish(true)} aria-label={`Terbitkan ${selectedIds.size} kegiatan terpilih`} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Publish</button>
           <button onClick={() => handleBulkPublish(false)} aria-label={`Kembalikan ${selectedIds.size} kegiatan ke draft`} className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-600">Unpublish</button>
-          <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} kegiatan terpilih`} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
+          {permDelete && <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} kegiatan terpilih`} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>}
           <button onClick={() => setSelectedIds(new Set())} aria-label="Hapus pilihan" title="Hapus pilihan" className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
         </div>
       )}
@@ -652,6 +671,19 @@ export default function AdminActivitiesPage() {
                     <p className="text-sm text-slate-500">Memuat data kegiatan...</p>
                   </div>
                 </td></tr>
+              ) : loadError ? (
+                <tr><td colSpan={8} className="px-4 py-16 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                      <XCircle className="h-6 w-6 text-red-400" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{loadError}</p>
+                    <button onClick={() => fetchActivities()} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                      Coba lagi
+                    </button>
+                  </div>
+                </td></tr>
               ) : paginated.length === 0 ? (
                 <tr><td colSpan={8} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
@@ -664,7 +696,7 @@ export default function AdminActivitiesPage() {
                         {search || typeFilter !== "all" || filter !== "all" ? "Coba ubah kata kunci atau filter" : "Belum ada kegiatan"}
                       </p>
                     </div>
-                    {!search && filter === "all" && typeFilter === "all" && (
+                    {!search && filter === "all" && typeFilter === "all" && permCreate && (
                       <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
                         <Plus className="h-3.5 w-3.5" /> Buat Kegiatan Pertama
                       </button>
@@ -718,9 +750,9 @@ export default function AdminActivitiesPage() {
                       </p>
                     </td>
                     <td className="px-4 py-3.5 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => handleTogglePublish(item)}
-                        aria-label={`${item.is_published ? "Kembalikan ke draft" : "Terbitkan"} ${item.title}`}
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                      <button onClick={() => handleTogglePublish(item)} disabled={!permPublish}
+                        title={permPublish ? undefined : "Tidak berizin menerbitkan"}
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:cursor-default disabled:opacity-70 ${
                           item.is_published
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
                             : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
@@ -734,15 +766,21 @@ export default function AdminActivitiesPage() {
                         <button onClick={() => setViewItem(item)} aria-label={`Lihat ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat">
                           <Eye className="h-4 w-4" />
                         </button>
-                        <button onClick={() => openEdit(item)} aria-label={`Edit ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
-                          <PencilSimple className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => handleDuplicate(item)} aria-label={`Duplikat ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-600" title="Duplikat (salinan draft)">
-                          <Copy className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => setDeleteItem(item)} aria-label={`Hapus ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
-                          <Trash className="h-4 w-4" />
-                        </button>
+                        {permUpdate && (
+                          <button onClick={() => openEdit(item)} aria-label={`Edit ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
+                            <PencilSimple className="h-4 w-4" />
+                          </button>
+                        )}
+                        {permCreate && (
+                          <button onClick={() => handleDuplicate(item)} aria-label={`Duplikat ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-600" title="Duplikat (salinan draft)">
+                            <Copy className="h-4 w-4" />
+                          </button>
+                        )}
+                        {permDelete && (
+                          <button onClick={() => setDeleteItem(item)} aria-label={`Hapus ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
+                            <Trash className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -793,6 +831,17 @@ export default function AdminActivitiesPage() {
                 </div>
               ))}
             </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                <XCircle className="h-6 w-6 text-red-400" />
+              </div>
+              <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
+              <p className="mt-0.5 text-xs text-slate-500">{loadError}</p>
+              <button onClick={() => fetchActivities()} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                Coba lagi
+              </button>
+            </div>
           ) : paginated.length === 0 ? (
             <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
@@ -804,7 +853,7 @@ export default function AdminActivitiesPage() {
                   {search || typeFilter !== "all" || filter !== "all" ? "Coba ubah kata kunci atau filter" : "Belum ada kegiatan"}
                 </p>
               </div>
-              {!search && filter === "all" && typeFilter === "all" && (
+              {!search && filter === "all" && typeFilter === "all" && permCreate && (
                 <button onClick={openCreate} className="mt-1 flex min-h-10 items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
                   <Plus className="h-3.5 w-3.5" /> Buat Kegiatan Pertama
                 </button>
@@ -824,6 +873,10 @@ export default function AdminActivitiesPage() {
                 onDuplicate={handleDuplicate}
                 onDelete={setDeleteItem}
                 onPublish={requestPublish}
+                canEdit={permUpdate}
+                canDuplicate={permCreate}
+                canDelete={permDelete}
+                canPublish={permPublish}
               />
             ))
           )}
@@ -848,25 +901,29 @@ export default function AdminActivitiesPage() {
       {pickMode && (
         <MobileSelectBar
           count={selectedIds.size}
-          onDelete={() => setBulkDelete(true)}
+          onDelete={permDelete ? () => setBulkDelete(true) : undefined}
           onCancel={exitPickMode}
         >
-          <button
-            type="button"
-            onClick={() => handleBulkPublish(true)}
-            disabled={selectedIds.size === 0}
-            className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Terbitkan
-          </button>
-          <button
-            type="button"
-            onClick={() => handleBulkPublish(false)}
-            disabled={selectedIds.size === 0}
-            className="min-h-10 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Draft
-          </button>
+          {permPublish && (
+            <button
+              type="button"
+              onClick={() => handleBulkPublish(true)}
+              disabled={selectedIds.size === 0}
+              className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Terbitkan
+            </button>
+          )}
+          {permPublish && (
+            <button
+              type="button"
+              onClick={() => handleBulkPublish(false)}
+              disabled={selectedIds.size === 0}
+              className="min-h-10 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Draft
+            </button>
+          )}
         </MobileSelectBar>
       )}
 
@@ -878,17 +935,23 @@ export default function AdminActivitiesPage() {
         description={viewItem ? `${activityTypeLabel(viewItem.activity_type)} · ${viewItem.is_published ? "Published" : "Draft"}` : undefined}
         footer={
           <>
-            <button onClick={() => { setViewItem(null); openEdit(viewItem!); }}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 md:flex-none">
-              <PencilSimple className="h-4 w-4" /> Edit
-            </button>
-            {viewItem && (
+            {permUpdate && (
+              <button onClick={() => { setViewItem(null); openEdit(viewItem!); }}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 md:flex-none">
+                <PencilSimple className="h-4 w-4" /> Edit
+              </button>
+            )}
+            {viewItem && (permCreate || permDelete) && (
               <div className="flex shrink-0 md:hidden">
                 <RowActionsMenu
                   label={viewItem.title}
                   actions={[
-                    { key: "duplicate", label: "Duplikat", icon: <Copy className="h-4 w-4" />, run: () => handleDuplicate(viewItem) },
-                    { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => { setViewItem(null); setDeleteItem(viewItem); } },
+                    ...(permCreate
+                      ? [{ key: "duplicate", label: "Duplikat", icon: <Copy className="h-4 w-4" />, run: () => handleDuplicate(viewItem) } as RowAction]
+                      : []),
+                    ...(permDelete
+                      ? [{ key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => { setViewItem(null); setDeleteItem(viewItem); } } as RowAction]
+                      : []),
                   ]}
                 />
               </div>
@@ -939,7 +1002,7 @@ export default function AdminActivitiesPage() {
             </div>
             {viewItem.contact_person && (
               <p className="mb-4 flex items-center gap-1.5 text-xs text-slate-500">
-                <Phone className="h-3.5 w-3.5" /> {viewItem.contact_person}
+                <Phone className="h-3.5 w-3.5" /> {normalizeName(viewItem.contact_person)}
               </p>
             )}
             {viewItem.description && <p className="mb-4 text-sm text-slate-600 italic border-l-2 border-[#f4d21f] pl-3">{viewItem.description}</p>}
@@ -1257,6 +1320,10 @@ function ActivityMobileRow({
   onDuplicate,
   onDelete,
   onPublish,
+  canEdit,
+  canDuplicate,
+  canDelete,
+  canPublish,
 }: {
   item: Activity;
   selected: boolean;
@@ -1268,6 +1335,10 @@ function ActivityMobileRow({
   onDuplicate: (a: Activity) => void;
   onDelete: (a: Activity) => void;
   onPublish: (a: Activity) => void;
+  canEdit: boolean;
+  canDuplicate: boolean;
+  canDelete: boolean;
+  canPublish: boolean;
 }) {
   const startKey = toJakartaDateKey(item.activity_date);
   const scheduled =
@@ -1275,15 +1346,23 @@ function ActivityMobileRow({
 
   const actions: RowAction[] = [
     { key: "view", label: "Lihat", icon: <Eye className="h-4 w-4" />, run: () => onView(item) },
-    { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) },
-    {
-      key: "publish",
-      label: item.is_published ? "Jadikan Draft" : "Terbitkan",
-      icon: item.is_published ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
-      run: () => onPublish(item),
-    },
-    { key: "duplicate", label: "Duplikat", icon: <Copy className="h-4 w-4" />, run: () => onDuplicate(item) },
-    { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) },
+    ...(canEdit
+      ? [{ key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) } as RowAction]
+      : []),
+    ...(canPublish
+      ? [{
+          key: "publish",
+          label: item.is_published ? "Jadikan Draft" : "Terbitkan",
+          icon: item.is_published ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
+          run: () => onPublish(item),
+        } as RowAction]
+      : []),
+    ...(canDuplicate
+      ? [{ key: "duplicate", label: "Duplikat", icon: <Copy className="h-4 w-4" />, run: () => onDuplicate(item) } as RowAction]
+      : []),
+    ...(canDelete
+      ? [{ key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) } as RowAction]
+      : []),
   ];
 
   return (

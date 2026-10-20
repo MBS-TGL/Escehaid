@@ -10,7 +10,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [news, articles, activities] = await Promise.all([
     getNewsListForSitemap(),
     getArticleListForSitemap(),
-    getActivityListAll(),
+    // getActivityListAll melempar saat query gagal (standar panel admin) —
+    // sitemap sendiri harus tetap tangguh, jadi gagal → daftar kosong.
+    getActivityListAll().catch(() => []),
   ]);
 
   const now = new Date().toISOString();

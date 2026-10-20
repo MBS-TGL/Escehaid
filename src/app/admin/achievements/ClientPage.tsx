@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import {
-  getAchievementList,
+  getAchievementListAdmin,
   createAchievement,
   updateAchievement,
   deleteAchievement,
@@ -15,6 +15,8 @@ import { SlideOver, ConfirmModal } from "@/components/ui";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import type { Achievement } from "@/lib/supabase";
 import { useToast } from "@/components/ui/Toast";
+import { usePermissions } from "@/app/admin/PermissionsProvider";
+import { normalizeName, normalizeSchool } from "@/lib/format-name";
 import { compressImage } from "@/lib/compress-image";
 import {
   ACHIEVEMENT_CATEGORIES,
@@ -27,6 +29,7 @@ import {
   Trophy,
   Eye,
   X,
+  XCircle,
   Medal,
   CaretLeft,
   CaretRight,
@@ -115,8 +118,15 @@ const emptyForm: FormData = {
 
 export default function AdminAchievementsPage() {
   const { toast } = useToast();
+  const { can } = usePermissions();
+  // Gate UI aksi — penegakan sesungguhnya di proxy.ts/RLS (lihat PermissionsProvider).
+  const permCreate = can("prestasi:create");
+  const permUpdate = can("prestasi:update");
+  const permDelete = can("prestasi:delete");
+  const permPublish = can("prestasi:publish");
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -149,9 +159,17 @@ export default function AdminAchievementsPage() {
   const [imageUploading, setImageUploading] = useState(false);
 
   const fetchAchievements = useCallback(async () => {
-    const data = await getAchievementList();
-    setAchievements(data);
-    setLoading(false);
+    setLoading(true);
+    setLoadError("");
+    try {
+      const data = await getAchievementListAdmin();
+      setAchievements(data);
+    } catch {
+      // Query gagal → tampil EmptyState "Gagal memuat", BUKAN daftar kosong palsu.
+      setLoadError("Gagal memuat prestasi.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -552,9 +570,11 @@ export default function AdminAchievementsPage() {
             <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">Pencapaian siswa dan sekolah</p>
           </div>
         </div>
-        <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] md:py-2.5">
-          <Plus className="h-4 w-4" /> Tambah Prestasi
-        </button>
+        {permCreate && (
+          <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] md:py-2.5">
+            <Plus className="h-4 w-4" /> Tambah Prestasi
+          </button>
+        )}
       </div>
 
       {/* Stats — StatPillGroup: pill kompak satu baris */}
@@ -570,7 +590,7 @@ export default function AdminAchievementsPage() {
         <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex">
           <Checks className="h-4 w-4 text-[var(--brand-primary)]" />
           <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
-          <button onClick={() => setBulkDelete(true)} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
+          {permDelete && <button onClick={() => setBulkDelete(true)} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>}
           <button onClick={() => setSelectedIds(new Set())} aria-label="Batalkan pilihan" title="Batalkan pilihan" className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
         </div>
       )}
@@ -675,6 +695,19 @@ export default function AdminAchievementsPage() {
                     <p className="text-sm text-slate-500">Memuat data prestasi...</p>
                   </div>
                 </td></tr>
+              ) : loadError ? (
+                <tr><td colSpan={6} className="px-4 py-16 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                      <XCircle className="h-6 w-6 text-red-400" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{loadError}</p>
+                    <button onClick={() => fetchAchievements()} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                      Coba lagi
+                    </button>
+                  </div>
+                </td></tr>
               ) : paginated.length === 0 ? (
                 <tr><td colSpan={6} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
@@ -685,7 +718,7 @@ export default function AdminAchievementsPage() {
                       <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
                       <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada prestasi"}</p>
                     </div>
-                    {!search && filter === "all" && (
+                    {!search && filter === "all" && permCreate && (
                       <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
                         <Plus className="h-3.5 w-3.5" /> Tambah Prestasi Pertama
                       </button>
@@ -745,15 +778,21 @@ export default function AdminAchievementsPage() {
                         <button onClick={() => setViewItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat">
                           <Eye className="h-4 w-4" />
                         </button>
-                        <button onClick={() => openEdit(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
-                          <PencilSimple className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => openDuplicate(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-purple-50 hover:text-purple-600" title="Duplikat">
-                          <Files className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => setDeleteItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
-                          <Trash className="h-4 w-4" />
-                        </button>
+                        {permUpdate && (
+                          <button onClick={() => openEdit(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
+                            <PencilSimple className="h-4 w-4" />
+                          </button>
+                        )}
+                        {permCreate && (
+                          <button onClick={() => openDuplicate(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-purple-50 hover:text-purple-600" title="Duplikat">
+                            <Files className="h-4 w-4" />
+                          </button>
+                        )}
+                        {permDelete && (
+                          <button onClick={() => setDeleteItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
+                            <Trash className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -806,6 +845,17 @@ export default function AdminAchievementsPage() {
               </div>
             ))}
           </div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+              <XCircle className="h-6 w-6 text-red-400" />
+            </div>
+            <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
+            <p className="mt-0.5 text-xs text-slate-500">{loadError}</p>
+            <button onClick={() => fetchAchievements()} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+              Coba lagi
+            </button>
+          </div>
         ) : paginated.length === 0 ? (
           <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
@@ -815,14 +865,25 @@ export default function AdminAchievementsPage() {
               <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
               <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada prestasi"}</p>
             </div>
+            {!search && filter === "all" && permCreate && (
+              <button onClick={openCreate} className="mt-1 flex min-h-10 items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                <Plus className="h-3.5 w-3.5" /> Tambah Prestasi Pertama
+              </button>
+            )}
           </div>
         ) : (
           paginated.map((item) => {
             const actions: RowAction[] = [
               { key: "view", label: "Lihat", icon: <Eye className="h-4 w-4" />, run: () => setViewItem(item) },
-              { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => openEdit(item) },
-              { key: "duplicate", label: "Duplikat", icon: <Files className="h-4 w-4" />, run: () => openDuplicate(item) },
-              { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => setDeleteItem(item) },
+              ...(permUpdate
+                ? [{ key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => openEdit(item) } as RowAction]
+                : []),
+              ...(permCreate
+                ? [{ key: "duplicate", label: "Duplikat", icon: <Files className="h-4 w-4" />, run: () => openDuplicate(item) } as RowAction]
+                : []),
+              ...(permDelete
+                ? [{ key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => setDeleteItem(item) } as RowAction]
+                : []),
             ];
             const meta = catMeta(item.category);
             const CategoryIcon = meta.icon;
@@ -913,7 +974,7 @@ export default function AdminAchievementsPage() {
       {pickMode && (
         <MobileSelectBar
           count={selectedIds.size}
-          onDelete={() => setBulkDelete(true)}
+          onDelete={permDelete ? () => setBulkDelete(true) : undefined}
           onCancel={exitPickMode}
         />
       )}
@@ -966,13 +1027,13 @@ export default function AdminAchievementsPage() {
               {viewItem.participants && (
                 <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
                   <span className="shrink-0 text-slate-500">Peraih</span>
-                  <span className="text-right font-medium text-slate-800">{viewItem.participants}</span>
+                  <span className="text-right font-medium text-slate-800">{normalizeName(viewItem.participants)}</span>
                 </div>
               )}
               {viewItem.organizer && (
                 <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
                   <span className="shrink-0 text-slate-500">Penyelenggara</span>
-                  <span className="text-right font-medium text-slate-800">{viewItem.organizer}</span>
+                  <span className="text-right font-medium text-slate-800">{normalizeSchool(viewItem.organizer)}</span>
                 </div>
               )}
               <div className="flex justify-between border-b border-slate-100 pb-2">
@@ -991,18 +1052,24 @@ export default function AdminAchievementsPage() {
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-3">
-              <button onClick={() => openDuplicate(viewItem)}
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                <Files className="h-4 w-4" /> Duplikat
-              </button>
-              <button onClick={() => { setViewItem(null); openEdit(viewItem); }}
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                <PencilSimple className="h-4 w-4" /> Edit
-              </button>
-              <button onClick={() => { setViewItem(null); setDeleteItem(viewItem); }}
-                className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100">
-                <Trash className="h-4 w-4" /> Hapus
-              </button>
+              {permCreate && (
+                <button onClick={() => openDuplicate(viewItem)}
+                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  <Files className="h-4 w-4" /> Duplikat
+                </button>
+              )}
+              {permUpdate && (
+                <button onClick={() => { setViewItem(null); openEdit(viewItem); }}
+                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  <PencilSimple className="h-4 w-4" /> Edit
+                </button>
+              )}
+              {permDelete && (
+                <button onClick={() => { setViewItem(null); setDeleteItem(viewItem); }}
+                  className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100">
+                  <Trash className="h-4 w-4" /> Hapus
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1249,7 +1316,8 @@ export default function AdminAchievementsPage() {
                 Tampil di bagian Unggulan paling atas halaman prestasi (maks {MAX_FEATURED} aktif).
               </p>
             </div>
-            <button type="button" onClick={toggleFeatured} aria-pressed={form.is_featured}
+            <button type="button" onClick={toggleFeatured} aria-pressed={form.is_featured} disabled={!permPublish}
+              title={permPublish ? undefined : "Tidak berizin mengubah status unggulan"}
               className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${form.is_featured ? "bg-[var(--brand-accent)]" : "bg-slate-300"}`}>
               <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_featured ? "left-[22px]" : "left-0.5"}`} />
             </button>

@@ -46,6 +46,22 @@ export async function getAchievementList(
   return data || [];
 }
 
+/** Varian panel admin: lempar saat query gagal agar panel bisa
+    membedakan "kosong" vs "gagal memuat" (tampilkan tombol Coba lagi).
+    Versi publik (getAchievementList) tetap tangguh demi halaman publik. */
+export async function getAchievementListAdmin(): Promise<Achievement[]> {
+  const { data, error } = await supabase
+    .from("achievements")
+    .select("*")
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching achievements (admin):", error);
+    throw new Error(error.message);
+  }
+  return data || [];
+}
+
 export async function createAchievement(achievement: {
   title: string;
   description?: string;

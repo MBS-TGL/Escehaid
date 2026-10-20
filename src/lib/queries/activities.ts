@@ -189,7 +189,9 @@ export async function getActivityListAll(): Promise<Activity[]> {
 
   if (error) {
     console.error("Error fetching all activities:", error);
-    return [];
+    // Melempar error agar panel admin bisa membedakan "kosong" vs "gagal
+    // memuat"; pemanggil server (sitemap) menahan lemparan dengan .catch().
+    throw new Error(error.message);
   }
   return data || [];
 }
