@@ -21,35 +21,29 @@ Yang tersisa adalah penyempurnaan, tercantum di bawah.
 
 ## 🔴 Prioritas Tinggi — kerjakan berikutnya
 
-- [ ] **1. Patch lubang kepemilikan upload SPMB**
-  Pendaftar anon dapat menimpa dokumen pendaftar lain dengan menebak path
-  `spmb-<tahun>/<nisn>/ktp.pdf` (`upsert: true`, tanpa verifikasi kepemilikan; regex path mengizinkan nisn apa pun).
-  Solusi: token unik per-registrasi di segmen path, atau tabel reservasi path + `upsert: false`.
-  `src/app/api/spmb/upload/route.ts:126`
+- [x] **1. Patch lubang kepemilikan upload SPMB** ✅ `ebc0252`
+  Token rahasia 16 karakter di path (`<nisn>-<token16>`), token disimpan di draft
+  localStorage dan server menolak path tanpa polanya — folder pendaftar lain tak bisa ditebak.
 
-- [ ] **2. Perketat validasi MIME upload SPMB**
-  Logika `if (!ALLOWED_TYPES.has(file.type) && !ALLOWED_EXT.has(ext))` memakai AND,
-  sehingga file `text/html` yang diberi nama `ktp.pdf` lolos cek dan ke-serve sebagai PDF lewat signed URL.
-  Fix: ubah menjadi OR, atau paksa `contentType` detasarkan ekstensi, atau cek magic bytes.
-  `src/app/api/spmb/upload/route.ts:110-127`
+- [x] **2. Perketat validasi MIME upload SPMB** ✅ `ebc0252`
+  MIME final diputuskan sisi server dari ekstensi; `file.type` klien hanya dipercaya
+  bila cocok dengan daftar MIME ekstensi itu. (Magic bytes: tunda ke iterasi lain.)
 
-- [ ] **3. Kunci jejak DEBUG_DATA di formulir SPMB**
-  Wizard mengisi dummy data bila flag aktif; istimewakan berdasarkan env dan pastikan mati di production / saat wave terbuka.
-  `src/app/admission/register/SPMBForm.tsx:360`
+- [x] **3. Kunci jejak DEBUG_DATA di formulir SPMB** ✅ `ebc0252`
+  Kini butuh build dev + `NEXT_PUBLIC_SPMB_DEBUG=1`; cabang ikut DEBUG_DATA ter-DCE dari bundle produksi.
 
-- [ ] **4. Tambah skip link aksesibilitas**
-  "Lewati ke konten utama" di `src/components/PublicShell.tsx` + anchor `<main id="content">`.
-  Dampak WCAG besar, kerja ±15 menit.
+- [x] **4. Tambah skip link aksesibilitas** ✅ `735cb01`
+  "Lewati ke konten utama" di PublicShell → anchor `#konten-utama`; tersembunyi sampai fokus keyboard.
 
-- [ ] **5. Bersihkan rate limiter in-memory (memory leak)**
-  Map limiternya tidak pernah di-prune: entri mati menumpuk selamanya, dan limiter pecah bila server multi-instance.
-  Solusi: bounded Map + sweep periodik, atau Upstash/Redis.
-  Juga tangani IP `unknown` yang menumpuk di slot yang sama.
-  `src/app/api/auth/login/route.ts:12-33`, `src/app/api/spmb/upload/route.ts:38-57`, `src/app/api/ai/refine/route.ts:26-45`
+- [x] **5. Bersihkan rate limiter in-memory (memory leak)** ✅ `a03d8fc`
+  Semua limiter kini memakai `src/lib/rate-limit.ts`: window Map di-sweep saat menyentuh
+  batas `maxEntries` (ukuran terikat), IP `unknown` tetap satu bucket tapi penuh sendiri;
+  + 8 unit test. Ganti ke Redis/Upstash bila nanti multi-instance.
 
-- [ ] **6. Tambah rate limit yang masih kosong**
-  - `/api/auth/reset` — tanpa limit → rawan email-bombing (email sungguhan terkirim per request). `src/app/api/auth/reset/route.ts`
-  - `/api/admin/storage` (GET/POST/DELETE) & `signed-url`. `src/app/api/admin/storage/route.ts`
+- [x] **6. Tambah rate limit yang masih kosong** ✅ `a03d8fc`
+  `/api/auth/reset` (5/10 mnt per IP + 3/10 mnt per email), `/api/admin/storage`
+  POST/DELETE (60/10 mnt per IP, cek sebelum parse body), `signed-url` (60/10 mnt).
+  Semua 429 kini mengirim header `Retry-After`.
 
 ---
 
