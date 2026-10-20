@@ -15,6 +15,10 @@
      garis bawah judul, border tipis) atau teks di atas bidang warna utama.
      Jangan dipakai sebagai warna teks di atas putih atau background tombol. */
   --brand-highlight: #f4d21f;
+  /* Emas hangat turunan kuning sembat - khusus aksen tipis (garis kutip,
+     ikon, watermark dekoratif), tidak untuk teks isi. Dihitung dari
+     --brand-highlight agar ikut bergerak bila admin mengganti warna. */
+  --brand-gold: color-mix(in srgb, var(--brand-highlight) 68%, #7c5200);
   /* Perhentian gradien: dihitung dari warna utama (lihat root layout) supaya
      gradien tetap serasi walau admin mengganti warna merek. */
   --brand-primary-mid: #0a3570;

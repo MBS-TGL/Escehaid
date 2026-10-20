@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import type { Metadata } from "next";
-import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock } from "@/components/Icons";
+import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock, Quotes } from "@/components/Icons";
 import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList } from "@/lib/queries";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
@@ -64,6 +64,11 @@ const FACILITY_FALLBACKS: Record<string, string> = {
   "Lapangan Olahraga": "/images/Lapangan-Olahraga.jpg",
 };
 
+const SALAM_BUKA = "Assalamu'alaikum Warahmatullahi Wabarakatuh.";
+const SALAM_TUTUP = "Wassalamu'alaikum Warahmatullahi Wabarakatuh.";
+const PRINCIPAL_QUOTE_FALLBACK =
+  "Selamat datang di SMP Muhammadiyah 4 Tanggul. Kami berkomitmen mencerdaskan kehidupan bangsa melalui pendidikan berkualitas yang memadukan keunggulan akademik dan pembentukan karakter Islami.";
+
 export async function generateMetadata(): Promise<Metadata> {
   // Judul beranda memakai `absolute` agar TIDAK ikut template `%s | <nama>`
   // dari root layout — kalau tidak, nama sekolah muncul dua kali.
@@ -99,6 +104,11 @@ export default async function Home() {
 
   // Tagline & identitas dari Pengaturan Situs (bukan lagi konstanta kode).
   const brand = toPublicBrand(settings);
+  const schoolName = settings.values.site_name.trim() || profile?.school_name || "SMP Muhammadiyah 4 Tanggul";
+
+  const principalQuote = (profile?.principal_quote || PRINCIPAL_QUOTE_FALLBACK).trim();
+  const greetingStarts = principalQuote.toLowerCase().startsWith("assalamu");
+  const greetingEnds = /wassalamu/.test(principalQuote.toLowerCase().slice(-80));
 
   // Urutan prestasi di beranda disamakan dengan halaman /achievements:
   // unggulan dulu, lalu tahun menurun, lalu terbit menurun. Urutan yang sama
@@ -188,7 +198,17 @@ export default async function Home() {
 
       {/* ── SAMBUTAN ──────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-[#f4f7fb]" style={CV}>
-        <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
+        <svg
+          viewBox="0 0 100 100"
+          fill="none"
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-14 -right-14 h-56 w-56 stroke-[var(--brand-gold)] opacity-5 md:h-72 md:w-72"
+        >
+          <rect x="24" y="24" width="52" height="52" strokeWidth="2.25" />
+          <rect x="24" y="24" width="52" height="52" transform="rotate(45 50 50)" strokeWidth="2.25" />
+          <circle cx="50" cy="50" r="9" strokeWidth="2.25" />
+        </svg>
+        <div className="relative z-10 mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
           <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.3fr] lg:gap-16">
             <CSSFadeIn>
               <div className="flex justify-center lg:justify-end">
@@ -203,8 +223,11 @@ export default async function Home() {
                       className="object-cover object-[center_15%]"
                     />
                   </div>
-                  <div className="absolute -bottom-2 -right-2 rounded-2xl bg-[var(--brand-primary)] px-4 py-2 shadow-lg">
-                    <p className="text-xs font-bold text-white">Kepala Sekolah</p>
+                  <div
+                    className="absolute -bottom-2 -right-2 flex h-11 w-11 items-center justify-center rounded-full border-4 border-[#f4f7fb] bg-[var(--brand-primary)] shadow-lg"
+                    aria-hidden="true"
+                  >
+                    <Star weight="fill" className="h-5 w-5 text-[var(--brand-highlight)]" />
                   </div>
                 </div>
               </div>
@@ -216,16 +239,28 @@ export default async function Home() {
                 <h2 className="mt-4 text-3xl font-semibold leading-tight tracking-tight text-[var(--brand-primary)] md:text-4xl">
                   Belajar dengan arah, tumbuh dengan nilai.
                 </h2>
-                <blockquote className="relative mt-6 border-l-2 border-[var(--brand-accent)] pl-6">
-                  <div className="absolute -left-3.5 top-0 h-7 w-7 rounded-full border-2 border-[var(--brand-accent)] bg-[#f4f7fb]" />
-                  <p className="text-base leading-relaxed text-slate-600 md:text-lg">
-                    &ldquo;{profile?.principal_quote || "Selamat datang di SMP Muhammadiyah 4 Tanggul. Kami berkomitmen mencerdaskan kehidupan bangsa melalui pendidikan berkualitas yang memadukan keunggulan akademik dan pembentukan karakter Islami."}&rdquo;
+                {!greetingStarts && (
+                  <p className="mt-6 text-sm font-medium italic text-[var(--brand-accent)] md:text-[15px]">
+                    {SALAM_BUKA}
+                  </p>
+                )}
+                <blockquote className="relative mt-4 border-l-2 border-[var(--brand-accent)] pl-6">
+                  <div className="absolute -left-3.5 top-0 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[var(--brand-accent)] bg-[#f4f7fb]" aria-hidden="true">
+                    <Quotes weight="fill" className="h-3.5 w-3.5 text-[var(--brand-gold)]" />
+                  </div>
+                  <p className="text-base leading-relaxed text-slate-700 md:text-lg">
+                    &ldquo;{principalQuote}&rdquo;
                   </p>
                 </blockquote>
+                {!greetingEnds && (
+                  <p className="mt-4 pl-6 text-sm font-medium italic text-[var(--brand-accent)]">
+                    {SALAM_TUTUP}
+                  </p>
+                )}
                 <footer className="mt-6 flex items-center gap-3 pl-6">
                   <div>
                     <p className="text-sm font-semibold text-[var(--brand-primary)]">{profile?.principal_name || "Khoirul Anwar, S.Pd"}</p>
-                    <p className="text-xs text-slate-500">Kepala Sekolah</p>
+                    <p className="text-xs text-slate-600">Kepala {schoolName}</p>
                   </div>
                 </footer>
               </div>
