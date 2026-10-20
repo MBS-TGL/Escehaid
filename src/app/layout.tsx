@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
 import PublicShell from "@/components/PublicShell";
@@ -18,6 +18,13 @@ const jakartaSans = Plus_Jakarta_Sans({
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const quoteSerif = Source_Serif_4({
+  variable: "--font-serif-quote",
+  subsets: ["latin"],
+  weight: ["500", "600"],
   display: "swap",
 });
 
@@ -174,7 +181,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="id"
-      className={`${jakartaSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${jakartaSans.variable} ${jetbrainsMono.variable} ${quoteSerif.variable} h-full antialiased`}
     >
       <head>
         {/* Warna merek dari Pengaturan Situs. Di-render di server (SSR) sehingga

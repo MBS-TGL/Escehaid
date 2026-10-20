@@ -35,6 +35,8 @@
   --color-brand-accent: var(--brand-accent);
   --font-sans: var(--font-jakarta);
   --font-mono: var(--font-jetbrains);
+  /* Serif khusus blok kutipan/sambutan; memuat Source Serif 4 via next/font. */
+  --font-serif: var(--font-serif-quote), Georgia, serif;
 }
 
 body {

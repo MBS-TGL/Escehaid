@@ -225,33 +225,25 @@ export default async function Home() {
                 <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Sambutan Kepala Sekolah</h2>
                 <blockquote className="mt-6">
                   {!startsWithGreeting && (
-                    <p className="mb-5 text-sm tracking-wide text-slate-600">{SALAM_BUKA}</p>
+                    <p className="mb-5 font-serif text-sm tracking-wide text-slate-600">{SALAM_BUKA}</p>
                   )}
                   <span
                     aria-hidden="true"
-                    className="pointer-events-none mb-2 block select-none font-serif text-5xl leading-none text-[var(--brand-gold)]/35 lg:hidden"
+                    className="pointer-events-none -mb-4 block select-none font-serif text-4xl leading-none text-[var(--brand-gold)]/35 md:text-5xl"
                   >
                     &ldquo;
                   </span>
-                  <div className="relative">
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute -left-14 -top-2 hidden select-none font-serif text-[4rem] leading-none text-[var(--brand-gold)]/35 lg:block"
-                    >
-                      &ldquo;
-                    </span>
-                    <p className={`${quoteTypeClass} max-w-[38em] font-medium leading-relaxed text-[var(--brand-primary)]`}>
-                      {keepTogether(principalQuote)}
-                    </p>
-                  </div>
+                  <p className={`${quoteTypeClass} max-w-[38em] font-serif font-medium leading-relaxed text-[var(--brand-primary)]`}>
+                    {keepTogether(principalQuote)}
+                  </p>
                   {!endsWithGreeting && (
-                    <p className="mt-5 text-sm tracking-wide text-slate-600">{SALAM_TUTUP}</p>
+                    <p className="mt-5 font-serif text-sm tracking-wide text-slate-600">{SALAM_TUTUP}</p>
                   )}
                 </blockquote>
                 <footer className="mt-6">
                   <div className="h-0.5 w-10 bg-[var(--brand-gold)]" />
-                  <p className="mt-4 text-[17px] font-semibold text-[var(--brand-primary)]">{profile?.principal_name || "Khoirul Anwar, S.Pd"}</p>
-                  <p className="text-sm text-slate-600">Kepala {schoolName}</p>
+                  <p className="mt-4 font-serif text-[17px] font-semibold text-[var(--brand-primary)]">{profile?.principal_name || "Khoirul Anwar, S.Pd"}</p>
+                  <p className="text-sm text-slate-600">Kepala {schoolName} &middot; {brand.tagline}</p>
                 </footer>
               </div>
             </CSSFadeIn>
