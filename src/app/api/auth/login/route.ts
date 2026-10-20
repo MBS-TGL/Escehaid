@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
+import { clientIpFrom, createRateLimiter } from "@/lib/rate-limit";
 
 /**
  * Login admin: email + password diverifikasi di server; hasilnya disimpan
@@ -8,35 +9,15 @@ import { createClient } from "@/lib/supabase-server";
  */
 export const runtime = "nodejs";
 
-/** Rate limit login per-IP (in-memory; node server tunggal). */
-const LIMIT = 10;
-const WINDOW_MS = 10 * 60 * 1000;
-const ENTRIES: { ip: string; count: number; resetAt: number }[] = [];
-
-function rateCheck(ip: string): boolean {
-  const now = Date.now();
-  let found = ENTRIES.find((e) => e.ip === ip && e.resetAt > now);
-  if (!found) {
-    found = { ip, count: 0, resetAt: now + WINDOW_MS };
-    ENTRIES.push(found);
-  }
-  found.count += 1;
-  return found.count <= LIMIT;
-}
-
-function clientIp(req: Request): string {
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    req.headers.get("x-real-ip") ||
-    "unknown"
-  );
-}
+/** Rate limit login per-IP: 10 percobaan / 10 menit, entri di-prune otomatis. */
+const rateLimit = createRateLimiter(10, 10 * 60 * 1000);
 
 export async function POST(req: Request) {
-  if (!rateCheck(clientIp(req))) {
+  const { allowed, retryAfterSec } = rateLimit.check(clientIpFrom(req));
+  if (!allowed) {
     return NextResponse.json(
       { error: "Terlalu banyak percobaan login. Coba lagi beberapa saat." },
-      { status: 429 }
+      { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
     );
   }
 

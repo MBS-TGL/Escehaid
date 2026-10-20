@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { forbiddenResponseIfLacks } from "@/lib/rbac/server";
 import { storageFrom, type StorageBucket } from "@/lib/storage";
+import { clientIpFrom, createRateLimiter } from "@/lib/rate-limit";
 
 /**
  * Storage admin sisi server — menggantikan akses storage langsung dari
@@ -63,6 +64,9 @@ const DOC_EXT = new Set([
 ]);
 
 const PATH_RE = /^[\w][\w./ -]{0,238}$/;
+
+/** Rate limit per IP untuk POST & DELETE: 60 aksi / 10 menit (GET tidak dibatasi). */
+const rateLimit = createRateLimiter(60, 10 * 60 * 1000);
 
 function pathValid(path: string): boolean {
   if (!PATH_RE.test(path) || path.includes("..") || path.startsWith("/")) return false;
@@ -127,6 +131,15 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  // Cek rate limit SEBELUM menelan body (formData hingga 10 MB).
+  const { allowed, retryAfterSec } = rateLimit.check(clientIpFrom(req));
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Terlalu banyak aksi storage. Coba lagi beberapa saat." },
+      { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
+    );
+  }
+
   const form = await req.formData().catch(() => null);
   if (!form) {
     return NextResponse.json({ error: "Body harus multipart/form-data." }, { status: 400 });
@@ -209,6 +222,14 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  const { allowed, retryAfterSec } = rateLimit.check(clientIpFrom(req));
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Terlalu banyak aksi storage. Coba lagi beberapa saat." },
+      { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
+    );
+  }
+
   const body = (await req.json().catch(() => null)) as
     | { bucket?: string; paths?: string[] }
     | null;

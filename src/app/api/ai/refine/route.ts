@@ -9,6 +9,7 @@ import {
   normalizeRefinedFor,
 } from "@/lib/ai-refine";
 import { sanitize } from "@/lib/sanitize";
+import { createRateLimiter } from "@/lib/rate-limit";
 
 /**
  * POST /api/ai/refine — refrase catatan mentah via Gemini untuk panel admin.
@@ -24,25 +25,8 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 const MAX_RAW_TEXT = 4000;
-/** Batas rate-limit per user (terbaik-mungkin, in-memory — versi serverless bisa multi-instans). */
-const RATE_LIMIT = 8;
-const RATE_LIMIT_WINDOW_MS = 60_000;
-
-/** Terakhir N request per user — kunci `userId`, isi timestamp. */
-const rateBuckets = new Map<string, number[]>();
-
-function hitRateLimit(userId: string, now: number): boolean {
-  const timestamps = (rateBuckets.get(userId) ?? []).filter(
-    (t) => now - t < RATE_LIMIT_WINDOW_MS
-  );
-  if (timestamps.length >= RATE_LIMIT) {
-    rateBuckets.set(userId, timestamps);
-    return false;
-  }
-  timestamps.push(now);
-  rateBuckets.set(userId, timestamps);
-  return true;
-}
+/** Batas rate-limit per user: 8 permintaan / menit, entri di-prune otomatis. */
+const rateLimit = createRateLimiter(8, 60_000);
 
 function errorResponse(error: string, status: number) {
   return NextResponse.json({ error }, { status });
@@ -122,8 +106,12 @@ export async function POST(req: NextRequest) {
     return errorResponse("Anda tidak punya izin rapikan konten modul ini.", 403);
   }
 
-  if (!hitRateLimit(user.id, Date.now())) {
-    return errorResponse("Terlalu sering memakai AI — tunggu satu menit lagi.", 429);
+  const { allowed, retryAfterSec } = rateLimit.check(user.id);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Terlalu sering memakai AI — tunggu satu menit lagi." },
+      { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
+    );
   }
 
   const rawText = typeof body?.rawText === "string" ? body.rawText.trim() : "";
