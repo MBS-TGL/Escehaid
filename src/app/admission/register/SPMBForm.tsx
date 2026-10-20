@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { CheckCircle, ArrowLeft, ArrowRight, FileText } from "@/components/Icons";
 import type { SpmbFormField } from "@/lib/supabase";
 import { submitRegistration, spmbAnswerKey } from "@/lib/queries";
+import { normalizeName, normalizeSchool } from "@/lib/format-name";
 import { Input, InputRupiah, Select, DatePicker, FileUpload } from "@/components/ui";
 import { SpmbCustomField, validateSpmbCustomAnswers } from "@/components/SpmbCustomField";
 import {
@@ -161,6 +162,20 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
   const update = (field: keyof FormData, value: string) => {
     setData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
+  };
+
+  /**
+   * Preview formal: saat user selesai mengetik (onBlur), rapikan nama langsung
+   * di form supaya pengisi melihat hasil Title Case. Sumber KEBENARAN tetap
+   * normalisasi ulang di server (submitRegistration) — fungsi di sini hanya UX.
+   */
+  const doneName = (field: "full_name" | "nickname" | "father_name" | "mother_name") => () => {
+    if (!data[field]) return;
+    update(field, normalizeName(data[field]));
+  };
+  const doneSchool = () => {
+    if (!data.previous_school) return;
+    update("previous_school", normalizeSchool(data.previous_school));
   };
 
   const updateDoc = (field: keyof Documents, file: File | null) => {
@@ -416,8 +431,8 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
             <div className="step-enter space-y-4">
               <h3 className="text-lg font-bold text-[var(--brand-primary)]">Data Siswa</h3>
               <div className="grid gap-4 md:grid-cols-2">
-                <div data-field="full_name"><Input label="Nama Lengkap" required placeholder="Nama Lengkap Siswa" value={data.full_name} onChange={(e) => update("full_name", e.target.value)} error={errors.full_name} /></div>
-                <div data-field="nickname"><Input label="Nama Panggilan" required placeholder="Nama Panggilan" value={data.nickname} onChange={(e) => update("nickname", e.target.value)} error={errors.nickname} /></div>
+                <div data-field="full_name"><Input label="Nama Lengkap" required placeholder="Nama Lengkap Siswa" value={data.full_name} onChange={(e) => update("full_name", e.target.value)} onBlur={doneName("full_name")} error={errors.full_name} /></div>
+                <div data-field="nickname"><Input label="Nama Panggilan" required placeholder="Nama Panggilan" value={data.nickname} onChange={(e) => update("nickname", e.target.value)} onBlur={doneName("nickname")} error={errors.nickname} /></div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <Select label="Jenis Kelamin" required options={["Laki-Laki", "Perempuan"]} value={data.gender === "L" ? "Laki-Laki" : "Perempuan"} onChange={(val) => update("gender", val === "Laki-Laki" ? "L" : "P")} />
@@ -445,7 +460,7 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
                 <Input label="Jumlah Saudara" placeholder="Contoh: 3" value={data.siblings} onChange={(e) => update("siblings", e.target.value)} />
                 <Select label="Yatim/Piatu" options={["Tidak", "Yatim", "Piatu", "Yatim Piatu"]} value={data.orphan_status === "tidak" ? "Tidak" : data.orphan_status === "yatim" ? "Yatim" : data.orphan_status === "piatu" ? "Piatu" : "Yatim Piatu"} onChange={(val) => update("orphan_status", val === "Tidak" ? "tidak" : val === "Yatim" ? "yatim" : val === "Piatu" ? "piatu" : "yatim_piatu")} />
               </div>
-              <div data-field="previous_school"><Input label="Asal Sekolah" required placeholder="Nama Sekolah Asal" value={data.previous_school} onChange={(e) => update("previous_school", e.target.value)} error={errors.previous_school} /></div>
+              <div data-field="previous_school"><Input label="Asal Sekolah" required placeholder="Nama Sekolah Asal" value={data.previous_school} onChange={(e) => update("previous_school", e.target.value)} onBlur={doneSchool} error={errors.previous_school} /></div>
               <div data-field="address"><Input label="Alamat Lengkap" required placeholder="Alamat Domisili" value={data.address} onChange={(e) => update("address", e.target.value)} error={errors.address} /></div>
             </div>
           )}
@@ -456,7 +471,7 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
               <div>
                 <h3 className="mb-4 text-lg font-bold text-[var(--brand-primary)]">Data Ayah</h3>
                 <div className="space-y-4">
-                  <div data-field="father_name"><Input label="Nama Ayah Kandung" required placeholder="Nama Ayah" value={data.father_name} onChange={(e) => update("father_name", e.target.value)} error={errors.father_name} /></div>
+                  <div data-field="father_name"><Input label="Nama Ayah Kandung" required placeholder="Nama Ayah" value={data.father_name} onChange={(e) => update("father_name", e.target.value)} onBlur={doneName("father_name")} error={errors.father_name} /></div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div data-field="father_birth_place"><Select searchable label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.father_birth_place} onChange={(val) => update("father_birth_place", val)} placeholder="Pilih kota/kabupaten" error={errors.father_birth_place} /></div>
                     <div data-field="father_birth_date"><DatePicker label="Tanggal Lahir" required value={data.father_birth_date} onChange={(val) => update("father_birth_date", val)} error={errors.father_birth_date} /></div>
@@ -471,7 +486,7 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
               <div>
                 <h3 className="mb-4 text-lg font-bold text-[var(--brand-primary)]">Data Ibu</h3>
                 <div className="space-y-4">
-                  <div data-field="mother_name"><Input label="Nama Ibu Kandung" required placeholder="Nama Ibu" value={data.mother_name} onChange={(e) => update("mother_name", e.target.value)} error={errors.mother_name} /></div>
+                  <div data-field="mother_name"><Input label="Nama Ibu Kandung" required placeholder="Nama Ibu" value={data.mother_name} onChange={(e) => update("mother_name", e.target.value)} onBlur={doneName("mother_name")} error={errors.mother_name} /></div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div data-field="mother_birth_place"><Select searchable label="Tempat Lahir" required options={KOTA_KABUPATEN} value={data.mother_birth_place} onChange={(val) => update("mother_birth_place", val)} placeholder="Pilih kota/kabupaten" error={errors.mother_birth_place} /></div>
                     <div data-field="mother_birth_date"><DatePicker label="Tanggal Lahir" required value={data.mother_birth_date} onChange={(val) => update("mother_birth_date", val)} error={errors.mother_birth_date} /></div>

@@ -5,6 +5,58 @@ import { notifyAllAdmins } from "./users";
 import { getPublishedWaves, getWaveStatus } from "./waves";
 import { isFeatureEnabled } from "@/lib/flags";
 import { mergeSpmbDocuments } from "@/lib/spmb-registration";
+import {
+  normalizeName,
+  normalizeSchool,
+  normalizeParentName,
+  normalizePhone,
+} from "@/lib/format-name";
+
+/** Kunci documents yang berisi NAMA — dinormalisasi saat simpan (merge-safe). */
+const REG_NAME_DOC_KEYS = new Set(["nickname", "father_name", "mother_name"]);
+
+/**
+ * Normalisasi INPUT DATA PENDAFTAR sebelum ditulis ke DB — dipanggil dari
+ * SEMUA pintu masuk (submit form publik, tambah/edit manual admin, impor
+ * massal) agar nama selalu konsisten di tiga lapis (DB, admin, publik).
+ *
+ * Aturan:
+ * - full_name/parent_name/previous_school + kunci nama di documents
+ *   (nickname, father_name, mother_name) → Title Case (format-name.ts).
+ * - email → trim + lowercase.
+ * - phone → buang spasi/tanda hubung (awalan 0 / +62 dipertahankan).
+ * - documents: hanya kunci nama yang disentuh — kunci lain (cf_*, berkas,
+ *   input_source, ....) dipertahankan apa adanya. Untuk UPDATE, merge dengan
+ *   row lama tetap ditangani mergeSpmbDocuments di tempat pemanggil.
+ */
+export function normalizeRegistrationInput<
+  T extends {
+    full_name?: string;
+    parent_name?: string;
+    previous_school?: string;
+    email?: string;
+    phone?: string;
+    documents?: Record<string, string | null>;
+  },
+>(input: T): T {
+  const out: T = {
+    ...input,
+    full_name: normalizeName(input.full_name ?? ""),
+    parent_name: input.parent_name === undefined ? undefined : normalizeParentName(input.parent_name),
+    previous_school:
+      input.previous_school === undefined ? undefined : normalizeSchool(input.previous_school),
+    email: input.email === undefined ? undefined : input.email.trim().toLowerCase(),
+    phone: input.phone === undefined ? undefined : normalizePhone(input.phone),
+  };
+  if (input.documents) {
+    out.documents = Object.fromEntries(
+      Object.entries(input.documents).map(([k, v]) =>
+        REG_NAME_DOC_KEYS.has(k) && typeof v === "string" && v ? [k, normalizeName(v)] : [k, v]
+      )
+    );
+  }
+  return out;
+}
 
 export async function submitRegistration(registration: {
   full_name: string;
@@ -37,20 +89,21 @@ export async function submitRegistration(registration: {
     waveId = null;
   }
 
+  const reg = normalizeRegistrationInput(registration);
   const { error } = await supabase.from("spmb_registrations").insert({
-    full_name: registration.full_name,
-    birth_place: registration.birth_place,
-    birth_date: registration.birth_date,
-    gender: registration.gender,
-    address: registration.address,
-    phone: registration.phone,
-    parent_name: registration.parent_name,
-    parent_occupation: registration.parent_occupation,
-    previous_school: registration.previous_school,
-    registration_path: registration.registration_path,
+    full_name: reg.full_name,
+    birth_place: reg.birth_place,
+    birth_date: reg.birth_date,
+    gender: reg.gender,
+    address: reg.address,
+    phone: reg.phone,
+    parent_name: reg.parent_name,
+    parent_occupation: reg.parent_occupation,
+    previous_school: reg.previous_school,
+    registration_path: reg.registration_path,
     // Email wajib ikut tersimpan — kolom dipakai pencarian & tab Kontak di admin.
-    email: registration.email,
-    documents: registration.documents || {},
+    email: reg.email,
+    documents: reg.documents || {},
     wave_id: waveId,
   });
 
@@ -60,10 +113,10 @@ export async function submitRegistration(registration: {
   }
 
   // In-app notification to admins
-  const pathLabel = registration.registration_path === "prestasi" ? "Prestasi" : registration.registration_path === "beasiswa" ? "Beasiswa" : "Reguler";
+  const pathLabel = reg.registration_path === "prestasi" ? "Prestasi" : reg.registration_path === "beasiswa" ? "Beasiswa" : "Reguler";
   notifyAllAdmins(
     "Pendaftaran SPMB Baru",
-    `${registration.full_name} mendaftar via jalur ${pathLabel} dari ${registration.previous_school || "-"}.`,
+    `${reg.full_name} mendaftar via jalur ${pathLabel} dari ${reg.previous_school || "-"}.`,
     "info",
     "/admin/admission"
   ).catch(() => {});
@@ -225,22 +278,23 @@ export async function adminCreateRegistration(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const birthDate = input.birth_date?.trim() || "";
+    const normalized = normalizeRegistrationInput(input);
     const { error } = await supabase.from("spmb_registrations").insert({
-      full_name: input.full_name.trim(),
-      birth_place: input.birth_place?.trim() || "",
+      full_name: normalized.full_name,
+      birth_place: normalized.birth_place?.trim() || "",
       birth_date: birthDate || null,
-      gender: input.gender,
-      address: input.address?.trim() || "",
-      phone: input.phone?.trim() || "",
-      email: input.email?.trim() || "",
-      parent_name: input.parent_name ?? "",
-      parent_occupation: input.parent_occupation ?? "",
-      previous_school: input.previous_school?.trim() || "",
-      registration_path: input.registration_path,
-      status: input.status ?? "pending",
-      admin_notes: input.admin_notes?.trim() || "",
-      documents: input.documents || {},
-      wave_id: input.wave_id ?? null,
+      gender: normalized.gender,
+      address: normalized.address?.trim() || "",
+      phone: normalized.phone || "",
+      email: normalized.email || "",
+      parent_name: normalized.parent_name ?? "",
+      parent_occupation: normalized.parent_occupation ?? "",
+      previous_school: normalized.previous_school?.trim() || "",
+      registration_path: normalized.registration_path,
+      status: normalized.status ?? "pending",
+      admin_notes: normalized.admin_notes?.trim() || "",
+      documents: normalized.documents || {},
+      wave_id: normalized.wave_id ?? null,
     });
 
     if (error) {
@@ -340,6 +394,7 @@ export async function adminUpdateRegistration(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const birthDate = input.birth_date?.trim() || "";
+    const normalized = normalizeRegistrationInput(input);
 
     // Ambil documents lama untuk merge; gagal baca → anggap kosong (merge
     // jadi timpa penuh — perilaku menyimpang hanya bila SELECT ditolak RLS,
@@ -352,25 +407,25 @@ export async function adminUpdateRegistration(
 
     const documents = mergeSpmbDocuments(
       existingRow?.documents ?? null,
-      input.documents || {}
+      normalized.documents || {}
     );
 
     const { data, error } = await supabase
       .from("spmb_registrations")
       .update({
-        full_name: input.full_name.trim(),
-        birth_place: input.birth_place?.trim() || "",
+        full_name: normalized.full_name,
+        birth_place: normalized.birth_place?.trim() || "",
         birth_date: birthDate || null,
-        gender: input.gender,
-        address: input.address?.trim() || "",
-        phone: input.phone?.trim() || "",
-        email: input.email?.trim() || "",
-        parent_name: input.parent_name ?? "",
-        parent_occupation: input.parent_occupation ?? "",
-        previous_school: input.previous_school?.trim() || "",
-        registration_path: input.registration_path,
-        wave_id: input.wave_id ?? null,
-        admin_notes: input.admin_notes?.trim() || "",
+        gender: normalized.gender,
+        address: normalized.address?.trim() || "",
+        phone: normalized.phone || "",
+        email: normalized.email || "",
+        parent_name: normalized.parent_name ?? "",
+        parent_occupation: normalized.parent_occupation ?? "",
+        previous_school: normalized.previous_school?.trim() || "",
+        registration_path: normalized.registration_path,
+        wave_id: normalized.wave_id ?? null,
+        admin_notes: normalized.admin_notes?.trim() || "",
         documents,
         updated_at: new Date().toISOString(),
       })
