@@ -107,7 +107,7 @@ export default function HeroCarousel({
   return (
     <div
       ref={containerRef}
-      className="relative h-[480px] w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] md:h-[600px]"
+      className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/15 bg-slate-950 shadow-2xl shadow-slate-950/40 ring-1 ring-white/10"
     >
       {/* Poster: tampil selama video belum berjalan — di HP sampai tombol play
           ditekan, di desktop selama buffer awal. `priority` karena ini yang
@@ -183,7 +183,7 @@ export default function HeroCarousel({
       )}
 
       {/* bottom label */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 p-8 pointer-events-none">
+      <div className="absolute bottom-0 left-0 right-0 z-20 p-4 sm:p-5 pointer-events-none">
         <div className="flex items-center gap-3">
           <Image src="/images/Logo-Sekolah.png" alt="Logo SMP Muhammadiyah 4 Tanggul" width={40} height={52} sizes="40px" className="h-10 w-auto" />
           <div>

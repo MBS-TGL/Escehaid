@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import type { Metadata } from "next";
-import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock } from "@/components/Icons";
+import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock, Quotes } from "@/components/Icons";
 import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList } from "@/lib/queries";
 import { detectPrincipalGreeting, keepTogether } from "@/lib/principal-quote";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
@@ -10,7 +10,8 @@ import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import { faqs } from "./faq-data";
 import { ekskul } from "./ekskul-data";
 import EkskulCard from "@/components/EkskulCard";
-import HeroCarousel from "./HeroCarousel";
+import HeroBackground from "./HeroBackground";
+import HeroVideoModal from "./HeroVideoModal";
 import {
   SITE,
   capitalizeCategory,
@@ -22,9 +23,8 @@ import type { Achievement } from "@/lib/supabase";
 
 const FAQ = dynamic(() => import("./FAQ"), { loading: () => <div className="h-96" /> });
 const WhatsAppButton = dynamic(() => import("./WhatsAppButton"));
-// HeroCarousel diimpor statis (bukan dynamic): hero ada tepat di layar pertama,
-// dynamic import membuat hero kosong menunggu chunk JS ekstra → terasa "delay"
-// di HP. Videonya sendiri tetap dimuat malas (preload=none + IntersectionObserver).
+// HeroBackground & HeroVideoModal diimpor statis untuk LCP optimal di layar pertama.
+// Video dimuat lazy saat mendekati viewport dengan fallback poster image statis di mobile.
 const TeacherCarousel = dynamic(() => import("./TeacherCarousel"), { loading: () => <div className="h-64 rounded-2xl bg-slate-100" /> });
 const CountdownEvent = dynamic(() => import("@/components/CountdownEvent"));
 
@@ -150,108 +150,206 @@ export default async function Home() {
   return (
     <div className="bg-white text-[#172033]">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
-      {/* ── HERO — only section using Framer Motion ───────── */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)]" />
-        <div
-          className="absolute inset-0 md:hidden"
-          style={{ backgroundImage: "radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--brand-accent) 14%, transparent), transparent 45%), radial-gradient(circle at 100% 100%, color-mix(in srgb, var(--brand-accent) 35%, transparent), transparent 55%)" }}
+      {/* ── HERO — Full Bleed Video Background ───────── */}
+      <section className="relative min-h-[580px] sm:min-h-[640px] lg:min-h-[700px] flex items-center overflow-hidden">
+        {/* Full-bleed video background */}
+        <HeroBackground
+          ytId={process.env.HERO_VIDEO_YT ?? ""}
+          videoUrl={process.env.HERO_VIDEO_URL || undefined}
         />
-        <div className="absolute inset-0 hidden opacity-20 md:block">
-          <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[var(--brand-highlight)] blur-[150px]" />
-          <div className="absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-[var(--brand-highlight)] blur-[180px]" />
-        </div>
-        <div className="absolute inset-0 hidden opacity-[0.03] md:block" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--brand-highlight)]/30 to-transparent" />
 
-        <div className="relative mx-auto grid max-w-[1296px] gap-12 px-6 pb-20 pt-16 md:px-10 md:pb-28 md:pt-24 lg:grid-cols-[1.1fr_.9fr] lg:items-center">
-          <div className="text-white">
-            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-[var(--brand-highlight)]/30 bg-[var(--brand-highlight)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-highlight)]">
-              Pusat Kaderisasi Da&apos;i &amp; Ulama Hafidz &middot; {brand.tagline}
+        {/* Cinematic Scrim Overlay: Transparan netral (bukan biru pekat) agar video profil terlihat jelas & hidup */}
+        <div
+          className="absolute inset-0 z-10 bg-gradient-to-r from-black/80 via-black/45 to-black/20 lg:from-black/75 lg:via-black/35 lg:to-transparent"
+          aria-hidden="true"
+        />
+        {/* Soft bottom vignette untuk transisi halus ke section berikutnya */}
+        <div
+          className="absolute inset-0 z-10 bg-gradient-to-t from-slate-950/80 via-transparent to-black/30 pointer-events-none"
+          aria-hidden="true"
+        />
+        <div className="absolute bottom-0 left-0 right-0 z-10 h-px bg-gradient-to-r from-transparent via-[var(--brand-highlight)]/30 to-transparent" />
+
+        {/* Content Container (z-20) */}
+        <div className="relative z-20 mx-auto w-full max-w-[1296px] px-6 py-16 sm:py-20 md:px-10 lg:py-24">
+          <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-14">
+            {/* Left Column: Heading, Tagline, CTAs */}
+            <div className="text-white">
+              <div className="mb-4 sm:mb-5 inline-flex items-center gap-2 rounded-full border border-[var(--brand-highlight)]/30 bg-[var(--brand-highlight)]/15 px-3.5 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-highlight)] backdrop-blur-xs">
+                Pusat Kaderisasi Da&apos;i &amp; Ulama Hafidz &middot; {brand.tagline}
+              </div>
+
+              <h1 className="max-w-3xl text-4xl font-bold leading-[1.12] sm:text-5xl lg:text-6xl text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.7)]">
+                Pendidikan yang menumbuhkan{" "}
+                <span className="relative inline-block">
+                  <span className="text-[var(--brand-highlight)]">ilmu, iman,</span>
+                  <svg className="absolute -bottom-1 left-0 w-full" viewBox="0 0 200 12" fill="none" aria-hidden="true">
+                    <path d="M2 8C40 2 80 2 100 6C120 10 160 10 198 4" stroke="var(--brand-highlight)" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                </span>{" "}
+                dan keberanian.
+              </h1>
+
+              <p className="mt-4 sm:mt-5 max-w-xl text-base sm:text-lg leading-relaxed text-slate-100 drop-shadow-[0_1px_6px_rgba(0,0,0,0.7)]">
+                SMP Muhammadiyah 4 Tanggul memadukan keunggulan akademik dan keislaman secara terintegrasi untuk membentuk kader umat yang berakhlak mulia.
+              </p>
+
+              {/* Action Buttons: SPMB CTA + Tonton Video Profil Modal + Kenali Sekolah */}
+              <div className="mt-8 flex flex-wrap items-center gap-3.5 sm:gap-4">
+                <Link
+                  href="/admission"
+                  className="group inline-flex items-center gap-2 rounded-xl bg-[var(--brand-accent)] px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-black/20 transition-all hover:bg-white hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+                >
+                  Daftar SPMB
+                  <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </Link>
+
+                <HeroVideoModal
+                  ytId={process.env.HERO_VIDEO_YT ?? ""}
+                  videoUrl={process.env.HERO_VIDEO_URL || undefined}
+                />
+
+                <Link
+                  href="/profile"
+                  className="group inline-flex items-center gap-1.5 px-3 py-3.5 text-sm font-semibold text-white/80 transition-colors hover:text-[var(--brand-highlight)]"
+                >
+                  Kenali sekolah
+                  <CaretRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </div>
             </div>
 
-            <h1 className="max-w-3xl text-4xl font-bold leading-[1.1] md:text-5xl lg:text-6xl">
-              Pendidikan yang menumbuhkan{" "}
-              <span className="relative inline-block">
-                <span className="gradient-text">ilmu, iman,</span>
-                <svg className="absolute -bottom-1 left-0 w-full" viewBox="0 0 200 12" fill="none">
-                  <path d="M2 8C40 2 80 2 100 6C120 10 160 10 198 4" stroke="var(--brand-highlight)" strokeWidth="3" strokeLinecap="round" />
-                </svg>
-              </span>{" "}
-              dan keberanian.
-            </h1>
+            {/* Right Column: Premium Highlights Card (Glassmorphism) */}
+            <div className="hidden lg:block">
+              <div className="relative rounded-3xl border border-white/15 bg-white/[0.08] p-7 backdrop-blur-md shadow-2xl shadow-black/30">
+                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[var(--brand-highlight)]">Profil Unggulan</p>
+                    <h2 className="text-base font-bold text-white">SMP Muhammadiyah 4 Tanggul</h2>
+                  </div>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-medium text-emerald-300 border border-emerald-500/30">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Aktif
+                  </span>
+                </div>
 
-            <p className="mt-7 max-w-xl text-lg leading-relaxed text-white/70">
-              SMP Muhammadiyah 4 Tanggul memadukan keunggulan akademik dan keislaman secara terintegrasi untuk membentuk kader umat yang berakhlak mulia.
-            </p>
+                <div className="mt-5 space-y-4">
+                  <div className="flex items-start gap-3.5 rounded-2xl bg-white/[0.05] p-3.5 transition-colors hover:bg-white/[0.1]">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-highlight)]/20 text-[var(--brand-highlight)]">
+                      <Trophy className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white">Terakreditasi A</p>
+                      <p className="text-xs text-slate-300 leading-relaxed">Standar mutu pendidikan nasional dengan fasilitas terpadu.</p>
+                    </div>
+                  </div>
 
-            <div className="mt-9 flex flex-wrap items-center gap-5">
-              <Link
-                href="/admission"
-                className="group inline-flex items-center gap-2 rounded-xl bg-[var(--brand-accent)] px-6 py-3.5 text-sm font-bold text-white transition-all hover:bg-white hover:text-[var(--brand-primary)] hover:shadow-lg hover:shadow-[var(--brand-accent)]/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-              >
-                Daftar
-                <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-              </Link>
-              <Link
-                href="/profile"
-                className="group inline-flex items-center gap-1.5 text-sm font-semibold text-white/80 transition-colors hover:text-[var(--brand-highlight)]"
-              >
-                Kenali sekolah
-                <CaretRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Link>
+                  <div className="flex items-start gap-3.5 rounded-2xl bg-white/[0.05] p-3.5 transition-colors hover:bg-white/[0.1]">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/20 text-amber-300">
+                      <GraduationCap className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white">Tahfidz &amp; Kepesantrenan</p>
+                      <p className="text-xs text-slate-300 leading-relaxed">Program intensif hafalan Al-Qur&apos;an dan pembinaan akhlak mulia.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3.5 rounded-2xl bg-white/[0.05] p-3.5 transition-colors hover:bg-white/[0.1]">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-400/20 text-sky-300">
+                      <BookOpen className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white">Kurikulum Terpadu</p>
+                      <p className="text-xs text-slate-300 leading-relaxed">Integrasi Kurikulum Nasional dan kurikulum Al-Islam Kemuhammadiyahan.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-slate-300">
+                  <span>Penerimaan Santri Baru (SPMB)</span>
+                  <Link href="/admission" className="font-semibold text-[var(--brand-highlight)] hover:underline inline-flex items-center gap-1">
+                    Informasi &amp; Alur <ArrowUpRight className="h-3 w-3" />
+                  </Link>
+                </div>
+              </div>
             </div>
-          </div>
-
-          <div className="relative">
-            <div className="absolute -inset-4 hidden rounded-3xl bg-gradient-to-br from-[var(--brand-highlight)]/20 to-[var(--brand-highlight)]/20 blur-2xl md:block" />
-            <HeroCarousel ytId={process.env.HERO_VIDEO_YT ?? ""} videoUrl={process.env.HERO_VIDEO_URL || undefined} />
           </div>
         </div>
       </section>
 
       <CountdownEvent />
 
-      {/* ── SAMBUTAN ──────────────────────────────────────── */}
-      <section className="bg-[var(--surface-muted)]" style={CV}>
-        <div className="mx-auto max-w-5xl px-6 py-14 md:px-10 md:py-20">
-          <div className="grid items-center gap-12 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-20">
+      {/* ── SAMBUTAN KEPALA SEKOLAH ───────────────────────── */}
+      <section className="relative overflow-hidden bg-[var(--surface-muted)] py-16 md:py-24" style={CV}>
+        {/* Watermark kutipan halus di pojok kanan atas latar belakang section */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute right-4 top-4 select-none text-slate-200/50 lg:right-16 lg:top-8"
+        >
+          <Quotes weight="fill" className="h-44 w-44 md:h-56 md:w-56" />
+        </div>
+
+        <div className="relative mx-auto max-w-5xl px-6 md:px-10">
+          <div className="grid items-center gap-10 sm:gap-12 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-16">
+            {/* Kolom Foto Kepala Sekolah — Modern Portrait Card */}
             <CSSFadeIn>
-              {/* Bingkai mihrab: lengkung di atas (rounded-t-full) tepi lurus di
-                  bawah, dibayangkan satu blok datar navy dengan offset 12px
-                  (8px di HP) ke kanan-bawah — tanpa gradien/blur/shadow. */}
-              <figure className="relative mx-auto w-52 lg:w-full lg:max-w-[300px]">
+              <div className="relative mx-auto w-full max-w-[260px] sm:max-w-[280px] lg:max-w-none">
+                {/* Backdrop offset lembut */}
                 <div
                   aria-hidden="true"
-                  className="absolute inset-0 translate-x-2 translate-y-2 rounded-t-full rounded-b-2xl bg-[var(--brand-primary)] lg:translate-x-3 lg:translate-y-3"
+                  className="absolute -inset-2 -rotate-1 rounded-2xl bg-gradient-to-br from-[var(--brand-primary)]/10 via-[var(--brand-accent)]/5 to-transparent sm:rounded-3xl"
                 />
-                <div className="relative aspect-[4/5] overflow-hidden rounded-t-full rounded-b-2xl ring-1 ring-black/5">
+
+                {/* Frame foto utama: kurva rounded-2xl modern, aspect 4/5 profesional */}
+                <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-100 shadow-md ring-1 ring-black/5 sm:rounded-3xl">
                   <Image
                     src={profile?.principal_photo_url || "/images/Kepala-Sekolah.jpg"}
-                    alt={`${profile?.principal_name || "Kepala Sekolah"} - Kepala Sekolah`}
+                    alt={`${profile?.principal_name || "Khoirul Anwar, S.Pd"} - Kepala Sekolah`}
                     fill
-                    sizes="300px"
-                    className="object-cover object-[center_18%]"
+                    sizes="(min-width: 1024px) 280px, (min-width: 640px) 280px, 260px"
+                    className="object-cover object-[center_16%] transition-transform duration-500 hover:scale-105"
                   />
+
+                  {/* Overlay gradien halus di mobile */}
+                  <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 via-black/20 to-transparent sm:hidden" />
+                  <div className="absolute inset-x-3 bottom-3 sm:hidden">
+                    <p className="text-sm font-semibold text-white drop-shadow-sm">
+                      {profile?.principal_name || "Khoirul Anwar, S.Pd"}
+                    </p>
+                    <p className="text-xs text-white/80 drop-shadow-sm">
+                      Kepala {schoolName}
+                    </p>
+                  </div>
                 </div>
-              </figure>
+
+                {/* Floating badge resmi di bawah foto (tablet & desktop) */}
+                <div className="absolute -bottom-3 left-1/2 z-10 hidden -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-slate-200/90 bg-white/95 px-3.5 py-1.5 shadow-md shadow-slate-900/5 backdrop-blur-sm sm:inline-flex">
+                  <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-xs font-semibold text-slate-700">Kepala Sekolah</span>
+                </div>
+              </div>
             </CSSFadeIn>
 
+            {/* Kolom Teks Sambutan — Tipografi Editorial Bermartabat */}
             <CSSFadeIn delay={0.1}>
-              <figure>
-                <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand-accent)]">Sambutan Kepala Sekolah</h2>
-                {/* Satu elemen fokus: petik pembuka besar. Margin negatif
-                    menarik baris konten berikutnya menempel ke glyph. */}
-                <span
-                  aria-hidden="true"
-                  className="-ml-1 -mb-4 block text-[64px] font-bold leading-none text-[var(--brand-gold)] md:-mb-6 md:text-[88px] lg:-mb-7 lg:text-[104px]"
-                >
-                  &ldquo;
-                </span>
-                {!startsWithGreeting && <p className="text-sm text-slate-600">{SALAM_BUKA}</p>}
-                <blockquote className={startsWithGreeting ? "" : "mt-3"}>
-                  <p className={`${quoteTypeClass} max-w-[34em] font-normal leading-[1.65] tracking-normal text-slate-800 text-pretty`}>
-                    {endsWithGreeting ? (
+              <div className="flex flex-col justify-center">
+                {/* Eyebrow badge */}
+                <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--brand-primary)]/15 bg-white/80 px-3.5 py-1 text-xs font-semibold text-[var(--brand-primary)] shadow-xs">
+                  <Quotes weight="fill" className="h-3.5 w-3.5 text-[var(--brand-accent)]" />
+                  <span>Sambutan Kepala Sekolah</span>
+                </div>
+
+                {/* Salam Pembuka */}
+                {!startsWithGreeting && (
+                  <p className="mt-5 text-sm text-slate-600 sm:text-base">
+                    {SALAM_BUKA}
+                  </p>
+                )}
+
+                {/* Kutipan Utama */}
+                <blockquote className={startsWithGreeting ? "mt-4" : "mt-3"}>
+                  <p className={`${quoteTypeClass} font-normal leading-[1.65] tracking-normal text-slate-800 text-pretty`}>
+                    &ldquo;{endsWithGreeting ? (
                       <>
                         {keepTogether(principalQuoteWords.head)}
                         <span className="whitespace-nowrap">
@@ -259,21 +357,30 @@ export default async function Home() {
                         </span>
                       </>
                     ) : (
-                      keepTogether(principalQuote)
+                      <>
+                        {keepTogether(principalQuote)} <span aria-hidden="true" className="font-bold text-[var(--brand-gold)]">&rdquo;</span>
+                      </>
                     )}
                   </p>
                 </blockquote>
+
+                {/* Salam Penutup */}
                 {!endsWithGreeting && (
-                  <p className="mt-4 text-sm text-slate-600">
-                    {SALAM_TUTUP} <span aria-hidden="true" className="font-bold text-[var(--brand-gold)]">&rdquo;</span>
+                  <p className="mt-4 text-sm text-slate-600 sm:text-base">
+                    {SALAM_TUTUP}
                   </p>
                 )}
-                <figcaption className="mt-8">
-                  <div className="h-0.5 w-10 bg-[var(--brand-gold)]" />
-                  <p className="mt-4 text-base font-semibold text-[var(--brand-primary)]">{profile?.principal_name || "Khoirul Anwar, S.Pd"}</p>
-                  <p className="text-sm text-slate-600">Kepala {schoolName}</p>
+
+                {/* Signoff / Identitas Pimpinan */}
+                <figcaption className="mt-8 border-t border-slate-200/80 pt-5">
+                  <p className="text-base font-bold tracking-tight text-[var(--brand-primary)] sm:text-lg">
+                    {profile?.principal_name || "Khoirul Anwar, S.Pd"}
+                  </p>
+                  <p className="text-xs font-medium text-slate-500 sm:text-sm">
+                    Kepala {schoolName}
+                  </p>
                 </figcaption>
-              </figure>
+              </div>
             </CSSFadeIn>
           </div>
         </div>
