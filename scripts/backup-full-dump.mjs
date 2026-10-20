@@ -175,7 +175,7 @@ for (const t of tables) {
 }
 
 L.push(`\n-- ---------- constraints (PK, FK, UNIQUE, CHECK; idempotent) ----------`);
-const guardConstraint = (c, order) => {
+const guardConstraint = (c) => {
   L.push(`DO $block$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint con
        JOIN pg_class cn ON cn.oid = con.conrelid
@@ -184,10 +184,10 @@ const guardConstraint = (c, order) => {
     ALTER TABLE public.${ident(c.table_name)} ADD CONSTRAINT ${ident(c.conname)} ${c.def};
   END IF; END $block$;`);
 };
-for (const c of constraints.filter((x) => x.contype === "p")) guardConstraint(c, "PK");
-for (const c of constraints.filter((x) => x.contype === "u")) guardConstraint(c, "UNIQUE");
-for (const c of constraints.filter((x) => x.contype === "f")) guardConstraint(c, "FK");
-for (const c of constraints.filter((x) => x.contype === "c")) guardConstraint(c, "CHECK");
+for (const c of constraints.filter((x) => x.contype === "p")) guardConstraint(c);
+for (const c of constraints.filter((x) => x.contype === "u")) guardConstraint(c);
+for (const c of constraints.filter((x) => x.contype === "f")) guardConstraint(c);
+for (const c of constraints.filter((x) => x.contype === "c")) guardConstraint(c);
 
 // index duplikat dgn UNIQUE constraint (contoh: articles_slug_unique_idx) → skip
 const parseCols = (def) => {
@@ -269,7 +269,7 @@ for (const d of fkDeps) {
 const ordered = [];
 const done = new Set();
 const visiting = new Set();
-function visit(n, chain = []) {
+function visit(n) {
   if (done.has(n)) return;
   if (visiting.has(n)) return; // siklus FK — biarkan diurut seadanya
   visiting.add(n);

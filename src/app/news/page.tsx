@@ -103,7 +103,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
           <>
             {/* Grid — 3 kolom, kartu terbaru di kiri-atas */}
             <CSSStagger stagger={60} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {berita.map((item) => {
+              {berita.map((item, idx) => {
                 const cat = newsCategory(item.category);
                 return (
                   <div key={item.id}>
@@ -113,6 +113,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
                       description={item.summary}
                       imageUrl={item.image_url}
                       imageAlt={item.image_alt || item.title}
+                      priority={idx === 0}
                       badges={
                         <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${cat.bg} ${cat.color} ${cat.border}`}>
                           {cat.label}

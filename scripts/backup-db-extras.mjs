@@ -98,9 +98,6 @@ await client.end();
 // ---------------------------------------------------------------- generate auth_users.sql
 const userCols = Object.keys(users[0] ?? { id: null });
 const identCols = Object.keys(identities[0] ?? { user_id: null, provider: null });
-const idents = identities
-  .map((i) => `  (${identCols.map((c) => sqlLiteral(i[c])).join(", ")})`)
-  .join(",\n");
 
 const authSql = `-- ============================================================
 -- RESTORE auth users → jalan di SQL Editor project BARU

@@ -15,6 +15,7 @@ export default function ContentCard({
   imageAlt = "",
   badges,
   meta,
+  priority = false,
   className = "",
 }: {
   href: string;
@@ -26,6 +27,8 @@ export default function ContentCard({
   badges?: ReactNode;
   /** Baris meta di bawah (tanggal, lampiran, dsb). */
   meta?: ReactNode;
+  /** True untuk kartu pertama grid → ikut preloading LCP (kartu di atas fold). */
+  priority?: boolean;
   className?: string;
 }) {
   return (
@@ -42,6 +45,7 @@ export default function ContentCard({
             height={720}
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className="h-auto w-full transition-transform duration-500 group-hover:scale-105"
+            priority={priority}
           />
         ) : (
           <div className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-accent)]">

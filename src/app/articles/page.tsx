@@ -114,7 +114,7 @@ export default async function ArtikelPage({
           <>
             {/* Grid kartu — 3 kolom, kartu terbaru di kiri-atas */}
             <CSSStagger stagger={60} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {articles.map((item) => (
+              {articles.map((item, idx) => (
                 <div key={item.id}>
                   <ContentCard
                     href={`/articles/${item.slug}`}
@@ -122,6 +122,7 @@ export default async function ArtikelPage({
                     description={item.excerpt}
                     imageUrl={item.image_url}
                     imageAlt={item.image_alt || item.title}
+                    priority={idx === 0}
                     badges={
                       <span className="inline-flex items-center rounded-md bg-[var(--brand-accent)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-accent)]">
                         {item.category}

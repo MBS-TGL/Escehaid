@@ -13,7 +13,7 @@
  *
  * Env: TARGET_DATABASE_URL = pooler session/transaction project BARU
  */
-import { readFileSync, mkdirSync, writeFileSync, appendFileSync } from "node:fs";
+import { readFileSync, mkdirSync, appendFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -35,7 +35,6 @@ const log = (...a) => {
 const { Client } = await import("pg");
 const client = new Client({ connectionString: url, ssl: { rejectUnauthorized: false } });
 await client.connect();
-const LOGFN = async (s) => { log(...arguments); };
 
 async function failAt(name, err, sql = "") {
   const pos = Number(err.position || 0);

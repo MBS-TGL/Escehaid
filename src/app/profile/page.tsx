@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Users, GraduationCap, Eye, Checks, ArrowUpRight, Trophy, MapPin } from "@/components/Icons";
 import { getSchoolProfile, getTeacherList, getFacilityList, getAchievementList, getGalleryList, registrationHref } from "@/lib/queries";
+import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import PageHero from "@/components/public/PageHero";
 import TeacherGrid from "./TeacherGrid";
@@ -18,13 +19,15 @@ export const metadata = {
 export const revalidate = 3600;
 
 export default async function ProfilPage() {
-  const [profil, teachers, facilities, achievements, gallery] = await Promise.all([
+  const [profil, teachers, facilities, achievements, gallery, settings] = await Promise.all([
     getSchoolProfile(),
     getTeacherList(),
     getFacilityList(),
     getAchievementList(),
     getGalleryList(8),
+    getSiteSettings(),
   ]);
+  const brand = toPublicBrand(settings);
 
   const daftarHref = registrationHref(profil).trim();
 
@@ -74,13 +77,17 @@ export default async function ProfilPage() {
                 )}
               </div>
               <Link
-                href="https://dapo.kemendikdasmen.go.id/sekolah?npsn=69957381"
+                href={
+                  brand.npsn.trim()
+                    ? `https://dapo.kemendikdasmen.go.id/sekolah?npsn=${brand.npsn.trim()}`
+                    : "https://dapo.kemendikdasmen.go.id/"
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#f4f7fb] px-4 py-2 text-sm font-medium text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/10"
               >
                 <GraduationCap className="h-4 w-4 text-[var(--brand-accent)]" />
-                Akreditasi {profil?.accreditation || "A"}
+                Akreditasi {brand.accreditation.trim() || profil?.accreditation || "A"}
                 <ArrowUpRight className="h-3.5 w-3.5 text-slate-400" />
               </Link>
             </div>
