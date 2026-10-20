@@ -15,7 +15,12 @@ export async function getAgendaEvents(): Promise<AgendaEvent[]> {
     .from("agenda_events")
     .select("*")
     .order("sort_order", { ascending: true });
-  if (error) return [];
+  if (error) {
+    // Melempar error agar panel admin bisa membedakan "kosong" vs "gagal
+    // memuat" — pemanggil (panel agenda) menangkap dan menampilkan retry.
+    console.error("Error fetching agenda events:", error);
+    throw new Error(error.message);
+  }
   return data || [];
 }
 

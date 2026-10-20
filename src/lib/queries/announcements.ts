@@ -23,7 +23,9 @@ export async function getAnnouncements(): Promise<Announcement[]> {
 
   if (error) {
     console.error("Error fetching announcements:", error);
-    return [];
+    // Melempar error agar panel admin bisa membedakan "kosong" vs "gagal
+    // memuat" — pemanggil (panel pengumuman) menangkap dan menampilkan retry.
+    throw new Error(error.message);
   }
   return data || [];
 }
