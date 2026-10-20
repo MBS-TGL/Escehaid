@@ -68,7 +68,7 @@ const FACILITY_FALLBACKS: Record<string, string> = {
 const SALAM_BUKA = "Assalamu'alaikum Warahmatullahi Wabarakatuh.";
 const SALAM_TUTUP = "Wassalamu'alaikum Warahmatullahi Wabarakatuh.";
 const PRINCIPAL_QUOTE_FALLBACK =
-  "Selamat datang di SMP Muhammadiyah 4 Tanggul. Kami berkomitmen mencerdaskan kehidupan bangsa melalui pendidikan berkualitas yang memadukan keunggulan akademik dan pembentukan karakter Islami.";
+  "Setiap anak datang dengan bakat dan caranya sendiri. Tugas kami di SMP Muhammadiyah 4 Tanggul adalah menuntunnya tumbuh berilmu, berakhlak, dan berkemajuan - menjadi pribadi yang bermanfaat bagi keluarga, masyarakat, dan umat.";
 
 export async function generateMetadata(): Promise<Metadata> {
   // Judul beranda memakai `absolute` agar TIDAK ikut template `%s | <nama>`
