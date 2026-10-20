@@ -25,6 +25,28 @@ type Documents = SpmbDocumentFiles;
 const STORAGE_KEY = "spmb_form_data";
 const STORAGE_STEP_KEY = "spmb_form_step";
 const STORAGE_CUSTOM_KEY = "spmb_form_custom";
+const STORAGE_TOKEN_KEY = "spmb_upload_token";
+
+/**
+ * Token rahasia 16 karakter untuk folder upload dokumen ini (disimpan per draft,
+ * dipakai berulang agar pendaftar boleh mengganti ulang berkasnya sendiri).
+ * Token inilah yang membuat folder tidak bisa ditebak pendaftar lain —
+ * route /api/spmb/upload menolak path tanpa pola `...-<token16>/`.
+ */
+function ensureUploadToken(): string {
+  try {
+    const saved = localStorage.getItem(STORAGE_TOKEN_KEY);
+    if (saved && /^[0-9a-z]{16}$/.test(saved)) return saved;
+  } catch {}
+  const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  const token = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+  try {
+    localStorage.setItem(STORAGE_TOKEN_KEY, token);
+  } catch {}
+  return token;
+}
 
 const DEBUG_DATA: FormData = {
   program: "SMP Boarding",
@@ -126,6 +148,9 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
       const savedData = localStorage.getItem(STORAGE_KEY);
       const savedStep = localStorage.getItem(STORAGE_STEP_KEY);
       const savedCustom = localStorage.getItem(STORAGE_CUSTOM_KEY);
+      // Token folder upload disiapkan di sini (bukan pada handleSubmit) supaya
+      // sudah tersimpan sebelum berkas pertama diunggah.
+      ensureUploadToken();
       if (savedData) {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrasi localStorage harus terjadi setelah mount: SSR tidak punya localStorage, jadi inisialisasi saat render akan membuat hydration mismatch. Menunda ke rAF/mikrotask justru membuat draft tampak kosong 1 frame.
         setData(JSON.parse(savedData));
@@ -157,6 +182,7 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(STORAGE_STEP_KEY);
     localStorage.removeItem(STORAGE_CUSTOM_KEY);
+    localStorage.removeItem(STORAGE_TOKEN_KEY);
   }
 
   const update = (field: keyof FormData, value: string) => {
@@ -299,15 +325,20 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
   async function handleSubmit() {
     setLoading(true);
 
+    // Folder ber-token: `<nisn>-<token16>` — token dari draft ini yang membuat
+    // path upload tidak bisa ditebak pendaftar lain (server menolak tanpa token).
     const nisn = data.nisn || Date.now().toString();
-    const folder = `spmb-${new Date().getFullYear()}/${nisn}`;
+    const token = ensureUploadToken();
+    const folder = `spmb-${new Date().getFullYear()}/${nisn}-${token}`;
 
+    // Ekstensi dilowercase — server menolak pola path yang tidak cocok.
+    const extOf = (f: File) => (f.name.split(".").pop() || "").toLowerCase();
     const [kkUrl, aktaUrl, suratUrl, ktpUrl, transferUrl] = await Promise.all([
-      docs.kk ? uploadFile(docs.kk, `${folder}/kk.${docs.kk.name.split(".").pop()}`) : Promise.resolve(null),
-      docs.akta ? uploadFile(docs.akta, `${folder}/akta.${docs.akta.name.split(".").pop()}`) : Promise.resolve(null),
-      docs.surat_sekolah ? uploadFile(docs.surat_sekolah, `${folder}/surat.${docs.surat_sekolah.name.split(".").pop()}`) : Promise.resolve(null),
-      docs.ktp_ortu ? uploadFile(docs.ktp_ortu, `${folder}/ktp.${docs.ktp_ortu.name.split(".").pop()}`) : Promise.resolve(null),
-      docs.bukti_transfer ? uploadFile(docs.bukti_transfer, `${folder}/transfer.${docs.bukti_transfer.name.split(".").pop()}`) : Promise.resolve(null),
+      docs.kk ? uploadFile(docs.kk, `${folder}/kk.${extOf(docs.kk)}`) : Promise.resolve(null),
+      docs.akta ? uploadFile(docs.akta, `${folder}/akta.${extOf(docs.akta)}`) : Promise.resolve(null),
+      docs.surat_sekolah ? uploadFile(docs.surat_sekolah, `${folder}/surat.${extOf(docs.surat_sekolah)}`) : Promise.resolve(null),
+      docs.ktp_ortu ? uploadFile(docs.ktp_ortu, `${folder}/ktp.${extOf(docs.ktp_ortu)}`) : Promise.resolve(null),
+      docs.bukti_transfer ? uploadFile(docs.bukti_transfer, `${folder}/transfer.${extOf(docs.bukti_transfer)}`) : Promise.resolve(null),
     ]);
 
     // Satu-satunya penyusun jsonb documents (modul bersama) — termasuk
@@ -354,8 +385,10 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
   return (
     <div className="mx-auto max-w-2xl" ref={formRef} onKeyDown={handleFormKeyDown}>
 
-      {/* DEBUG: Auto-fill button */}
-      {process.env.NODE_ENV === "development" && (
+      {/* DEBUG: tombol auto-fill hanya di build dev DAN diaktifkan lewat env
+          NEXT_PUBLIC_SPMB_DEBUG=1 — check NODE_ENV di-compile inline, jadi
+          cabang ini (beserta DEBUG_DATA) terhapus dari bundle production. */}
+      {process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_SPMB_DEBUG === "1" && (
         <button
           onClick={() => { setData(DEBUG_DATA); setStep(0); setErrors({}); }}
           className="mb-4 w-full rounded-xl border border-dashed border-amber-400 bg-amber-50 px-4 py-2.5 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100 cursor-pointer"

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { storageFrom } from "@/lib/storage";
+import { clientIpFrom, createRateLimiter } from "@/lib/rate-limit";
 
 /**
  * Endpoint upload dokumen SPMB untuk pendaftar publik. Pengganti akses
@@ -10,51 +11,44 @@ import { storageFrom } from "@/lib/storage";
  * Autentikasi: TANPA sesi — dipakai pengunjung baru. Keamanan mengandalkan:
  * 1. RLS bucket `spmb-documents` di Supabase (anon hanya boleh insert ke
  *    folder SPMB).
- * 2. Validasi ketat path & tipe file di bawah (path harus mengikuti pola
- *    `spmb-<tahun>/<nisn>/<organ>.<ext>`; tidak ada traversal).
- * 3. Rate limit per-IP sederhana (in-memory).
+ * 2. Path WAJIB memuat token rahasia 16 karakter acak yang hanya diketahui
+ *    browser pendaftar (disimpan di draft localStorage): pola
+ *    `spmb-<tahun>/<nisn>-<token>/<organ>.<ext>`. Tanpa token, pendaftar lain
+ *    tidak bisa menebak path dokumen orang lain — menggantikan verifikasi
+ *    kepemilikan berbasis sesi yang tidak mungkin untuk pendaftar anon.
+ * 3. Ekstensi menentukan Content-Type yang diupload ke Storage (MIME klien
+ *    TIDAK dipercaya) — berkas HTML bernama *.pdf tetap tercatat sebagai PDF.
+ * 4. Rate limit per-IP 40 upload / 10 menit (in-memory, ter-prune).
  */
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 
-/** MIME yang diizinkan — sejalan dengan teks bantu di form. */
-const ALLOWED_TYPES = new Set([
-  "application/pdf",
-  "image/jpeg",
-  "image/pjpeg",
-  "image/png",
-  "image/webp",
-]);
+/**
+ * Ekstensi → MIME yang diperbolehkan dari peramban + MIME final yang dipaksa
+ * saat upload (diputuskan server dari ekstensi, bukan dari `file.type` klien).
+ */
+const EXT_MIME: Record<string, { accepted: string[]; final: string }> = {
+  pdf: { accepted: ["application/pdf"], final: "application/pdf" },
+  jpg: { accepted: ["image/jpeg", "image/pjpeg", "image/jpg"], final: "image/jpeg" },
+  jpeg: { accepted: ["image/jpeg", "image/pjpeg", "image/jpg"], final: "image/jpeg" },
+  png: { accepted: ["image/png"], final: "image/png" },
+  webp: { accepted: ["image/webp"], final: "image/webp" },
+};
 
 /** Nama organ dokumen final — kalau form menambah slot dokumen, tambah di sini. */
 const ALLOWED_ORGS = new Set(["kk", "akta", "surat", "ktp", "transfer"]);
 
-const ALLOWED_EXT = new Set(["pdf", "jpg", "jpeg", "png", "webp"]);
+/**
+ * Pola path: `spmb-<tahun4>/<identitas>-<token16>/<organ>.<ext>`.
+ * - Identitas: nisn / penanda bebas (huruf-angka-titik-garis, 4-32 karakter).
+ * - Token: 16 karakter [0-9a-z] acak — bagian rahasia yang membuat folder
+ *   tidak bisa ditebak oleh pendaftar lain.
+ */
+const PATH_RE =
+  /^spmb-\d{4}\/[A-Za-z0-9._-]{4,32}-[A-Za-z0-9]{16}\/(kk|akta|surat|ktp|transfer)\.(pdf|jpg|jpeg|png|webp)$/;
 
-/** Pola path: spmb-<tahun4>/<nisn|timestamp>/<organ>.<ext> — tanpa traversal. */
-const PATH_RE = /^spmb-\d{4}\/[A-Za-z0-9._-]{4,64}\/(kk|akta|surat|ktp|transfer)\.(pdf|jpg|jpeg|png|webp)$/;
-
-/** Rate limit in-memory per IP (proses Node tunggal; cukup untuk spam biasa). */
-const RATE_LIMIT = 40;
-const RATE_WINDOW_MS = 10 * 60 * 1000;
-
-interface RateEntry {
-  ip: string;
-  count: number;
-  resetAt: number;
-}
-const RATE_ENTRIES: RateEntry[] = [];
-
-function rateCheck(ip: string): boolean {
-  const now = Date.now();
-  let found = RATE_ENTRIES.find((e) => e.ip === ip && e.resetAt > now);
-  if (!found) {
-    found = { ip, count: 0, resetAt: now + RATE_WINDOW_MS };
-    RATE_ENTRIES.push(found);
-  }
-  found.count += 1;
-  return found.count <= RATE_LIMIT;
-}
+/** Rate limit per IP: 40 upload / 10 menit. */
+const rateLimit = createRateLimiter(40, 10 * 60 * 1000);
 
 /** Klien anon di sisi server — mirip kebiasaan proxy.ts (no session). */
 function storageClient() {
@@ -65,14 +59,11 @@ function storageClient() {
 }
 
 export async function POST(req: Request) {
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    req.headers.get("x-real-ip") ||
-    "unknown";
-  if (!rateCheck(ip)) {
+  const { allowed, retryAfterSec } = rateLimit.check(clientIpFrom(req));
+  if (!allowed) {
     return NextResponse.json(
       { error: "Terlalu banyak percobaan upload. Coba lagi beberapa saat." },
-      { status: 429 }
+      { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
     );
   }
 
@@ -94,9 +85,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Path upload tidak valid." }, { status: 400 });
   }
 
-  const org = path.split("/").pop()!.split(".")[0];
-  const ext = path.split(".").pop()!.toLowerCase();
-  if (!ALLOWED_ORGS.has(org) || !ALLOWED_EXT.has(ext)) {
+  const filename = path.split("/").pop()!;
+  const ext = filename.split(".").pop()!.toLowerCase();
+  const mime = EXT_MIME[ext];
+  if (!ALLOWED_ORGS.has(filename.split(".")[0]) || !mime) {
     return NextResponse.json({ error: "Jenis/sekor file tidak dikenal." }, { status: 400 });
   }
 
@@ -107,7 +99,10 @@ export async function POST(req: Request) {
     );
   }
 
-  if (!ALLOWED_TYPES.has(file.type) && !ALLOWED_EXT.has(ext)) {
+  // MIME klien hanya dipercaya bila cocok dengan ekstensi. Tipe kosong/aneh
+  // tetap boleh — Storage akan menyimpannya dengan MIME final dari ekstensi,
+  // jadi berkas teks bernama ktp.pdf TIDAK akan terekspos sebagai text/html.
+  if (file.type && !mime.accepted.includes(file.type)) {
     return NextResponse.json(
       { error: `Format file "${file.name}" tidak didukung. Gunakan PDF, JPG, atau PNG.` },
       { status: 415 }
@@ -123,8 +118,10 @@ export async function POST(req: Request) {
   }
 
   const bytes = Buffer.from(await file.arrayBuffer());
+  // upsert tetap true — pendaftar boleh mengganti berkasnya sendiri di folder
+  // ber-token miliknya; folder orang lain tidak bisa ditebak.
   const { data, error } = await storageFrom("spmb-documents", supabase).upload(path, bytes, {
-    contentType: file.type || "application/octet-stream",
+    contentType: mime.final,
     upsert: true,
   });
 
