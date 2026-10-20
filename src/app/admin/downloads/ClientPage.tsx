@@ -18,6 +18,7 @@ import type { Download as DownloadItem } from "@/lib/supabase";
 import { ConfirmModal, SlideOver, SkeletonBlock } from "@/components/ui";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useToast } from "@/components/ui/Toast";
+import { usePermissions } from "@/app/admin/PermissionsProvider";
 import {
   Download,
   Plus,
@@ -66,6 +67,11 @@ const emptyForm: DownloadFormState = { title: "", category: "", description: "" 
 
 export default function AdminDownloadsPage() {
   const { toast } = useToast();
+  const { can } = usePermissions();
+  // Gate UI aksi — penegakan sesungguhnya di proxy.ts/RLS (lihat PermissionsProvider).
+  const permCreate = can("unduhan:create");
+  const permUpdate = can("unduhan:update");
+  const permDelete = can("unduhan:delete");
   const [items, setItems] = useState<DownloadItem[]>([]);
   const [loading, setLoading] = useState(true);
   /** Pesan kegagalan memuat (RLS/tabel belum ada) — tampil sebagai banner. */
@@ -325,10 +331,12 @@ export default function AdminDownloadsPage() {
             <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">Kelola berkas yang dapat diunduh publik di halaman Unduhan</p>
           </div>
         </div>
-        <button onClick={openCreate}
-          className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] md:py-2.5">
-          <Plus className="h-4 w-4" /> Buat Baru
-        </button>
+        {permCreate && (
+          <button onClick={openCreate}
+            className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] md:py-2.5">
+            <Plus className="h-4 w-4" /> Buat Baru
+          </button>
+        )}
       </div>
 
       {/* Stats — StatPillGroup: pill kompak satu baris */}
@@ -351,11 +359,13 @@ export default function AdminDownloadsPage() {
         <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex">
           <Checks className="h-4 w-4 text-[var(--brand-primary)]" />
           <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
-          <button onClick={() => setBulkDelete(true)}
-            aria-label={`Hapus ${selectedIds.size} unduhan terpilih`}
-            className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">
-            Hapus
-          </button>
+          {permDelete && (
+            <button onClick={() => setBulkDelete(true)}
+              aria-label={`Hapus ${selectedIds.size} unduhan terpilih`}
+              className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">
+              Hapus
+            </button>
+          )}
           <button onClick={() => setSelectedIds(new Set())}
             aria-label="Hapus pilihan" title="Hapus pilihan"
             className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600">
@@ -441,7 +451,7 @@ export default function AdminDownloadsPage() {
                       <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
                       <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada unduhan"}</p>
                     </div>
-                    {!search && filter === "all" && !loadError && (
+                    {!search && filter === "all" && !loadError && permCreate && (
                       <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
                         <Plus className="h-3.5 w-3.5" /> Buat Unduhan Pertama
                       </button>
@@ -505,14 +515,18 @@ export default function AdminDownloadsPage() {
                           className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Lihat berkas">
                           <FileText className="h-4 w-4" />
                         </a>
-                        <button onClick={() => openEdit(item)}
-                          className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
-                          <PencilSimple className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => setDeleteItem(item)}
-                          className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
-                          <Trash className="h-4 w-4" />
-                        </button>
+                        {permUpdate && (
+                          <button onClick={() => openEdit(item)}
+                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
+                            <PencilSimple className="h-4 w-4" />
+                          </button>
+                        )}
+                        {permDelete && (
+                          <button onClick={() => setDeleteItem(item)}
+                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
+                            <Trash className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -572,7 +586,7 @@ export default function AdminDownloadsPage() {
                 <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
                 <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada unduhan"}</p>
               </div>
-              {!search && filter === "all" && !loadError && (
+              {!search && filter === "all" && !loadError && permCreate && (
                 <button onClick={openCreate} className="mt-1 flex min-h-10 items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
                   <Plus className="h-3.5 w-3.5" /> Buat Unduhan Pertama
                 </button>
@@ -593,6 +607,9 @@ export default function AdminDownloadsPage() {
                 onReorder={handleReorder}
                 canGoUp={index > 0}
                 canGoDown={index < paginated.length - 1}
+                canEdit={permUpdate}
+                canDelete={permDelete}
+                canToggle={permUpdate}
               />
             ))
           )}
@@ -616,7 +633,7 @@ export default function AdminDownloadsPage() {
       {pickMode && (
         <MobileSelectBar
           count={selectedIds.size}
-          onDelete={() => setBulkDelete(true)}
+          onDelete={permDelete ? () => setBulkDelete(true) : undefined}
           onCancel={exitPickMode}
         />
       )}
@@ -748,6 +765,9 @@ function DownloadMobileRow({
   onReorder,
   canGoUp,
   canGoDown,
+  canEdit,
+  canDelete,
+  canToggle,
 }: {
   item: DownloadItem;
   selected: boolean;
@@ -760,30 +780,39 @@ function DownloadMobileRow({
   onReorder: (id: string, direction: "up" | "down") => void;
   canGoUp: boolean;
   canGoDown: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canToggle: boolean;
 }) {
   const sizeLabel = formatFileSize(item.file_size);
 
   const actions: RowAction[] = [
-    { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) },
+    ...(canEdit
+      ? [{ key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) } as RowAction]
+      : []),
     {
       key: "open",
       label: "Lihat Berkas",
       icon: <FileText className="h-4 w-4" />,
       run: () => window.open(item.file_url, "_blank", "noopener"),
     },
-    {
-      key: "toggle",
-      label: item.is_active ? "Nonaktifkan" : "Aktifkan",
-      icon: item.is_active ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
-      run: () => onToggle(item),
-    },
+    ...(canToggle
+      ? [{
+          key: "toggle",
+          label: item.is_active ? "Nonaktifkan" : "Aktifkan",
+          icon: item.is_active ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
+          run: () => onToggle(item),
+        } as RowAction]
+      : []),
     ...(canGoUp
       ? [{ key: "up", label: "Naik", icon: <ArrowUp className="h-4 w-4" />, run: () => onReorder(item.id, "up") }]
       : []),
     ...(canGoDown
       ? [{ key: "down", label: "Turun", icon: <ArrowDown className="h-4 w-4" />, run: () => onReorder(item.id, "down") }]
       : []),
-    { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) },
+    ...(canDelete
+      ? [{ key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) } as RowAction]
+      : []),
   ];
 
   return (

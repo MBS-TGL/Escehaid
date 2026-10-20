@@ -30,8 +30,12 @@ import {
   SortAscending,
   Checks,
   CalendarBlank,
+  XCircle,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
+import { usePermissions } from "@/app/admin/PermissionsProvider";
+import { normalizeName } from "@/lib/format-name";
+import { formatRelativeTime } from "@/lib/admin-display";
 import {
   MobileFilterBar,
   MobilePagination,
@@ -51,8 +55,13 @@ type SortDir = "asc" | "desc";
 
 export default function AdminContactPage() {
   const { toast } = useToast();
+  const { can } = usePermissions();
+  // Gate UI aksi — penegakan sesungguhnya di proxy.ts/RLS (lihat PermissionsProvider).
+  const permUpdate = can("kontak:update");
+  const permDelete = can("kontak:delete");
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -73,9 +82,17 @@ export default function AdminContactPage() {
   const [detailItem, setDetailItem] = useState<ContactMessage | null>(null);
 
   const fetchMessages = useCallback(async () => {
-    const data = await getContactMessageList();
-    setMessages(data);
-    setLoading(false);
+    setLoading(true);
+    setLoadError("");
+    try {
+      const data = await getContactMessageList();
+      setMessages(data);
+    } catch {
+      // Query gagal → tampil EmptyState "Gagal memuat", BUKAN daftar kosong palsu.
+      setLoadError("Gagal memuat pesan masuk.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -264,9 +281,9 @@ export default function AdminContactPage() {
         <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex">
           <Checks className="h-4 w-4 text-[var(--brand-primary)]" />
           <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
-          <button onClick={() => handleBulkMarkRead(true)} aria-label={`Tandai ${selectedIds.size} pesan terpilih sudah dibaca`} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Tandai Dibaca</button>
-          <button onClick={() => handleBulkMarkRead(false)} aria-label={`Tandai ${selectedIds.size} pesan terpilih belum dibaca`} className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-600">Tandai Belum Dibaca</button>
-          <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} pesan terpilih`} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
+          {permUpdate && <button onClick={() => handleBulkMarkRead(true)} aria-label={`Tandai ${selectedIds.size} pesan terpilih sudah dibaca`} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Tandai Dibaca</button>}
+          {permUpdate && <button onClick={() => handleBulkMarkRead(false)} aria-label={`Tandai ${selectedIds.size} pesan terpilih belum dibaca`} className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-600">Tandai Belum Dibaca</button>}
+          {permDelete && <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} pesan terpilih`} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>}
           <button onClick={() => setSelectedIds(new Set())} aria-label="Batalkan pilihan" title="Batalkan pilihan" className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
         </div>
       )}
@@ -362,7 +379,31 @@ export default function AdminContactPage() {
                     <p className="text-sm text-slate-500">Memuat data pesan...</p>
                   </div>
                 </td></tr>
-              ) : paginated.length === 0 ? (
+              ) : loadError ? (
+                <tr><td colSpan={8} className="px-4 py-16 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                      <XCircle className="h-6 w-6 text-red-400" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{loadError}</p>
+                    <button onClick={() => fetchMessages()} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                      Coba lagi
+                    </button>
+                  </div>
+                </td></tr>
+          ) : loadError ? (
+            <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                <XCircle className="h-6 w-6 text-red-400" />
+              </div>
+              <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
+              <p className="mt-0.5 text-xs text-slate-500">{loadError}</p>
+              <button onClick={() => fetchMessages()} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                Coba lagi
+              </button>
+            </div>
+          ) : paginated.length === 0 ? (
                 <tr><td colSpan={8} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
@@ -387,14 +428,15 @@ export default function AdminContactPage() {
                         <div className={`flex h-8 w-8 items-center justify-center rounded-full ${!item.is_read ? "bg-[var(--brand-primary)]/10" : "bg-slate-100"}`}>
                           <User className={`h-4 w-4 ${!item.is_read ? "text-[var(--brand-primary)]" : "text-slate-400"}`} />
                         </div>
-                        <span className={`text-sm ${!item.is_read ? "font-semibold text-slate-800" : "font-medium text-slate-700"}`}>{item.name}</span>
+                        <span className={`text-sm ${!item.is_read ? "font-semibold text-slate-800" : "font-medium text-slate-700"}`}>{normalizeName(item.name)}</span>
                       </div>
                     </td>
                     <td className="hidden px-4 py-3.5 text-sm text-slate-500 md:table-cell">{item.email}</td>
                     <td className="hidden px-4 py-3.5 text-sm text-slate-600 sm:table-cell">{item.subject || "-"}</td>
                     <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => handleToggleRead(item)}
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                      <button onClick={() => handleToggleRead(item)} disabled={!permUpdate}
+                        title={permUpdate ? "Klik untuk ubah status baca" : "Tidak berizin menandai"}
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:cursor-default disabled:opacity-70 ${
                           item.is_read
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
                             : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
@@ -403,17 +445,19 @@ export default function AdminContactPage() {
                         {item.is_read ? "Dibaca" : "Baru"}
                       </button>
                     </td>
-                    <td className="hidden px-4 py-3.5 text-sm text-slate-500 lg:table-cell">
-                      {new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                    <td className="hidden px-4 py-3.5 text-sm text-slate-500 lg:table-cell whitespace-nowrap" title={new Date(item.created_at).toLocaleString("id-ID", { dateStyle: "full", timeStyle: "short" })}>
+                      {formatRelativeTime(item.created_at)}
                     </td>
                     <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         <button onClick={() => handleViewMessage(item)} aria-label={`Lihat pesan dari ${item.name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat">
                           <Eye className="h-4 w-4" />
                         </button>
-                        <button onClick={() => setDeleteItem(item)} aria-label={`Hapus pesan dari ${item.name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
-                          <Trash className="h-4 w-4" />
-                        </button>
+                        {permDelete && (
+                          <button onClick={() => setDeleteItem(item)} aria-label={`Hapus pesan dari ${item.name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
+                            <Trash className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -487,6 +531,8 @@ export default function AdminContactPage() {
                 onView={handleViewMessage}
                 onToggleRead={handleToggleRead}
                 onDelete={setDeleteItem}
+                canToggle={permUpdate}
+                canDelete={permDelete}
               />
             ))
           )}
@@ -510,27 +556,31 @@ export default function AdminContactPage() {
       {pickMode && (
         <MobileSelectBar
           count={selectedIds.size}
-          onDelete={() => setBulkDelete(true)}
+          onDelete={permDelete ? () => setBulkDelete(true) : undefined}
           onCancel={exitPickMode}
         >
-          <button
-            type="button"
-            onClick={() => handleBulkMarkRead(true)}
-            disabled={selectedIds.size === 0}
-            aria-label="Tandai pesan terpilih sudah dibaca"
-            className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Dibaca
-          </button>
-          <button
-            type="button"
-            onClick={() => handleBulkMarkRead(false)}
-            disabled={selectedIds.size === 0}
-            aria-label="Tandai pesan terpilih belum dibaca"
-            className="min-h-10 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Belum Dibaca
-          </button>
+          {permUpdate && (
+            <button
+              type="button"
+              onClick={() => handleBulkMarkRead(true)}
+              disabled={selectedIds.size === 0}
+              aria-label="Tandai pesan terpilih sudah dibaca"
+              className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Dibaca
+            </button>
+          )}
+          {permUpdate && (
+            <button
+              type="button"
+              onClick={() => handleBulkMarkRead(false)}
+              disabled={selectedIds.size === 0}
+              aria-label="Tandai pesan terpilih belum dibaca"
+              className="min-h-10 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Belum Dibaca
+            </button>
+          )}
         </MobileSelectBar>
       )}
 
@@ -559,7 +609,8 @@ export default function AdminContactPage() {
               )}
               <button onClick={() => { setDetailItem(null); setDeleteItem(detailItem); }}
                 aria-label="Hapus pesan ini"
-                title="Hapus pesan"
+                title={permDelete ? "Hapus pesan" : "Tidak berizin menghapus"}
+                hidden={!permDelete}
                 className="flex items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100">
                 <Trash className="h-4 w-4" />
               </button>
@@ -572,7 +623,7 @@ export default function AdminContactPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <p className="text-[11px] font-semibold text-slate-400">Nama</p>
-                <p className="text-sm font-medium text-slate-800">{detailItem.name}</p>
+                <p className="text-sm font-medium text-slate-800">{normalizeName(detailItem.name)}</p>
               </div>
               <div>
                 <p className="text-[11px] font-semibold text-slate-400">Email</p>
@@ -650,6 +701,8 @@ function ContactMobileRow({
   onView,
   onToggleRead,
   onDelete,
+  canToggle,
+  canDelete,
 }: {
   item: ContactMessage;
   selected: boolean;
@@ -659,16 +712,22 @@ function ContactMobileRow({
   onView: (m: ContactMessage) => void;
   onToggleRead: (m: ContactMessage) => void;
   onDelete: (m: ContactMessage) => void;
+  canToggle: boolean;
+  canDelete: boolean;
 }) {
   const actions: RowAction[] = [
     { key: "view", label: "Lihat", icon: <Eye className="h-4 w-4" />, run: () => onView(item) },
-    {
-      key: "read",
-      label: item.is_read ? "Tandai Belum Dibaca" : "Tandai Sudah Dibaca",
-      icon: item.is_read ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
-      run: () => onToggleRead(item),
-    },
-    { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) },
+    ...(canToggle
+      ? [{
+          key: "read",
+          label: item.is_read ? "Tandai Belum Dibaca" : "Tandai Sudah Dibaca",
+          icon: item.is_read ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
+          run: () => onToggleRead(item),
+        } as RowAction]
+      : []),
+    ...(canDelete
+      ? [{ key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) } as RowAction]
+      : []),
   ];
 
   return (
@@ -700,15 +759,15 @@ function ContactMobileRow({
             {!item.is_read && (
               <StatusDot tone="info" label="Belum dibaca" className="shrink-0" />
             )}
-            <span className={`min-w-0 ${!item.is_read ? "font-semibold" : "font-medium text-[#0f2a4d]"}`}>{item.name}</span>
+            <span className={`min-w-0 ${!item.is_read ? "font-semibold" : "font-medium text-[#0f2a4d]"}`}>{normalizeName(item.name)}</span>
           </span>
         }
         subtitle={
           <>
             <span className="min-w-0 truncate">{item.subject || item.email}</span>
             <span className="shrink-0 text-slate-300" aria-hidden="true">·</span>
-            <span className="shrink-0">
-              {new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+            <span className="shrink-0" title={new Date(item.created_at).toLocaleString("id-ID", { dateStyle: "full", timeStyle: "short" })}>
+              {formatRelativeTime(item.created_at)}
             </span>
           </>
         }

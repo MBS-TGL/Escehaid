@@ -35,7 +35,9 @@ export async function getFacilityListAll(): Promise<Facility[]> {
 
   if (error) {
     console.error("Error fetching all facilities:", error);
-    return [];
+    // Melempar error agar panel admin bisa membedakan "kosong" vs "gagal
+    // memuat" — pemanggil (panel fasilitas, satu-satunya) menampilkan retry.
+    throw new Error(error.message);
   }
   return data || [];
 }

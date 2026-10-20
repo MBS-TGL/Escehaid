@@ -84,7 +84,9 @@ export async function getContactMessageList(): Promise<ContactMessage[]> {
 
   if (error) {
     console.error("Error fetching contacts:", error);
-    return [];
+    // Melempar error agar panel admin bisa membedakan "kosong" vs "gagal
+    // memuat" — pemanggil (panel kontak) menangkap dan menampilkan retry.
+    throw new Error(error.message);
   }
   return data || [];
 }

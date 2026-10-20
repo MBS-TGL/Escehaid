@@ -62,6 +62,7 @@ import {
   XCircle,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
+import { usePermissions } from "@/app/admin/PermissionsProvider";
 import {
   MobileFilterBar,
   MobilePagination,
@@ -101,8 +102,15 @@ const emptyForm: FormData = {
 
 export default function AdminFacilitiesPage() {
   const { toast } = useToast();
+  const { can } = usePermissions();
+  // Gate UI aksi — penegakan sesungguhnya di proxy.ts/RLS (lihat PermissionsProvider).
+  const permCreate = can("fasilitas:create");
+  const permUpdate = can("fasilitas:update");
+  const permDelete = can("fasilitas:delete");
+  const permPublish = can("fasilitas:publish");
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -144,9 +152,16 @@ export default function AdminFacilitiesPage() {
   // Fetch
   const fetchFacilities = useCallback(async () => {
     setLoading(true);
-    const data = await getFacilityListAll();
-    setFacilities(data as Facility[]);
-    setLoading(false);
+    setLoadError("");
+    try {
+      const data = await getFacilityListAll();
+      setFacilities(data as Facility[]);
+    } catch {
+      // Query gagal → tampil EmptyState "Gagal memuat", BUKAN daftar kosong palsu.
+      setLoadError("Gagal memuat fasilitas.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -481,11 +496,13 @@ export default function AdminFacilitiesPage() {
             <ArrowSquareOut className="h-4 w-4 shrink-0" />
             <span className="truncate">Lihat di website</span>
           </a>
-          <button onClick={openCreate}
-            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-3 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] sm:flex-none sm:px-4 md:py-2.5">
-            <Plus className="h-4 w-4 shrink-0" />
-            <span className="truncate">Buat Baru</span>
-          </button>
+          {permCreate && (
+            <button onClick={openCreate}
+              className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-3 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] sm:flex-none sm:px-4 md:py-2.5">
+              <Plus className="h-4 w-4 shrink-0" />
+              <span className="truncate">Buat Baru</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -502,7 +519,7 @@ export default function AdminFacilitiesPage() {
         <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex">
           <Checks className="h-4 w-4 text-[var(--brand-primary)]" />
           <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
-          <button onClick={() => setBulkDelete(true)} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
+          {permDelete && <button onClick={() => setBulkDelete(true)} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>}
           <button onClick={() => setSelectedIds(new Set())} aria-label="Hapus pilihan" title="Hapus pilihan" className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
         </div>
       )}
@@ -601,6 +618,19 @@ export default function AdminFacilitiesPage() {
                     <p className="text-sm text-slate-500">Memuat data fasilitas...</p>
                   </div>
                 </td></tr>
+              ) : loadError ? (
+                <tr><td colSpan={6} className="px-4 py-16 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                      <XCircle className="h-6 w-6 text-red-400" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{loadError}</p>
+                    <button onClick={() => fetchFacilities()} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                      Coba lagi
+                    </button>
+                  </div>
+                </td></tr>
               ) : paginated.length === 0 ? (
                 <tr><td colSpan={6} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
@@ -611,7 +641,7 @@ export default function AdminFacilitiesPage() {
                       <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
                       <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada fasilitas"}</p>
                     </div>
-                    {!search && filter === "all" && (
+                    {!search && filter === "all" && permCreate && (
                       <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
                         <Plus className="h-3.5 w-3.5" /> Tambah Fasilitas Pertama
                       </button>
@@ -631,6 +661,10 @@ export default function AdminFacilitiesPage() {
                     onDelete={setDeleteItem}
                     onDuplicate={openDuplicate}
                     onToggleActive={handleToggleActive}
+                    canEdit={permUpdate}
+                    canDelete={permDelete}
+                    canCreate={permCreate}
+                    canToggle={permPublish}
                   />
                 ))
               )}
@@ -692,6 +726,17 @@ export default function AdminFacilitiesPage() {
                     </div>
                   ))}
                 </div>
+              ) : loadError ? (
+                <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                    <XCircle className="h-6 w-6 text-red-400" />
+                  </div>
+                  <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
+                  <p className="mt-0.5 text-xs text-slate-500">{loadError}</p>
+                  <button onClick={() => fetchFacilities()} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                    Coba lagi
+                  </button>
+                </div>
               ) : paginated.length === 0 ? (
                 <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
                   <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
@@ -701,7 +746,7 @@ export default function AdminFacilitiesPage() {
                     <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
                     <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada fasilitas"}</p>
                   </div>
-                  {!search && filter === "all" && (
+                  {!search && filter === "all" && permCreate && (
                     <button onClick={openCreate} className="mt-1 flex min-h-10 items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
                       <Plus className="h-3.5 w-3.5" /> Tambah Fasilitas Pertama
                     </button>
@@ -722,6 +767,10 @@ export default function AdminFacilitiesPage() {
                     onDelete={setDeleteItem}
                     onDuplicate={openDuplicate}
                     onToggleActive={handleToggleActive}
+                    canEdit={permUpdate}
+                    canDelete={permDelete}
+                    canCreate={permCreate}
+                    canToggle={permPublish}
                   />
                 ))
               )}
@@ -747,7 +796,7 @@ export default function AdminFacilitiesPage() {
       {pickMode && (
         <MobileSelectBar
           count={selectedIds.size}
-          onDelete={() => setBulkDelete(true)}
+          onDelete={permDelete ? () => setBulkDelete(true) : undefined}
           onCancel={exitPickMode}
         />
       )}
@@ -760,17 +809,23 @@ export default function AdminFacilitiesPage() {
         description={viewItem ? `${viewItem.is_active ? "Aktif" : "Nonaktif"} · Urutan: ${viewItem.sort_order || 0}` : undefined}
         footer={
           <div className="flex w-full items-center gap-2 md:w-auto">
-            <button onClick={() => { setViewItem(null); openEdit(viewItem!); }}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 md:flex-none">
-              <PencilSimple className="h-4 w-4" /> Edit
-            </button>
-            {viewItem && (
+            {permUpdate && (
+              <button onClick={() => { setViewItem(null); openEdit(viewItem!); }}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 md:flex-none">
+                <PencilSimple className="h-4 w-4" /> Edit
+              </button>
+            )}
+            {viewItem && (permCreate || permDelete) && (
               <div className="flex shrink-0 md:hidden">
                 <RowActionsMenu
                   label={viewItem.name}
                   actions={[
-                    { key: "duplicate", label: "Duplikat", icon: <Copy className="h-4 w-4" />, run: () => openDuplicate(viewItem) },
-                    { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => { setViewItem(null); setDeleteItem(viewItem); } },
+                    ...(permCreate
+                      ? [{ key: "duplicate", label: "Duplikat", icon: <Copy className="h-4 w-4" />, run: () => openDuplicate(viewItem) }]
+                      : []),
+                    ...(permDelete
+                      ? [{ key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => { setViewItem(null); setDeleteItem(viewItem); } }]
+                      : []),
                   ]}
                 />
               </div>
@@ -983,6 +1038,10 @@ function SortableFacilityRow({
   onDelete,
   onDuplicate,
   onToggleActive,
+  canEdit,
+  canDelete,
+  canCreate,
+  canToggle,
 }: {
   item: Facility;
   selected: boolean;
@@ -993,6 +1052,10 @@ function SortableFacilityRow({
   onDelete: (f: Facility) => void;
   onDuplicate: (f: Facility) => void;
   onToggleActive: (f: Facility) => void;
+  canEdit: boolean;
+  canDelete: boolean;
+  canCreate: boolean;
+  canToggle: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id, disabled: dragDisabled });
@@ -1069,9 +1132,9 @@ function SortableFacilityRow({
       </td>
 
       <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => onToggleActive(item)}
-          title={item.is_active ? "Klik untuk menonaktifkan" : "Klik untuk mengaktifkan"}
-          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+        <button onClick={() => onToggleActive(item)} disabled={!canToggle}
+          title={item.is_active ? (canToggle ? "Klik untuk menonaktifkan" : "Tidak berizin mengubah status") : (canToggle ? "Klik untuk mengaktifkan" : "Tidak berizin mengubah status")}
+          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:cursor-default disabled:opacity-70 ${
             item.is_active
               ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
               : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
@@ -1091,15 +1154,21 @@ function SortableFacilityRow({
           <button onClick={() => onView(item)} className="hidden rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 sm:flex" title="Lihat" aria-label={`Lihat ${item.name}`}>
             <Eye className="h-4 w-4" />
           </button>
-          <button onClick={() => onEdit(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit" aria-label={`Edit ${item.name}`}>
-            <PencilSimple className="h-4 w-4" />
-          </button>
-          <button onClick={() => onDuplicate(item)} className="hidden rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-[var(--brand-primary)] sm:flex" title="Duplikat" aria-label={`Duplikat ${item.name}`}>
-            <Copy className="h-4 w-4" />
-          </button>
-          <button onClick={() => onDelete(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus" aria-label={`Hapus ${item.name}`}>
-            <Trash className="h-4 w-4" />
-          </button>
+          {canEdit && (
+            <button onClick={() => onEdit(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit" aria-label={`Edit ${item.name}`}>
+              <PencilSimple className="h-4 w-4" />
+            </button>
+          )}
+          {canCreate && (
+            <button onClick={() => onDuplicate(item)} className="hidden rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-[var(--brand-primary)] sm:flex" title="Duplikat" aria-label={`Duplikat ${item.name}`}>
+              <Copy className="h-4 w-4" />
+            </button>
+          )}
+          {canDelete && (
+            <button onClick={() => onDelete(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus" aria-label={`Hapus ${item.name}`}>
+              <Trash className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </td>
     </tr>
@@ -1131,6 +1200,10 @@ function FacilityMobileRow({
   onDelete,
   onDuplicate,
   onToggleActive,
+  canEdit,
+  canDelete,
+  canCreate,
+  canToggle,
 }: {
   item: Facility;
   selected: boolean;
@@ -1143,6 +1216,10 @@ function FacilityMobileRow({
   onDelete: (f: Facility) => void;
   onDuplicate: (f: Facility) => void;
   onToggleActive: (f: Facility) => void;
+  canEdit: boolean;
+  canDelete: boolean;
+  canCreate: boolean;
+  canToggle: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id, disabled: dragDisabled || selectMode });
@@ -1233,15 +1310,23 @@ function FacilityMobileRow({
             disabled={selectMode}
             actions={[
               { key: "view", label: "Lihat", icon: <Eye className="h-4 w-4" />, run: () => onView(item) },
-              { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) },
-              { key: "duplicate", label: "Duplikat", icon: <Copy className="h-4 w-4" />, run: () => onDuplicate(item) },
-              {
-                key: "toggle",
-                label: item.is_active ? "Nonaktifkan" : "Aktifkan",
-                icon: item.is_active ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
-                run: () => onToggleActive(item),
-              },
-              { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) },
+              ...(canEdit
+                ? [{ key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) }]
+                : []),
+              ...(canCreate
+                ? [{ key: "duplicate", label: "Duplikat", icon: <Copy className="h-4 w-4" />, run: () => onDuplicate(item) }]
+                : []),
+              ...(canToggle
+                ? [{
+                    key: "toggle",
+                    label: item.is_active ? "Nonaktifkan" : "Aktifkan",
+                    icon: item.is_active ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />,
+                    run: () => onToggleActive(item),
+                  }]
+                : []),
+              ...(canDelete
+                ? [{ key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) }]
+                : []),
             ]}
           />
         }
