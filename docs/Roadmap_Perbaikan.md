@@ -49,16 +49,21 @@ Yang tersisa adalah penyempurnaan, tercantum di bawah.
 
 ## 🟡 Cepat & Ringan — performa
 
-- [ ] **7. Hapus `framer-motion`** — terbukti nol penggunaan di `src/` (sudah diganti animasi CSS di `src/components/CSSAnimations.tsx`); memangkas ~30 kB gzip. `package.json:37`
-- [ ] **8. Ganti `select("*")` query publik dengan seleksi kolom eksplisit** — ±28 lokasi, menghindari payload kolom besar (`history`, `mission`, jsonb registrasi) ikut terserialisasi saat ISR:
-  `src/lib/queries/profile.ts:9`, `achievements.ts:26,55`, `facilities.ts:15,33`, `gallery.ts:10,98,114`, `teachers.ts:15,61`, `agenda.ts:16,30`, `downloads.ts:53,101`.
-  Pola yang benar sudah ada: `NEWS_LIST_COLUMNS` di `src/lib/queries/news.ts:16-17`.
+- [x] **7. Hapus `framer-motion`** — terbukti nol penggunaan di `src/` (sudah diganti animasi CSS di `src/components/CSSAnimations.tsx`); memangkas ~30 kB gzip. `package.json:37`
+- [~] **8. Ganti `select("*")` query publik dengan seleksi kolom eksplisit** — selesai untuk path publik (item a di bawah); admin panel masih `select("*")` (data kecil, tidak prioritas).
+  - [x] a. Seleksi kolom eksplisit: `getTeacherList` (teachers.ts), `getFacilityList` (facilities.ts), `getGalleryList` (gallery.ts), `getDownloadList` (downloads.ts), `getActiveAgendaEvents` (agenda.ts), `getPublishedWaves` (waves.ts), `getAchievementList` (achievements.ts, `video_url` tetap lewat probe).
+  - [x] b. Fungsi mati dihapus: `getProfileList` (users.ts), `getGalleryByCategory` (gallery.ts), `getRecentUnreadMessages` (contact.ts).
+  - [ ] c. Lokasi lain yang disebut di bawah mengikuti pola ke atas bila disentuh lagi.
+  (`NEWS_LIST_COLUMNS` di `src/lib/queries/news.ts:16-17` tetap patokan pola.)
 - [ ] **8b. Hapus probe kolom dari path publik** (`tableHasColumn`/`newsHas*Column`) setelah migrasi SQL kolom stabil; tersisa 1-2 round-trip Supabase per halaman yang dirender ulang. `src/lib/queries/shared.ts:12-25`, `src/lib/queries/news.ts:27-55`
-- [ ] **9. Pindahkan query publik server ke `supabase-server.ts`** — sekarang semua query memakai client browser (`src/lib/supabase.ts:3`) sehingga supabase-js ikut masuk bundle client (`src/app/search/SearchView.tsx:12` dll).
-- [ ] **10. turunkan `"use client"` yang tidak perlu (mengurangi hidrasi)**
-  Kandidat: `PublicShell.tsx` (Navbar/Footer/RunningText), `src/app/TeacherCard.tsx`, `src/app/profile/TeacherGrid.tsx` & `FacilityGrid.tsx`, `src/components/CoverImage.tsx`, `src/components/EkskulCard.tsx`.
+- [~] **9. Pindahkan query publik server ke `supabase-server.ts`** — dengan lazy-proxy di `src/lib/supabase.ts` client tidak lagi mengeksekusi `createBrowserClient` saat modul termuat, 4 fungsi pencarian dikonsumsi via `GET /api/search` (server), `RunningText` & `CountdownEvent` menerima data dari server sebagai prop. Sisa migrasi menyeluruh ke `supabase-server.ts` belum dilakukan.
+- [~] **10. turunkan `"use client"` yang tidak perlu (mengurangi hidrasi)**
+  - [x] `Footer.tsx` → server component (di-render di `layout.tsx`, diteruskan sebagai slot ke `PublicShell`) + ikon phosphor ke subpath `dist/ssr`.
+  - [x] `CoverImage.tsx` → server component.
+  - [x] `RunningText` & `CountdownEvent` → tidak lagi mem-fetch dari browser (prop server).
+  - Kandidat sisa: `src/app/TeacherCard.tsx`, `src/app/profile/TeacherGrid.tsx` & `FacilityGrid.tsx`, `src/components/EkskulCard.tsx`.
   Biarkan client yang benar-benar interaktif saja: SearchOverlay, MobileBottomNav.
-- [ ] **11. Pagination server-side untuk `/admin/media` & `/admin/users`** — sekarang semua baris ditarik ke memori (`src/lib/queries/media.ts:209`, `users.ts:7,117`, `registrations.ts:130`). Tambah `limit` di server + fetch bertahap di client, terutama `/admin/media` yang merender banyak thumbnail.
+- [~] **11. Pagination server-side untuk `/admin/media` & `/admin/users`** — `/admin/users` selesai (server action `fetchUsersPage` + filter/sort/paginasi di server), pemindai referensi `/admin/media` pindah ke server action `scanMediaReferences` + `MEDIA_SCAN_ROW_CAP` (media.ts) sebagai guard; paginasi listing thumbnail media itu sendiri belum dibuat (fase berikutnya). `users.ts:7,117`, `registrations.ts:130` tetap dokumen ke depan.
 
 ---
 
