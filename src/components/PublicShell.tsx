@@ -12,10 +12,12 @@ export default function PublicShell({
   children,
   profile,
   brand,
+  announcements,
 }: {
   children: React.ReactNode;
   profile: SchoolProfile | null;
   brand: PublicBrand;
+  announcements: string[];
 }) {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/admin");
@@ -32,7 +34,7 @@ export default function PublicShell({
       >
         Lewati ke konten utama
       </a>
-      <RunningText />
+      <RunningText items={announcements} />
       <Navbar brand={brand} />
       <main id="konten-utama" className="flex-1">{children}</main>
       <Footer

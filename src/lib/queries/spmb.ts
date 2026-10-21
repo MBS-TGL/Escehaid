@@ -116,10 +116,8 @@ export function spmbFieldNeedsOptions(type: SpmbFieldType): boolean {
   return type === "select" || type === "radio" || type === "checkbox";
 }
 
-/** Kunci jawaban pendaftar di spmb_registrations.documents untuk sebuah field. */
-export function spmbAnswerKey(fieldId: string): string {
-  return `cf_${fieldId}`;
-}
+/** Re-export supaya barrel lama tetap menyediakan helper murni ini. */
+export { spmbAnswerKey } from "../helpers";
 
 /** Batas jumlah pertanyaan custom (pertahanan terhadap jsonb korup/rakus). */
 const SPMB_FIELDS_MAX = 50;

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Download, X, Eye } from "@/components/Icons";
-import { attachmentKind } from "@/lib/queries";
+import { attachmentKind } from "@/lib/helpers";
 
 /**
  * Kartu lampiran berita (PDF dsb.) dengan pratinjau tertanam.

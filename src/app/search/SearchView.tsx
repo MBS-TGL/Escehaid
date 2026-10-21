@@ -9,8 +9,7 @@ import {
   MagnifyingGlass,
   X,
 } from "@/components/Icons";
-import { groupSearchResults, searchAllContent } from "@/lib/queries";
-import type { SearchItem } from "@/lib/queries";
+import type { SearchGroup } from "@/lib/queries/search";
 import { KIND_META, formatSearchDate } from "@/components/SearchMeta";
 import Highlight from "@/components/public/Highlight";
 
@@ -21,17 +20,21 @@ type Status = "idle" | "loading" | "done";
  * kegiatan, dan prestasi. Menggunakan debounce 300ms + sinkronisasi URL
  * dangkal (`history.replaceState`) sehingga ?q= bisa dibagikan tanpa memicu
  * re-render server tiap ketikan; form GET tetap berfungsi tanpa JavaScript.
+ * Query dijalankan via /api/search (server) — bukan Supabase langsung.
  */
 export default function SearchView({
   initialQuery,
-  initialResults,
+  initialGroups,
+  initialCount,
 }: {
   initialQuery: string;
-  initialResults: SearchItem[];
+  initialGroups: SearchGroup[];
+  initialCount: number;
 }) {
   const pathname = usePathname();
   const [query, setQuery] = useState(initialQuery);
-  const [results, setResults] = useState<SearchItem[]>(initialResults);
+  const [groups, setGroups] = useState<SearchGroup[]>(initialGroups);
+  const [count, setCount] = useState(initialCount);
   const [searchedQuery, setSearchedQuery] = useState(initialQuery);
   const [status, setStatus] = useState<Status>(initialQuery ? "done" : "idle");
   /** Istilah yang SUDAH punya hasil (awal dari server atau baru dicari). */
@@ -46,7 +49,8 @@ export default function SearchView({
     if (value.trim() === "") {
       requestIdRef.current += 1; // batalkan permintaan yang masih melayang
       lastSearchedRef.current = "";
-      setResults([]);
+      setGroups([]);
+      setCount(0);
       setSearchedQuery("");
       setStatus("idle");
       window.history.replaceState(null, "", pathname);
@@ -63,14 +67,27 @@ export default function SearchView({
     const timer = window.setTimeout(async () => {
       setStatus("loading");
       const requestId = (requestIdRef.current += 1);
-      const items = await searchAllContent(term);
-      if (cancelled || requestId !== requestIdRef.current) return; // jawaban basi
-      setResults(items);
-      setSearchedQuery(term);
-      setStatus("done");
-      lastSearchedRef.current = term;
-      // Sinkkan URL secara dangkal (tanpa re-render server) agar bisa dibagikan.
-      window.history.replaceState(null, "", `${pathname}?q=${encodeURIComponent(term)}`);
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(term)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as { groups: SearchGroup[]; count: number };
+        if (cancelled || requestId !== requestIdRef.current) return; // jawaban basi
+        setGroups(data.groups);
+        setCount(data.count);
+        setSearchedQuery(term);
+        setStatus("done");
+        lastSearchedRef.current = term;
+        // Sinkkan URL secara dangkal (tanpa re-render server) agar bisa dibagikan.
+        window.history.replaceState(null, "", `${pathname}?q=${encodeURIComponent(term)}`);
+      } catch {
+        if (!cancelled && requestId === requestIdRef.current) {
+          setGroups([]);
+          setCount(0);
+          setSearchedQuery(term);
+          setStatus("done");
+          lastSearchedRef.current = term;
+        }
+      }
     }, 300);
 
     return () => {
@@ -79,15 +96,13 @@ export default function SearchView({
     };
   }, [query, pathname]);
 
-  const groups = groupSearchResults(results);
-
   const statusText =
     status === "loading"
       ? "Mencari…"
       : status === "idle"
         ? "Masukkan kata kunci untuk mulai mencari."
-        : results.length > 0
-          ? `${results.length} hasil untuk “${searchedQuery}”`
+        : count > 0
+          ? `${count} hasil untuk “${searchedQuery}”`
           : `Tidak ada hasil untuk “${searchedQuery}”`;
 
   return (

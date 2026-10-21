@@ -3,7 +3,7 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import type { Metadata } from "next";
 import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock, Quotes } from "@/components/Icons";
-import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList } from "@/lib/queries";
+import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList, getActiveAgendaEvents, filterUpcomingEvents } from "@/lib/queries";
 import { detectPrincipalGreeting, keepTogether } from "@/lib/principal-quote";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
@@ -119,7 +119,7 @@ export default async function Home() {
   // Batasi jumlah baris sesuai yang benar-benar dipakai beranda (berita/kegiatan/
   // artikel 4, fasilitas 5, prestasi 6, guru 12) supaya payload & waktu render
   // ulang ISR lebih ringan — terutama saat dibuka dari HP.
-  const [beritaRaw, dbFacilities, activities, articles, teachers, profile, achievements, settings] =
+  const [beritaRaw, dbFacilities, activities, articles, teachers, profile, achievements, settings, agendaEvents] =
     await Promise.all([
       getNewsList(4) as Promise<NewsItem[]>,
       getFacilityList(5),
@@ -129,7 +129,11 @@ export default async function Home() {
       getSchoolProfile(),
       getAchievementList(undefined, { featuredFirst: true, limit: 6 }),
       getSiteSettings(),
+      getActiveAgendaEvents(),
     ]);
+
+  // Hanya acara yang belum dimulai yang layak ditayangkan di countdown.
+  const upcomingEvents = filterUpcomingEvents(agendaEvents);
 
   // Tagline & identitas dari Pengaturan Situs (bukan lagi konstanta kode).
   const brand = toPublicBrand(settings);
@@ -305,7 +309,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <CountdownEvent />
+      <CountdownEvent events={upcomingEvents} />
 
       {/* ── SAMBUTAN KEPALA SEKOLAH ───────────────────────── */}
       <section className="relative overflow-hidden bg-[var(--surface-muted)] py-16 md:py-24" style={CV}>
@@ -738,8 +742,22 @@ export default async function Home() {
                     <Link
                       key={f.id}
                       href="/profile#fasilitas"
-                      className={`group relative flex flex-col justify-end overflow-hidden rounded-2xl border border-black/5 bg-slate-900 shadow-sm transition-all hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${bentoSpanClass(index, dbFacilities.length)}`}
+                      className={`group relative flex flex-col justify-end overflow-hidden rounded-3xl border border-white/80 bg-slate-900 shadow-md shadow-slate-900/5 ring-1 ring-slate-900/[0.06] transition-all duration-500 ease-out hover:border-white hover:shadow-2xl hover:shadow-[var(--brand-primary)]/20 motion-safe:hover:-translate-y-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${bentoSpanClass(index, dbFacilities.length)}`}
                     >
+                      {/* Badge Kategori Glassmorphism (Pojok Kiri Atas) */}
+                      <div className="absolute left-3.5 top-3.5 z-20 sm:left-4 sm:top-4">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-black/40 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-xs backdrop-blur-md">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-highlight)]" />
+                          Fasilitas
+                        </span>
+                      </div>
+
+                      {/* Tombol Aksi Panah Mini (Pojok Kanan Atas) */}
+                      <div className="absolute right-3.5 top-3.5 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/30 text-white backdrop-blur-md opacity-85 transition-all duration-300 group-hover:scale-110 group-hover:border-white group-hover:bg-white group-hover:text-[var(--brand-primary)] group-hover:opacity-100 sm:right-4 sm:top-4">
+                        <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                      </div>
+
+                      {/* Foto Fasilitas atau Placeholder Estetik */}
                       {imgSrc ? (
                         <Image
                           src={imgSrc}
@@ -751,21 +769,32 @@ export default async function Home() {
                               : "(max-width: 768px) 50vw, (max-width: 1024px) 25vw, 320px"
                           }
                           priority={false}
-                          className="object-cover transition-transform duration-500 ease-out motion-safe:group-hover:scale-105"
+                          className="object-cover transition-transform duration-700 ease-out motion-safe:group-hover:scale-105"
                         />
                       ) : (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-light)] text-white/30 transition-transform duration-500 ease-out motion-safe:group-hover:scale-105">
-                          <ImageSquare className="h-12 w-12 text-white/25" />
+                        <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[#0a3570] to-[#0c4482] p-4 text-white">
+                          <div className="pointer-events-none absolute -right-8 -top-8 h-36 w-36 rounded-full bg-[var(--brand-highlight)]/15 blur-2xl" />
+                          <div className="pointer-events-none absolute -bottom-8 -left-8 h-36 w-36 rounded-full bg-[var(--brand-accent)]/25 blur-2xl" />
+                          <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-white shadow-xs backdrop-blur-md transition-transform duration-500 group-hover:scale-110">
+                            <ImageSquare className="h-6 w-6 text-[var(--brand-highlight)]" />
+                          </div>
+                          <span className="relative z-10 mt-2 text-[10px] font-semibold tracking-wider text-white/50 uppercase">SMP Muhammadiyah 4</span>
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/90 via-[var(--brand-primary)]/25 to-transparent pointer-events-none" />
-                      <div className="relative z-10 p-4 sm:p-5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/70">
-                          Fasilitas
-                        </span>
-                        <h3 className={`mt-1 font-bold text-white leading-snug drop-shadow-sm ${isLarge ? "text-base sm:text-xl lg:text-2xl" : "text-sm sm:text-base line-clamp-2"}`}>
+
+                      {/* Cinematic Scrim Gradient Overlay */}
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/35 via-35% to-black/10 transition-opacity duration-300 group-hover:from-slate-950/95" />
+
+                      {/* Info & Nama Fasilitas */}
+                      <div className="relative z-10 p-4 sm:p-5 lg:p-6">
+                        <h3 className={`font-bold text-white drop-shadow-sm leading-snug transition-colors group-hover:text-[var(--brand-highlight)] ${isLarge ? "text-lg sm:text-2xl lg:text-[26px]" : "text-sm sm:text-base line-clamp-1"}`}>
                           {f.name}
                         </h3>
+                        {f.description && (
+                          <p className={`mt-1 font-normal text-slate-200/85 leading-relaxed ${isLarge ? "text-xs sm:text-sm line-clamp-2 max-w-xl" : "hidden sm:line-clamp-1 text-[11px]"}`}>
+                            {f.description}
+                          </p>
+                        )}
                       </div>
                     </Link>
                   );

@@ -2,13 +2,13 @@
 
 import { Megaphone } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { getActiveAnnouncements } from "@/lib/queries";
 
 const SPEED_PX_PER_SEC = 70; // ganti di sini kalau mau lebih cepet/lambat
 const MIN_COPIES = 2; // minimal 2 salinan biar loop selalu punya "pasangan"
 
-export function RunningText() {
-  const [items, setItems] = useState<string[]>([]);
+/** Teks pengumuman aktif diambil di server (layout) dan dilempar sebagai prop,
+ *  supaya komponen client ini tidak menarik supabase-js. */
+export function RunningText({ items }: { items: string[] }) {
   const [paused, setPaused] = useState(false);
   // Jumlah salinan teks yang di-render, dihitung dinamis dari lebar
   // container vs lebar 1 teks — supaya track SELALU penuh dari ujung ke
@@ -26,26 +26,6 @@ export function RunningText() {
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    // Ambil semua pengumuman aktif dari database (urut sort_order).
-    // Marquee menampilkan SEMUA teks, dipisahkan bullet — bukan satu teks hardcode.
-    getActiveAnnouncements()
-      .then((texts) => {
-        if (cancelled) return;
-        setItems(texts.map((t) => t.trim()).filter(Boolean));
-      })
-      .catch((err) => {
-        console.error("Failed to load announcements:", err);
-        if (!cancelled) setItems([]);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // Ukur lebar 1 salinan teks, lalu tentukan berapa banyak salinan yang
   // dibutuhkan supaya (jumlah salinan - 1) * itemWidth >= lebar container.

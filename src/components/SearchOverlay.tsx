@@ -4,8 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Clock, FileText, MagnifyingGlass, X } from "@/components/Icons";
-import { groupSearchResults, searchAllContent } from "@/lib/queries";
-import type { SearchItem } from "@/lib/queries";
+import type { SearchGroup } from "@/lib/queries/search";
 import { KIND_META, formatSearchDate } from "@/components/SearchMeta";
 
 type Status = "idle" | "loading" | "done";
@@ -30,7 +29,8 @@ export default function SearchOverlay({
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchItem[]>([]);
+  const [groups, setGroups] = useState<SearchGroup[]>([]);
+  const [count, setCount] = useState(0);
   const [status, setStatus] = useState<Status>("idle");
   /** Istilah yang SUDAH menghasilkan — dipakai statusText & pengumuman SR. */
   const [searchedQuery, setSearchedQuery] = useState("");
@@ -65,13 +65,28 @@ export default function SearchOverlay({
     const timer = window.setTimeout(async () => {
       setStatus("loading");
       const requestId = (requestIdRef.current += 1);
-      const items = await searchAllContent(term);
-      if (cancelled || requestId !== requestIdRef.current) return; // jawaban basi
-      setResults(items);
-      setStatus("done");
-      setSearchedQuery(term);
-      lastSearchedRef.current = term;
-      setActiveIndex(-1); // sorotan di-reset tiap hasil baru
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(term)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        // Jawaban bisa datang dari permintaan lama (basi) — nomor urut menjaga.
+        const data = (await res.json()) as { groups: SearchGroup[]; count: number };
+        if (cancelled || requestId !== requestIdRef.current) return; // jawaban basi
+        setGroups(data.groups);
+        setCount(data.count);
+        setStatus("done");
+        setSearchedQuery(term);
+        lastSearchedRef.current = term;
+        setActiveIndex(-1); // sorotan di-reset tiap hasil baru
+      } catch {
+        if (!cancelled && requestId === requestIdRef.current) {
+          setGroups([]);
+          setCount(0);
+          setStatus("done");
+          setSearchedQuery(term);
+          lastSearchedRef.current = term;
+          setActiveIndex(-1);
+        }
+      }
     }, 300);
 
     return () => {
@@ -80,7 +95,6 @@ export default function SearchOverlay({
     };
   }, [query, open]);
 
-  const groups = groupSearchResults(results);
   // List datar untuk navigasi ↑/↓ melintasi kelompok.
   const flat = groups.flatMap((g) => g.items);
 
@@ -88,7 +102,8 @@ export default function SearchOverlay({
     requestIdRef.current += 1; // batalkan permintaan yang masih melayang
     lastSearchedRef.current = "";
     setQuery("");
-    setResults([]);
+    setGroups([]);
+    setCount(0);
     setStatus("idle");
     setSearchedQuery("");
     setActiveIndex(-1);
@@ -105,8 +120,8 @@ export default function SearchOverlay({
       ? "Mencari…"
       : status === "idle"
         ? "Masukkan kata kunci untuk mulai mencari."
-        : results.length > 0
-          ? `${results.length} hasil untuk “${searchedQuery}”`
+        : count > 0
+          ? `${count} hasil untuk “${searchedQuery}”`
           : `Tidak ada hasil untuk “${searchedQuery}”`;
 
   // Navigasi keyboard pada list hasil (dipakai saat fokus di input).

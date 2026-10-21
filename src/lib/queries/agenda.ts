@@ -34,6 +34,15 @@ export async function getActiveAgendaEvents(): Promise<AgendaEvent[]> {
   return (data || []) as AgendaEvent[];
 }
 
+/** Acara yang belum dimulai (event_date > `now`) — helper murni supaya
+ *  komponen server tidak memanggil Date.now() langsung di badan render. */
+export function filterUpcomingEvents(
+  events: AgendaEvent[],
+  now: Date = new Date()
+): AgendaEvent[] {
+  return events.filter((e) => new Date(e.event_date).getTime() > now.getTime());
+}
+
 export async function createAgendaEvent(title: string, event_date: string): Promise<{ error?: string }> {
   const { error } = await supabase.from("agenda_events").insert({ title, event_date });
   if (error) return { error: error.message };

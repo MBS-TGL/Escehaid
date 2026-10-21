@@ -1,7 +1,7 @@
 "use client";
 
 import { Input, Select, DatePicker } from "@/components/ui";
-import { spmbAnswerKey } from "@/lib/queries";
+import { spmbAnswerKey } from "@/lib/helpers";
 import { SPMB_CHECK_SEP } from "@/lib/spmb-registration";
 import type { SpmbFormField } from "@/lib/supabase";
 

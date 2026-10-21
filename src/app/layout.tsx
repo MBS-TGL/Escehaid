@@ -8,6 +8,7 @@ import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { DEFAULT_THEME } from "@/lib/settings/theme";
 import { getSchoolProfile } from "@/lib/queries/profile";
+import { getActiveAnnouncements } from "@/lib/queries/announcements";
 
 const jakartaSans = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -104,7 +105,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Dibagi dengan pembacaan di dalam getSiteSettings (React `cache`) — tetap
   // satu query profil per request. Diteruskan ke PublicShell → Footer
   // (nomor WhatsApp panitia SPMB + badge akreditasi).
-  const [settings, profile] = await Promise.all([getSiteSettings(), getSchoolProfile()]);
+  const [settings, profile, rawAnnouncements] = await Promise.all([
+    getSiteSettings(),
+    getSchoolProfile(),
+    getActiveAnnouncements(),
+  ]);
+  const announcements = rawAnnouncements.map((t) => t.trim()).filter(Boolean);
   const { values, theme } = settings;
 
   const schoolName = values.site_name.trim() || "SMP Muhammadiyah 4 Tanggul";
@@ -236,7 +242,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           `}
         </Script>
         <ToastProvider>
-          <PublicShell profile={profile} brand={toPublicBrand(settings)}>
+          <PublicShell profile={profile} brand={toPublicBrand(settings)} announcements={announcements}>
             {children}
           </PublicShell>
         </ToastProvider>

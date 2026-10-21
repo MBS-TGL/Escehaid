@@ -102,11 +102,7 @@ export function checkAttachment(file: File): string | null {
   return null;
 }
 
-/** Label jenis lampiran dari ekstensi, mis. "PDF", "DOCX". */
-export function attachmentKind(name?: string | null): string {
-  const ext = (name || "").split(".").pop()?.toUpperCase() || "FILE";
-  return ext.length <= 5 ? ext : "FILE";
-}
+export { attachmentKind } from "../helpers";
 
 export async function uploadNewsAttachment(
   file: File,

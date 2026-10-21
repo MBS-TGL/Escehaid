@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { CalendarBlank } from "@/components/Icons";
-import { getActiveAgendaEvents } from "@/lib/queries";
-import type { AgendaEvent } from "@/lib/queries";
+import type { AgendaEvent } from "@/lib/queries/agenda";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -105,24 +104,11 @@ function Countdown({ target }: { target: string }) {
 /*  Main section                                                       */
 /* ------------------------------------------------------------------ */
 
-export default function CountdownEvent() {
-  const [events, setEvents] = useState<AgendaEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+/** Acara agenda disiapkan di server (src/app/page.tsx) dan dilempar sebagai
+ *  prop — komponen ini tidak lagi memanggil Supabase dari browser. */
+export default function CountdownEvent({ events }: { events: AgendaEvent[] }) {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
-
-  /* ---------- Fetch & filter past events ---------- */
-  useEffect(() => {
-    getActiveAgendaEvents()
-      .then((items) => {
-        const upcoming = items.filter(
-          (e) => new Date(e.event_date).getTime() > Date.now(),
-        );
-        setEvents(upcoming);
-      })
-      .catch(() => setEvents([]))
-      .finally(() => setLoading(false));
-  }, []);
 
   /* ---------- Auto-rotate (8 s) ---------- */
   useEffect(() => {
@@ -163,7 +149,6 @@ export default function CountdownEvent() {
   );
 
   /* ---------- Early returns ---------- */
-  if (loading) return null;
   if (events.length === 0) return null;
 
   const current = events[active];

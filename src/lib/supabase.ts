@@ -1,9 +1,35 @@
 import { createBrowserClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-export const supabase = createBrowserClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_ANON_KEY!
-);
+/**
+ * Client browser dibuat LAZY lewat Proxy — `createBrowserClient()` tidak
+ * dijalankan saat modul di-load, hanya pada akses properti pertama. Efeknya:
+ * modul queries yang ikut ter-bundle di sisi client (via barrel) tidak lagi
+ * memicu inisialisasi supabase-js bila fungsinya tak pernah dipanggil di
+ * browser, dan RSC tidak mengeksekusi side-effect browser saat import.
+ */
+let browserClient: SupabaseClient | null = null;
+
+function getBrowserClient(): SupabaseClient {
+  if (!browserClient) {
+    browserClient = createBrowserClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_ANON_KEY!
+    );
+  }
+  return browserClient;
+}
+
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    const client = getBrowserClient() as unknown as Record<string | symbol, unknown>;
+    const value = client[prop];
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+  has(_target, prop) {
+    return prop in (getBrowserClient() as unknown as object);
+  },
+});
 
 export interface SchoolProfile {
   id: string;
