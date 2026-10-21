@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import type { Metadata } from "next";
-import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock, Quotes, MoonStars } from "@/components/Icons";
+import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock, Quotes } from "@/components/Icons";
 import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList, getActiveAgendaEvents, filterUpcomingEvents } from "@/lib/queries";
 import { detectPrincipalGreeting, keepTogether } from "@/lib/principal-quote";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
@@ -804,20 +804,19 @@ export default async function Home() {
               <h3 className="text-lg font-bold text-[var(--brand-primary)]">Agenda harian santri</h3>
               <span className="text-sm text-slate-500">dari dini hari hingga istirahat malam</span>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {BLOCKS.map((block) => (
                 <Link
                   key={block.key}
                   href="/program#agenda"
                   className="group flex flex-col rounded-2xl bg-[var(--surface-muted)] p-5 transition-all hover:-translate-y-0.5 hover:bg-[var(--brand-primary)] hover:shadow-lg hover:shadow-[var(--brand-primary)]/10 motion-safe:duration-300"
                 >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-3 py-1 text-[11px] font-semibold text-white transition-colors group-hover:bg-white group-hover:text-[var(--brand-primary)]">
-                      <MoonStars className="h-3 w-3" aria-hidden="true" />
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-[var(--brand-primary)] px-2.5 py-1 text-[11px] font-semibold text-white transition-colors group-hover:bg-white group-hover:text-[var(--brand-primary)]">
                       {block.title}
                     </span>
-                    <span className="whitespace-nowrap rounded-full border border-[#dce3ed] bg-white px-2.5 py-1 text-[11px] font-semibold tabular-nums text-[var(--brand-primary)] transition-colors group-hover:border-white/30 group-hover:bg-white/10 group-hover:text-white">
-                      {block.timeLabel}
+                    <span className="min-w-0 overflow-hidden text-ellipsis rounded-full border border-[#dce3ed] bg-white px-2.5 py-1 text-[11px] font-semibold tabular-nums text-[var(--brand-primary)] transition-colors group-hover:border-white/30 group-hover:bg-white/10 group-hover:text-white">
+                      <span className="whitespace-nowrap">{block.timeLabel}</span>
                     </span>
                   </div>
                   <p className="mt-3 text-[13px] leading-relaxed text-slate-600 line-clamp-3 transition-colors group-hover:text-white/80">
