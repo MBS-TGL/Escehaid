@@ -1,8 +1,21 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from "react";
 import { CalendarBlank } from "@/components/Icons";
 import type { AgendaEvent } from "@/lib/queries/agenda";
+
+/** Flag "sudah mount" — false saat SSR/hidrasi (pola HeroBackground/CSSAnimations),
+ *  agar digit countdown (jam-jalan) tidak membuat hydration mismatch. */
+function subscribeNoop(): () => void {
+  return () => {};
+}
+function useMounted(): boolean {
+  return useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -40,11 +53,12 @@ function formatEventDate(dateStr: string) {
 /*  Countdown (isolated per-second re-renders)                         */
 /* ------------------------------------------------------------------ */
 
-function Unit({ value, label }: { value: number; label: string }) {
+function Unit({ value, label }: { value: number | string; label: string }) {
+  const text = typeof value === "number" ? String(value).padStart(2, "0") : value;
   return (
     <div className="flex flex-col items-center">
       <span className="flex h-14 w-14 items-center justify-center rounded-xl bg-white/15 text-2xl font-bold tabular-nums text-white md:h-16 md:w-16 md:backdrop-blur-sm md:text-3xl">
-        {String(value).padStart(2, "0")}
+        {text}
       </span>
       <span className="mt-1.5 text-[11px] font-semibold uppercase tracking-wider text-white/70">
         {label}
@@ -54,6 +68,7 @@ function Unit({ value, label }: { value: number; label: string }) {
 }
 
 function Countdown({ target }: { target: string }) {
+  const mounted = useMounted();
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -63,10 +78,12 @@ function Countdown({ target }: { target: string }) {
     return () => clearInterval(timer);
   }, [target]);
 
-  const time = calcTimeLeft(target, now);
+  // Sebelum hidrasi tuntas: render placeholder tetap ("--") — nilai jam nyata
+  // berubah antara awal-mula server dan klien sehingga digit memicu mismatch.
+  const time = mounted ? calcTimeLeft(target, now) : null;
 
-  // Static sr-only text updated at most per minute (not per second)
   const srText = useMemo(() => {
+    if (!time) return "Memuat waktu tersisa…";
     if (time.ended) return "Acara telah dimulai";
     const parts: string[] = [];
     if (time.days > 0) parts.push(`${time.days} hari`);
@@ -74,9 +91,9 @@ function Countdown({ target }: { target: string }) {
     if (time.minutes > 0) parts.push(`${time.minutes} menit`);
     if (parts.length === 0) parts.push("kurang dari 1 menit");
     return `${parts.join(" ")} lagi`;
-  }, [time.ended, time.days, time.hours, time.minutes]);
+  }, [time]);
 
-  if (time.ended) {
+  if (time && time.ended) {
     return (
       <div className="mt-8 flex items-center justify-center">
         <p className="text-lg font-semibold text-white/80">Acara telah dimulai</p>
@@ -84,17 +101,19 @@ function Countdown({ target }: { target: string }) {
     );
   }
 
+  const digits = time ?? { days: "--", hours: "--", minutes: "--", seconds: "--", ended: false };
+
   return (
     <div className="mt-8">
       <span className="sr-only">{srText}</span>
       <div className="flex items-center justify-center gap-3 md:gap-4" aria-hidden="true">
-        <Unit value={time.days} label="Hari" />
+        <Unit value={digits.days} label="Hari" />
         <span className="mt-[-12px] text-2xl font-bold text-white/40">:</span>
-        <Unit value={time.hours} label="Jam" />
+        <Unit value={digits.hours} label="Jam" />
         <span className="mt-[-12px] text-2xl font-bold text-white/40">:</span>
-        <Unit value={time.minutes} label="Menit" />
+        <Unit value={digits.minutes} label="Menit" />
         <span className="mt-[-12px] text-2xl font-bold text-white/40">:</span>
-        <Unit value={time.seconds} label="Detik" />
+        <Unit value={digits.seconds} label="Detik" />
       </div>
     </div>
   );
