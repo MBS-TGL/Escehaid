@@ -4,7 +4,7 @@ import type { SpmbWave } from "../supabase";
 export async function getPublishedWaves(): Promise<SpmbWave[]> {
   const { data, error } = await supabase
     .from("spmb_waves")
-    .select("*")
+    .select("id, name, start_date, end_date, note")
     .eq("is_published", true)
     .order("sort_order", { ascending: true })
     .order("start_date", { ascending: true });

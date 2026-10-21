@@ -12,7 +12,7 @@ import { uploadFileViaRoute } from "../storage-remote";
 export async function getTeacherList(limit?: number): Promise<Teacher[]> {
   let query = supabase
     .from("teachers")
-    .select("*")
+    .select("id, name, position, photo_url")
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
 
@@ -24,7 +24,7 @@ export async function getTeacherList(limit?: number): Promise<Teacher[]> {
     console.error("Error fetching teachers:", error);
     return [];
   }
-  return data || [];
+  return (data || []) as Teacher[];
 }
 
 // ============ FACILITIES ============

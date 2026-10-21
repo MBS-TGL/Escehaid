@@ -117,19 +117,4 @@ export async function getUnreadMessageCount(): Promise<number> {
   return count || 0;
 }
 
-export async function getRecentUnreadMessages(limit = 5): Promise<ContactMessage[]> {
-  const { data, error } = await supabase
-    .from("contact_messages")
-    .select("*")
-    .eq("is_read", false)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    console.error("Error fetching recent unread messages:", error);
-    return [];
-  }
-  return data || [];
-}
-
 // ============ USER PROFILES ============

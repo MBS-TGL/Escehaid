@@ -24,7 +24,7 @@ export default function HeroVideoModal({
         aria-label="Tonton video profil sekolah dengan suara"
       >
         <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[var(--brand-primary)] shadow-xs transition-transform group-hover:scale-110">
-          <Play weight="fill" className="h-3.5 w-3.5 translate-x-0.5" />
+          <Play weight="fill" className="h-3.5 w-3.5" />
         </span>
         <span>Tonton Video Profil</span>
       </button>

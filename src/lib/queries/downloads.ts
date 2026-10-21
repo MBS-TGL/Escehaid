@@ -50,7 +50,7 @@ export function checkDownloadFile(file: File): string | null {
 export async function getDownloadList(): Promise<Download[]> {
   const { data, error } = await supabase
     .from("downloads")
-    .select("*")
+    .select("id, title, description, category, file_url, file_name, file_size")
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
@@ -58,7 +58,7 @@ export async function getDownloadList(): Promise<Download[]> {
     console.error("Error fetching downloads:", error);
     return [];
   }
-  return data || [];
+  return (data || []) as Download[];
 }
 
 /**

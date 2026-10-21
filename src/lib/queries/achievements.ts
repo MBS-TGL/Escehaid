@@ -23,7 +23,11 @@ export async function getAchievementList(
   opts?: { featuredFirst?: boolean; limit?: number }
 ): Promise<Achievement[]> {
   const term = sanitizeSearchTerm(search ?? "");
-  let query = supabase.from("achievements").select("*");
+  const hasVideo = await achievementsHasVideoColumn();
+  const columns =
+    "id, title, description, category, year, image_url, sort_order, created_at, rank_label, level, participants, organizer, is_featured, image_alt" +
+    (hasVideo ? ", video_url" : "");
+  let query = supabase.from("achievements").select(columns);
 
   if (opts?.featuredFirst) {
     query = query
@@ -43,7 +47,7 @@ export async function getAchievementList(
     console.error("Error fetching achievements:", error);
     return [];
   }
-  return data || [];
+  return (data || []) as unknown as Achievement[];
 }
 
 /** Varian panel admin: lempar saat query gagal agar panel bisa

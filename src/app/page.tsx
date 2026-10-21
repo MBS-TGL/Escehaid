@@ -65,6 +65,34 @@ const FACILITY_FALLBACKS: Record<string, string> = {
   "Lapangan Olahraga": "/images/Lapangan-Olahraga.jpg",
 };
 
+/**
+ * Layout bento grid fasilitas beranda:
+ * 5 item: 1 foto besar di kiri (span 2 kolom, 2 baris di desktop) + 4 foto kecil di kanan (2x2).
+ * Di mobile: foto besar span 2 kolom di baris pertama, sisanya 2 kolom di bawahnya.
+ * Adaptasi dinamis untuk total < 5 item agar tidak ada kotak kosong.
+ */
+function bentoSpanClass(index: number, total: number): string {
+  if (total >= 5) {
+    if (index === 0) {
+      return "col-span-2 lg:col-span-2 lg:row-span-2 min-h-[260px] sm:min-h-[320px] lg:min-h-[440px]";
+    }
+    return "col-span-1 lg:col-span-1 lg:row-span-1 min-h-[170px] sm:min-h-[190px] lg:min-h-[210px]";
+  }
+  if (total === 4) {
+    return "col-span-1 lg:col-span-1 min-h-[180px] sm:min-h-[220px] lg:min-h-[260px]";
+  }
+  if (total === 3) {
+    if (index === 0) {
+      return "col-span-2 lg:col-span-2 lg:row-span-2 min-h-[260px] sm:min-h-[320px] lg:min-h-[440px]";
+    }
+    return "col-span-1 lg:col-span-2 lg:row-span-1 min-h-[170px] sm:min-h-[190px] lg:min-h-[210px]";
+  }
+  if (total === 2) {
+    return "col-span-2 sm:col-span-1 lg:col-span-2 min-h-[220px] sm:min-h-[260px] lg:min-h-[320px]";
+  }
+  return "col-span-2 lg:col-span-4 min-h-[280px] sm:min-h-[360px]";
+}
+
 const SALAM_BUKA = "Assalamu'alaikum Warahmatullahi Wabarakatuh.";
 const SALAM_TUTUP = "Wassalamu'alaikum Warahmatullahi Wabarakatuh.";
 const PRINCIPAL_QUOTE_FALLBACK =
@@ -89,12 +117,12 @@ type NewsItem = { id: string | number; slug: string; title: string; summary: str
 
 export default async function Home() {
   // Batasi jumlah baris sesuai yang benar-benar dipakai beranda (berita/kegiatan/
-  // artikel 4, fasilitas 3, prestasi 6, guru 12) supaya payload & waktu render
+  // artikel 4, fasilitas 5, prestasi 6, guru 12) supaya payload & waktu render
   // ulang ISR lebih ringan — terutama saat dibuka dari HP.
   const [beritaRaw, dbFacilities, activities, articles, teachers, profile, achievements, settings] =
     await Promise.all([
       getNewsList(4) as Promise<NewsItem[]>,
-      getFacilityList(3),
+      getFacilityList(5),
       getActivityList(4),
       getArticleList(4),
       getTeacherList(12),
@@ -397,9 +425,7 @@ export default async function Home() {
                   <h3 className="text-lg font-bold text-[var(--brand-primary)]">Berita</h3>
                   <div className="mt-1.5 h-1 w-10 rounded-full bg-[var(--brand-highlight)]" />
                 </div>
-                {/* Tanpa flex-1: sisa ruang kolom jatuh SETELAH tombol, bukan
-                    memecah jarak antara kartu berita dan "Selengkapnya". */}
-                <div className="flex flex-col">
+                <div className="flex flex-1 flex-col justify-between">
                   {beritaRaw.length === 0 ? (
                     <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-[#dce3ed] bg-[#f4f7fb] py-10 text-center">
                       <Megaphone className="h-9 w-9 text-[var(--brand-primary)]/15" />
@@ -407,10 +433,10 @@ export default async function Home() {
                       <p className="mt-0.5 text-xs text-slate-400">Nantikan informasi terbaru dari sekolah</p>
                     </div>
                   ) : (
-                    <>
+                    <div>
                       <Link
                         href={`/news/${beritaRaw[0].slug}`}
-                        className="group block overflow-hidden rounded-xl border border-[#dce3ed] bg-white transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+                        className="group block overflow-hidden rounded-xl"
                       >
                         <div className="relative aspect-[4/3] overflow-hidden bg-[#f4f7fb]">
                           {beritaRaw[0]?.image_url ? (
@@ -426,24 +452,22 @@ export default async function Home() {
                               <Megaphone className="h-12 w-12 text-[var(--brand-primary)]/10" />
                             </div>
                           )}
-                        </div>
-                        <div className="p-3.5">
-                          <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${NEWS_BADGE(beritaRaw[0]?.category)}`}>
-                            {newsCategory(beritaRaw[0]?.category).label || "Berita"}
-                          </span>
-                          <h4 className="mt-2 line-clamp-2 text-sm font-bold text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)]">
-                            {beritaRaw[0]?.title || "Berita terbaru sekolah"}
-                          </h4>
-                          {beritaRaw[0]?.summary && (
-                            <p className="mt-1 line-clamp-2 text-xs text-slate-600">{beritaRaw[0].summary}</p>
-                          )}
-                          <div className="mt-2 flex items-center gap-1 text-[10px] text-slate-400">
-                            <Clock className="h-3 w-3" />
-                            {beritaRaw[0]?.published_at ? new Date(beritaRaw[0].published_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"}
+                          <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/85 via-[var(--brand-primary)]/25 to-transparent" />
+                          <div className="absolute bottom-0 left-0 right-0 p-3.5">
+                            <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur-xs ${NEWS_BADGE(beritaRaw[0]?.category)}`}>
+                              {newsCategory(beritaRaw[0]?.category).label || "Berita"}
+                            </span>
+                            <h4 className="mt-1.5 line-clamp-2 text-sm font-semibold text-white drop-shadow-xs">
+                              {beritaRaw[0]?.title || "Berita terbaru sekolah"}
+                            </h4>
+                            <div className="mt-1.5 flex items-center gap-1 text-[10px] text-white/70">
+                              <Clock className="h-3 w-3" />
+                              {beritaRaw[0]?.published_at ? new Date(beritaRaw[0].published_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"}
+                            </div>
                           </div>
                         </div>
                       </Link>
-                      <div className="mt-6 space-y-3">
+                      <div className="mt-2.5 space-y-2.5">
                         {beritaRaw.slice(1, 3).map((item) => (
                           <Link key={item.id} href={`/news/${item.slug}`} className="group flex gap-2.5">
                             <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f4f7fb]">
@@ -462,12 +486,12 @@ export default async function Home() {
                           </Link>
                         ))}
                       </div>
-                    </>
+                    </div>
                   )}
+                  <Link href="/news" className="mt-4 inline-flex items-center justify-center rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[var(--brand-accent)]">
+                    Selengkapnya
+                  </Link>
                 </div>
-                <Link href="/news" className="mt-4 inline-flex items-center justify-center rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[var(--brand-accent)]">
-                  Selengkapnya
-                </Link>
               </div>
             </CSSFadeIn>
 
@@ -478,7 +502,7 @@ export default async function Home() {
                   <h3 className="text-lg font-bold text-[var(--brand-primary)]">Kegiatan Sekolah</h3>
                   <div className="mt-1.5 h-1 w-10 rounded-full bg-[var(--brand-highlight)]" />
                 </div>
-                <div className="flex flex-1 flex-col">
+                <div className="flex flex-1 flex-col justify-between">
                   {activities.length === 0 ? (
                     <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-[#dce3ed] bg-[#f4f7fb] py-10 text-center">
                       <CalendarBlank className="h-9 w-9 text-[var(--brand-primary)]/15" />
@@ -486,8 +510,8 @@ export default async function Home() {
                       <p className="mt-0.5 text-xs text-slate-400">Nantikan info kegiatan dari sekolah kami</p>
                     </div>
                   ) : (
-                    <>
-                      <Link href="/activities" className="group block overflow-hidden rounded-xl">
+                    <div>
+                      <Link href={`/activities/${activities[0]?.slug || ""}`} className="group block overflow-hidden rounded-xl">
                         <div className="relative aspect-[4/3] overflow-hidden bg-[#f4f7fb]">
                           {activities[0]?.image_url ? (
                             <Image src={activities[0].image_url} alt={activities[0].title} fill sizes="(max-width: 768px) 100vw, 320px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -496,10 +520,14 @@ export default async function Home() {
                               <CalendarBlank className="h-12 w-12 text-[var(--brand-primary)]/10" />
                             </div>
                           )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/80 via-[var(--brand-primary)]/20 to-transparent" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/85 via-[var(--brand-primary)]/25 to-transparent" />
                           <div className="absolute bottom-0 left-0 right-0 p-3.5">
-                            <p className="text-[10px] font-bold text-white/70">Kegiatan</p>
-                            <h4 className="mt-0.5 line-clamp-2 text-sm font-semibold text-white">{activities[0]?.title || "Kegiatan sekolah terbaru"}</h4>
+                            <span className="inline-flex items-center rounded-md border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white/90 backdrop-blur-xs">
+                              {activities[0]?.activity_type || "Kegiatan"}
+                            </span>
+                            <h4 className="mt-1.5 line-clamp-2 text-sm font-semibold text-white drop-shadow-xs">
+                              {activities[0]?.title || "Kegiatan sekolah terbaru"}
+                            </h4>
                           </div>
                         </div>
                       </Link>
@@ -522,68 +550,96 @@ export default async function Home() {
                           </Link>
                         ))}
                       </div>
-                    </>
+                    </div>
                   )}
+                  <Link href="/activities" className="mt-4 inline-flex items-center justify-center rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[var(--brand-accent)]">
+                    Selengkapnya
+                  </Link>
                 </div>
-                <Link href="/activities" className="mt-4 inline-flex items-center justify-center rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[var(--brand-accent)]">
-                  Selengkapnya
-                </Link>
               </div>
             </CSSFadeIn>
 
-            {/* Fasilitas */}
+            {/* Artikel */}
             <CSSFadeIn delay={0.1}>
               <div className="flex h-full flex-col">
                 <div className="mb-4">
-                  <h3 className="text-lg font-bold text-[var(--brand-primary)]">Fasilitas</h3>
+                  <h3 className="text-lg font-bold text-[var(--brand-primary)]">Artikel</h3>
                   <div className="mt-1.5 h-1 w-10 rounded-full bg-[var(--brand-highlight)]" />
                 </div>
-                <div className="flex flex-1 flex-col">
-                  {dbFacilities.length === 0 ? (
+                <div className="flex flex-1 flex-col justify-between">
+                  {articles.length === 0 ? (
                     <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-[#dce3ed] bg-[#f4f7fb] py-10 text-center">
-                      <ImageSquare className="h-9 w-9 text-[var(--brand-primary)]/15" />
-                      <p className="mt-2.5 text-sm font-medium text-slate-500">Belum ada fasilitas</p>
-                      <p className="mt-0.5 text-xs text-slate-400">Fasilitas sekolah akan segera ditambahkan</p>
+                      <BookOpen className="h-9 w-9 text-[var(--brand-primary)]/15" />
+                      <p className="mt-2.5 text-sm font-medium text-slate-500">Belum ada artikel</p>
+                      <p className="mt-0.5 text-xs text-slate-400">Nantikan tulisan dan tips dari kami</p>
                     </div>
                   ) : (
-                    <>
-                      <Link href="/profile#fasilitas" className="group block overflow-hidden rounded-xl">
-                        <div className="relative aspect-[4/3] overflow-hidden bg-[#f4f7fb]">
-                          {dbFacilities[0]?.image_url ? (
-                            <Image src={dbFacilities[0].image_url} alt={dbFacilities[0].name} fill sizes="(max-width: 768px) 100vw, 320px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
-                          ) : (
-                            <Image src={FACILITY_FALLBACKS[dbFacilities[0]?.name] || "/images/Ruang-Kelas.jpg"} alt={dbFacilities[0]?.name || "Fasilitas"} fill sizes="(max-width: 768px) 100vw, 320px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
-                          )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/80 via-[var(--brand-primary)]/20 to-transparent" />
-                          <div className="absolute bottom-0 left-0 right-0 p-3.5">
-                            <p className="text-[10px] font-bold text-white/70">Fasilitas</p>
-                            <h4 className="mt-0.5 line-clamp-2 text-sm font-semibold text-white">{dbFacilities[0]?.name || "Fasilitas sekolah"}</h4>
+                    <div>
+                      {/* Kartu Unggulan Artikel (Editorial Card aspect-[4/3] Seragam) */}
+                      <Link
+                        href={`/articles/${articles[0].slug}`}
+                        className="group relative block aspect-[4/3] overflow-hidden rounded-xl bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[#0c3e75] p-3.5 sm:p-4 text-white shadow-sm transition-all hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+                      >
+                        {/* Watermark dekoratif halus */}
+                        <div className="pointer-events-none absolute -right-3 -top-3 text-white/[0.07] transition-transform duration-500 group-hover:scale-110">
+                          <BookOpen className="h-28 w-28 -rotate-12" />
+                        </div>
+                        <div className="relative z-10 flex h-full flex-col justify-between">
+                          <div>
+                            <span className="inline-flex items-center rounded-md border border-[var(--brand-highlight)]/30 bg-[var(--brand-highlight)]/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-highlight)]">
+                              {capitalizeCategory(articles[0].category)}
+                            </span>
+                            <h4 className="mt-2 line-clamp-3 text-sm font-semibold text-white drop-shadow-xs transition-colors group-hover:text-[var(--brand-highlight)]">
+                              {articles[0].title}
+                            </h4>
+                            {articles[0].excerpt && (
+                              <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-white/70">
+                                {articles[0].excerpt}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between border-t border-white/10 pt-2 text-[10px] text-white/60">
+                            <span className="line-clamp-1 font-medium">oleh {articles[0].author_name ?? "Tim MBS"}</span>
+                            {articles[0].published_at && (
+                              <span className="shrink-0">
+                                {new Date(articles[0].published_at).toLocaleDateString("id-ID", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </Link>
+
+                      {/* 2 Item Daftar Kecil */}
                       <div className="mt-2.5 space-y-2.5">
-                        {dbFacilities.slice(1, 3).map((f) => (
-                          <Link key={f.id} href="/profile#fasilitas" className="group flex gap-2.5">
-                            <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[#f4f7fb]">
-                              {f.image_url ? (
-                                <Image src={f.image_url} alt={f.name} width={56} height={56} sizes="56px" className="h-full w-full object-cover" />
-                              ) : (
-                                <Image src={FACILITY_FALLBACKS[f.name] || "/images/Ruang-Kelas.jpg"} alt={f.name} width={56} height={56} sizes="56px" className="h-full w-full object-cover" />
-                              )}
+                        {articles.slice(1, 3).map((item) => (
+                          <Link key={item.id} href={`/articles/${item.slug}`} className="group flex gap-2.5">
+                            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-[#dce3ed]/80 bg-[#f4f7fb] text-[var(--brand-accent)] transition-colors group-hover:border-[var(--brand-accent)]/30 group-hover:bg-blue-50/50">
+                              <BookOpen className="h-6 w-6 text-[var(--brand-primary)]/25 transition-colors group-hover:text-[var(--brand-accent)]" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-[10px] text-slate-400">Fasilitas</p>
-                              <h5 className="mt-0.5 line-clamp-2 text-xs font-medium text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)]">{f.name}</h5>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand-accent)]">
+                                {capitalizeCategory(item.category)}
+                              </p>
+                              <h5 className="mt-0.5 line-clamp-2 text-xs font-medium text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)]">
+                                {item.title}
+                              </h5>
                             </div>
                           </Link>
                         ))}
                       </div>
-                    </>
+                    </div>
                   )}
+                  <Link
+                    href="/articles"
+                    className="mt-4 inline-flex items-center justify-center rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[var(--brand-accent)]"
+                  >
+                    Selengkapnya
+                  </Link>
                 </div>
-                <Link href="/profile#fasilitas" className="mt-4 inline-flex items-center justify-center rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[var(--brand-accent)]">
-                  Selengkapnya
-                </Link>
               </div>
             </CSSFadeIn>
 
@@ -594,7 +650,7 @@ export default async function Home() {
                   <h3 className="text-lg font-bold text-[var(--brand-primary)]">Prestasi</h3>
                   <div className="mt-1.5 h-1 w-10 rounded-full bg-[var(--brand-highlight)]" />
                 </div>
-                <div className="flex flex-1 flex-col">
+                <div className="flex flex-1 flex-col justify-between">
                   {achievementsSorted.length === 0 ? (
                     <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-[#dce3ed] bg-[#f4f7fb] py-10 text-center">
                       <Trophy className="h-9 w-9 text-[var(--brand-primary)]/15" />
@@ -602,7 +658,7 @@ export default async function Home() {
                       <p className="mt-0.5 text-xs text-slate-400">Prestasi siswa akan segera ditampilkan</p>
                     </div>
                   ) : (
-                    <>
+                    <div>
                       <Link href="/achievements" className="group block overflow-hidden rounded-xl">
                         <div className="relative aspect-[4/3] overflow-hidden bg-[#f4f7fb]">
                           {achievementsSorted[0]?.image_url ? (
@@ -612,10 +668,14 @@ export default async function Home() {
                               <PrestasiIcon category={achievementsSorted[0]?.category} className="h-12 w-12 text-[var(--brand-primary)]/10" />
                             </div>
                           )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/80 via-[var(--brand-primary)]/20 to-transparent" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/85 via-[var(--brand-primary)]/25 to-transparent" />
                           <div className="absolute bottom-0 left-0 right-0 p-3.5">
-                            <p className="text-[10px] font-bold text-white/70">{prestasiMeta(achievementsSorted[0])}</p>
-                            <h4 className="mt-0.5 line-clamp-2 text-sm font-semibold text-white">{achievementsSorted[0]?.title || "Prestasi sekolah"}</h4>
+                            <span className="inline-flex items-center rounded-md border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white/90 backdrop-blur-xs">
+                              {prestasiMeta(achievementsSorted[0]) || "Prestasi"}
+                            </span>
+                            <h4 className="mt-1.5 line-clamp-2 text-sm font-semibold text-white drop-shadow-xs">
+                              {achievementsSorted[0]?.title || "Prestasi sekolah"}
+                            </h4>
                           </div>
                         </div>
                       </Link>
@@ -638,17 +698,92 @@ export default async function Home() {
                           </Link>
                         ))}
                       </div>
-                    </>
+                    </div>
                   )}
+                  <Link href="/achievements" className="mt-4 inline-flex items-center justify-center rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[var(--brand-accent)]">
+                    Selengkapnya
+                  </Link>
                 </div>
-                <Link href="/achievements" className="mt-4 inline-flex items-center justify-center rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[var(--brand-accent)]">
-                  Selengkapnya
-                </Link>
               </div>
             </CSSFadeIn>
           </div>
         </div>
       </section>
+
+      {/* ── FASILITAS SEKOLAH ──────────────────────────────── */}
+      {dbFacilities.length > 0 && (
+        <section className="bg-[#f4f7fb]" style={CV}>
+          <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
+            <CSSFadeIn>
+              <div className="mb-8 flex items-end justify-between md:mb-12">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Fasilitas</p>
+                  <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Fasilitas Sekolah</h2>
+                </div>
+                <Link
+                  href="/profile#fasilitas"
+                  className="hidden items-center gap-1.5 text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)] md:inline-flex"
+                >
+                  Lihat semua fasilitas <ArrowUpRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </CSSFadeIn>
+
+            <CSSFadeIn delay={0.05}>
+              <div className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
+                {dbFacilities.map((f, index) => {
+                  const imgSrc = f.image_url?.trim() || FACILITY_FALLBACKS[f.name];
+                  const isLarge = index === 0 && (dbFacilities.length >= 5 || dbFacilities.length === 3);
+                  return (
+                    <Link
+                      key={f.id}
+                      href="/profile#fasilitas"
+                      className={`group relative flex flex-col justify-end overflow-hidden rounded-2xl border border-black/5 bg-slate-900 shadow-sm transition-all hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${bentoSpanClass(index, dbFacilities.length)}`}
+                    >
+                      {imgSrc ? (
+                        <Image
+                          src={imgSrc}
+                          alt={f.name}
+                          fill
+                          sizes={
+                            isLarge
+                              ? "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 640px"
+                              : "(max-width: 768px) 50vw, (max-width: 1024px) 25vw, 320px"
+                          }
+                          priority={false}
+                          className="object-cover transition-transform duration-500 ease-out motion-safe:group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-light)] text-white/30 transition-transform duration-500 ease-out motion-safe:group-hover:scale-105">
+                          <ImageSquare className="h-12 w-12 text-white/25" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/90 via-[var(--brand-primary)]/25 to-transparent pointer-events-none" />
+                      <div className="relative z-10 p-4 sm:p-5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/70">
+                          Fasilitas
+                        </span>
+                        <h3 className={`mt-1 font-bold text-white leading-snug drop-shadow-sm ${isLarge ? "text-base sm:text-xl lg:text-2xl" : "text-sm sm:text-base line-clamp-2"}`}>
+                          {f.name}
+                        </h3>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </CSSFadeIn>
+
+            <div className="mt-6 md:hidden">
+              <Link
+                href="/profile#fasilitas"
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)]"
+              >
+                Lihat semua fasilitas <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── PROGRAM UNGGULAN ──────────────────────────────── */}
       <section className="bg-white" style={CV}>
@@ -718,42 +853,6 @@ export default async function Home() {
           <CSSFadeIn>
             <TeacherCarousel teachers={teachers.filter((t) => t.position !== "Kepala Sekolah")} />
           </CSSFadeIn>
-        </div>
-      </section>
-
-      {/* ── ARTIKEL ──────────────────────────────────────── */}
-      <section className="bg-[#f4f7fb]" style={CV}>
-        <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
-          <CSSFadeIn>
-            <div className="mb-12 flex items-end justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Artikel & Tips</p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Artikel Sekolah</h2>
-              </div>
-              <Link href="/articles" className="text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)]">
-                Semua artikel <ArrowUpRight className="inline h-4 w-4" />
-              </Link>
-            </div>
-          </CSSFadeIn>
-
-          <CSSStagger stagger={100} className="grid gap-6 md:grid-cols-2">
-            {articles.length === 0 ? (
-              <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white py-16 text-center">
-                <BookOpen className="h-12 w-12 text-[var(--brand-primary)]/20" />
-                <p className="mt-4 text-sm text-slate-500">Artikel masih kosong.</p>
-                <p className="mt-1 text-xs text-slate-400">Nantikan tulisan dan tips dari guru kami.</p>
-              </div>
-            ) : articles.map((item) => (
-              <Link key={item.slug} href={`/articles/${item.slug}`} className="group block rounded-2xl border border-[#dce3ed] bg-white p-6 transition-all hover:shadow-lg hover:shadow-[var(--brand-primary)]/5">
-                <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-[var(--brand-accent)]/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-accent)]">{capitalizeCategory(item.category)}</span>
-                </div>
-                <h3 className="mt-3 text-lg font-semibold text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)]">{item.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-500 line-clamp-2">{item.excerpt}</p>
-                <p className="mt-3 text-xs text-slate-400">oleh {item.author_name ?? "Tim MBS"}</p>
-              </Link>
-            ))}
-          </CSSStagger>
         </div>
       </section>
 

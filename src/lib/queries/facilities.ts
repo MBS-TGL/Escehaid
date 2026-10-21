@@ -12,7 +12,7 @@ import { removeViaRoute, listViaRoute, uploadFileViaRoute } from "../storage-rem
 export async function getFacilityList(limit?: number): Promise<Facility[]> {
   let query = supabase
     .from("facilities")
-    .select("*")
+    .select("id, name, image_url, description")
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
 
@@ -24,7 +24,7 @@ export async function getFacilityList(limit?: number): Promise<Facility[]> {
     console.error("Error fetching facilities:", error);
     return [];
   }
-  return data || [];
+  return (data || []) as Facility[];
 }
 
 export async function getFacilityListAll(): Promise<Facility[]> {

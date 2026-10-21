@@ -1,18 +1,4 @@
 import { supabase } from "../supabase";
-import type { UserProfile } from "../auth";
-
-export async function getProfileList(): Promise<UserProfile[]> {
-  const { data, error } = await supabase
-    .from("user_profiles")
-    .select("*")
-    .order("full_name", { ascending: true });
-
-  if (error) {
-    console.error("Error fetching profiles:", error);
-    return [];
-  }
-  return data || [];
-}
 
 export async function updateProfileRole(
   id: string,

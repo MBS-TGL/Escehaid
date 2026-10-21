@@ -19,7 +19,7 @@ Dibangun dengan **Next.js App Router** + **Supabase** (database, auth, storage).
 | Supabase | `@supabase/supabase-js` 2.114.0, `@supabase/ssr` 0.12.5 |
 | Editor rich text | TipTap 3 (starter-kit + ekstensi) |
 | Drag & drop urutan | dnd-kit |
-| Carousel / animasi | Splide 4, framer-motion 11 |
+| Carousel / animasi | Splide 4 |
 | Lint | ESLint 9 + `eslint-config-next` 16.4.0 |
 
 ## Persyaratan

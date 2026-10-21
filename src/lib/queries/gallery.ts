@@ -7,7 +7,7 @@ import { uploadFileViaRoute } from "../storage-remote";
 export async function getGalleryList(limit?: number): Promise<Gallery[]> {
   let query = supabase
     .from("gallery")
-    .select("*")
+    .select("id, title, description, url, thumbnail_url, category, media_type, created_at")
     .order("created_at", { ascending: false });
 
   if (limit) {
@@ -91,19 +91,6 @@ export async function getGalleryCategories(): Promise<string[]> {
     if (value) unique.add(value);
   }
   return [...unique].sort((a, b) => a.localeCompare(b, "id"));
-}
-
-export async function getGalleryByCategory(category: string): Promise<Gallery[]> {  const { data, error } = await supabase
-    .from("gallery")
-    .select("*")
-    .eq("category", category)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error("Error fetching gallery by category:", error);
-    return [];
-  }
-  return data || [];
 }
 
 // ============ SPMB ============

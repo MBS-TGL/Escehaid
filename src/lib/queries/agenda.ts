@@ -27,11 +27,11 @@ export async function getAgendaEvents(): Promise<AgendaEvent[]> {
 export async function getActiveAgendaEvents(): Promise<AgendaEvent[]> {
   const { data, error } = await supabase
     .from("agenda_events")
-    .select("*")
+    .select("id, title, event_date")
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
   if (error) return [];
-  return data || [];
+  return (data || []) as AgendaEvent[];
 }
 
 export async function createAgendaEvent(title: string, event_date: string): Promise<{ error?: string }> {
