@@ -207,7 +207,13 @@ export default function WeeklySchedule() {
           tableVisible ? "" : "lg:hidden"
         }`}
       >
-        <table className="min-w-[760px] border-collapse text-left text-[13px]">
+        <table className="w-full min-w-[760px] table-fixed border-collapse text-left text-[13px]">
+          <colgroup>
+            <col className="w-[110px]" />
+            {DAYS.map((day) => (
+              <col key={day} />
+            ))}
+          </colgroup>
           <caption className="px-4 py-3 text-left text-xs font-medium text-slate-500">
             Jadwal harian MBS sepekan (waktu WIB; slot 21:00 berlanjut hingga 03:00).
           </caption>
@@ -215,7 +221,7 @@ export default function WeeklySchedule() {
             <tr className="border-b border-[#e5ebf2] bg-slate-50">
               <th
                 scope="col"
-                className="w-[110px] sticky left-0 z-10 bg-slate-50 px-3 py-2 font-semibold text-slate-600"
+                className="sticky left-0 z-10 bg-slate-50 px-3 py-2 font-semibold text-slate-600"
               >
                 Waktu
               </th>
@@ -246,7 +252,7 @@ export default function WeeklySchedule() {
                 >
                   <th
                     scope="row"
-                    className={`w-[110px] sticky left-0 z-10 whitespace-nowrap px-3 py-2 align-top font-semibold tabular-nums text-[var(--brand-primary)] ${
+                    className={`sticky left-0 z-10 whitespace-nowrap px-3 py-2 align-top font-semibold tabular-nums text-[var(--brand-primary)] ${
                       rowActive ? "bg-emerald-50" : "bg-white"
                     }`}
                   >
@@ -255,6 +261,7 @@ export default function WeeklySchedule() {
                   {DAYS.map((day, col) => {
                     const badgeHere = rowActive && col === ownerCol;
                     const colTint = col === activeDayCol;
+                    const dayItems = itemsForDay(slot, day);
                     return (
                       <td
                         key={day}
@@ -270,13 +277,17 @@ export default function WeeklySchedule() {
                             Sedang berlangsung
                           </span>
                         )}
-                        <ul className="space-y-0.5">
-                          {itemsForDay(slot, day).map((item) => (
-                            <li key={`${day}-${item.label}`} className="text-slate-700">
-                              {item.label}
-                            </li>
-                          ))}
-                        </ul>
+                        {dayItems.length > 0 ? (
+                          <ul className="space-y-0.5">
+                            {dayItems.map((item) => (
+                              <li key={`${day}-${item.label}`} className="text-slate-700">
+                                {item.label}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span aria-hidden="true" className="text-slate-300">&ndash;</span>
+                        )}
                       </td>
                     );
                   })}
