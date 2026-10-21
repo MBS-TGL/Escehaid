@@ -69,6 +69,15 @@ const nextConfig: NextConfig = {
         pathname: "/**",
       },
     ],
+    // Gambar lokal (folder /public) boleh membawa query string (cache-buster
+    // `?v=` yang ditambah panel admin / data lama tanpa R2_PUBLIC_BASE_URL).
+    // Tanpa aturan ini next/image melempar error "not configured in
+    // images.localPatterns" saat src memuat tambalan "?v=".
+    localPatterns: [
+      { pathname: "/images/**" },
+      { pathname: "/videos/**" },
+      { pathname: "/documents/**" },
+    ],
   },
   headers: async () => [
     {

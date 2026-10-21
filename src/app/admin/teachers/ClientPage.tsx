@@ -51,6 +51,12 @@ type FilterTab = "all" | "active" | "inactive";
 
 const PAGE_SIZE = 10;
 
+/** URL foto + cache-buster. URL yang sudah punya query (`?v=<ts>` hasil unggahan)
+ *  diteruskan dengan `&`, bukan `?` lagi — jangan bikin URL rusak `...?v=1?v=0`. */
+function photoSrc(url: string, bust: number): string {
+  return `${url}${url.includes("?") ? "&" : "?"}v=${bust || 0}`;
+}
+
 export default function AdminTeachersPage() {
   const { toast } = useToast();
   const { can } = usePermissions();
@@ -455,7 +461,7 @@ export default function AdminTeachersPage() {
                     <td className="hidden px-4 py-3.5 sm:table-cell">
                       <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-slate-100">
                         {item.photo_url ? (
-                          <Image src={`${item.photo_url}?v=${photoBust[item.id] || 0}`} alt={item.name} width={40} height={40} loading="lazy"
+                          <Image src={photoSrc(item.photo_url, photoBust[item.id])} alt={item.name} width={40} height={40} loading="lazy"
                             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }}
                             className="h-full w-full object-cover" />
                         ) : null}
@@ -792,7 +798,7 @@ function TeacherMobileRow({
         }
         thumb={
           <MobileThumb
-            src={item.photo_url ? `${item.photo_url}?v=${photoBust[item.id] || 0}` : null}
+            src={item.photo_url ? photoSrc(item.photo_url, photoBust[item.id]) : null}
             shape="circle"
             icon={<User className="h-6 w-6" weight="light" />}
             status={{
