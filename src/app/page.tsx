@@ -208,22 +208,15 @@ export default async function Home() {
             {/* Left Column: Heading, Tagline, CTAs */}
             <div className="text-white">
               <div className="mb-4 sm:mb-5 inline-flex items-center gap-2 rounded-full border border-[var(--brand-highlight)]/30 bg-[var(--brand-highlight)]/15 px-3.5 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-highlight)] backdrop-blur-xs">
-                Pusat Kaderisasi Da&apos;i &amp; Ulama Hafidz &middot; {brand.tagline}
+                SMP Muhammadiyah 4 Tanggul &middot; {brand.tagline}
               </div>
 
               <h1 className="max-w-3xl text-4xl font-bold leading-[1.12] sm:text-5xl lg:text-6xl text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.7)]">
-                Pendidikan yang menumbuhkan{" "}
-                <span className="relative inline-block">
-                  <span className="text-[var(--brand-highlight)]">ilmu, iman,</span>
-                  <svg className="absolute -bottom-1 left-0 w-full" viewBox="0 0 200 12" fill="none" aria-hidden="true">
-                    <path d="M2 8C40 2 80 2 100 6C120 10 160 10 198 4" stroke="var(--brand-highlight)" strokeWidth="3" strokeLinecap="round" />
-                  </svg>
-                </span>{" "}
-                dan keberanian.
+                Pusat Kaderisasi Da&apos;i &amp; Ulama Hafidz
               </h1>
 
               <p className="mt-4 sm:mt-5 max-w-xl text-base sm:text-lg leading-relaxed text-slate-100 drop-shadow-[0_1px_6px_rgba(0,0,0,0.7)]">
-                SMP Muhammadiyah 4 Tanggul memadukan keunggulan akademik dan keislaman secara terintegrasi untuk membentuk kader umat yang berakhlak mulia.
+                Menjadi lembaga pencetak kader da&apos;i dan ulama hafidz yang menguasai ilmu pengetahuan dan teknologi, berwawasan global serta peduli dan berbudaya lingkungan.
               </p>
 
               {/* Action Buttons: SPMB CTA + Tonton Video Profil Modal + Kenali Sekolah */}
@@ -251,60 +244,6 @@ export default async function Home() {
               </div>
             </div>
 
-            {/* Right Column: Premium Highlights Card (Glassmorphism) */}
-            <div className="hidden lg:block">
-              <div className="relative rounded-3xl border border-white/15 bg-white/[0.08] p-7 backdrop-blur-md shadow-2xl shadow-black/30">
-                <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-[var(--brand-highlight)]">Profil Unggulan</p>
-                    <h2 className="text-base font-bold text-white">SMP Muhammadiyah 4 Tanggul</h2>
-                  </div>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-medium text-emerald-300 border border-emerald-500/30">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Aktif
-                  </span>
-                </div>
-
-                <div className="mt-5 space-y-4">
-                  <div className="flex items-start gap-3.5 rounded-2xl bg-white/[0.05] p-3.5 transition-colors hover:bg-white/[0.1]">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-highlight)]/20 text-[var(--brand-highlight)]">
-                      <Trophy className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">Terakreditasi A</p>
-                      <p className="text-xs text-slate-300 leading-relaxed">Standar mutu pendidikan nasional dengan fasilitas terpadu.</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3.5 rounded-2xl bg-white/[0.05] p-3.5 transition-colors hover:bg-white/[0.1]">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/20 text-amber-300">
-                      <GraduationCap className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">Tahfidz &amp; Kepesantrenan</p>
-                      <p className="text-xs text-slate-300 leading-relaxed">Program intensif hafalan Al-Qur&apos;an dan pembinaan akhlak mulia.</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3.5 rounded-2xl bg-white/[0.05] p-3.5 transition-colors hover:bg-white/[0.1]">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-400/20 text-sky-300">
-                      <BookOpen className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">Kurikulum Terpadu</p>
-                      <p className="text-xs text-slate-300 leading-relaxed">Integrasi Kurikulum Nasional dan kurikulum Al-Islam Kemuhammadiyahan.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-slate-300">
-                  <span>Penerimaan Santri Baru (SPMB)</span>
-                  <Link href="/admission" className="font-semibold text-[var(--brand-highlight)] hover:underline inline-flex items-center gap-1">
-                    Informasi &amp; Alur <ArrowUpRight className="h-3 w-3" />
-                  </Link>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
