@@ -4,14 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
   MEDIA_BUCKETS,
-  collectMediaReferences,
   deleteMediaFile,
   getMediaFiles,
   isMediaReferenced,
   mediaPublicUrl,
   mediaSignedUrl,
 } from "@/lib/queries";
-import type { MediaBucket, MediaFile, MediaReferenceScan } from "@/lib/queries";
+import type { MediaBucket, MediaFile } from "@/lib/queries";
+import { scanMediaReferences, type MediaScanResult } from "./actions";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useToast } from "@/components/ui/Toast";
 import { ConfirmModal } from "@/components/ui";
@@ -87,7 +87,7 @@ export default function AdminMediaPage() {
     files: MediaFile[];
     error: string | null;
   } | null>(null);
-  const [scan, setScan] = useState<MediaReferenceScan | null>(null);
+  const [scan, setScan] = useState<MediaScanResult | null>(null);
   const [search, setSearch] = useState("");
   const [confirmPath, setConfirmPath] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -119,12 +119,17 @@ export default function AdminMediaPage() {
     };
   }, [bucket]);
 
-  // Pemindaian referensi sekali per halaman.
+  // Pemindaian referensi sekali per halaman — dijalankan di server via action.
   useEffect(() => {
     let cancelled = false;
-    collectMediaReferences().then((result) => {
-      if (!cancelled) setScan(result);
-    });
+    scanMediaReferences()
+      .then((result) => {
+        if (!cancelled) setScan(result);
+      })
+      .catch(() => {
+        if (!cancelled)
+          setScan({ complete: false, failedTables: ["SEMUA"], refs: [] });
+      });
     return () => {
       cancelled = true;
     };
@@ -134,7 +139,7 @@ export default function AdminMediaPage() {
   const files = listing?.bucket === bucket ? listing.files : EMPTY_LIST;
   const loadError = listing?.bucket === bucket ? listing.error : null;
 
-  const refs = scan?.refs ?? null;
+  const refs = useMemo(() => (scan ? new Set(scan.refs) : null), [scan]);
   const scanComplete = scan?.complete ?? false;
 
   const visible = useMemo(() => {

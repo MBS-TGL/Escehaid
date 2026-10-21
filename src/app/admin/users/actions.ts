@@ -33,12 +33,145 @@ import {
   guardSelfDelete,
   guardSelfRoleChange,
 } from "@/lib/rbac/index";
+import type { AdminUserRow } from "@/lib/queries/rbac";
 
 type ActionResult = { success: boolean; error?: string };
 
 /** Kolom aman yang boleh dikembalikan ke UI (tanpa hash/token). */
 const SAFE_PROFILE_COLUMNS =
   "id, full_name, email, role, system_role, is_active, must_change_password, last_login_at, created_at, updated_at";
+
+// ─── BACA: tabel pengguna (server-side paginasi/filter/sort) ─────────────────
+
+const USER_PAGE_SIZE = 10;
+const SORT_FIELDS = ["full_name", "system_role", "is_active", "last_login_at", "created_at"] as const;
+type UserSortField = (typeof SORT_FIELDS)[number];
+
+export interface FetchUsersPageInput {
+  page: number;
+  pageSize?: number;
+  search?: string;
+  /** "all" | kunci role | "—" (belum diatur). */
+  role?: string;
+  status?: "all" | "active" | "inactive";
+  sortField?: UserSortField;
+  sortDir?: "asc" | "desc";
+}
+
+export interface FetchUsersPageResult {
+  success: boolean;
+  error?: string;
+  rows?: AdminUserRow[];
+  /** Total baris yang lolos filter SEMUA (dipakai paginate + label "dari N"). */
+  total?: number;
+  /** Statistik global + hitungan per-role untuk chip filter (tanpa filter). */
+  stats?: {
+    total: number;
+    active: number;
+    inactive: number;
+    superAdmins: number;
+    noRole: number;
+    byRole: Record<string, number>;
+  };
+}
+
+/** Karakter yang bisa mengubah makna `or(...)` PostgREST — dilucuti dari input. */
+function sanitizeLike(raw: string): string {
+  return raw.replace(/[,()%*]/g, " ").trim();
+}
+
+/**
+ * Baca halaman pengguna di server: filter pencarian/peran/status, urutkan,
+ * dan batas per halaman (range). Sebelumnya UsersTab menarik SELURUH tabel
+ * user_profiles ke client lalu memfilter/mengurutkan di browser — kini
+ * data yang melintas jaringan hanya 1 halaman + statistik ringan.
+ */
+export async function fetchUsersPage(
+  input: FetchUsersPageInput
+): Promise<FetchUsersPageResult> {
+  const guard = requirePermission("users:manage");
+  const check = await guard();
+  if (!check.ok) return { success: false, error: check.error };
+
+  const supabase = await createSessionClient();
+
+  const pageSize = Math.min(Math.max(input.pageSize ?? USER_PAGE_SIZE, 1), 100);
+  const page = Math.max(input.page ?? 1, 1);
+  const start = (page - 1) * pageSize;
+  const end = start + pageSize - 1;
+
+  const sortField: UserSortField = SORT_FIELDS.includes(input.sortField as UserSortField)
+    ? (input.sortField as UserSortField)
+    : "full_name";
+  const ascending = input.sortDir !== "desc";
+
+  const role = input.role ?? "all";
+  const status = input.status ?? "all";
+
+  // ── Util pembungkus filter 1× (dipakai 2 query) ──
+  function base() {
+    return supabase.from("user_profiles");
+  }
+  function applyFilters(rb: ReturnType<typeof base>) {
+    let q = rb.select(SAFE_PROFILE_COLUMNS, { count: "exact" });
+    if (role === "—") q = q.is("system_role", null);
+    else if (role !== "all") q = q.eq("system_role", role);
+    if (status === "active") q = q.eq("is_active", true);
+    else if (status === "inactive") q = q.eq("is_active", false);
+    const term = sanitizeLike(input.search ?? "");
+    if (term) {
+      const like = term.replace(/[\\]/g, "");
+      const esc = like.replace(/[\s]+/g, " ");
+      q = q.or(`full_name.ilike.%${esc}%,email.ilike.%${esc}%`);
+    }
+    return q;
+  }
+
+  const [pageResult, summaryRows] = await Promise.all([
+    applyFilters(base()).order(sortField, { ascending }).range(start, end),
+    // Statistik global + per-role: satu query kolom ringan (id tidak perlu).
+    supabase.from("user_profiles").select("system_role, is_active"),
+  ]);
+
+  if (pageResult.error) {
+    console.error("fetchUsersPage:", pageResult.error);
+    return { success: false, error: pageResult.error.message };
+  }
+  if (summaryRows.error) {
+    console.error("fetchUsersPage(summary):", summaryRows.error);
+    return { success: false, error: summaryRows.error.message };
+  }
+
+  const byRole: Record<string, number> = {};
+  let total = 0;
+  let active = 0;
+  let inactive = 0;
+  let noRole = 0;
+  for (const row of summaryRows.data || []) {
+    const r = row as { system_role: string | null; is_active: boolean | null };
+    total += 1;
+    if (r.is_active) active += 1;
+    else inactive += 1;
+    if (!r.system_role) noRole += 1;
+    else byRole[r.system_role] = (byRole[r.system_role] || 0) + 1;
+  }
+
+  return {
+    success: true,
+    rows: (pageResult.data || []) as AdminUserRow[],
+    total: pageResult.count ?? (pageResult.data || []).length,
+    stats: {
+      total,
+      active,
+      inactive,
+      superAdmins: byRole["SUPER_ADMIN"] ?? 0,
+      noRole,
+      byRole,
+    },
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 /** Catat aksi sistem ke audit_logs (best-effort; gagal = tidak menjatuhkan aksi). */
 async function logSystem(

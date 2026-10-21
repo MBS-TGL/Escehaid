@@ -10,13 +10,13 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  getUserList,
   getRoleList,
   rbacTablesReady,
   type AdminUserRow,
   type RoleRow,
 } from "@/lib/queries/rbac";
 import {
+  fetchUsersPage,
   inviteUser,
   changeUserRole,
   toggleUserActive,
@@ -63,10 +63,20 @@ type SortDir = "asc" | "desc";
 export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
   const { toast } = useToast();
   const [users, setUsers] = useState<AdminUserRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+    superAdmins: 0,
+    noRole: 0,
+    byRole: {} as Record<string, number>,
+  });
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -84,18 +94,46 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
   const [deleteItem, setDeleteItem] = useState<AdminUserRow | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  // Pencarian di-debounce 300ms sebelum diteruskan ke server.
+  useEffect(() => {
+    if (search === debouncedSearch) return;
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [search, debouncedSearch]);
+
+  /** Muat halaman dari server action (filter/sort/paginasi di server). */
   const load = useCallback(async () => {
     // Tidak memanggil setLoading(true) di sini: `loading` sudah true pada
     // mount (state awal), dan saat muat ulang (setelah simpan) tombol sudah
     // menampilkan spinner sendiri — tanpa kedip layar penuh.
     const ok = await rbacTablesReady();
     setReady(ok);
-    const [u, r] = await Promise.all([getUserList(), ok ? getRoleList() : Promise.resolve([])]);
-    setUsers(u);
-    setRoles(r);
+    const [u, r] = await Promise.all([
+      fetchUsersPage({
+        page,
+        role: roleFilter,
+        status: statusFilter as "all" | "active" | "inactive",
+        search: debouncedSearch,
+        sortField,
+        sortDir,
+      }),
+      ok ? getRoleList() : Promise.resolve([]),
+    ]);
+    if (r) setRoles(r);
+    if (u.success && u.rows && u.stats) {
+      setUsers(u.rows);
+      setTotal(u.total ?? u.rows.length);
+      setStats(u.stats);
+    } else if (u.error) {
+      toast(u.error, "error");
+    }
     setLoading(false);
-  }, []);
+  }, [page, roleFilter, statusFilter, debouncedSearch, sortField, sortDir, toast]);
 
+  // Faktor-faktor "permintaan" — setiap perubahan memicu muat ulang dari server.
   useEffect(() => {
     // Panggil lewat microtask agar bukan "setState sinkron dalam effect".
     queueMicrotask(() => {
@@ -111,16 +149,16 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
   const roleFilterGroup: FilterGroup = {
     value: roleFilter,
     options: [
-      { key: "all", label: "Semua Peran", count: users.length },
+      { key: "all", label: "Semua Peran", count: stats.total },
       ...roleKeys.map((key) => ({
         key,
         label: ROLE_BADGE[key]?.label ?? key,
-        count: users.filter((u) => (u.system_role ?? "—") === key).length,
+        count: stats.byRole[key] ?? 0,
       })),
       {
         key: "—",
         label: "Belum diatur",
-        count: users.filter((u) => !u.system_role).length,
+        count: stats.noRole,
       },
     ],
     onChange: (k) => {
@@ -133,9 +171,9 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
   const statusFilterGroup: FilterGroup = {
     value: statusFilter,
     options: [
-      { key: "all", label: "Semua Status", count: users.length },
-      { key: "active", label: "Aktif", count: users.filter((u) => u.is_active).length },
-      { key: "inactive", label: "Tidak Aktif", count: users.filter((u) => !u.is_active).length },
+      { key: "all", label: "Semua Status", count: stats.total },
+      { key: "active", label: "Aktif", count: stats.active },
+      { key: "inactive", label: "Tidak Aktif", count: stats.inactive },
     ],
     onChange: (k) => {
       setStatusFilter(k);
@@ -144,47 +182,11 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
     menuLabel: "Filter status",
   };
 
-  const filtered = useMemo(() => {
-    const result = users.filter((item) => {
-      const q = search.toLowerCase();
-      const matchSearch =
-        item.full_name.toLowerCase().includes(q) ||
-        (item.email ?? "").toLowerCase().includes(q);
-      const matchRole = roleFilter === "all" || (item.system_role ?? "—") === roleFilter;
-      const matchStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active" ? item.is_active : !item.is_active);
-      return matchSearch && matchRole && matchStatus;
-    });
+  // Filter + sort + paginasi telah dijalankan di server (fetchUsersPage);
+  // rows di sini adalah isi halaman aktif.
+  const paginated = users;
 
-    result.sort((a, b) => {
-      let cmp = 0;
-      if (sortField === "full_name") cmp = a.full_name.localeCompare(b.full_name);
-      else if (sortField === "system_role")
-        cmp = (a.system_role ?? "").localeCompare(b.system_role ?? "");
-      else if (sortField === "is_active") cmp = (a.is_active ? 1 : 0) - (b.is_active ? 1 : 0);
-      else if (sortField === "last_login_at")
-        cmp =
-          new Date(a.last_login_at ?? 0).getTime() - new Date(b.last_login_at ?? 0).getTime();
-      else if (sortField === "created_at")
-        cmp = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
-      return sortDir === "asc" ? cmp : -cmp;
-    });
-    return result;
-  }, [users, search, roleFilter, statusFilter, sortField, sortDir]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  const noRoleCount = users.filter((u) => !u.system_role).length;
-
-  const stats = {
-    total: users.length,
-    active: users.filter((u) => u.is_active).length,
-    inactive: users.filter((u) => !u.is_active).length,
-    superAdmins: users.filter((u) => u.system_role === "SUPER_ADMIN" && u.is_active).length,
-    noRole: noRoleCount,
-  };
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   function toggleSort(field: SortField) {
     if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -516,11 +518,11 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
             </tbody>
           </table>
         </div>
-        {filtered.length > 0 && (
+        {total > 0 && (
           <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-slate-400">
-              Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} dari{" "}
-              {filtered.length} pengguna
+              Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} dari{" "}
+              {total} pengguna
             </p>
             <div className="flex items-center gap-1">
               <button

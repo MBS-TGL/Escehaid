@@ -194,11 +194,16 @@ function collectStrings(value: unknown, out: Set<string>): void {
   }
 }
 
+/** Batas keras baris per tabel — cegah pindai tak berujung bila tabel membengkak.
+ *  Dipakai lewat server action scanMediaReferences (src/app/admin/media/actions.ts). */
+export const MEDIA_SCAN_ROW_CAP = 5000;
+
 /**
  * Pindai seluruh tabel aplikasi untuk membangun set referensi file.
  * Gagal pada satu tabel TIDAK membuang hasil — dicatat di `failedTables`
  * dan `complete` jadi false supaya UI menonaktifkan hapus (aman: file yang
- * masih dipakai tidak boleh terhapus).
+ * masih dipakai tidak boleh terhapus). Tiap tabel dibatasi MEDIA_SCAN_ROW_CAP
+ * baris; tanda `>cap` di failedTables berarti batas tersentuh (komplit=false).
  */
 export async function collectMediaReferences(): Promise<MediaReferenceScan> {
   const refs = new Set<string>();
@@ -206,13 +211,22 @@ export async function collectMediaReferences(): Promise<MediaReferenceScan> {
 
   await Promise.all(
     REFERENCE_TABLES.map(async (table) => {
-      const { data, error } = await supabase.from(table).select("*");
+      const { data, error } = await supabase
+        .from(table)
+        .select("*")
+        .limit(MEDIA_SCAN_ROW_CAP);
       if (error) {
         failedTables.push(table);
         console.error(`Error scanning refs ${table}:`, JSON.stringify(error), error.message);
         return;
       }
-      for (const row of data ?? []) collectStrings(row, refs);
+      const rows = data ?? [];
+      if (rows.length >= MEDIA_SCAN_ROW_CAP) {
+        failedTables.push(`${table} (>=${MEDIA_SCAN_ROW_CAP} baris)`);
+        console.warn(`collectMediaReferences: tabel ${table} mencapai batas pindai (${MEDIA_SCAN_ROW_CAP} baris)`);
+        return;
+      }
+      for (const row of rows) collectStrings(row, refs);
     })
   );
 
