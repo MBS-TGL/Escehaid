@@ -12,6 +12,7 @@ import {
   dayIndexNowJakarta,
   timeNowJakarta,
   activeSlotNowJakarta,
+  slotOwnerDayIndex,
 } from "./mbs-schedule";
 
 const slot = SLOTS.find((s) => s.id === "dini-1")!;
@@ -135,6 +136,23 @@ describe("activeSlotNowJakarta", () => {
       const hits = SLOTS.filter((s) => isSlotActiveNow(s, time));
       expect(hits.length).toBe(1);
     }
+  });
+});
+
+describe("slotOwnerDayIndex", () => {
+  const midnight = SLOTS.find((s) => s.id === "mlm-2")!;
+  const subuh = SLOTS.find((s) => s.id === "dini-1")!;
+  it("slot normal: pemiliknya hari ini", () => {
+    expect(slotOwnerDayIndex(subuh, "04:00", 3)).toBe(3);
+  });
+  it("slot lintas tengah malam, jam >= start (malam): pemiliknya hari ini", () => {
+    expect(slotOwnerDayIndex(midnight, "23:00", 1)).toBe(1);
+    expect(slotOwnerDayIndex(midnight, "21:00", 1)).toBe(1);
+  });
+  it("slot lintas tengah malam, jam < end (subuh): pemiliknya HARI KEMARIN", () => {
+    expect(slotOwnerDayIndex(midnight, "01:00", 1)).toBe(0);
+    // wrap Senin (0) -> Ahad (6).
+    expect(slotOwnerDayIndex(midnight, "02:00", 0)).toBe(6);
   });
 });
 

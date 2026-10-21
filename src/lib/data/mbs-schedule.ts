@@ -301,6 +301,20 @@ export function activeSlotNowJakarta(
   return { slot: found, time, dayIndex };
 }
 
+/**
+ * Kolom hari pemilik slot yang sedang berjalan (dipakai tanda badge tabel sepekan):
+ * - slot normal atau jam >= start -> hari ini;
+ * - slot lintas tengah malam dengan jam subuh (cur < end) -> dipegang hari kemarin
+ *   (slot "kemarin 21:00" yang belum selesai), jadi badge menandai kolom kemarin.
+ */
+export function slotOwnerDayIndex(slot: Slot, time: string, todayIndex: number): number {
+  const cur = parseMinutes(time);
+  if (isSlotCrossingMidnight(slot) && cur < parseMinutes(slot.end)) {
+    return (todayIndex + DAYS.length - 1) % DAYS.length;
+  }
+  return todayIndex;
+}
+
 /** Catatan review (TIDAK dirender di UI). */
 export const REVIEW_NOTES: string[] = [
   "Jumat: apakah ada Shalat Jumat (dokumen menulis Shalat Dzuhur + KBM normal)?",

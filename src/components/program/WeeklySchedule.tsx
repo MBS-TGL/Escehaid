@@ -19,6 +19,7 @@ import {
   isSlotCrossingMidnight,
   itemsForDay,
   slotsForDay,
+  slotOwnerDayIndex,
   type Day,
 } from "@/lib/data/mbs-schedule";
 
@@ -76,68 +77,80 @@ export default function WeeklySchedule() {
   const listVisible = mode === "per-hari";
   const tableVisible = mode === "sepekan";
 
+  // Kolom pemilik slot berjalan (badge kecil di tabel); -1 saat SSR/badge belum sedia.
+  const ownerCol =
+    currentSlot && currentSlot.slot
+      ? slotOwnerDayIndex(currentSlot.slot, currentSlot.time, currentSlot.dayIndex)
+      : -1;
+  const activeDayCol = DAYS.indexOf(activeDay);
+
   return (
     <div data-testid="weekly-schedule">
-      {/* Toggle desktop (default Sepekan). Mobile/tablet pakai tab di bawah. */}
-      <div
-        role="group"
-        aria-label="Mode tampilan jadwal"
-        className="mb-4 hidden justify-end lg:flex"
-      >
-        <div className="inline-flex rounded-xl border border-[#dce3ed] bg-slate-50 p-1">
-          <button
-            type="button"
-            aria-pressed={listVisible}
-            onClick={() => setMode("per-hari")}
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-              listVisible
-                ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                : "text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            Per Hari
-          </button>
-          <button
-            type="button"
-            aria-pressed={tableVisible}
-            onClick={() => setMode("sepekan")}
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-              tableVisible
-                ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                : "text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            Sepekan
-          </button>
+      {/* Satu row: tab hari di kiri + toggle mode di kanan (desktop). Mobile hanya tab. */}
+      <div className="flex flex-wrap items-center justify-between gap-2 lg:flex-nowrap">
+        <div
+          role="tablist"
+          aria-label="Pilih hari"
+          className="flex max-w-full flex-wrap gap-1.5 lg:flex-nowrap"
+        >
+          {DAYS.map((day, index) => (
+            <button
+              key={day}
+              ref={(el) => {
+                tabsRef.current[index] = el;
+              }}
+              type="button"
+              role="tab"
+              id={`mbs-tab-${day}`}
+              aria-selected={day === activeDay}
+              aria-controls="mbs-day-panel"
+              tabIndex={day === activeDay ? 0 : -1}
+              onClick={() => setSelectedDay(day)}
+              onKeyDown={(e) => onTabKeyDown(e, index)}
+              className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${
+                day === activeDay
+                  ? "bg-[var(--brand-primary)] text-white"
+                  : "bg-white text-slate-600 hover:bg-[var(--brand-accent)]/10"
+              }`}
+            >
+              {day}
+              {index === todayIndex && <span className="sr-only"> (hari ini)</span>}
+            </button>
+          ))}
         </div>
-      </div>
 
-      {/* Tab hari */}
-      <div role="tablist" aria-label="Pilih hari" className="flex flex-wrap gap-1.5">
-        {DAYS.map((day, index) => (
-          <button
-            key={day}
-            ref={(el) => {
-              tabsRef.current[index] = el;
-            }}
-            type="button"
-            role="tab"
-            id={`mbs-tab-${day}`}
-            aria-selected={day === activeDay}
-            aria-controls="mbs-day-panel"
-            tabIndex={day === activeDay ? 0 : -1}
-            onClick={() => setSelectedDay(day)}
-            onKeyDown={(e) => onTabKeyDown(e, index)}
-            className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${
-              day === activeDay
-                ? "bg-[var(--brand-primary)] text-white"
-                : "bg-white text-slate-600 hover:bg-[var(--brand-accent)]/10"
-            }`}
-          >
-            {day}
-            {index === todayIndex && <span className="sr-only"> (hari ini)</span>}
-          </button>
-        ))}
+        <div
+          role="group"
+          aria-label="Mode tampilan jadwal"
+          className="hidden shrink-0 lg:inline-flex"
+        >
+          <div className="inline-flex rounded-xl border border-[#dce3ed] bg-slate-50 p-1">
+            <button
+              type="button"
+              aria-pressed={listVisible}
+              onClick={() => setMode("per-hari")}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                listVisible
+                  ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                  : "text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              Per Hari
+            </button>
+            <button
+              type="button"
+              aria-pressed={tableVisible}
+              onClick={() => setMode("sepekan")}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                tableVisible
+                  ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                  : "text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              Sepekan
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Panel per hari — selalu tampil di mobile/tablet; di desktop hanya mode "Per Hari" */}
@@ -187,13 +200,14 @@ export default function WeeklySchedule() {
         </ol>
       </div>
 
-      {/* Tabel sepekan — desktop (mode Sepekan) */}
+      {/* Tabel sepekan — desktop (mode Sepekan). Baris slot aktif + kolom hari
+          aktif di-tint; badge hanya 1x di perpotongan slot-aktif x hari pemilik. */}
       <div
         className={`mt-2 hidden overflow-x-auto rounded-2xl border border-[#dce3ed] bg-white lg:block ${
           tableVisible ? "" : "lg:hidden"
         }`}
       >
-        <table className="min-w-[900px] border-collapse text-left text-[13px]">
+        <table className="min-w-[760px] border-collapse text-left text-[13px]">
           <caption className="px-4 py-3 text-left text-xs font-medium text-slate-500">
             Jadwal harian MBS sepekan (waktu WIB; slot 21:00 berlanjut hingga 03:00).
           </caption>
@@ -201,50 +215,74 @@ export default function WeeklySchedule() {
             <tr className="border-b border-[#e5ebf2] bg-slate-50">
               <th
                 scope="col"
-                className="sticky left-0 z-10 bg-slate-50 px-3 py-2 font-semibold text-slate-600"
+                className="w-[110px] sticky left-0 z-10 bg-slate-50 px-3 py-2 font-semibold text-slate-600"
               >
                 Waktu
               </th>
-              {DAYS.map((day) => (
-                <th scope="col" key={day} className="px-3 py-2 font-semibold text-slate-600">
+              {DAYS.map((day, col) => (
+                <th
+                  scope="col"
+                  key={day}
+                  className={`px-3 py-2 font-semibold ${
+                    col === activeDayCol
+                      ? "bg-[var(--brand-highlight)]/10 text-[var(--brand-primary)]"
+                      : "text-slate-600"
+                  }`}
+                >
                   {day}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {SLOTS.map((slot) => (
-              <tr
-                key={slot.id}
-                className="border-b border-[#eef3f8] last:border-b-0 hover:bg-slate-50/70"
-              >
-                <th
-                  scope="row"
-                  className="sticky left-0 z-10 max-w-[130px] whitespace-nowrap bg-white px-3 py-2 align-top font-semibold tabular-nums text-[var(--brand-primary)]"
+            {SLOTS.map((slot) => {
+              const rowActive = currentSlot?.slot?.id === slot.id;
+              return (
+                <tr
+                  key={slot.id}
+                  className={`border-b border-[#eef3f8] last:border-b-0 ${
+                    rowActive ? "bg-emerald-50/50" : "hover:bg-slate-50/70"
+                  }`}
                 >
-                  {formatSlotTime(slot)}
-                </th>
-                {DAYS.map((day) => {
-                  const nowHere = currentSlot?.slot?.id === slot.id;
-                  return (
-                    <td key={day} className="px-3 py-2 align-top">
-                      {nowHere && (
-                        <span className="mb-1 inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-bold text-white">
-                          Sedang berlangsung
-                        </span>
-                      )}
-                      <ul className="space-y-0.5">
-                        {itemsForDay(slot, day).map((item) => (
-                          <li key={`${day}-${item.label}`} className="text-slate-700">
-                            {item.label}
-                          </li>
-                        ))}
-                      </ul>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+                  <th
+                    scope="row"
+                    className={`w-[110px] sticky left-0 z-10 whitespace-nowrap px-3 py-2 align-top font-semibold tabular-nums text-[var(--brand-primary)] ${
+                      rowActive ? "bg-emerald-50" : "bg-white"
+                    }`}
+                  >
+                    {formatSlotTime(slot)}
+                  </th>
+                  {DAYS.map((day, col) => {
+                    const badgeHere = rowActive && col === ownerCol;
+                    const colTint = col === activeDayCol;
+                    return (
+                      <td
+                        key={day}
+                        className={`px-3 py-2 align-top ${
+                          colTint ? "bg-[var(--brand-highlight)]/[0.07]" : ""
+                        }`}
+                      >
+                        {badgeHere && currentSlot && (
+                          <span
+                            className="mb-0.5 inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-bold text-white"
+                            title={activeDayCol === ownerCol ? undefined : `Sedang berjalan pada ${DAYS[ownerCol]}`}
+                          >
+                            Sedang berlangsung
+                          </span>
+                        )}
+                        <ul className="space-y-0.5">
+                          {itemsForDay(slot, day).map((item) => (
+                            <li key={`${day}-${item.label}`} className="text-slate-700">
+                              {item.label}
+                            </li>
+                          ))}
+                        </ul>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
