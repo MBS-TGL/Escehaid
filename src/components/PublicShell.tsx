@@ -2,22 +2,22 @@
 
 import { usePathname } from "next/navigation";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import { RunningText } from "@/components/RunningText";
-import type { SchoolProfile } from "@/lib/supabase";
 import type { PublicBrand } from "@/lib/settings";
 
 export default function PublicShell({
   children,
-  profile,
   brand,
   announcements,
+  footer,
 }: {
   children: React.ReactNode;
-  profile: SchoolProfile | null;
   brand: PublicBrand;
   announcements: string[];
+  /** Footer di-render di server (layout) dan diteruskan sebagai slot —
+   *  supaya komponen ini tetap client tanpa membundling Footer. */
+  footer: React.ReactNode;
 }) {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/admin");
@@ -37,12 +37,7 @@ export default function PublicShell({
       <RunningText items={announcements} />
       <Navbar brand={brand} />
       <main id="konten-utama" className="flex-1">{children}</main>
-      <Footer
-        profile={profile}
-        brand={brand}
-        accreditation={brand.accreditation.trim() || undefined}
-        npsn={brand.npsn.trim() || undefined}
-      />
+      {footer}
       <MobileBottomNav />
     </>
   );

@@ -1,7 +1,5 @@
-"use client";
-
 import Link from "next/link";
-import { MapPin, Phone, Envelope, MusicNotes, TwitterLogo, ArrowSquareOut, Certificate, SealCheck } from "@phosphor-icons/react";
+import { MapPin, Phone, Envelope, MusicNotes, TwitterLogo, ArrowSquareOut, Certificate, SealCheck } from "@phosphor-icons/react/dist/ssr";
 import { waLink } from "@/lib/site-config";
 import type { SchoolProfile } from "@/lib/supabase";
 import type { PublicBrand } from "@/lib/settings";

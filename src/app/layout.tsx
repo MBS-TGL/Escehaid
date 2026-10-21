@@ -4,6 +4,7 @@ import { Plus_Jakarta_Sans, JetBrains_Mono, Source_Serif_4 } from "next/font/goo
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
 import PublicShell from "@/components/PublicShell";
+import Footer from "@/components/Footer";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { DEFAULT_THEME } from "@/lib/settings/theme";
@@ -110,7 +111,18 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     getSchoolProfile(),
     getActiveAnnouncements(),
   ]);
+  // Announcements & footer disiapkan di sini (server) — PublicShell tetap
+  // client, tetapi keduanya tiba sebagai slot/prop siap render.
   const announcements = rawAnnouncements.map((t) => t.trim()).filter(Boolean);
+  const brand = toPublicBrand(settings);
+  const footer = (
+    <Footer
+      profile={profile}
+      brand={brand}
+      accreditation={brand.accreditation.trim() || undefined}
+      npsn={brand.npsn.trim() || undefined}
+    />
+  );
   const { values, theme } = settings;
 
   const schoolName = values.site_name.trim() || "SMP Muhammadiyah 4 Tanggul";
@@ -242,7 +254,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           `}
         </Script>
         <ToastProvider>
-          <PublicShell profile={profile} brand={toPublicBrand(settings)} announcements={announcements}>
+          <PublicShell brand={brand} announcements={announcements} footer={footer}>
             {children}
           </PublicShell>
         </ToastProvider>
