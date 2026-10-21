@@ -252,7 +252,7 @@ export default function WeeklySchedule() {
                 >
                   <th
                     scope="row"
-                    className={`sticky left-0 z-10 whitespace-nowrap px-3 py-2 align-top font-semibold tabular-nums text-[var(--brand-primary)] ${
+                    className={`sticky left-0 z-10 whitespace-nowrap px-3 py-2 align-middle font-semibold tabular-nums text-[var(--brand-primary)] ${
                       rowActive ? "bg-emerald-50" : "bg-white"
                     }`}
                   >
