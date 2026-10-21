@@ -214,8 +214,8 @@ export default function WeeklySchedule() {
               <col key={day} />
             ))}
           </colgroup>
-          <caption className="px-4 py-3 text-left text-xs font-medium text-slate-500">
-            Jadwal harian MBS sepekan (waktu WIB; slot 21:00 berlanjut hingga 03:00).
+          <caption className="sr-only">
+            Jadwal harian MBS sepekan, waktu dalam WIB; slot 21:00 berlanjut hingga 03:00.
           </caption>
           <thead>
             <tr className="border-b border-[#e5ebf2] bg-slate-50">
@@ -297,6 +297,11 @@ export default function WeeklySchedule() {
           </tbody>
         </table>
       </div>
+
+      {/* Footnote waktu — berlaku untuk kedua mode (per hari & sepekan). */}
+      <p className="mt-3 text-xs text-slate-400">
+        Waktu dalam WIB; slot 21:00 berlanjut hingga 03:00.
+      </p>
     </div>
   );
 }
