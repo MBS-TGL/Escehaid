@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import type { Metadata } from "next";
-import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock, Quotes } from "@/components/Icons";
+import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock, Quotes, MoonStars } from "@/components/Icons";
 import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList, getActiveAgendaEvents, filterUpcomingEvents } from "@/lib/queries";
 import { detectPrincipalGreeting, keepTogether } from "@/lib/principal-quote";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
@@ -20,6 +20,7 @@ import {
   newsCategory,
 } from "@/lib/site-config";
 import type { Achievement } from "@/lib/supabase";
+import { BLOCKS } from "@/lib/data/mbs-schedule";
 
 const FAQ = dynamic(() => import("./FAQ"), { loading: () => <div className="h-96" /> });
 const WhatsAppButton = dynamic(() => import("./WhatsAppButton"));
@@ -757,8 +758,18 @@ export default async function Home() {
       <section className="bg-white" style={CV}>
         <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
           <CSSFadeIn>
-            <div className="mb-12">
-              <h2 className="text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Program unggulan</h2>
+            <div className="mb-12 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Program MBS</p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Program unggulan</h2>
+              </div>
+              {/* Tombol kanan ala Fasilitas: ke halaman /program (desktop). */}
+              <Link
+                href="/program"
+                className="hidden shrink-0 items-center gap-1.5 text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)] md:inline-flex"
+              >
+                Lihat selengkapnya <ArrowUpRight className="h-4 w-4" />
+              </Link>
             </div>
           </CSSFadeIn>
 
@@ -785,6 +796,47 @@ export default async function Home() {
               </div>
             ))}
           </CSSStagger>
+
+          {/* Preview agenda harian santri — data satu sumber dengan halaman /program. */}
+          <CSSStagger stagger={60} className="mt-12">
+            <div className="mb-5 flex flex-wrap items-center gap-2">
+              <Clock className="h-5 w-5 text-[var(--brand-accent)]" aria-hidden="true" />
+              <h3 className="text-lg font-bold text-[var(--brand-primary)]">Agenda harian santri</h3>
+              <span className="text-sm text-slate-500">dari dini hari hingga istirahat malam</span>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {BLOCKS.map((block) => (
+                <Link
+                  key={block.key}
+                  href="/program#agenda"
+                  className="group flex flex-col rounded-2xl bg-[var(--surface-muted)] p-5 transition-all hover:-translate-y-0.5 hover:bg-[var(--brand-primary)] hover:shadow-lg hover:shadow-[var(--brand-primary)]/10 motion-safe:duration-300"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-3 py-1 text-[11px] font-semibold text-white transition-colors group-hover:bg-white group-hover:text-[var(--brand-primary)]">
+                      <MoonStars className="h-3 w-3" aria-hidden="true" />
+                      {block.title}
+                    </span>
+                    <span className="whitespace-nowrap rounded-full border border-[#dce3ed] bg-white px-2.5 py-1 text-[11px] font-semibold tabular-nums text-[var(--brand-primary)] transition-colors group-hover:border-white/30 group-hover:bg-white/10 group-hover:text-white">
+                      {block.timeLabel}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-[13px] leading-relaxed text-slate-600 line-clamp-3 transition-colors group-hover:text-white/80">
+                    {block.summary}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </CSSStagger>
+
+          {/* Tombol mobile full-width ala Fasilitas. */}
+          <div className="mt-6 md:hidden">
+            <Link
+              href="/program"
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)]"
+            >
+              Lihat selengkapnya <ArrowUpRight className="h-4 w-4" />
+            </Link>
+          </div>
         </div>
       </section>
 
