@@ -809,7 +809,7 @@ export default async function Home() {
                 <Link
                   key={block.key}
                   href="/program#agenda"
-                  className="group flex flex-col rounded-2xl bg-[var(--surface-muted)] p-5 transition-all hover:-translate-y-0.5 hover:bg-[var(--brand-primary)] hover:shadow-lg hover:shadow-[var(--brand-primary)]/10 motion-safe:duration-300"
+                  className="group flex min-h-[150px] flex-col rounded-2xl bg-[var(--surface-muted)] p-6 transition-all hover:-translate-y-0.5 hover:bg-[var(--brand-primary)] hover:shadow-lg hover:shadow-[var(--brand-primary)]/10 motion-safe:duration-300"
                 >
                   <div className="flex items-center gap-2">
                     <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-[var(--brand-primary)] px-2.5 py-1 text-[11px] font-semibold text-white transition-colors group-hover:bg-white group-hover:text-[var(--brand-primary)]">
@@ -819,7 +819,7 @@ export default async function Home() {
                       <span className="whitespace-nowrap">{block.timeLabel}</span>
                     </span>
                   </div>
-                  <p className="mt-3 text-[13px] leading-relaxed text-slate-600 line-clamp-3 transition-colors group-hover:text-white/80">
+                  <p className="mt-4 text-[13px] leading-relaxed text-slate-600 line-clamp-3 transition-colors group-hover:text-white/80">
                     {block.summary}
                   </p>
                 </Link>
