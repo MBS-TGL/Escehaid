@@ -179,6 +179,10 @@ CREATE TABLE public.achievements (
   event_start date,
   event_end date,
   team_name text,
+  -- Tautan opsional ke tabel ekskuls (halaman detail /ekskul/[slug]);
+  -- FK SET NULL agar menghapus ekskul tidak turut menghapus prestasi.
+  ekskul_id uuid,
+  CONSTRAINT achievements_ekskul_id_fkey FOREIGN KEY (ekskul_id) REFERENCES public.ekskuls (id) ON DELETE SET NULL,
   CONSTRAINT achievements_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.contact_messages (
@@ -315,6 +319,8 @@ CREATE TABLE public.ekskuls (
   slug text NOT NULL UNIQUE,
   name text NOT NULL,
   description text DEFAULT ''::text,
+  -- Sejarah (halaman detail /ekskul/[slug]; paragraf dipisah baris kosong).
+  history text DEFAULT ''::text,
   icon text DEFAULT ''::text,
   schedule_day smallint,
   schedule_time time without time zone,

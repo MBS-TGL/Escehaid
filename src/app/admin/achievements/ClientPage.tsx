@@ -10,10 +10,11 @@ import {
   deleteAchievementBulk,
   uploadAchievementImage,
   revalidateAchievements,
+  getEkskulListAll,
 } from "@/lib/queries";
-import { SlideOver, ConfirmModal } from "@/components/ui";
+import { SlideOver, ConfirmModal, Select } from "@/components/ui";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
-import type { Achievement } from "@/lib/supabase";
+import type { Achievement, Ekskul } from "@/lib/supabase";
 import { useToast } from "@/components/ui/Toast";
 import { usePermissions } from "@/app/admin/PermissionsProvider";
 import { normalizeName, normalizeSchool } from "@/lib/format-name";
@@ -99,6 +100,8 @@ interface FormData {
   image_alt: string;
   is_featured: boolean;
   video_url: string;
+  /** Ekskul terkait (uuid) — "" = tidak terhubung. */
+  ekskul_id: string;
 }
 
 const emptyForm: FormData = {
@@ -114,6 +117,7 @@ const emptyForm: FormData = {
   image_alt: "",
   is_featured: false,
   video_url: "",
+  ekskul_id: "",
 };
 
 export default function AdminAchievementsPage() {
@@ -157,6 +161,8 @@ export default function AdminAchievementsPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [imageUploading, setImageUploading] = useState(false);
+  /** Opsi select "Ekskul terkait" — gagal loads (tabel belum ada) → kosong. */
+  const [ekskulOptions, setEkskulOptions] = useState<Pick<Ekskul, "id" | "name">[]>([]);
 
   const fetchAchievements = useCallback(async () => {
     setLoading(true);
@@ -169,6 +175,14 @@ export default function AdminAchievementsPage() {
       setLoadError("Gagal memuat prestasi.");
     } finally {
       setLoading(false);
+    }
+    // Opsi tautan ekskul side-load — panel prestasi tetap jalan meski
+    // migrasi ekskul.sql belum dijalankan (select hanya berisi "Tidak terhubung").
+    try {
+      const ekskul = await getEkskulListAll();
+      setEkskulOptions(ekskul.map((e) => ({ id: e.id, name: e.name })));
+    } catch {
+      setEkskulOptions([]);
     }
   }, []);
 
@@ -413,6 +427,7 @@ export default function AdminAchievementsPage() {
       image_alt: item.image_alt || "",
       is_featured: !!item.is_featured,
       video_url: item.video_url || "",
+      ekskul_id: item.ekskul_id || "",
     };
     setEditItem(item);
     setForm(next);
@@ -442,6 +457,7 @@ export default function AdminAchievementsPage() {
       image_alt: item.image_alt || "",
       is_featured: false,
       video_url: item.video_url || "",
+      ekskul_id: item.ekskul_id || "",
     };
     setViewItem(null);
     setEditItem(null);
@@ -501,6 +517,7 @@ export default function AdminAchievementsPage() {
       image_alt: form.image_alt.trim() || null,
       is_featured: form.is_featured,
       video_url: form.video_url.trim() || null,
+      ekskul_id: form.ekskul_id || null,
     };
 
     if (editItem) {
@@ -1221,6 +1238,19 @@ export default function AdminAchievementsPage() {
               onChange={(e) => setForm({ ...form, organizer: e.target.value })}
               className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
               placeholder="mis. FLS2N tingkat kabupaten" />
+          </div>
+
+          {/* Ekskul terkait — tautan FK ke tabel ekskuls (halaman detail /ekskul/[slug]) */}
+          <div>
+            <Select
+              label="Ekskul terkait"
+              options={[{ value: "", label: "— Tidak terhubung —" }, ...ekskulOptions.map((e) => ({ value: e.id, label: e.name }))]}
+              value={form.ekskul_id}
+              onChange={(v) => setForm({ ...form, ekskul_id: v })}
+            />
+            <p className="-mt-2 text-xs text-slate-400">
+              Opsional — prestasi ini juga ditampilkan di halaman detail ekskul.
+            </p>
           </div>
 
           {/* Gambar — pola dropzone form berita (klik, seret-lepas, Ctrl+V) */}

@@ -324,6 +324,7 @@ export default function AdminEkskulPage() {
   const [formSlug, setFormSlug] = useState("");
   const [formSlugTouched, setFormSlugTouched] = useState(false);
   const [formDescription, setFormDescription] = useState("");
+  const [formHistory, setFormHistory] = useState("");
   const [formIcon, setFormIcon] = useState("");
   const [formDay, setFormDay] = useState<string>("-1");
   const [formTime, setFormTime] = useState("");
@@ -412,6 +413,7 @@ export default function AdminEkskulPage() {
     setFormSlug("");
     setFormSlugTouched(false);
     setFormDescription("");
+    setFormHistory("");
     setFormIcon("");
     setFormDay("-1");
     setFormTime("");
@@ -430,6 +432,7 @@ export default function AdminEkskulPage() {
     setFormSlug(item.slug);
     setFormSlugTouched(false);
     setFormDescription(item.description || "");
+    setFormHistory(item.history || "");
     setFormIcon(item.icon || "");
     setFormDay(item.schedule_day === null || item.schedule_day === undefined ? "-1" : String(item.schedule_day));
     setFormTime(item.schedule_time ? item.schedule_time.slice(0, 5) : "");
@@ -464,6 +467,7 @@ export default function AdminEkskulPage() {
       name,
       slug,
       description: formDescription.trim(),
+      history: formHistory.trim(),
       icon: formIcon,
       schedule_day: formDay === "-1" ? null : Number(formDay),
       schedule_time: formTime ? `${formTime}:00` : null,
@@ -1046,6 +1050,19 @@ export default function AdminEkskulPage() {
               onChange={(e) => setFormDescription(e.target.value)}
               rows={3}
               placeholder="Opsional — tampil di kartu beranda & profil"
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label htmlFor="ekskul-history" className={labelCls}>
+              Sejarah
+            </label>
+            <textarea
+              id="ekskul-history"
+              value={formHistory}
+              onChange={(e) => setFormHistory(e.target.value)}
+              rows={6}
+              placeholder="Opsional — tampil di halaman detail ekskul. Pisahkan paragraf dengan baris kosong."
               className={inputCls}
             />
           </div>

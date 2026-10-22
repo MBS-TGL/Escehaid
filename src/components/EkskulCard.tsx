@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Clock } from "./Icons";
 import EkskulGlyph from "./EkskulIcon";
 import { formatEkskulSchedule } from "@/app/ekskul-data";
@@ -6,15 +7,19 @@ import type { Ekskul } from "@/lib/supabase";
 
 /**
  * Kartu ekskul bersama (beranda & halaman Profil). Data dari tabel
- * `public.ekskuls` (panel admin /admin/ekskul). Bukan link/tombol: tanpa
- * cursor-pointer maupun efek press. Foto/deskripsi/jadwal/pembina hanya
- * tampil bila datanya tersedia; item polos cukup ikon + nama.
+ * `public.ekskuls` (panel admin /admin/ekskul). Klik → halaman detail
+ * `/ekskul/[slug]` (ikon + nama + jadwal + pembina tampil; hover tetap
+ * halus tanpa efek press kuat). Foto/deskripsi/jadwal/pembina hanya tampil
+ * bila datanya tersedia; item polos cukup ikon + nama.
  */
 export default function EkskulCard({ item }: { item: Ekskul }) {
   const schedule = formatEkskulSchedule(item.schedule_day, item.schedule_time, item.schedule_note);
 
   return (
-    <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white text-center transition-colors hover:border-[var(--brand-accent)]/40">
+    <Link
+      href={`/ekskul/${item.slug}`}
+      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white text-center transition-colors hover:border-[var(--brand-accent)]/40"
+    >
       {item.image_url && (
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#f4f7fb]">
           <Image
@@ -52,6 +57,6 @@ export default function EkskulCard({ item }: { item: Ekskul }) {
           <span className="mx-auto block h-0.5 w-8 rounded-full bg-[var(--brand-highlight)] opacity-40 transition-all duration-300 group-hover:h-1 group-hover:w-12 group-hover:opacity-100" />
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

@@ -211,6 +211,7 @@
 | `event_start` | `date` |  Nullable |
 | `event_end` | `date` |  Nullable |
 | `team_name` | `text` |  Nullable |
+| `ekskul_id` | `uuid` |  Nullable — FK `achievements_ekskul_id_fkey` → `ekskuls(id)` ON DELETE SET NULL (`achievements_ekskul_idx`) |
 
 ## Table `contact_messages`
 
@@ -319,7 +320,7 @@ Area unduhan publik (brosur, formulir, juklak) — migrasi `supabase/downloads.s
 
 ## Table `ekskuls`
 
-Ekstrakurikuler dinamis (beranda + profil + panel admin `/admin/ekskul`) — migrasi `supabase/ekskul.sql` (idempoten: tabel + RLS + seed 6 ekskul awal + izin peran bawaan). Foto tersimpan di bucket Storage `images` folder `ekskuls/<id>/`.
+Ekstrakurikuler dinamis (beranda + profil + panel admin `/admin/ekskul` + halaman detail `/ekskul/[slug]`) — migrasi `supabase/ekskul.sql` (idempoten: tabel + RLS + seed 6 ekskul awal + izin peran bawaan). Foto tersimpan di bucket Storage `images` folder `ekskuls/<id>/`.
 
 ### Columns
 
@@ -329,6 +330,7 @@ Ekstrakurikuler dinamis (beranda + profil + panel admin `/admin/ekskul`) — mig
 | `slug` | `text` | Unique, NOT NULL |
 | `name` | `text` | NOT NULL |
 | `description` | `text` | Default `''` |
+| `history` | `text` | Sejarah untuk halaman detail (paragraf dipisah baris kosong); kosong → bagian tidak dirender |
 | `icon` | `text` | Kunci ikon (soccer/pingpong/tent/target/microphone/trophy); kosong → pemetaan slug |
 | `schedule_day` | `int2` | 0=Minggu .. 6=Sabtu, Nullable (CHECK 0-6) |
 | `schedule_time` | `time` | Nullable |

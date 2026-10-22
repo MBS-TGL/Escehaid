@@ -212,6 +212,8 @@ export interface Ekskul {
   slug: string;
   name: string;
   description: string;
+  /** Sejarah untuk halaman detail /ekskul/[slug] — kosong → bagian tak dirender. */
+  history: string;
   icon: string;
   schedule_day: number | null;
   schedule_time: string | null;
@@ -298,6 +300,8 @@ export interface Achievement {
   image_alt?: string | null;
   /** Tautan video eksternal — opsional, butuh migrasi supabase/content_video.sql. */
   video_url?: string | null;
+  /** Ekskul terkait (halaman detail /ekskul/[slug]) — FK opsional ke ekskuls. */
+  ekskul_id?: string | null;
 }
 
 export interface ContactMessage {

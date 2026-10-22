@@ -66,6 +66,39 @@ export async function getAchievementListAdmin(): Promise<Achievement[]> {
   return data || [];
 }
 
+/** Probe kolom `ekskul_id` (tautan prestasi ↔ ekskul — supabase/ekskul.sql). */
+export function achievementsHasEkskulColumn(): Promise<boolean> {
+  return tableHasColumn("achievements", "ekskul_id");
+}
+
+/**
+ * Prestasi yang terhubung ke ekskul tertentu — dipakai halaman detail
+ * `/ekskul/[slug]`. Urut tahun terbaru, gagal → [] (bagian prestasi
+ * otomatis disembunyikan).
+ */
+export async function getAchievementsByEkskul(
+  ekskulId: string,
+  limit = 12
+): Promise<Achievement[]> {
+  const hasVideo = await achievementsHasVideoColumn();
+  const columns =
+    "id, title, description, category, year, image_url, sort_order, created_at, rank_label, level, participants, organizer, is_featured, image_alt" +
+    (hasVideo ? ", video_url" : "");
+  const { data, error } = await supabase
+    .from("achievements")
+    .select(columns)
+    .eq("ekskul_id", ekskulId)
+    .order("year", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Error fetching achievements by ekskul:", error);
+    return [];
+  }
+  return (data || []) as unknown as Achievement[];
+}
+
 export async function createAchievement(achievement: {
   title: string;
   description?: string;
@@ -82,11 +115,17 @@ export async function createAchievement(achievement: {
   image_alt?: string | null;
   /** Tautan video eksternal (opsional; probe video_url — content_video.sql). */
   video_url?: string | null;
+  /** Ekskul terkait (uuid ekskuls — supabase/ekskul.sql). Dikosongkan bila tak terhubung. */
+  ekskul_id?: string | null;
 }): Promise<{ data: Achievement | null; error?: string }> {
   // Tautan video hanya dikirim bila kolomnya sudah ada (migrasi belum jalan → lewati diam-diam).
   const hasVideoCol = achievement.video_url ? await achievementsHasVideoColumn() : false;
+  // Sama untuk tautan ekskul: bila migrasi ekskul belum jalan, simpan prestasi
+  // tetap berjalan — nilai tautan diabaikan (penyimpanan selanjutnya diulang).
+  const hasEkskulCol = achievement.ekskul_id ? await achievementsHasEkskulColumn() : false;
   const payload: Record<string, unknown> = { ...achievement };
   if (!hasVideoCol) delete payload.video_url;
+  if (!achievement.ekskul_id || !hasEkskulCol) delete payload.ekskul_id;
   const { data, error } = await supabase
     .from("achievements")
     .insert(payload)
@@ -144,6 +183,8 @@ export async function updateAchievement(
   image_alt?: string | null;
   /** Tautan video eksternal (opsional; probe video_url — content_video.sql). */
   video_url?: string | null;
+  /** Ekskul terkait (uuid ekskuls — supabase/ekskul.sql; null/"" = lepas tautan). */
+  ekskul_id?: string | null;
 }): Promise<{ data: Achievement | null; error?: string }> {
   // Ambil URL gambar lama supaya file lama bisa dibersihkan bila berganti
   let oldImageUrl: string | null = null;
@@ -153,8 +194,12 @@ export async function updateAchievement(
   }
   // Tautan video hanya dikirim bila kolomnya sudah ada (migrasi belum jalan → lewati diam-diam).
   const hasVideoCol = achievement.video_url ? await achievementsHasVideoColumn() : false;
+  // Ekskul: kirim bila kolom ada; null/"" berarti lepas tautan (hanya bisa
+  // dikirim bila kolom ekskul memang sudah tersedia).
+  const hasEkskulCol = await achievementsHasEkskulColumn();
   const payload: Record<string, unknown> = { ...achievement };
   if (!hasVideoCol) delete payload.video_url;
+  if (!hasEkskulCol) delete payload.ekskul_id;
 
   const { data, error } = await supabase
     .from("achievements")

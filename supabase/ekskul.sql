@@ -1,9 +1,10 @@
 -- ============================================================================
 -- Tabel `ekskuls` — Ekstrakurikuler dinamis (beranda + profil + panel admin)
+-- + halaman detail publik /ekskul/[slug] + tautan prestasi (achievements).
 --
 -- Jalankan di Supabase SQL Editor. Idempoten: aman dijalankan berulang.
 -- Seed mengisi 6 ekskul yang sebelumnya hardcode di `src/app/ekskul-data.ts`
--- (tanpa deskripsi/foto — lengkapi lewat panel admin: /admin/ekskul).
+-- (tanpa foto — lengkapi lewat panel admin: /admin/ekskul).
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS public.ekskuls (
@@ -11,6 +12,9 @@ CREATE TABLE IF NOT EXISTS public.ekskuls (
   slug text NOT NULL UNIQUE,
   name text NOT NULL,
   description text DEFAULT ''::text,
+  -- Sejarah ekskul (halaman detail /ekskul/[slug]; dipisah paragraf dengan
+  -- baris kosong). Kosong → bagian sejarah tidak dirender.
+  history text DEFAULT ''::text,
   -- Kunci ikon tampilan (soccer/pingpong/tent/target/microphone/trophy).
   -- Kosong → dicari dari pemetaan slug → fallback trophy.
   icon text DEFAULT ''::text,
@@ -31,6 +35,9 @@ CREATE TABLE IF NOT EXISTS public.ekskuls (
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT ekskuls_pkey PRIMARY KEY (id)
 );
+
+-- Kolom sejarah untuk instalasi lama (fresh install sudah dapat dari CREATE TABLE).
+ALTER TABLE public.ekskuls ADD COLUMN IF NOT EXISTS history text DEFAULT ''::text;
 
 CREATE INDEX IF NOT EXISTS ekskuls_sort_idx ON public.ekskuls (sort_order);
 
@@ -103,6 +110,46 @@ INSERT INTO public.ekskuls (slug, name, schedule_day, schedule_time, icon, sort_
   ('futsal',        'Futsal',        0, '09:00', 'soccer',    5),
   ('qiroah',        'Qiroah',        3, '20:00', 'microphone', 6)
 ON CONFLICT (slug) DO NOTHING;
+
+-- ── Seed draft sejarah (needsReview — WAJIB ditinjau admin sekolah) ────────
+-- Draft ini otomatis mengisi kolom history bila masih kosong, sehingga
+-- sekali admin menyunting lewat /admin/ekskul nilainya TIDAK tertimpa lagi.
+UPDATE public.ekskuls SET history = $where$Hizbul Wathan (HW) adalah gerakan kepramukaan di dalam Persyarikatan Muhammadiyah yang dideklarasikan pada 31 Oktober 1918 di Yogyakarta oleh para tokoh Muhammadiyah. Sebagai gerakan wajib Muhammadiyah, HW membina anggotanya dengan sifat serta semangat agama, Indonesia, dan kekeluargaan.
+
+Di SMP Muhammadiyah 4 Tanggul, ekskul Hizbul Wathan menjadi wadah pembinaan karakter dan kepemimpinan santri melalui kegiatan kepramukaan: baris berbaris, perkemahan, serta kegiatan keterampilan lainnya yang menanamkan kemandirian, kedisiplinan, dan sikap Islami sejak usia muda.$where$ WHERE slug = 'hizbul-wathan' AND (history = '' OR history IS NULL);
+UPDATE public.ekskuls SET history = $where$Ekskul Bulu Tangkis membina minat dan bakat siswa dalam olahraga raket yang menuntut ketangkasan, refleks, dan ketelitian. Latihan mencakup teknik dasar forehand dan backhand, footwork, hingga pola permainan tunggal maupun ganda.
+
+Pembinaan bersifat berjenjang — dari pemula hingga siap turnamen — dan para anggota antusias mengikuti kejuaraan pelajar tingkat kabupaten maupun liga pelajar nasional.$where$ WHERE slug = 'bulu-tangkis' AND (history = '' OR history IS NULL);
+UPDATE public.ekskuls SET history = $where$Sepak bola merupakan ekskul unggulan yang membina siswa melalui olahraga paling populer di dunia. Program latihan mencakup kebugaran fisik, teknik dasar passing dan dribbling, serta penguasaan strategi permainan.
+
+Melalui latihan rutin dan partisipasi turnamen antar sekolah maupun tingkat kecamatan, ekskul ini menumbuhkan sportivitas, kerja sama tim, dan mental juara.$where$ WHERE slug = 'sepak-bola' AND (history = '' OR history IS NULL);
+UPDATE public.ekskuls SET history = $where$Ekskul Panahan memperkenalkan siswa pada olahraga ketepatan yang melatih konsentrasi, fokus, dan pengendalian diri. Latihan diawali dengan penekanan keselamatan (safety) sebelum melangkah ke teknik dasar menembak dengan busur recurve.
+
+Anggota dibimbing berjenjang sesuai standar perlombaan — mulai jarak pendek hingga jarak perlombaan, dipersiapkan untuk kejuaraan tingkat kabupaten/provinsi.$where$ WHERE slug = 'panahan' AND (history = '' OR history IS NULL);
+UPDATE public.ekskuls SET history = $where$Futsal mengasah kemampuan teknik bermain dalam ruang kecil: dribbling cepat, wall pass, dan formasi permainan 5 orang. Ekskul ini menjadi favorit siswa lantaran ritme permainannya yang cepat dan menyenangkan.
+
+Latihan rutin serta kejuaraan futsal antar sekolah menjadi sarana menyalurkan bakat sekaligus menumbuhkan semangat tim dan kebersamaan.$where$ WHERE slug = 'futsal' AND (history = '' OR history IS NULL);
+UPDATE public.ekskuls SET history = $where$Qiroah adalah ekskul seni baca dan musikalisasi Al-Qur'an yang memperindah tilawah dengan ilmu tajwid serta nuansa qasidah yang syahdu. Anggota belajar langgam tadarus, murattal, hingga musikalisasi khas ekskul ini.
+
+Para anggota rutin murojaah dan tuntunan bacaan, lalu tampil memeriahkan acara-acara sekolah serta berlaga dalam lomba MTQ tingkat kabupaten maupun kejuaraan musikalisasi.$where$ WHERE slug = 'qiroah' AND (history = '' OR history IS NULL);
+
+-- ── Tautan prestasi ↔ ekskul (tabel achievements) ─────────────────────────
+-- Prestasi dapat terhubung ke ekskul tertentu (halaman detail /ekskul/[slug]
+-- menampilkan prestasi tersebut). Kolom nullable; FK SET NULL supaya menghapus
+-- ekskul tidak ikut menghapus dat prestasi (riwayat tetap utuh).
+ALTER TABLE public.achievements ADD COLUMN IF NOT EXISTS ekskul_id uuid;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'achievements_ekskul_id_fkey') THEN
+    ALTER TABLE public.achievements ADD CONSTRAINT achievements_ekskul_id_fkey
+      FOREIGN KEY (ekskul_id) REFERENCES public.ekskuls (id) ON DELETE SET NULL;
+  END IF;
+END
+$$;
+
+-- Pencarian prestasi per ekskul di halaman detail.
+CREATE INDEX IF NOT EXISTS achievements_ekskul_idx ON public.achievements (ekskul_id);
 
 -- ── Seed izin modul untuk peran bawaan (idempoten) ─────────────────────────
 -- `can()` memperlakukan SUPER_ADMIN sebagai wildcard, tetapi baris eksplisit

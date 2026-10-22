@@ -1,7 +1,7 @@
 import { supabase } from "../supabase";
 import type { Ekskul } from "../supabase";
 import { tryCompressImage } from "../compress-image";
-import { deleteStorageFileByUrl, storagePathFromUrl } from "./shared";
+import { deleteStorageFileByUrl, storagePathFromUrl, tableHasColumn } from "./shared";
 import { removeViaRoute, listViaRoute, uploadFileViaRoute } from "../storage-remote";
 
 /**
@@ -60,12 +60,31 @@ export async function getEkskulListAll(): Promise<Ekskul[]> {
   return data || [];
 }
 
+/**
+ * Satu ekskul aktif berdasarkan slug — dipakai halaman detail
+ * `/ekskul/[slug]` (termasuk kolom `history`). Baris nonaktif/tak ada → null.
+ */
+export async function getEkskulBySlug(slug: string): Promise<Ekskul | null> {
+  const { data, error } = await supabase
+    .from("ekskuls")
+    .select("*")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (error) {
+    console.error("Error fetching ekskul by slug:", error);
+    return null;
+  }
+  return (data as Ekskul) || null;
+}
+
 export type EkskulInput = Partial<
   Pick<
     Ekskul,
     | "name"
     | "slug"
     | "description"
+    | "history"
     | "icon"
     | "schedule_day"
     | "schedule_time"
@@ -81,9 +100,10 @@ export type EkskulInput = Partial<
 export async function createEkskul(
   input: EkskulInput
 ): Promise<{ data: Ekskul | null; error?: string }> {
+  const payload = await normalizeInput(input);
   const { data, error } = await supabase
     .from("ekskuls")
-    .insert(input)
+    .insert(payload)
     .select()
     .single();
   if (error) {
@@ -91,6 +111,29 @@ export async function createEkskul(
     return { data: null, error: friendlyError(error) };
   }
   return { data };
+}
+
+/** Timpa memoized: apakah kolom `history` sudah ada di tabel ekskuls? */
+let historyColPromise: Promise<boolean> | null = null;
+function ekskulHasHistoryColumn(): Promise<boolean> {
+  if (!historyColPromise) {
+    historyColPromise = tableHasColumn("ekskuls", "history");
+  }
+  return historyColPromise;
+}
+
+/**
+ * Hilangkan `history` dari payload bila kolomnya belum ada (migrasi
+ * supabase/ekskul.sql belum dijalankan) — simpan tetap berjalan, kolom
+ * sejarah diabaikan sampai migrasi jalan.
+ */
+async function normalizeInput(input: EkskulInput): Promise<EkskulInput & Record<string, unknown>> {
+  if (typeof input.history !== "undefined" && !(await ekskulHasHistoryColumn())) {
+    const rest: EkskulInput = { ...input };
+    delete rest.history;
+    return { ...rest } as EkskulInput & Record<string, unknown>;
+  }
+  return { ...input } as EkskulInput & Record<string, unknown>;
 }
 
 /**
@@ -117,7 +160,7 @@ export async function updateEkskul(
 
   const { data, error } = await supabase
     .from("ekskuls")
-    .update({ ...input, updated_at: new Date().toISOString() })
+    .update({ ...(await normalizeInput(input)), updated_at: new Date().toISOString() })
     .eq("id", id)
     .select()
     .single();

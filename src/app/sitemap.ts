@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getNewsListForSitemap, getArticleListForSitemap, getActivityListAll } from "@/lib/queries";
+import { getNewsListForSitemap, getArticleListForSitemap, getActivityListAll, getEkskulList } from "@/lib/queries";
 
 const BASE_URL = "https://www.smpmuh4tanggul.sch.id";
 
@@ -7,12 +7,15 @@ const BASE_URL = "https://www.smpmuh4tanggul.sch.id";
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [news, articles, activities] = await Promise.all([
+  const [news, articles, activities, ekskul] = await Promise.all([
     getNewsListForSitemap(),
     getArticleListForSitemap(),
     // getActivityListAll melempar saat query gagal (standar panel admin) —
     // sitemap sendiri harus tetap tangguh, jadi gagal → daftar kosong.
     getActivityListAll().catch(() => []),
+    // getEkskulList sudah tangguh (gagal → []); tanpa updated_at di select,
+    // halaman detail ekskul masuk tanpa lastModified (pola halaman statis).
+    getEkskulList(),
   ]);
 
   const now = new Date().toISOString();
@@ -103,6 +106,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...activities.map((item) => ({
       url: `${BASE_URL}/activities/${item.slug}`,
       lastModified: item.published_at || item.updated_at || now,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
+    ...ekskul.map((item) => ({
+      url: `${BASE_URL}/ekskul/${item.slug}`,
       changeFrequency: "monthly" as const,
       priority: 0.6,
     })),
