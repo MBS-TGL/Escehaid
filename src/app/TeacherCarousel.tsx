@@ -100,7 +100,7 @@ export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
                     <div className="flex h-full w-full items-center justify-center bg-[#f0f4fa]">
                       <span
                         aria-hidden="true"
-                        className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-primary)] text-lg font-bold text-[var(--brand-accent)]"
+                        className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-primary)] text-lg font-bold text-white"
                       >
                         {nameInitials(t.name)}
                       </span>

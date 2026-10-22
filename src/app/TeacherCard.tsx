@@ -63,7 +63,7 @@ export default function TeacherCard({ teacher }: { teacher: Teacher }) {
         <div className="flex h-full w-full items-center justify-center bg-[#f0f4fa]">
           <span
             aria-hidden="true"
-            className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--brand-primary)] text-2xl font-bold text-[var(--brand-accent)]"
+            className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--brand-primary)] text-2xl font-bold text-white"
           >
             {nameInitials(teacher.name)}
           </span>
