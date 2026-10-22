@@ -1,7 +1,6 @@
 /**
  * Utilitas ekstrakurikuler — SATU sumber untuk:
  * - Label nama hari (schedule_day 0=Minggu .. 6=Sabtu)
- * - Opsi select ikon di form admin
  * - Pemetaan slug legacy → kunci ikon (dipakai EkskulGlyph juga untuk kartu)
  * - Formatter teks jadwal tampilan ("Sabtu, 08:00" / catatan bebas)
  * - Slug otomatis di form admin
@@ -9,22 +8,13 @@
  * Sumber data ekstrakurikuler kini tabel `public.ekskuls` (supabase/ekskul.sql)
  * yang dikelola lewat /admin/ekskul — file ini TIDAK lagi berisi daftar statis
  * ekskul (tanpa fallback runtime, sesuai keputusan).
- * Komponen ikon: lihat `@/components/EkskulIcon` (EkskulGlyph).
+ * Komponen ikon: lihat `@/components/EkskulIcon` (EkskulGlyph). Picker form
+ * admin memakai registry penuh ikon portal (PORTAL_ICONS, @/lib/portal-theme)
+ * ditambah opsi "" "Otomatis (dari slug)".
  */
 
 /** Nama hari sesuai indeks kolom `schedule_day` (0-6). */
 export const EKSKUL_DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"] as const;
-
-/** Opsi select ikon di form admin (label bicara bahasa pengguna). */
-export const EKSKUL_ICON_OPTIONS: { value: string; label: string }[] = [
-  { value: "", label: "Otomatis (dari slug)" },
-  { value: "soccer", label: "Bola" },
-  { value: "pingpong", label: "Bulu tangkis" },
-  { value: "tent", label: "Tenda" },
-  { value: "target", label: "Target" },
-  { value: "microphone", label: "Mikrofon" },
-  { value: "trophy", label: "Trophy" },
-];
 
 /**
  * Pemetaan slug legacy → kunci ikon, dipakai bila kolom `icon` kosong

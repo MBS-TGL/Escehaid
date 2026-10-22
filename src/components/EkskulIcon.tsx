@@ -3,9 +3,16 @@
  * render (lint `react-hooks/static-components` melarang membuat komponen
  * di dalam render; akses map di badan komponen ini lolos dan identitas
  * component type tetap stabil antar render).
+ *
+ * Rantai resolve kunci ikon (kolom `icon` ekskuls):
+ * 1. kunci legacy lowercase ("soccer", "tent", …) — baris seed & data lama;
+ * 2. nama ikon portal PascalCase ("Trophy", "MusicNotes", …) dari registry
+ *    `PORTAL_ICONS` (@/lib/portal-theme) — hasil picker form admin;
+ * 3. fallback Trophy bila kunci tak dikenal/kosong tanpa slug cocok.
  */
 import { MicrophoneStage, PingPong, SoccerBall, Target, Tent, Trophy } from "./Icons";
 import { EKSKUL_SLUG_ICONS } from "@/app/ekskul-data";
+import { PORTAL_ICONS } from "@/lib/portal-theme";
 
 const EKSKUL_ICONS: Record<string, typeof Trophy> = {
   soccer: SoccerBall,
@@ -26,6 +33,6 @@ export default function EkskulGlyph({
   className?: string;
 }) {
   const key = iconKey || EKSKUL_SLUG_ICONS[slug || ""] || "";
-  const Icon = (key && EKSKUL_ICONS[key]) || Trophy;
+  const Icon = (key && EKSKUL_ICONS[key]) || (key && PORTAL_ICONS[key]) || Trophy;
   return <Icon weight="fill" className={className} />;
 }

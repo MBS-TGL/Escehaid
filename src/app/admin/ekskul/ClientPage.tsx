@@ -12,7 +12,8 @@ import {
   uploadEkskulImage,
   revalidateEkskul,
 } from "@/lib/queries";
-import { slugifyEkskul, EKSKUL_DAYS, EKSKUL_ICON_OPTIONS, formatEkskulSchedule } from "@/app/ekskul-data";
+import { slugifyEkskul, EKSKUL_DAYS, formatEkskulSchedule } from "@/app/ekskul-data";
+import { PORTAL_ICONS, PORTAL_ICON_LABELS, PORTAL_ICON_SEARCH } from "@/lib/portal-theme";
 import EkskulGlyph from "@/components/EkskulIcon";
 import type { Ekskul } from "@/lib/supabase";
 import { ConfirmModal, SlideOver, SkeletonBlock, Select } from "@/components/ui";
@@ -59,16 +60,37 @@ const PAGE_SIZE = 10;
  * ikon + label, panel opsi di-portal ke body dengan position:fixed memakai
  * hook bersama `useFloatingPanel` (flip atas/bawah, re-posisi saat scroll
  * modal & resize) supaya tinggi SlideOver tidak berubah saat panel dibuka.
- * Opsi cuma 7 (tanpa pencarian), tiap tile menampilkan ikon + label — tile
- * ikon-saja ala portal tidak cukup jelas untuk label semacam
- * "Otomatis (dari slug)". Tutup dengan klik di luar/Esc (Esc capture —
- * SlideOver di belakang tidak ikut tertutup); fokus kembali ke trigger. */
+ * Opsi = registry penuh ikon portal (110 ikon, PORTAL_ICONS) + tile pertama
+ * khusus "Otomatis (dari slug)" (nilai "") — tidak seperti portal yang balik
+ * ke fallback tengah; ekskul butuh pilihan eksplisit karena ikon dirandom dari
+ * slug bila dikosongkan. Pencarian selalu terlihat di kepala panel, grid ikon
+ * men-scroll internal; tutup dengan klik di luar/Esc (Esc capture — SlideOver
+ * di belakang tidak ikut tertutup); fokus kembali ke trigger, query di-reset. */
 const PICKER_INPUT_CLS =
   "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20";
 const PICKER_TRIGGER_CLS = `${PICKER_INPUT_CLS} flex items-center justify-between gap-3 bg-white text-left`;
 const PICKER_FOCUS_RING =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]";
 
+const PICKER_ICON_NAMES = Object.keys(PORTAL_ICONS);
+
+/** Label Indonesia untuk nilai kolom `icon` versi legacy (baris seed & data
+ * lama memakai kunci lowercase; data baru memakai nama PascalCase portal). */
+const EKSKUL_LEGACY_ICON_LABELS: Record<string, string> = {
+  soccer: "Bola",
+  pingpong: "Bulu tangkis",
+  tent: "Tenda",
+  target: "Target",
+  microphone: "Mikrofon",
+  trophy: "Trophy",
+};
+
+function ikonEkskulLabel(value: string): string {
+  return PORTAL_ICON_LABELS[value] ?? EKSKUL_LEGACY_ICON_LABELS[value] ?? value;
+}
+
+/* Tile preview di trigger & tile "Otomatis" — kunci bisa legacy lowercase
+ * maupun nama portal, jadi lewat EkskulGlyph (sudah menangani keduanya). */
 function EkskulIconTileGlyph({
   iconKey,
   className,
@@ -88,26 +110,30 @@ function EkskulIconPicker({
   onChange: (key: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const { pos, reposition } = useFloatingPanel({
     triggerRef,
     open,
     onTriggerLost: () => setOpen(false),
-    maxHeight: 260,
-    minFit: 200,
+    maxHeight: 360,
+    minFit: 260,
   });
 
-  // Tutup → kembalikan fokus ke trigger. wasOpen supaya fokus tidak
-  // "mencuri" saat komponen baru mount.
+  // Buka → fokus ke pencarian; tutup → reset query + kembalikan fokus ke
+  // trigger. wasOpen supaya fokus tidak "mencuri" saat komponen baru mount.
   const wasOpen = useRef(false);
   useEffect(() => {
     if (open) {
       wasOpen.current = true;
+      searchRef.current?.focus();
     } else if (wasOpen.current) {
       wasOpen.current = false;
+      setQuery("");
       triggerRef.current?.focus();
     }
   }, [open]);
@@ -139,6 +165,11 @@ function EkskulIconPicker({
     return () => document.removeEventListener("keydown", onKey, true);
   }, [open]);
 
+  const q = query.trim().toLowerCase();
+  const names = q
+    ? PICKER_ICON_NAMES.filter((n) => PORTAL_ICON_SEARCH[n].includes(q))
+    : PICKER_ICON_NAMES;
+
   function toggle() {
     if (open) {
       setOpen(false);
@@ -156,9 +187,6 @@ function EkskulIconPicker({
     setOpen(false);
   }
 
-  const activeLabel =
-    EKSKUL_ICON_OPTIONS.find((o) => o.value === value)?.label ?? value;
-
   return (
     <div ref={wrapRef} className="relative">
       <button
@@ -173,7 +201,9 @@ function EkskulIconPicker({
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#e4ecf6] text-[var(--brand-accent)]">
             <EkskulIconTileGlyph iconKey={value} className="h-5 w-5" />
           </span>
-          <span className="truncate">{activeLabel}</span>
+          <span className="truncate">
+            {value ? ikonEkskulLabel(value) : "Otomatis (dari slug)"}
+          </span>
           {value ? <span className="truncate text-xs text-slate-400">{value}</span> : null}
         </span>
         <CaretDown
@@ -197,34 +227,70 @@ function EkskulIconPicker({
             }}
             className="flex flex-col overflow-hidden rounded-xl border border-[#dce3ed] bg-white shadow-lg"
           >
-            <div
-              role="group"
-              aria-label="Ikon ekskul"
-              className="grid min-h-0 flex-1 grid-cols-2 gap-1 overflow-y-auto p-2"
-            >
-              {EKSKUL_ICON_OPTIONS.map((opt) => {
-                const selected = opt.value === value;
-                return (
-                  <button
-                    key={opt.value || "auto"}
-                    type="button"
-                    aria-pressed={selected}
-                    title={opt.label}
-                    onClick={() => pick(opt.value)}
-                    className={`flex h-11 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors ${PICKER_FOCUS_RING} ${
-                      selected
-                        ? "bg-[#e4ecf6] font-semibold text-[var(--brand-primary)] ring-2 ring-[var(--brand-primary)]"
-                        : "text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--brand-accent)]">
-                      <EkskulIconTileGlyph iconKey={opt.value} className="h-4 w-4" />
-                    </span>
-                    <span className="truncate">{opt.label}</span>
-                  </button>
-                );
-              })}
+            <div className="shrink-0 border-b border-slate-100 p-2">
+              <input
+                ref={searchRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (names[0]) pick(names[0]);
+                  }
+                }}
+                placeholder={`Cari ${PICKER_ICON_NAMES.length} ikon, mis. bola, musik, masjid`}
+                aria-label="Cari ikon"
+                className={PICKER_INPUT_CLS}
+              />
             </div>
+            {names.length === 0 ? (
+              <p className="px-4 py-6 text-center text-sm text-slate-400">Ikon tidak ditemukan</p>
+            ) : (
+              <div
+                role="group"
+                aria-label="Ikon ekskul"
+                className="grid min-h-0 flex-1 grid-cols-6 gap-1 overflow-y-auto p-2"
+              >
+                {/* Tile pertama: "" = Otomatis (dari slug) */}
+                <button
+                  key="auto"
+                  type="button"
+                  aria-pressed={value === ""}
+                  title="Otomatis (dari slug)"
+                  onClick={() => pick("")}
+                  className={`flex h-11 items-center justify-center rounded-lg transition-colors ${PICKER_FOCUS_RING} ${
+                    value === ""
+                      ? "bg-[#e4ecf6] text-[var(--brand-accent)] ring-2 ring-[var(--brand-primary)]"
+                      : "text-slate-500 hover:bg-slate-100"
+                  }`}
+                >
+                  <SquaresFour className="h-6 w-6" weight={value === "" ? "fill" : "regular"} />
+                </button>
+                {names.map((name) => {
+                  const Icon = PORTAL_ICONS[name];
+                  const selected = name === value;
+                  const label = ikonEkskulLabel(name);
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      aria-pressed={selected}
+                      aria-label={label}
+                      title={label}
+                      onClick={() => pick(name)}
+                      className={`flex h-11 items-center justify-center rounded-lg transition-colors ${PICKER_FOCUS_RING} ${
+                        selected
+                          ? "bg-[#e4ecf6] text-[var(--brand-accent)] ring-2 ring-[var(--brand-primary)]"
+                          : "text-slate-500 hover:bg-slate-100"
+                      }`}
+                    >
+                      <Icon className="h-6 w-6" weight={selected ? "fill" : "regular"} />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>,
           document.body
         )}

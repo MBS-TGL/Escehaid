@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { EKSKUL_DAYS, EKSKUL_ICON_OPTIONS, EKSKUL_SLUG_ICONS, formatEkskulSchedule, slugifyEkskul } from "./ekskul-data";
+import { EKSKUL_DAYS, EKSKUL_SLUG_ICONS, formatEkskulSchedule, slugifyEkskul } from "./ekskul-data";
+import { PORTAL_ICONS } from "@/lib/portal-theme";
 
 describe("formatEkskulSchedule", () => {
   it("gabungkan hari + jam + catatan", () => {
@@ -60,10 +61,13 @@ describe("registry ikon & slug legacy", () => {
     }
   });
 
-  it("opsi select ikon memiliki daftar kunci registry + otomatis", () => {
-    expect(EKSKUL_ICON_OPTIONS[0].value).toBe("");
-    const keys = EKSKUL_ICON_OPTIONS.slice(1).map((o) => o.value);
-    expect(new Set(keys)).toEqual(new Set(["soccer", "pingpong", "tent", "target", "microphone", "trophy"]));
-    expect(new Set(Object.values(EKSKUL_SLUG_ICONS)).isSubsetOf(new Set(keys))).toBe(true);
+  it("kunci ikon legacy (nilai kolom icon baris seed) dikenali registry resolver", () => {
+    // Nilai-nilai ini dipakai EkskulGlyph: kunci legacy → EKSKUL_ICONS
+    // (map privat di komponen), kunci PascalCase → PORTAL_ICONS.
+    const legacyKeys = ["soccer", "pingpong", "tent", "target", "microphone", "trophy"];
+    expect(new Set(Object.values(EKSKUL_SLUG_ICONS)).isSubsetOf(new Set(legacyKeys))).toBe(true);
+    // Ikon picker = registry penuh portal (PascalCase) + tile otomatis "".
+    expect(Object.keys(PORTAL_ICONS).length).toBeGreaterThan(100);
+    expect(legacyKeys.every((k) => !(k in PORTAL_ICONS))).toBe(true);
   });
 });
