@@ -316,6 +316,70 @@ export function slotOwnerDayIndex(slot: Slot, time: string, todayIndex: number):
   return todayIndex;
 }
 
+// ============ EDITOR /admin/program: format teks (DSL) per slot =============
+
+/**
+ * Teks editor untuk daftar item slot — satu item per baris; hari opsional
+ * setelah pemisah "|": `Label` (setiap hari) atau `Label | Senin,Kamis`.
+ * Menerima entitas jsonb apa pun yang berlabel/hari (tipe longgar).
+ */
+export function slotItemsToText(
+  items: readonly { label: string; days?: readonly string[] | null }[]
+): string {
+  return items
+    .map((item) =>
+      item.days && item.days.length ? `${item.label} | ${item.days.join(",")}` : item.label
+    )
+    .join("\n");
+}
+
+export interface SlotItemsParseResult {
+  list: SlotItem[];
+  /** Masalah per baris (1-based) — label kosong / hari tak dikenal. */
+  errors: { line: number; message: string }[];
+}
+
+/** Parser untuk `slotItemsToText` — baris kosong dilewati, urutan dipertahankan. */
+export function parseSlotItemsText(text: string): SlotItemsParseResult {
+  const list: SlotItem[] = [];
+  const errors: SlotItemsParseResult["errors"] = [];
+  const daySet: ReadonlySet<string> = new Set(DAYS);
+  text.split(/\r?\n/).forEach((raw, i) => {
+    const line = i + 1;
+    const trimmed = raw.trim();
+    if (!trimmed) return;
+    const sep = trimmed.indexOf("|");
+    const label = (sep === -1 ? trimmed : trimmed.slice(0, sep)).trim();
+    if (!label) {
+      errors.push({ line, message: `Baris ${line}: label kosong` });
+      return;
+    }
+    if (sep === -1) {
+      list.push({ label });
+      return;
+    }
+    const tokens = trimmed
+      .slice(sep + 1)
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (!tokens.length) {
+      errors.push({ line, message: `Baris ${line}: daftar hari kosong sesudah "|"` });
+      return;
+    }
+    const bad = tokens.filter((t) => !daySet.has(t));
+    if (bad.length) {
+      errors.push({
+        line,
+        message: `Baris ${line}: hari "${bad.join(", ")}" tidak dikenal (Senin..Ahad)`,
+      });
+      return;
+    }
+    list.push({ label, days: tokens as Day[] });
+  });
+  return { list, errors };
+}
+
 /** Catatan review (TIDAK dirender di UI). */
 export const REVIEW_NOTES: string[] = [
   "Jumat: apakah ada Shalat Jumat (dokumen menulis Shalat Dzuhur + KBM normal)?",

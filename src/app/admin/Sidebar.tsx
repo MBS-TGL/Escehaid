@@ -18,6 +18,7 @@ import {
   Trophy,
   GraduationCap,
   SquaresFour,
+  BookOpen,
   CaretRight,
   ArrowSquareOut,
   FolderOpen,
@@ -79,6 +80,7 @@ export const navGroups: NavGroup[] = [
       { label: "Fasilitas", href: "/admin/facilities", icon: Buildings, perm: "fasilitas:read" },
       { label: "Ekskul", href: "/admin/ekskul", icon: Trophy, perm: "ekskul:read" },
       { label: "Portal", href: "/admin/portal", icon: SquaresFour, perm: "portal:read" },
+      { label: "Program", href: "/admin/program", icon: BookOpen, perm: "program:read" },
     ],
   },
   {

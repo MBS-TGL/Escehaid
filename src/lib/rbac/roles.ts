@@ -98,6 +98,8 @@ const CONTENT_PERMISSIONS: readonly string[] = [
   "portal:create",
   "portal:update",
   "portal:delete",
+  "program:read",
+  "program:update",
 ];
 
 const SPMB_PERMISSIONS: readonly string[] = [

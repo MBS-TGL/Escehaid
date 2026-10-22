@@ -13,6 +13,8 @@ import {
   timeNowJakarta,
   activeSlotNowJakarta,
   slotOwnerDayIndex,
+  slotItemsToText,
+  parseSlotItemsText,
 } from "./mbs-schedule";
 
 const slot = SLOTS.find((s) => s.id === "dini-1")!;
@@ -165,5 +167,78 @@ describe("BLOCKS", () => {
     const malam = BLOCKS.find((b) => b.key === "malam")!;
     expect(malam.end).toBe("03:00");
     expect(isSlotActiveNow({ ...SLOTS[0], start: malam.start, end: malam.end }, "23:00")).toBe(true);
+  });
+});
+
+describe("slotItemsToText & parseSlotItemsText", () => {
+  it("serialize: tanpa days → label polos; dengan days → 'Label | Senin,Kamis'", () => {
+    expect(
+      slotItemsToText([
+        { label: "Shalat Subuh" },
+        { label: "Sahur", days: ["Senin", "Kamis"] },
+      ])
+    ).toBe("Shalat Subuh\nSahur | Senin,Kamis");
+  });
+
+  it("round-trip: teks hasil serialize diparser kembali identik", () => {
+    const items = [
+      { label: "Ngaji Malam" },
+      { label: "Sahur", days: ["Senin", "Kamis"] },
+      { label: "Ekstra", days: ["Sabtu", "Ahad"] },
+    ];
+    const { list, errors } = parseSlotItemsText(slotItemsToText(items));
+    expect(errors).toEqual([]);
+    expect(list).toEqual(items);
+  });
+
+  it("parse: baris tanpa '|' menjadi item setiap hari (days undefined)", () => {
+    const { list, errors } = parseSlotItemsText("Shalat Subuh");
+    expect(errors).toEqual([]);
+    expect(list).toEqual([{ label: "Shalat Subuh" }]);
+  });
+
+  it("parse: baris kosong dilewati, urutan dipertahankan, spasi dirapikan", () => {
+    const { list, errors } = parseSlotItemsText(
+      "  Sahur | Senin , Kamis  \n\n   \nQiyamul Lail"
+    );
+    expect(errors).toEqual([]);
+    expect(list).toEqual([
+      { label: "Sahur", days: ["Senin", "Kamis"] },
+      { label: "Qiyamul Lail" },
+    ]);
+  });
+
+  it("parse: label kosong (('| X') ) dilaporkan dengan nomor baris", () => {
+    const { list, errors } = parseSlotItemsText("Subuh\n| Senin");
+    expect(list).toEqual([{ label: "Subuh" }]);
+    expect(errors).toHaveLength(1);
+    expect(errors[0].line).toBe(2);
+    expect(errors[0].message).toContain("label kosong");
+  });
+
+  it("parse: hari tak dikenal ditolak dengan nomor baris", () => {
+    const { list, errors } = parseSlotItemsText("Ekstra | Sabtu,Minggu");
+    expect(list).toEqual([]);
+    expect(errors).toHaveLength(1);
+    expect(errors[0].line).toBe(1);
+    expect(errors[0].message).toContain("Minggu");
+  });
+
+  it("parse: '|' tanpa daftar hari dilaporkan", () => {
+    const { errors } = parseSlotItemsText("Label | ");
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toContain("daftar hari kosong");
+  });
+
+  it("parse: beberapa baris rusak semuanya terkumpul", () => {
+    const { list, errors } = parseSlotItemsText("| X\nGood\nM | Libur");
+    expect(list).toEqual([{ label: "Good" }]);
+    expect(errors.map((e) => e.line)).toEqual([1, 3]);
+  });
+
+  it("parse: mendukung baris CRLF", () => {
+    const { list, errors } = parseSlotItemsText("A\r\nB | Kamis\r\n");
+    expect(errors).toEqual([]);
+    expect(list).toEqual([{ label: "A" }, { label: "B", days: ["Kamis"] }]);
   });
 });
