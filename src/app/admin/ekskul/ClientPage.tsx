@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import {
   getEkskulListAll,
@@ -15,6 +16,7 @@ import { slugifyEkskul, EKSKUL_DAYS, EKSKUL_ICON_OPTIONS, formatEkskulSchedule }
 import EkskulGlyph from "@/components/EkskulIcon";
 import type { Ekskul } from "@/lib/supabase";
 import { ConfirmModal, SlideOver, SkeletonBlock, Select } from "@/components/ui";
+import { useFloatingPanel } from "@/components/ui/useFloatingPanel";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useToast } from "@/components/ui/Toast";
 import { usePermissions } from "@/app/admin/PermissionsProvider";
@@ -33,6 +35,8 @@ import {
   CheckCircle,
   XCircle,
   ImageSquare,
+  SquaresFour,
+  CaretDown,
 } from "@/components/Icons";
 import {
   MobileFilterBar,
@@ -50,6 +54,183 @@ import { FilterBar } from "@/components/admin/FilterBar";
 type FilterTab = "all" | "active" | "inactive";
 
 const PAGE_SIZE = 10;
+
+/* Picker ikon ekskul ala portal (/admin/portal): trigger berisi tile preview
+ * ikon + label, panel opsi di-portal ke body dengan position:fixed memakai
+ * hook bersama `useFloatingPanel` (flip atas/bawah, re-posisi saat scroll
+ * modal & resize) supaya tinggi SlideOver tidak berubah saat panel dibuka.
+ * Opsi cuma 7 (tanpa pencarian), tiap tile menampilkan ikon + label — tile
+ * ikon-saja ala portal tidak cukup jelas untuk label semacam
+ * "Otomatis (dari slug)". Tutup dengan klik di luar/Esc (Esc capture —
+ * SlideOver di belakang tidak ikut tertutup); fokus kembali ke trigger. */
+const PICKER_INPUT_CLS =
+  "w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20";
+const PICKER_TRIGGER_CLS = `${PICKER_INPUT_CLS} flex items-center justify-between gap-3 bg-white text-left`;
+const PICKER_FOCUS_RING =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]";
+
+function EkskulIconTileGlyph({
+  iconKey,
+  className,
+}: {
+  iconKey: string;
+  className: string;
+}) {
+  if (!iconKey) return <SquaresFour className={className} />;
+  return <EkskulGlyph iconKey={iconKey} className={className} />;
+}
+
+function EkskulIconPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (key: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const { pos, reposition } = useFloatingPanel({
+    triggerRef,
+    open,
+    onTriggerLost: () => setOpen(false),
+    maxHeight: 260,
+    minFit: 200,
+  });
+
+  // Tutup → kembalikan fokus ke trigger. wasOpen supaya fokus tidak
+  // "mencuri" saat komponen baru mount.
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (open) {
+      wasOpen.current = true;
+    } else if (wasOpen.current) {
+      wasOpen.current = false;
+      triggerRef.current?.focus();
+    }
+  }, [open]);
+
+  // Tutup saat klik di luar trigger DAN di luar panel (portal-nya).
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (wrapRef.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  // Esc → tutup panel saja; capture + stopPropagation mencegah SlideOver
+  // di belakangnya ikut tertutup (sama seperti IconPicker portal).
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, [open]);
+
+  function toggle() {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    if (!triggerRef.current) return;
+    // Posisi dihitung dalam batch yang sama dengan setOpen — panel sudah
+    // pada posisi benar sejak render pertama (tanpa frame kosong).
+    reposition();
+    setOpen(true);
+  }
+
+  function pick(key: string) {
+    onChange(key);
+    setOpen(false);
+  }
+
+  const activeLabel =
+    EKSKUL_ICON_OPTIONS.find((o) => o.value === value)?.label ?? value;
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={toggle}
+        className={PICKER_TRIGGER_CLS}
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#e4ecf6] text-[var(--brand-accent)]">
+            <EkskulIconTileGlyph iconKey={value} className="h-5 w-5" />
+          </span>
+          <span className="truncate">{activeLabel}</span>
+          {value ? <span className="truncate text-xs text-slate-400">{value}</span> : null}
+        </span>
+        <CaretDown
+          className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && pos &&
+        createPortal(
+          <div
+            ref={panelRef}
+            style={{
+              position: "fixed",
+              top: pos.top,
+              bottom: pos.bottom,
+              left: pos.left,
+              width: pos.width,
+              maxHeight: pos.maxHeight,
+              // Di atas overlay SlideOver (z-[9999]) karena panel di-portal keluar.
+              zIndex: 10000,
+            }}
+            className="flex flex-col overflow-hidden rounded-xl border border-[#dce3ed] bg-white shadow-lg"
+          >
+            <div
+              role="group"
+              aria-label="Ikon ekskul"
+              className="grid min-h-0 flex-1 grid-cols-2 gap-1 overflow-y-auto p-2"
+            >
+              {EKSKUL_ICON_OPTIONS.map((opt) => {
+                const selected = opt.value === value;
+                return (
+                  <button
+                    key={opt.value || "auto"}
+                    type="button"
+                    aria-pressed={selected}
+                    title={opt.label}
+                    onClick={() => pick(opt.value)}
+                    className={`flex h-11 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors ${PICKER_FOCUS_RING} ${
+                      selected
+                        ? "bg-[#e4ecf6] font-semibold text-[var(--brand-primary)] ring-2 ring-[var(--brand-primary)]"
+                        : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--brand-accent)]">
+                      <EkskulIconTileGlyph iconKey={opt.value} className="h-4 w-4" />
+                    </span>
+                    <span className="truncate">{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>,
+          document.body
+        )}
+    </div>
+  );
+}
 
 export default function AdminEkskulPage() {
   const { toast } = useToast();
@@ -859,7 +1040,10 @@ export default function AdminEkskulPage() {
             </div>
           </div>
           <p className="-mt-2 text-xs text-slate-400">Angka kecil tampil lebih dulu. Ekskul baru otomatis memakai urutan terbesar + 1.</p>
-          <Select label="Ikon" options={EKSKUL_ICON_OPTIONS} value={formIcon} onChange={setFormIcon} />
+          <div>
+            <label className={labelCls}>Ikon</label>
+            <EkskulIconPicker value={formIcon} onChange={setFormIcon} />
+          </div>
           <div>
             <span className="mb-1.5 block text-sm font-semibold text-slate-700">Gambar</span>
             <div className="flex items-center gap-3">
