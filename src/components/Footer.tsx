@@ -11,6 +11,7 @@ const NAV_GROUPS: { title: string; links: [href: string, label: string][] }[] = 
     title: "Sekolah",
     links: [
       ["/profile", "Profil sekolah"],
+      ["/program", "Program"],
       ["/achievements", "Prestasi"],
       ["/activities", "Kegiatan"],
       ["/gallery", "Galeri"],

@@ -11,6 +11,7 @@ import type { PublicBrand } from "@/lib/settings";
 const navLinks = [
   { href: "/", label: "Beranda" },
   { href: "/profile", label: "Profil" },
+  { href: "/program", label: "Program", hideOnMd: true },
   { href: "/achievements", label: "Prestasi" },
   { href: "/news", label: "Berita" },
   { href: "/articles", label: "Artikel" },
