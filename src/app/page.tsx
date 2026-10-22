@@ -20,6 +20,7 @@ import {
 } from "@/lib/site-config";
 import type { Achievement } from "@/lib/supabase";
 import { BLOCKS } from "@/lib/data/mbs-schedule";
+import { getAgendaBlocksList, blockRowToSummary } from "@/lib/queries";
 
 const FAQ = dynamic(() => import("./FAQ"), { loading: () => <div className="h-96" /> });
 const WhatsAppButton = dynamic(() => import("./WhatsAppButton"));
@@ -119,7 +120,7 @@ export default async function Home() {
   // Batasi jumlah baris sesuai yang benar-benar dipakai beranda (berita/kegiatan/
   // artikel 4, fasilitas 5, prestasi 6, guru 12) supaya payload & waktu render
   // ulang ISR lebih ringan — terutama saat dibuka dari HP.
-  const [beritaRaw, dbFacilities, activities, articles, teachers, profile, achievements, settings, agendaEvents, ekskulList] =
+  const [beritaRaw, dbFacilities, activities, articles, teachers, profile, achievements, settings, agendaEvents, ekskulList, programBlocks] =
     await Promise.all([
       getNewsList(4) as Promise<NewsItem[]>,
       getFacilityList(5),
@@ -131,7 +132,13 @@ export default async function Home() {
       getSiteSettings(),
       getActiveAgendaEvents(),
       getEkskulList(),
+      getAgendaBlocksList(),
     ]);
+
+  // Kartu agenda harian: dari tabel agenda_blocks (supabase/program.sql); bila
+  // SQL belum jalan → fallback data statis (mbs-schedule.ts) — aman dua-duanya.
+  const agendaBlocks =
+    programBlocks.length > 0 ? programBlocks.map(blockRowToSummary) : BLOCKS;
 
   // Hanya acara yang belum dimulai yang layak ditayangkan di countdown.
   const upcomingEvents = filterUpcomingEvents(agendaEvents);
@@ -805,7 +812,7 @@ export default async function Home() {
               <span className="text-sm text-slate-500">dari dini hari hingga istirahat malam</span>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {BLOCKS.map((block) => (
+              {agendaBlocks.map((block) => (
                 <Link
                   key={block.key}
                   href="/program#agenda"

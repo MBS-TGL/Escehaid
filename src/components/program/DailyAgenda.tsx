@@ -1,18 +1,33 @@
 import { CSSStagger } from "@/components/CSSAnimations";
 import { MoonStars, CalendarBlank, Clock } from "@/components/Icons";
 import { AGENDA_SECTION_META } from "@/lib/data/mbs-quran";
-import { BLOCKS } from "@/lib/data/mbs-schedule";
+import { BLOCKS, SLOTS, type Slot } from "@/lib/data/mbs-schedule";
+import type { AgendaBlockView } from "@/lib/queries/program";
 import WeeklySchedule from "./WeeklySchedule";
 
-const DAILY_BLOCKS = BLOCKS.map((b) => ({
-  key: b.key,
-  title: b.title,
-  timeLabel: b.timeLabel,
-  summary: b.summary,
-}));
-
-/** Server section: heading + 4 kartu ringkas + jadwal lengkap (client). */
-export default function DailyAgenda() {
+/**
+ * Server section: heading + 4 kartu ringkas + jadwal lengkap (client).
+ * Data dari tabel `agenda_blocks` + `agenda_slots` (supabase/program.sql)
+ * dipasok sebagai prop; bila kosong (SQL belum jalan) → fallback statis.
+ */
+export default function DailyAgenda({
+  blocks,
+  slots,
+}: {
+  blocks?: AgendaBlockView[];
+  slots?: Slot[];
+} = {}) {
+  const blockList: AgendaBlockView[] =
+    blocks && blocks.length > 0
+      ? blocks
+      : BLOCKS.map((b) => ({
+          key: b.key,
+          buttonText: b.buttonText,
+          title: b.title,
+          summary: b.summary,
+          timeLabel: b.timeLabel,
+        }));
+  const DAILY_BLOCKS = blockList;
   return (
     <div>
       <p className="mb-3 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">
@@ -56,7 +71,7 @@ export default function DailyAgenda() {
         <p className="mb-5 text-sm text-slate-500">
           Pilih hari untuk melihat rangkaian kegiatan; tampilan tabel menampilkan seluruh sepekan.
         </p>
-        <WeeklySchedule />
+        <WeeklySchedule slots={slots && slots.length > 0 ? slots : SLOTS} />
       </div>
     </div>
   );

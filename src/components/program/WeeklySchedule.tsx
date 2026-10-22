@@ -21,6 +21,7 @@ import {
   slotsForDay,
   slotOwnerDayIndex,
   type Day,
+  type Slot,
 } from "@/lib/data/mbs-schedule";
 
 /** Sinkronisasi "sudah mount?" tanpa setState di effect (pola CSSAnimations). */
@@ -42,7 +43,7 @@ const TAB_KEYS_TO_FOCUS: Record<string, (i: number) => number> = {
   End: () => DAYS.length - 1,
 };
 
-export default function WeeklySchedule() {
+export default function WeeklySchedule({ slots = SLOTS }: { slots?: Slot[] } = {}) {
   const mounted = useMounted();
   const [selectedDay, setSelectedDay] = useState<Day | null>(null);
   const [mode, setMode] = useState<"per-hari" | "sepekan">("sepekan");
@@ -55,11 +56,11 @@ export default function WeeklySchedule() {
 
   const todayIndex = mounted ? dayIndexNowJakarta(new Date()) : -1;
   const currentSlot = useMemo(
-    () => (mounted ? activeSlotNowJakarta(new Date()) : null),
-    [mounted]
+    () => (mounted ? activeSlotNowJakarta(slots, new Date()) : null),
+    [mounted, slots]
   );
 
-  const slots = useMemo(() => slotsForDay(activeDay), [activeDay]);
+  const slotsOfDay = useMemo(() => slotsForDay(slots, activeDay), [slots, activeDay]);
 
   const onTabKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -161,7 +162,7 @@ export default function WeeklySchedule() {
         className={`mt-4 ${listVisible ? "" : "lg:hidden"}`}
       >
         <ol className="relative space-y-3 border-l border-[#dce3ed] pl-6">
-          {slots.map((slot) => {
+          {slotsOfDay.map((slot) => {
             const isNow = currentSlot?.slot?.id === slot.id;
             return (
               <li key={`${slot.id}-${activeDay}`} className="relative">
@@ -241,7 +242,7 @@ export default function WeeklySchedule() {
             </tr>
           </thead>
           <tbody>
-            {SLOTS.map((slot) => {
+            {slots.map((slot) => {
               const rowActive = currentSlot?.slot?.id === slot.id;
               return (
                 <tr

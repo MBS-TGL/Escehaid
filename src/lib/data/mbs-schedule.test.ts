@@ -90,7 +90,7 @@ describe("itemsForDay & slotsForDay", () => {
   });
   it("semua hari tetap punya slot (tidak ada hari kosong)", () => {
     for (const day of DAYS) {
-      expect(slotsForDay(day).length).toBeGreaterThan(0);
+      expect(slotsForDay(SLOTS, day).length).toBeGreaterThan(0);
     }
   });
 });
@@ -117,14 +117,14 @@ describe("Intl Jakarta helpers", () => {
 describe("activeSlotNowJakarta", () => {
   it("jam normal mengembalikan slot yang berjalan", () => {
     // 2026-01-05T07:45Z = 14:45 WIB -> sm-1 mulai.
-    const r = activeSlotNowJakarta(new Date("2026-01-05T07:45:00Z"));
+    const r = activeSlotNowJakarta(SLOTS, new Date("2026-01-05T07:45:00Z"));
     expect(r.slot?.id).toBe("sm-1");
     expect(r.time).toBe("14:45");
     expect(r.dayIndex).toBe(0);
   });
   it("pukul 01:00 WIB: slot malam lintas tengah malam tetap ditemukan", () => {
     // 2026-01-05T18:00Z = 01:00 WIB.
-    const r = activeSlotNowJakarta(new Date("2026-01-05T18:00:00Z"));
+    const r = activeSlotNowJakarta(SLOTS, new Date("2026-01-05T18:00:00Z"));
     expect(r.slot?.id).toBe("mlm-2");
   });
   it("selalu ditemukan tepat satu slot aktif pada jam-jam sampel", () => {

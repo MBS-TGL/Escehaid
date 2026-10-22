@@ -1,13 +1,30 @@
 import { CSSStagger } from "@/components/CSSAnimations";
 import SectionHeading from "@/components/public/SectionHeading";
 import { BookOpen, Clock } from "@/components/Icons";
-import { QURAN_SECTION_META, QURAN_PILLARS, type QuranPillar } from "@/lib/data/mbs-quran";
+import { QURAN_SECTION_META, QURAN_PILLARS } from "@/lib/data/mbs-quran";
+import type { QuranPillarView } from "@/lib/queries/program";
 
 /**
  * Section "Pembelajaran Al-Qur'an Metode Wafa" — 5 kartu pilar harian.
- * Server component (konten statis). Target (`target`) hanya dirender bila terisi.
+ * Server component. Data dari tabel `quran_pillars` (supabase/program.sql)
+ * dipasok sebagai prop; bila kosong (SQL belum jalan) → fallback statis.
+ * Target (`target`) hanya dirender bila terisi.
  */
-export default function QuranPillars() {
+export default function QuranPillars({
+  pillars,
+}: {
+  pillars?: QuranPillarView[];
+} = {}) {
+  const list: QuranPillarView[] =
+    pillars && pillars.length > 0
+      ? pillars
+      : QURAN_PILLARS.map((pillar) => ({
+          number: pillar.number,
+          title: pillar.title,
+          description: pillar.description,
+          time: pillar.time,
+          target: pillar.target || "",
+        }));
   return (
     <div>
       <p className="mb-3 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">
@@ -24,7 +41,7 @@ export default function QuranPillars() {
         className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
         stagger={60}
       >
-        {QURAN_PILLARS.map((pillar: QuranPillar) => (
+        {list.map((pillar) => (
           <article
             key={pillar.number}
             className="flex h-full flex-col rounded-2xl border border-[#dce3ed] bg-white p-5 shadow-sm transition-shadow hover:shadow-md"

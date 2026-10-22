@@ -281,8 +281,8 @@ export function itemsForDay(slot: Slot, day: Day): SlotItem[] {
 }
 
 /** Semua slot berurutan yang punya minimal 1 item aktif pada hari itu. */
-export function slotsForDay(day: Day): Slot[] {
-  return SLOTS.filter((slot) => itemsForDay(slot, day).length > 0);
+export function slotsForDay(slots: Slot[], day: Day): Slot[] {
+  return slots.filter((slot) => itemsForDay(slot, day).length > 0);
 }
 
 /**
@@ -293,11 +293,12 @@ export function slotsForDay(day: Day): Slot[] {
  * cukup dikembalikan begitu saja (tidak pernah bentuk/overlap antar slot).
  */
 export function activeSlotNowJakarta(
+  slots: Slot[],
   now: Date = new Date()
 ): { slot: Slot | null; time: string; dayIndex: number } {
   const time = timeNowJakarta(now);
   const dayIndex = dayIndexNowJakarta(now);
-  const found = SLOTS.find((slot) => isSlotActiveNow(slot, time)) ?? null;
+  const found = slots.find((slot) => isSlotActiveNow(slot, time)) ?? null;
   return { slot: found, time, dayIndex };
 }
 
