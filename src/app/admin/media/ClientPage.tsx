@@ -26,11 +26,14 @@ import {
   Users,
   Database,
   CheckCircle,
+  CaretLeft,
+  CaretRight,
 } from "@/components/Icons";
 import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
 import {
   MobileFilterBar,
   MobileListRow,
+  MobilePagination,
   MobilePickButton,
   MobileSelectBar,
   MobileThumb,
@@ -67,6 +70,29 @@ function fileExt(name: string): string {
 /** Referensi kosong bersama — identitas stabil agar dep useMemo tidak berubah tiap render. */
 const EMPTY_LIST: MediaFile[] = [];
 
+/** File per halaman — grid desktop & daftar mobile memakai halaman yang sama. */
+const PAGE_SIZE = 24;
+
+/**
+ * Window nomor halaman untuk bar paginasi: ≤9 halaman tampil penuh; lebih
+ * dari itu dipadatkan jadi "1 … [sekitar current] … N" (media bisa punya
+ * ratusan file — deret penuh akan membanjiri bar).
+ */
+function pageWindow(total: number, current: number): (number | "…")[] {
+  if (total <= 9) return Array.from({ length: total }, (_, i) => i + 1);
+  const nums = Array.from(
+    new Set([1, total, current - 1, current, current + 1].filter((n) => n >= 1 && n <= total))
+  ).sort((a, b) => a - b);
+  const out: (number | "…")[] = [];
+  let prev = 0;
+  for (const n of nums) {
+    if (prev && n - prev > 1) out.push("…");
+    out.push(n);
+    prev = n;
+  }
+  return out;
+}
+
 /**
  * Media library admin: lihat / cari / hapus file Storage per bucket.
  * Hapus hanya diizinkan untuk file TIDAK TERPAKAI (orphan — tidak direferensikan
@@ -89,6 +115,7 @@ export default function AdminMediaPage() {
   } | null>(null);
   const [scan, setScan] = useState<MediaScanResult | null>(null);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [confirmPath, setConfirmPath] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -151,6 +178,12 @@ export default function AdminMediaPage() {
       : files;
     return [...filtered].sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
   }, [files, search]);
+
+  // Paginasi client-side (fase 1 item #11): safePage di-clamp derived, aman
+  // saat filter memperkecil hasil tanpa reset state page secara sinkron.
+  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const safePage = Math.max(1, Math.min(page, totalPages));
+  const paged = visible.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const totalSize = files.reduce((sum, f) => sum + (f.size ?? 0), 0);
   const orphanCount = refs ? files.filter((f) => !isMediaReferenced(f, refs)).length : null;
@@ -252,18 +285,19 @@ export default function AdminMediaPage() {
     onChange: (k) => {
       setBucket(k as MediaBucket);
       setConfirmPath(null);
+      setPage(1);
     },
     menuLabel: "Pilih bucket media",
   };
 
   const allVisibleSelected =
-    visible.length > 0 && visible.every((f) => selectedPaths.has(f.path));
+    paged.length > 0 && paged.every((f) => selectedPaths.has(f.path));
 
   function toggleSelectAllVisible() {
     setSelectedPaths(
       allVisibleSelected
         ? new Set()
-        : new Set(visible.map((f) => f.path))
+        : new Set(paged.map((f) => f.path))
     );
   }
 
@@ -320,7 +354,10 @@ export default function AdminMediaPage() {
           placeholder="Cari nama file atau folder…"
           searchLabel="Cari file"
           query={search}
-          onQueryChange={setSearch}
+          onQueryChange={(v) => {
+            setSearch(v);
+            setPage(1);
+          }}
           filters={[bucketFilterGroup]}
         />
       </div>
@@ -331,7 +368,10 @@ export default function AdminMediaPage() {
           placeholder="Cari file…"
           searchLabel="Cari file"
           query={search}
-          onQueryChange={setSearch}
+          onQueryChange={(v) => {
+            setSearch(v);
+            setPage(1);
+          }}
           filter={{
             value: bucket,
             options: MEDIA_BUCKETS.map((b) => ({ key: b.id, label: b.label })),
@@ -339,6 +379,7 @@ export default function AdminMediaPage() {
               setBucket(k as MediaBucket);
               setConfirmPath(null);
               setSelectedPaths(new Set());
+              setPage(1);
             },
           }}
           action={<MobilePickButton onClick={() => setPickMode(true)} />}
@@ -386,11 +427,8 @@ export default function AdminMediaPage() {
       {/* Grid file (desktop md+) */}
       {!loading && !loadError && visible.length > 0 && (
         <>
-          <p className="mb-3 text-xs text-[#64748b] md:text-slate-400">
-            {visible.length} file ditampilkan{search ? ` dari ${files.length} total` : ""}
-          </p>
           <ul className="hidden md:grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {visible.map((file) => {
+            {paged.map((file) => {
               const referenced = refs ? isMediaReferenced(file, refs) : null;
               const canDelete = scanComplete && refs !== null && referenced === false;
               const isConfirming = confirmPath === file.path;
@@ -501,6 +539,47 @@ export default function AdminMediaPage() {
             })}
           </ul>
 
+          {/* Paginasi desktop (gaya ekskul) */}
+          <div className="hidden md:flex md:flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+            <p className="text-xs text-slate-400">
+              Menampilkan {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, visible.length)} dari {visible.length} file{search ? ` (dari ${files.length} total)` : ""}
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={safePage === 1}
+                aria-label="Halaman sebelumnya"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <CaretLeft className="h-4 w-4" />
+              </button>
+              {pageWindow(totalPages, safePage).map((p, i) =>
+                p === "…" ? (
+                  <span key={`gap-${i}`} className="px-1 text-xs text-slate-400">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    aria-current={p === safePage ? "page" : undefined}
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === safePage ? "bg-[var(--brand-primary)] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={safePage === totalPages}
+                aria-label="Halaman berikutnya"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <CaretRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
           {/* Daftar mobile (<md) — baris 56px tipe berkas + nama + ukuran/tanggal,
               aksi di menu ⋯ (Buka, Salin tautan, Hapus), mode Pilih + bar sticky. */}
           <div
@@ -508,7 +587,7 @@ export default function AdminMediaPage() {
             aria-label="Daftar file media"
             className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden"
           >
-            {visible.map((file) => {
+            {paged.map((file) => {
               const referenced = refs ? isMediaReferenced(file, refs) : null;
               const canDelete = canDeleteFile(file);
               const isSelected = selectedPaths.has(file.path);
@@ -611,6 +690,17 @@ export default function AdminMediaPage() {
               );
             })}
           </div>
+
+          {/* Paginasi mobile */}
+          <MobilePagination
+            page={safePage}
+            totalPages={totalPages}
+            total={visible.length}
+            from={(safePage - 1) * PAGE_SIZE + 1}
+            to={Math.min(safePage * PAGE_SIZE, visible.length)}
+            onPageChange={setPage}
+            itemLabel="file"
+          />
 
           {/* Ruang ekstra agar baris terakhir tidak tertutup bar sticky mode pilih */}
           {pickMode && <div className="h-24" aria-hidden="true" />}
