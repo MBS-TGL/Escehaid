@@ -733,7 +733,7 @@ export default function AdminEkskulPage() {
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">No</th>
                 <th className="hidden w-20 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">Urutan</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Ekskul</th>
-                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Jadwal</th>
+                <th className="w-52 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Jadwal</th>
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</th>
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
               </tr>
@@ -832,9 +832,28 @@ export default function AdminEkskulPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 text-center text-sm whitespace-nowrap text-slate-500">
-                      {formatEkskulSchedule(item.schedule_day, item.schedule_time, item.schedule_note) || "—"}
-                      {item.coach && <span className="block text-[11px] text-slate-400">Pembina: {item.coach}</span>}
+                    <td className="px-4 py-3.5 text-center text-sm text-slate-500">
+                      {/* Cap lebar konten supaya kolom tidak melebar oleh
+                          catatan jadwal/nama pembina panjang — sisanya elipsis
+                          dengan teks penuh di tooltip. */}
+                      {(() => {
+                        const schedule = formatEkskulSchedule(item.schedule_day, item.schedule_time, item.schedule_note);
+                        return schedule ? (
+                          <span className="inline-block max-w-[208px] truncate align-middle" title={schedule}>
+                            {schedule}
+                          </span>
+                        ) : (
+                          "—"
+                        );
+                      })()}
+                      {item.coach && (
+                        <span
+                          className="mx-auto block max-w-[208px] truncate text-[11px] text-slate-400"
+                          title={item.coach}
+                        >
+                          Pembina: {item.coach}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                       <button
