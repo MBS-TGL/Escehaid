@@ -80,6 +80,10 @@ export async function getAchievementsByEkskul(
   ekskulId: string,
   limit = 12
 ): Promise<Achievement[]> {
+  // Migrasi supabase/ekskul.sql belum jalan → kolom filter tak ada; jangan
+  // query (42703) dan jangan spam console error — bagian prestasi disembunyikan.
+  const hasEkskulCol = await achievementsHasEkskulColumn();
+  if (!hasEkskulCol) return [];
   const hasVideo = await achievementsHasVideoColumn();
   const columns =
     "id, title, description, category, year, image_url, sort_order, created_at, rank_label, level, participants, organizer, is_featured, image_alt" +
@@ -93,7 +97,10 @@ export async function getAchievementsByEkskul(
     .limit(limit);
 
   if (error) {
-    console.error("Error fetching achievements by ekskul:", error);
+    console.error(
+      "Error fetching achievements by ekskul:",
+      JSON.stringify(error, ["message", "code", "details", "hint"])
+    );
     return [];
   }
   return (data || []) as unknown as Achievement[];
