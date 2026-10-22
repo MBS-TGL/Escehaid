@@ -36,7 +36,7 @@ export default function CoverImage({
           alt={alt}
           width={1200}
           height={675}
-          preload={priority}
+          priority={priority}
           sizes="(min-width: 1024px) 896px, 100vw"
           className="block h-auto w-auto max-w-full max-h-[70vh] md:max-h-[75vh] rounded-2xl border border-[#dce3ed] shadow-sm object-contain"
           style={{ width: "auto", height: "auto" }}
