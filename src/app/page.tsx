@@ -897,7 +897,7 @@ export default async function Home() {
               ["Berani mencoba", "Siswa mendapat ruang untuk bertanya, berkarya, dan mengembangkan potensi.", Star],
             ] as [string, string, React.ElementType][]).map(([title, description, Icon]) => (
               <div key={title} className="group rounded-2xl border border-white/10 bg-white/5 p-6 transition-all md:backdrop-blur-sm duration-300 hover:border-white/20 hover:bg-white/10">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-accent)]/10 text-[var(--brand-accent)]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-highlight)]/15 text-[var(--brand-highlight)]">
                   <Icon className="h-5 w-5" weight="fill" />
                 </div>
                 <h3 className="mt-4 font-semibold">{title}</h3>
