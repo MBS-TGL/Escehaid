@@ -422,7 +422,11 @@ export default function AdminActivitiesPage() {
       toast("Kegiatan berhasil diperbarui", "success");
       // Revalidasi slug baru + slug lama bila slug berubah (URL lama ikut segar)
       const oldSlug = editItem.slug && data?.slug && editItem.slug !== data.slug ? editItem.slug : undefined;
-      revalidateActivities(data?.slug, oldSlug).catch(() => {});
+      // Tunggu revalidasi selesai, lalu buka tab preview bila sudah dipublish
+      await revalidateActivities(data?.slug, oldSlug).catch(() => {});
+      if (form.is_published && data?.slug) {
+        setTimeout(() => window.open(`/activities/${data.slug}`, "_blank"), 300);
+      }
     } else {
       const { data, error } = await createActivity(
         aiAssisted
@@ -431,7 +435,11 @@ export default function AdminActivitiesPage() {
       );
       if (error) { setFormError(error); setFormSaving(false); return; }
       toast("Kegiatan berhasil dibuat", "success");
-      revalidateActivities(data?.slug).catch(() => {});
+      // Tunggu revalidasi selesai, lalu buka tab preview bila sudah dipublish
+      await revalidateActivities(data?.slug).catch(() => {});
+      if (form.is_published && data?.slug) {
+        setTimeout(() => window.open(`/activities/${data.slug}`, "_blank"), 300);
+      }
     }
 
     setFormOpen(false);
