@@ -269,7 +269,7 @@ export default function PrestasiClient({
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Prestasi" }]}
       />
 
-      <section className="mx-auto max-w-7xl px-6 py-16">
+      <section className="mx-auto max-w-7xl px-6 py-12 md:py-16">
         {achievements.length === 0 ? (
           /* ── Tanpa data sama sekali ── */
           <EmptyState

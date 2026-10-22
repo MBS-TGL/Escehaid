@@ -277,7 +277,7 @@ export default async function ActivitiesPage({
         {tipe && <p className="mt-3 text-sm font-medium text-slate-500">Tipe: {tipeLabel}</p>}
       </PageHero>
 
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 md:py-16" style={{ contentVisibility: "auto" } as React.CSSProperties}>
 
         {activities.length === 0 ? (
           /* Empty state berbeda: "belum ada" vs "tidak ada hasil" */

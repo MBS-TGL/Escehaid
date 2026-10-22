@@ -82,7 +82,7 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
         {q && <p className="mt-3 text-sm font-medium text-slate-500">Hasil pencarian: &quot;{q}&quot;</p>}
       </PageHero>
 
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 md:py-16" style={{ contentVisibility: "auto" } as React.CSSProperties}>
 
         {berita.length === 0 ? (
           <EmptyState
