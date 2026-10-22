@@ -62,8 +62,19 @@ export default async function EkskulDetailPage({ params }: { params: Promise<{ s
     .map((c) => c.trim())
     .filter(Boolean);
 
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Beranda", item: "https://www.smpmuh4tanggul.sch.id" },
+      { "@type": "ListItem", position: 2, name: "Profil Sekolah", item: "https://www.smpmuh4tanggul.sch.id/profile" },
+      { "@type": "ListItem", position: 3, name: ekskul.name, item: `https://www.smpmuh4tanggul.sch.id/ekskul/${ekskul.slug}` },
+    ],
+  };
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       {/* Breadcrumb ala detail berita */}
       <div className="border-b border-[#dce3ed] bg-white">
         <div className="mx-auto max-w-5xl px-4 sm:px-6">

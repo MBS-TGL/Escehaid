@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase-server";
 import { forbiddenResponseIfLacks } from "@/lib/rbac/server";
 import { storageFrom, type StorageBucket } from "@/lib/storage";
 import { clientIpFrom, createRateLimiter } from "@/lib/rate-limit";
+import { MEDIA_EXT_MIME as EXT_MIME } from "@/lib/queries/media";
 
 /**
  * Storage admin sisi server — menggantikan akses storage langsung dari
@@ -75,24 +76,6 @@ function pathValid(path: string): boolean {
 
 const sizeError = (name: string) =>
   NextResponse.json({ error: `File "${name}" terlalu besar. Maksimal 10 MB.` }, { status: 413 });
-
-/** Perkiraan Content-Type dari ekstensi — dipakai bila klien tak mengirim type. */
-const EXT_MIME: Record<string, string> = {
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  png: "image/png",
-  webp: "image/webp",
-  pdf: "application/pdf",
-  doc: "application/msword",
-  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  xls: "application/vnd.ms-excel",
-  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  ppt: "application/vnd.ms-powerpoint",
-  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  zip: "application/zip",
-  rar: "application/x-rar-compressed",
-  txt: "text/plain",
-};
 
 /**
  * GET: daftar entri bucket untuk Media Library. Bentuk respons meniru hasil

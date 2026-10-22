@@ -1,5 +1,5 @@
 import { supabase } from "../supabase";
-import { removeViaRoute, listViaRoute, signedUrlViaRoute, type RemoteStorageEntry } from "../storage-remote";
+import { removeViaRoute, listViaRoute, signedUrlViaRoute } from "../storage-remote";
 import { storageFrom } from "../storage";
 
 /**
@@ -82,6 +82,32 @@ const MAX_FOLDER_DEPTH = 4;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
+ * Perkiraan Content-Type dari ekstensi — dipakai mengisi `mimetype` bila
+ * driver list tidak menyediakannya (ListObjectsV2 S3 tidak mengirim
+ * Content-Type per objek). Satu sumber untuk walker & route admin storage.
+ */
+export const MEDIA_EXT_MIME: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ppt: "application/vnd.ms-powerpoint",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  zip: "application/zip",
+  rar: "application/x-rar-compressed",
+  txt: "text/plain",
+};
+
+function extOf(name: string): string {
+  return (name.split(".").pop() || "").toLowerCase();
+}
+
+/**
  * Gangguan SEMENTARA yang layak dicoba ulang — Supabase Storage kadang
  * melempar 503 "Service Unavailable" sesaat (instance sibuk/muat ulang),
  * terutama saat walk memanggil banyak folder, dan koneksi bisa gagal total.
@@ -97,34 +123,61 @@ function isTransientStorageError(
   );
 }
 
+/** Satu anak folder/file yang dibaca walker (bentuk longgar lintas driver/route). */
+export interface StorageWalkEntry {
+  id: string | null;
+  name: string;
+  metadata: { size?: number | null; mimetype?: string | null } | null;
+  created_at?: string | null;
+}
+
+export type StorageWalkListFn = (
+  prefix: string
+) => Promise<{
+  data: StorageWalkEntry[] | null;
+  error: { message?: string; status?: number; statusCode?: string } | null;
+}>;
+
 /**
- * `list()` satu folder — SELALU lewat route server (S3 kredensial tak boleh
- * di browser). Dengan retry: maks. 3 percobaan, jeda 400ms × nomor percobaan.
- * Error permanen (403 RBAC, 404, dst.) langsung dikembalikan.
+ * `list()` satu folder — SELALU lewat penyedia `listFn` (route HTTP dari
+ * browser, atau driver storage langsung dari server action). Dengan retry:
+ * maks. 3 percobaan, jeda 400ms × nomor percobaan. Error permanen (403 RBAC,
+ * 404, dst.) langsung dikembalikan; exception `listFn` diperlakukan sebagai
+ * error jaringan (bisa transient).
  */
-async function listWithRetry(bucket: MediaBucket, prefix: string, attempts = 3) {
+async function listWithRetry(listFn: StorageWalkListFn, prefix: string, attempts = 3) {
   for (let attempt = 1; ; attempt += 1) {
-    const { data, error } = await listViaRoute(bucket, prefix);
+    const { data, error } = await listFn(prefix).catch((e: unknown) => ({
+      data: null,
+      error: {
+        message: e instanceof Error ? e.message : String(e),
+        status: 0,
+      },
+    }));
     if (!error || attempt >= attempts || !isTransientStorageError(error)) {
       return { data, error };
     }
     console.warn(
-      `Retry list ${bucket}/${prefix} setelah "${error.message}" (percobaan ${attempt}/${attempts - 1} ulang)`
+      `Retry list ${prefix} setelah "${error.message}" (percobaan ${attempt}/${attempts - 1} ulang)`
     );
     await sleep(400 * attempt);
   }
 }
 
 /**
- * Daftar semua file di sebuah bucket (rekursif per folder).
- * Membuang error per-folder (folder dilewati + dicatat), tetapi error di root
- * dilempar agar UI menampilkan kegagalan, bukan daftar kosong palsu.
+ * Walker rekursif semua file di sebuah bucket (dipakai jalur browser via
+ * `getMediaFiles` dan server action `listMediaFiles`). Membuang error per-folder
+ * (folder dilewati + dicatat), tetapi error di root DILEMPAR agar UI
+ * menampilkan kegagalan, bukan daftar kosong palsu.
  */
-export async function getMediaFiles(bucket: MediaBucket): Promise<MediaFile[]> {
+export async function walkStorageFiles(
+  bucket: MediaBucket,
+  listFn: StorageWalkListFn
+): Promise<MediaFile[]> {
   const files: MediaFile[] = [];
 
   const walk = async (prefix: string, depth: number, isRoot: boolean): Promise<void> => {
-    const { data, error } = await listWithRetry(bucket, prefix);
+    const { data, error } = await listWithRetry(listFn, prefix);
     if (error) {
       console.error(`Error listing ${bucket}/${prefix}:`, JSON.stringify(error), error.message);
       if (isRoot) {
@@ -140,21 +193,23 @@ export async function getMediaFiles(bucket: MediaBucket): Promise<MediaFile[]> {
 
     for (const entry of data ?? []) {
       const path = prefix ? `${prefix}/${entry.name}` : entry.name;
-      const meta = entry.metadata as { size?: number; mimetype?: string } | null;
+      const meta = entry.metadata;
       // Folder: id & metadata null (konvensi list adapter Storage).
       const isFolder = entry.id === null && meta === null;
       if (isFolder) {
         await walk(path, depth + 1, false);
       } else {
+        const mimetype =
+          ((meta?.mimetype ?? "") as string) || MEDIA_EXT_MIME[extOf(entry.name)] || null;
         files.push({
           bucket,
           path,
           name: entry.name,
           folder: prefix,
           size: typeof meta?.size === "number" ? meta.size : null,
-          mimetype: (meta?.mimetype ?? "").toString() || null,
-          createdAt: (entry as RemoteStorageEntry).created_at ?? entry.created_at ?? null,
-          isImage: ((meta?.mimetype ?? "") as string).startsWith("image/"),
+          mimetype,
+          createdAt: entry.created_at ?? null,
+          isImage: (mimetype ?? "").startsWith("image/"),
         });
       }
     }
@@ -162,6 +217,16 @@ export async function getMediaFiles(bucket: MediaBucket): Promise<MediaFile[]> {
 
   await walk("", 0, true);
   return files;
+}
+
+/**
+ * Daftar semua file di sebuah bucket dari browser (walk rekursif per folder
+ * lewat route `/api/admin/storage`). Untuk pemakaai ringan (MediaPicker,
+ * panel admin); jalur utama /admin/media memakai server action
+ * `listMediaFiles` di `src/app/admin/media/actions.ts`.
+ */
+export async function getMediaFiles(bucket: MediaBucket): Promise<MediaFile[]> {
+  return walkStorageFiles(bucket, (prefix) => listViaRoute(bucket, prefix));
 }
 
 /** Tambah satu string referensi + varian ternormalisasi URL storage (lintas-origin tetap cocok). */

@@ -9,7 +9,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { ImageSquare, X } from "@/components/Icons";
-import { getMediaFiles, mediaPublicUrl, type MediaFile } from "@/lib/queries/media";
+import { mediaPublicUrl, type MediaFile } from "@/lib/queries/media";
+import { listMediaFiles } from "@/app/admin/media/actions";
 
 interface MediaPickerProps {
   /** Sembunyikan label bila field induk sudah merendernya sendiri. */
@@ -114,8 +115,11 @@ function MediaLibraryModal({
   const load = useCallback(async () => {
     setState({ status: "loading", files: [] });
     try {
-      const files = await getMediaFiles("images");
-      setState({ status: "ready", files: files.filter((f) => f.isImage) });
+      const res = await listMediaFiles("images");
+      if (res.error || !res.files) {
+        throw new Error(res.error || "Gagal memuat pustaka media.");
+      }
+      setState({ status: "ready", files: res.files.filter((f) => f.isImage) });
     } catch (e) {
       setState({
         status: "error",

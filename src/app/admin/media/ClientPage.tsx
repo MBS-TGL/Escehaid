@@ -5,13 +5,12 @@ import Image from "next/image";
 import {
   MEDIA_BUCKETS,
   deleteMediaFile,
-  getMediaFiles,
   isMediaReferenced,
   mediaPublicUrl,
   mediaSignedUrl,
 } from "@/lib/queries";
 import type { MediaBucket, MediaFile } from "@/lib/queries";
-import { scanMediaReferences, type MediaScanResult } from "./actions";
+import { listMediaFiles, scanMediaReferences, type MediaScanResult } from "./actions";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useToast } from "@/components/ui/Toast";
 import { ConfirmModal } from "@/components/ui";
@@ -125,12 +124,18 @@ export default function AdminMediaPage() {
   const [confirmDelete, setConfirmDelete] = useState<MediaFile | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
-  // Muat file bucket aktif (setState hanya di callback async → aman untuk lint effect).
+  // Muat file bucket aktif via server action (setState hanya di callback async
+  // → aman untuk lint effect). Walk folder berjalan di server.
   useEffect(() => {
     let cancelled = false;
-    getMediaFiles(bucket)
-      .then((files) => {
-        if (!cancelled) setListing({ bucket, files, error: null });
+    listMediaFiles(bucket)
+      .then((res) => {
+        if (cancelled) return;
+        if (res.error || !res.files) {
+          setListing({ bucket, files: [], error: res.error || "Gagal memuat file" });
+        } else {
+          setListing({ bucket, files: res.files, error: null });
+        }
       })
       .catch((err: unknown) => {
         if (!cancelled) {

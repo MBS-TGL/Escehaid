@@ -63,7 +63,7 @@ Yang tersisa adalah penyempurnaan, tercantum di bawah.
   - [x] `RunningText` & `CountdownEvent` → tidak lagi mem-fetch dari browser (prop server).
   - Kandidat sisa: `src/app/TeacherCard.tsx`, `src/app/profile/TeacherGrid.tsx` & `FacilityGrid.tsx`, `src/components/EkskulCard.tsx`.
   Biarkan client yang benar-benar interaktif saja: SearchOverlay, MobileBottomNav.
-- [~] **11. Pagination server-side untuk `/admin/media` & `/admin/users`** — `/admin/users` selesai (server action `fetchUsersPage` + filter/sort/paginasi di server), pemindai referensi `/admin/media` pindah ke server action `scanMediaReferences` + `MEDIA_SCAN_ROW_CAP` (media.ts) sebagai guard; paginasi listing thumbnail media itu sendiri belum dibuat (fase berikutnya). `users.ts:7,117`, `registrations.ts:130` tetap dokumen ke depan.
+- [x] **11. Pagination server-side untuk `/admin/media` & `/admin/users`** — selesai. `/admin/users`: server action `fetchUsersPage` (filter/sort/paginasi di server). `/admin/media`: pemindai referensi via `scanMediaReferences` + `MEDIA_SCAN_ROW_CAP` (media.ts); walk listing folder kini server action `listMediaFiles` (walker generik `walkStorageFiles` + retry transient, dipakai juga `MediaPicker`); paginasi UI 24 file/halaman dengan window nomor + `MobilePagination`, "pilih semua" ter-scope halaman aktif. `users.ts:7,117`, `registrations.ts:130` tetap dokumen ke depan.
 
 ---
 
