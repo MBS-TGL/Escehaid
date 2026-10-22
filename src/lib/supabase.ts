@@ -227,6 +227,70 @@ export interface Ekskul {
   updated_at: string;
 }
 
+/**
+ * Konten halaman /program (tabel `public.quran_pillars`, `public.agenda_blocks`,
+ * `public.agenda_slots` — supabase/program.sql). Seed = transkripsi dokumen
+ * agenda MBS; dikelola lewat /admin/program (izin program:read/update).
+ */
+
+/** Item kegiatan pada slot: days null/tidak ada = setiap hari. */
+export interface AgendaSlotItemRecord {
+  label: string;
+  days?: string[] | null;
+}
+
+/** Satu pilar Al-Qur'an (kolom `number` unik "01" dsb.).
+ *
+ * Field:
+ *  - `number`: label urut dua digit, teks bebas yang bisa admin ubah
+ *  - `time_label`: label waktu tampilan (pengganti "TARGET" dokumen)
+ *  - `target`: baris target tambahan — kosong → tidak dirender
+ */
+export interface QuranPillarRow {
+  id: string;
+  number: string;
+  title: string;
+  description: string;
+  time_label: string;
+  target: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Blok ringkasan hari santri (4 kartu: beranda + /program#agenda). */
+export interface AgendaBlockRow {
+  id: string;
+  /** Kunci stabil ("dini-hari" dsb.) — dipetakan BlockKey di kode. */
+  key: string;
+  button_text: string;
+  title: string;
+  summary: string;
+  start_time: string;
+  end_time: string;
+  time_label: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Slot jam kegiatan harian (14 baris, pk id stabil: "dini-1", "psm-3", …). */
+export interface AgendaSlotRow {
+  id: string;
+  block_key: string;
+  /** "HH:MM"; end < start = slot melintasi tengah malam. */
+  start_time: string;
+  end_time: string;
+  /** Daftar item jsonb: [{ label, days? }] — days null = setiap hari. */
+  items: AgendaSlotItemRecord[];
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Article {
   id: string;
   title: string;

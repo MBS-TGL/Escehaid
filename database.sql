@@ -335,3 +335,57 @@ CREATE TABLE public.ekskuls (
   CONSTRAINT ekskuls_pkey PRIMARY KEY (id)
 );
 CREATE INDEX IF NOT EXISTS ekskuls_sort_idx ON public.ekskuls (sort_order);
+-- Konten halaman /program — migrasi lengkap: supabase/program.sql
+-- (3 tabel + RLS + seed konten draft needsReview + izin program:read/update).
+CREATE TABLE public.quran_pillars (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  -- Label urut dua digit ("01", dst.) — teks bebas yang bisa admin ubah.
+  number text NOT NULL UNIQUE,
+  title text NOT NULL,
+  description text DEFAULT ''::text,
+  -- Label waktu tampilan (pengganti "TARGET" dokumen sumber).
+  time_label text DEFAULT ''::text,
+  -- Baris target tambahan; kosong → tidak dirender.
+  target text DEFAULT ''::text,
+  is_active boolean DEFAULT true,
+  sort_order integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT quran_pillars_pkey PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS quran_pillars_sort_idx ON public.quran_pillars (sort_order);
+CREATE TABLE public.agenda_blocks (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  -- Kunci stabil ("dini-hari" dsb.) — dipetakan BlockKey di kode.
+  key text NOT NULL UNIQUE,
+  button_text text DEFAULT ''::text,
+  title text NOT NULL,
+  summary text DEFAULT ''::text,
+  start_time text DEFAULT ''::text,
+  end_time text DEFAULT ''::text,
+  time_label text DEFAULT ''::text,
+  is_active boolean DEFAULT true,
+  sort_order integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT agenda_blocks_pkey PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS agenda_blocks_sort_idx ON public.agenda_blocks (sort_order);
+CREATE TABLE public.agenda_slots (
+  -- Id stabil dari transkripsi ("dini-1", "psm-3", dst.).
+  id text NOT NULL,
+  -- Kunci blok pemilik slot.
+  block_key text NOT NULL,
+  -- "HH:MM" WIB; end < start = slot lintas tengah malam.
+  start_time text NOT NULL,
+  end_time text NOT NULL,
+  -- Daftar item slot: [{ "label": "…", "days": ["Senin", …] | null }].
+  items jsonb NOT NULL DEFAULT '[]'::jsonb,
+  is_active boolean DEFAULT true,
+  sort_order integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT agenda_slots_pkey PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS agenda_slots_sort_idx ON public.agenda_slots (sort_order);
+CREATE INDEX IF NOT EXISTS agenda_slots_block_idx ON public.agenda_slots (block_key);

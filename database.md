@@ -343,6 +343,64 @@ Ekstrakurikuler dinamis (beranda + profil + panel admin `/admin/ekskul` + halama
 | `created_at` | `timestamptz` | Default `now()` |
 | `updated_at` | `timestamptz` | Default `now()` |
 
+## Table `quran_pillars`
+
+Pilar Pembelajaran Al-Qur'an (Metode Wafa) untuk halaman `/program` — migrasi `supabase/program.sql` (3 tabel konten program + RLS + seed draft needsReview + izin `program:read`/`program:update`). Dikelola lewat `/admin/program` (edit-only: tanpa create/delete baris).
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary, default `gen_random_uuid()` |
+| `number` | `text` | Unique, NOT NULL — label urut dua digit "01" dsb. (teks bebas) |
+| `title` | `text` | NOT NULL |
+| `description` | `text` | Default `''` |
+| `time_label` | `text` | Label waktu tampilan; Default `''` |
+| `target` | `text` | Baris target tambahan; kosong → tidak dirender |
+| `is_active` | `bool` | Default `true` |
+| `sort_order` | `int4` | Default `0`, index `quran_pillars_sort_idx` |
+| `created_at` | `timestamptz` | Default `now()` |
+| `updated_at` | `timestamptz` | Default `now()` |
+
+## Table `agenda_blocks`
+
+Blok ringkasan hari santri (4 kartu: beranda + `/program#agenda`).
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary, default `gen_random_uuid()` |
+| `key` | `text` | Unique, NOT NULL — kunci stabil (`dini-hari` dsb.) |
+| `button_text` | `text` | Default `''` |
+| `title` | `text` | NOT NULL |
+| `summary` | `text` | Default `''` |
+| `start_time` | `text` | "HH:MM"; Default `''` |
+| `end_time` | `text` | "HH:MM"; Default `''` |
+| `time_label` | `text` | Default `''` |
+| `is_active` | `bool` | Default `true` |
+| `sort_order` | `int4` | Default `0`, index `agenda_blocks_sort_idx` |
+| `created_at` | `timestamptz` | Default `now()` |
+| `updated_at` | `timestamptz` | Default `now()` |
+
+## Table `agenda_slots`
+
+14 slot jam kegiatan harian MBS (transkripsi dokumen "AGENDA KEGIATAN HARIAN MBS").
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `text` | Primary — id stabil dari transkripsi (`dini-1`, `psm-3`, dst.) |
+| `block_key` | `text` | NOT NULL — kunci blok pemilik slot |
+| `start_time` | `text` | "HH:MM" WIB; NOT NULL |
+| `end_time` | `text` | "HH:MM"; end < start = slot lintas tengah malam |
+| `items` | `jsonb` | NOT NULL default `[]` — array `{ "label", "days"?: string[] \| null }`; days null = setiap hari |
+| `is_active` | `bool` | Default `true` |
+| `sort_order` | `int4` | Default `0`, index `agenda_slots_sort_idx` |
+| `created_at` | `timestamptz` | Default `now()` |
+| `updated_at` | `timestamptz` | Default `now()` |
+
 ## Table `notifications`
 
 ### Columns
@@ -456,6 +514,16 @@ Ekstrakurikuler dinamis (beranda + profil + panel admin `/admin/ekskul` + halama
 | `Public can read active ekskul` | SELECT | public | PERMISSIVE | `(is_active = true)` | — |
 | `Admins can manage ekskul` | ALL | public | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` |
 | `Panel roles manage ekskul` | ALL | authenticated | PERMISSIVE | `(EXISTS (SELECT 1 FROM user_profiles up WHERE up.id = auth.uid() AND up.role = ANY (ARRAY['developer'::user_role, 'admin'::user_role, 'publisher'::user_role]) AND up.is_active = true))` | idem USING |
+
+### `quran_pillars` · `agenda_blocks` · `agenda_slots`
+
+Polanya identik per tabel (`supabase/program.sql`):
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Public can read active program` | SELECT | public | PERMISSIVE | `(is_active = true)` | — |
+| `Admins can manage program` | ALL | public | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` | idem USING |
+| `Panel roles manage program` | ALL | authenticated | PERMISSIVE | `(EXISTS (SELECT 1 FROM user_profiles up WHERE up.id = auth.uid() AND up.role = ANY (ARRAY['developer'::user_role, 'admin'::user_role, 'publisher'::user_role]) AND up.is_active = true))` | idem USING |
 
 ### `school_profile`
 
