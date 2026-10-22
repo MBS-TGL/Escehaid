@@ -9,6 +9,7 @@ import {
   updateEkskul,
   deleteEkskul,
   deleteEkskulBulk,
+  updateEkskulBulk,
   reorderEkskuls,
   uploadEkskulImage,
   revalidateEkskul,
@@ -473,6 +474,12 @@ export default function AdminEkskulPage() {
       toast("Slug wajib diisi (atau sesuaikan nama)", "error");
       return;
     }
+    // Validasi slug unik di klien (kecuali item yang sedang diedit) — tabel
+    // punya PK/unique di server, tapi cegah lebih awal biar tidak menabrak 409.
+    if (items.some((i) => i.slug === slug && i.id !== editItem?.id)) {
+      toast(`Slug "${slug}" sudah dipakai ekskul lain — ganti slug atau ubah nama`, "error");
+      return;
+    }
     setFormSaving(true);
     const payload = {
       name,
@@ -538,14 +545,18 @@ export default function AdminEkskulPage() {
   }
 
   async function handleToggle(item: Ekskul) {
-    const { error } = await updateEkskul(item.id, { is_active: !item.is_active });
+    // Optimistic: update lokal dulu — UI terasa instan. Bila DB gagal,
+    // kembalikan nilai lama (tanpa fetchItems penuh).
+    const nextActive = !item.is_active;
+    setItems((list) => list.map((i) => (i.id === item.id ? { ...i, is_active: nextActive } : i)));
+    const { error } = await updateEkskul(item.id, { is_active: nextActive });
     if (error) {
+      setItems((list) => list.map((i) => (i.id === item.id ? { ...i, is_active: item.is_active } : i)));
       toast(`Gagal mengubah status: ${error}`, "error");
-    } else {
-      toast(`Ekskul ${!item.is_active ? "diaktifkan" : "dinonaktifkan"}`, "success");
-      revalidateEkskul().catch(() => {});
+      return;
     }
-    fetchItems();
+    toast(`Ekskul ${nextActive ? "diaktifkan" : "dinonaktifkan"}`, "success");
+    revalidateEkskul().catch(() => {});
   }
 
   async function handleDelete() {
@@ -581,6 +592,25 @@ export default function AdminEkskulPage() {
     fetchItems();
   }
 
+  /** Aktifkan/nonaktifkan semua ekskul terpilih dalam satu query batch. */
+  async function handleBulkSetActive(nextActive: boolean) {
+    if (!permUpdate) return;
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    const { error } = await updateEkskulBulk(ids, { is_active: nextActive });
+    if (error) {
+      toast(`Gagal mengubah status: ${error}`, "error");
+    } else {
+      toast(
+        `${ids.length} ekskul ${nextActive ? "diaktifkan" : "dinonaktifkan"}`,
+        "success"
+      );
+      revalidateEkskul().catch(() => {});
+    }
+    exitPickMode();
+    fetchItems();
+  }
+
   async function handleReorder(id: string, direction: "up" | "down") {
     // Reorder hanya berarti saat daftar tampil apa adanya — dengan filter/
     // pencarian aktif posisi global tidak sesuai konteks user.
@@ -597,24 +627,33 @@ export default function AdminEkskulPage() {
     // penomoran 1..n (data lama bisa punya duplikat/gap hasil drag versi
     // sebelumnya). Hanya baris yang sort_order-nya benar-benar berubah yang
     // dikirim — bukan menulis ulang seluruh tabel.
-    const newItems = [...items];
-    [newItems[idx], newItems[target]] = [newItems[target], newItems[idx]];
+    const swapped = [...items];
+    [swapped[idx], swapped[target]] = [swapped[target], swapped[idx]];
+    const newItems = swapped.map((it, i) =>
+      (it.sort_order ?? 0) !== i + 1 ? { ...it, sort_order: i + 1 } : it
+    );
     const changed = newItems
-      .map((it, i) => ({ item: it, next: i + 1 }))
-      .filter(({ item, next }) => (item.sort_order ?? 0) !== next)
-      .map(({ item, next }) => ({ id: item.id, sort_order: next }));
+      .map((it) => ({ id: it.id, sort_order: it.sort_order }))
+      .filter((row) => {
+        const orig = items.find((i) => i.id === row.id);
+        return (orig?.sort_order ?? 0) !== row.sort_order;
+      });
 
     if (changed.length === 0) return;
+    // Optimistic: tampilkan urutan baru segera; bila salah satu update
+    // gagal, kembalikan snapshot lama (tanpa fetchItems penuh saat sukses).
+    const prevItems = items;
+    setItems(newItems);
     const { error } = await reorderEkskuls(changed);
     if (error) {
+      setItems(prevItems);
       toast(`Gagal mengubah urutan: ${error}`, "error");
-    } else {
-      toast("Urutan diperbarui", "success");
-      revalidateEkskul().catch(() => {});
+      // Promise.all bisa meninggalkan DB setengah-jadi — resink wilayah.
+      fetchItems();
+      return;
     }
-    // fetchItems tetap dipanggil (juga saat gagal) — reorderEkskuls memakai
-    // Promise.all, kegagalan sebagian baris bisa membuat damping DB berbeda.
-    fetchItems();
+    toast("Urutan diperbarui", "success");
+    revalidateEkskul().catch(() => {});
   }
 
   /** Simpan gambar yang dipilih di form (preview via object URL di input). */
@@ -678,6 +717,24 @@ export default function AdminEkskulPage() {
         <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex">
           <Checks className="h-4 w-4 text-[var(--brand-primary)]" />
           <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
+          {permUpdate && (
+            <>
+              <button
+                onClick={() => handleBulkSetActive(true)}
+                aria-label={`Aktifkan ${selectedIds.size} ekskul terpilih`}
+                className="rounded-lg border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50"
+              >
+                Aktifkan
+              </button>
+              <button
+                onClick={() => handleBulkSetActive(false)}
+                aria-label={`Nonaktifkan ${selectedIds.size} ekskul terpilih`}
+                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Nonaktifkan
+              </button>
+            </>
+          )}
           {permDelete && (
             <button
               onClick={() => setBulkDelete(true)}
@@ -823,6 +880,11 @@ export default function AdminEkskulPage() {
                   const globalIdx = items.findIndex((it) => it.id === item.id);
                   const canGoUp = globalIdx > 0;
                   const canGoDown = globalIdx !== -1 && globalIdx < items.length - 1;
+                  // Pembina bisa dipisah koma (multi-orang) — tampilkan nama
+                  // pertama + "+N", nama seluruhnya tetap ada di tooltip.
+                  const coachList = item.coach
+                    ? item.coach.split(",").map((c) => c.trim()).filter(Boolean)
+                    : [];
                   return (
                   <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[var(--brand-primary)]/[0.03]" : ""}`}>
                     <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
@@ -888,12 +950,13 @@ export default function AdminEkskulPage() {
                           "—"
                         );
                       })()}
-                      {item.coach && (
+                      {coachList.length > 0 && (
                         <span
                           className="mx-auto block max-w-[208px] truncate text-[11px] text-slate-400"
-                          title={item.coach}
+                          title={coachList.join(", ")}
                         >
-                          Pembina: {item.coach}
+                          Pembina: {coachList[0]}
+                          {coachList.length > 1 ? ` +${coachList.length - 1}` : ""}
                         </span>
                       )}
                     </td>
@@ -902,13 +965,15 @@ export default function AdminEkskulPage() {
                         onClick={() => handleToggle(item)}
                         disabled={!permUpdate}
                         title={permUpdate ? "Klik untuk ubah status" : "Tidak berizin mengubah status"}
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:cursor-default disabled:opacity-70 ${
+                        aria-label={`Ubah status ${item.name}: sekarang ${item.is_active ? "aktif" : "nonaktif"}`}
+                        className={`inline-flex cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:cursor-default disabled:opacity-70 ${
                           item.is_active
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
                             : "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200"
                         }`}
                       >
                         {item.is_active ? "Aktif" : "Nonaktif"}
+                        <CaretDown className={`h-2.5 w-2.5 opacity-50 ${permUpdate ? "" : "hidden"}`} />
                       </button>
                     </td>
                     <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
@@ -1040,7 +1105,28 @@ export default function AdminEkskulPage() {
           count={selectedIds.size}
           onDelete={permDelete ? () => setBulkDelete(true) : undefined}
           onCancel={exitPickMode}
-        />
+        >
+          {permUpdate && (
+            <>
+              <button
+                type="button"
+                onClick={() => handleBulkSetActive(true)}
+                aria-label={`Aktifkan ${selectedIds.size} ekskul terpilih`}
+                className="min-h-11 rounded-xl border border-emerald-200 bg-white px-3.5 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+              >
+                Aktifkan
+              </button>
+              <button
+                type="button"
+                onClick={() => handleBulkSetActive(false)}
+                aria-label={`Nonaktifkan ${selectedIds.size} ekskul terpilih`}
+                className="min-h-11 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+              >
+                Nonaktifkan
+              </button>
+            </>
+          )}
+        </MobileSelectBar>
       )}
 
       {/* Create/Edit SlideOver */}
@@ -1119,6 +1205,12 @@ export default function AdminEkskulPage() {
               placeholder="Opsional — tampil di kartu beranda & profil"
               className={inputCls}
             />
+            <p className="mt-1 text-right text-xs text-slate-400">
+              <span className={formDescription.length > 160 ? "font-semibold text-amber-600" : ""}>
+                {formDescription.length}
+              </span>
+              /160
+            </p>
           </div>
           <div>
             <label htmlFor="ekskul-history" className={labelCls}>
@@ -1242,7 +1334,7 @@ export default function AdminEkskulPage() {
         onClose={() => setDeleteItem(null)}
         onConfirm={handleDelete}
         title="Hapus Ekskul?"
-        description={`"${deleteItem?.name}" akan dihapus permanen.`}
+        description={`"${deleteItem?.name}" akan dihapus permanen, termasuk gambar yang terunggah.`}
       />
 
       <ConfirmModal
@@ -1250,7 +1342,7 @@ export default function AdminEkskulPage() {
         onClose={() => setBulkDelete(false)}
         onConfirm={handleBulkDelete}
         title={`Hapus ${selectedIds.size} Ekskul?`}
-        description="Semua ekskul yang dipilih akan dihapus permanen."
+        description={`${selectedIds.size} ekskul terpilih akan dihapus permanen, termasuk gambar yang terunggah.`}
       />
     </div>
   );

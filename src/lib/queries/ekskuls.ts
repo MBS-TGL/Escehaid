@@ -206,6 +206,27 @@ export async function deleteEkskulBulk(ids: string[]): Promise<{ error?: string 
 }
 
 /**
+ * Ubah status aktif/nonaktif beberapa ekskul sekaligus dalam SATU query
+ * batch (pola `deleteEkskulBulk`). Tidak ada pembersihan storage — data
+ * baris tetap ada.
+ */
+export async function updateEkskulBulk(
+  ids: string[],
+  patch: { is_active: boolean }
+): Promise<{ error?: string }> {
+  if (ids.length === 0) return {};
+  const { error } = await supabase
+    .from("ekskuls")
+    .update({ is_active: patch.is_active, updated_at: new Date().toISOString() })
+    .in("id", ids);
+  if (error) {
+    console.error("Error bulk updating ekskul:", error);
+    return { error: friendlyError(error) };
+  }
+  return {};
+}
+
+/**
  * Simpan urutan hasil geser panah di panel: update per baris, laporkan
  * error pertama yang gagal.
  */
