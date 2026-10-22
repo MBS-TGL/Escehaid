@@ -93,14 +93,15 @@ END
 $$;
 
 -- ── Seed awal data ekskul (idempoten) — 6 ekskul saat ini ─────────────────
--- schedule_day: 0=Minggu, 3=Rabu, 6=Sabtu.
+-- schedule_day: 0=Minggu, 3=Rabu, 6=Sabtu. Urutan berurut mulai dari 1 —
+-- penomoran lanjutan dipatur panel admin (baru = terbesar + 1).
 INSERT INTO public.ekskuls (slug, name, schedule_day, schedule_time, icon, sort_order) VALUES
-  ('hizbul-wathan', 'Hizbul Wathan', 6, '08:00', 'tent',      10),
-  ('bulu-tangkis',  'Bulu Tangkis',  6, '09:30', 'pingpong',  20),
-  ('sepak-bola',    'Sepak Bola',    6, '09:30', 'soccer',    30),
-  ('panahan',       'Panahan',       6, '12:30', 'target',    40),
-  ('futsal',        'Futsal',        0, '09:00', 'soccer',    50),
-  ('qiroah',        'Qiroah',        3, '20:00', 'microphone', 60)
+  ('hizbul-wathan', 'Hizbul Wathan', 6, '08:00', 'tent',      1),
+  ('bulu-tangkis',  'Bulu Tangkis',  6, '09:30', 'pingpong',  2),
+  ('sepak-bola',    'Sepak Bola',    6, '09:30', 'soccer',    3),
+  ('panahan',       'Panahan',       6, '12:30', 'target',    4),
+  ('futsal',        'Futsal',        0, '09:00', 'soccer',    5),
+  ('qiroah',        'Qiroah',        3, '20:00', 'microphone', 6)
 ON CONFLICT (slug) DO NOTHING;
 
 -- ── Seed izin modul untuk peran bawaan (idempoten) ─────────────────────────

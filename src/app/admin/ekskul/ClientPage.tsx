@@ -14,7 +14,7 @@ import {
 import { slugifyEkskul, EKSKUL_DAYS, EKSKUL_ICON_OPTIONS, formatEkskulSchedule } from "@/app/ekskul-data";
 import EkskulGlyph from "@/components/EkskulIcon";
 import type { Ekskul } from "@/lib/supabase";
-import { ConfirmModal, SlideOver, SkeletonBlock } from "@/components/ui";
+import { ConfirmModal, SlideOver, SkeletonBlock, Select } from "@/components/ui";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useToast } from "@/components/ui/Toast";
 import { usePermissions } from "@/app/admin/PermissionsProvider";
@@ -156,7 +156,7 @@ export default function AdminEkskulPage() {
 
   function nextSortOrder(): number {
     const max = items.reduce((acc, i) => Math.max(acc, i.sort_order || 0), 0);
-    return max + 10;
+    return max + 1;
   }
 
   function openCreate() {
@@ -325,8 +325,9 @@ export default function AdminEkskulPage() {
     if (target < 0 || target >= items.length) return;
     const newOrder = [...items];
     [newOrder[idx], newOrder[target]] = [newOrder[target], newOrder[idx]];
+    // Penomoran ulang pada satu strip: urutan selalu 1..n tanpa gap.
     for (let i = 0; i < newOrder.length; i++) {
-      await updateEkskul(newOrder[i].id, { sort_order: (i + 1) * 10 });
+      await updateEkskul(newOrder[i].id, { sort_order: i + 1 });
     }
     toast("Urutan diperbarui", "success");
     fetchItems();
@@ -802,19 +803,12 @@ export default function AdminEkskulPage() {
             />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="ekskul-day" className={labelCls}>
-                Hari
-              </label>
-              <select id="ekskul-day" value={formDay} onChange={(e) => setFormDay(e.target.value)} className={inputCls}>
-                <option value="-1">Belum ditetapkan</option>
-                {EKSKUL_DAYS.map((d, i) => (
-                  <option key={d} value={String(i)}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label="Hari"
+              options={[{ value: "-1", label: "Belum ditetapkan" }, ...EKSKUL_DAYS.map((d, i) => ({ value: String(i), label: d }))]}
+              value={formDay}
+              onChange={setFormDay}
+            />
             <div>
               <label htmlFor="ekskul-time" className={labelCls}>
                 Jam
@@ -846,7 +840,7 @@ export default function AdminEkskulPage() {
                 type="text"
                 value={formCoach}
                 onChange={(e) => setFormCoach(e.target.value)}
-                placeholder="Nama pembina"
+                placeholder="Nama pembina (pisahkan koma bila lebih dari satu)"
                 autoComplete="off"
                 className={inputCls}
               />
@@ -864,19 +858,8 @@ export default function AdminEkskulPage() {
               />
             </div>
           </div>
-          <p className="-mt-2 text-xs text-slate-400">Angka kecil tampil lebih dulu di beranda &amp; profil.</p>
-          <div>
-            <label htmlFor="ekskul-icon" className={labelCls}>
-              Ikon
-            </label>
-            <select id="ekskul-icon" value={formIcon} onChange={(e) => setFormIcon(e.target.value)} className={inputCls}>
-              {EKSKUL_ICON_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <p className="-mt-2 text-xs text-slate-400">Angka kecil tampil lebih dulu. Ekskul baru otomatis memakai urutan terbesar + 1.</p>
+          <Select label="Ikon" options={EKSKUL_ICON_OPTIONS} value={formIcon} onChange={setFormIcon} />
           <div>
             <span className="mb-1.5 block text-sm font-semibold text-slate-700">Gambar</span>
             <div className="flex items-center gap-3">
