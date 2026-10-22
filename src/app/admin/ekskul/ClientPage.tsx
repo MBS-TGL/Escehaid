@@ -9,6 +9,7 @@ import {
   updateEkskul,
   deleteEkskul,
   deleteEkskulBulk,
+  reorderEkskuls,
   uploadEkskulImage,
   revalidateEkskul,
 } from "@/lib/queries";
@@ -366,8 +367,16 @@ export default function AdminEkskulPage() {
   }, [items, filter, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Page guard hasil filter yang menyusut dihitung turunan (tanpa setState
+  // dalam effect), supaya state `page` yang basi tidak menyebabkan slice
+  // kosong — semua pemakaian memakai nilai yang sudah dijepit ini.
+  const safePage = Math.max(1, Math.min(page, totalPages));
+  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const allVisibleSelected = paginated.length > 0 && paginated.every((i) => selectedIds.has(i.id));
+
+  // Reorder diblokir saat daftar tersaring — posisi global tidak bermakna.
+  const reorderDisabled = search.trim() !== "" || filter !== "all";
 
   function toggleSelectAll() {
     if (allVisibleSelected) {
@@ -430,7 +439,9 @@ export default function AdminEkskulPage() {
     setEditItem(item);
     setFormName(item.name);
     setFormSlug(item.slug);
-    setFormSlugTouched(false);
+    // Mode edit dianggap "sudah menyentuh slug": slug lama dipertahankan
+    // apa adanya, tidak dihitung ulang dari nama (slug kustom tidak tertimpa).
+    setFormSlugTouched(true);
     setFormDescription(item.description || "");
     setFormHistory(item.history || "");
     setFormIcon(item.icon || "");
@@ -532,6 +543,7 @@ export default function AdminEkskulPage() {
       toast(`Gagal mengubah status: ${error}`, "error");
     } else {
       toast(`Ekskul ${!item.is_active ? "diaktifkan" : "dinonaktifkan"}`, "success");
+      revalidateEkskul().catch(() => {});
     }
     fetchItems();
   }
@@ -570,17 +582,38 @@ export default function AdminEkskulPage() {
   }
 
   async function handleReorder(id: string, direction: "up" | "down") {
+    // Reorder hanya berarti saat daftar tampil apa adanya — dengan filter/
+    // pencarian aktif posisi global tidak sesuai konteks user.
+    if (search.trim() !== "" || filter !== "all") {
+      toast("Reset filter untuk mengubah urutan", "error");
+      return;
+    }
     const idx = items.findIndex((i) => i.id === id);
     if (idx === -1) return;
     const target = direction === "up" ? idx - 1 : idx + 1;
     if (target < 0 || target >= items.length) return;
-    const newOrder = [...items];
-    [newOrder[idx], newOrder[target]] = [newOrder[target], newOrder[idx]];
-    // Penomoran ulang pada satu strip: urutan selalu 1..n tanpa gap.
-    for (let i = 0; i < newOrder.length; i++) {
-      await updateEkskul(newOrder[i].id, { sort_order: i + 1 });
+
+    // Susun urutan baru: tukar posisi dua baris tetangga, lalu normalisasi
+    // penomoran 1..n (data lama bisa punya duplikat/gap hasil drag versi
+    // sebelumnya). Hanya baris yang sort_order-nya benar-benar berubah yang
+    // dikirim — bukan menulis ulang seluruh tabel.
+    const newItems = [...items];
+    [newItems[idx], newItems[target]] = [newItems[target], newItems[idx]];
+    const changed = newItems
+      .map((it, i) => ({ item: it, next: i + 1 }))
+      .filter(({ item, next }) => (item.sort_order ?? 0) !== next)
+      .map(({ item, next }) => ({ id: item.id, sort_order: next }));
+
+    if (changed.length === 0) return;
+    const { error } = await reorderEkskuls(changed);
+    if (error) {
+      toast(`Gagal mengubah urutan: ${error}`, "error");
+    } else {
+      toast("Urutan diperbarui", "success");
+      revalidateEkskul().catch(() => {});
     }
-    toast("Urutan diperbarui", "success");
+    // fetchItems tetap dipanggil (juga saat gagal) — reorderEkskuls memakai
+    // Promise.all, kegagalan sebagian baris bisa membuat damping DB berbeda.
     fetchItems();
   }
 
@@ -783,7 +816,14 @@ export default function AdminEkskulPage() {
                   </td>
                 </tr>
               ) : (
-                paginated.map((item, index) => (
+                paginated.map((item, index) => {
+                  // Posisi global di `items` (urut sort_order) — bukan index
+                  // di halaman aktif: tombol naik/turun harus tahu rekan
+                  // sebenarnya, yang bisa ada di halaman terpisah.
+                  const globalIdx = items.findIndex((it) => it.id === item.id);
+                  const canGoUp = globalIdx > 0;
+                  const canGoDown = globalIdx !== -1 && globalIdx < items.length - 1;
+                  return (
                   <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[var(--brand-primary)]/[0.03]" : ""}`}>
                     <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
                       <input
@@ -793,13 +833,14 @@ export default function AdminEkskulPage() {
                         className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]"
                       />
                     </td>
-                    <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
+                    <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(safePage - 1) * PAGE_SIZE + index + 1}</td>
                     <td className="hidden px-4 py-3.5 sm:table-cell">
                       <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => handleReorder(item.id, "up")}
-                          disabled={index === 0}
-                          className="rounded p-0.5 text-slate-400 hover:text-slate-600 disabled:opacity-30"
+                          disabled={!canGoUp || reorderDisabled}
+                          title={reorderDisabled ? "Reset filter untuk mengubah urutan" : undefined}
+                          className="rounded p-0.5 text-slate-400 hover:text-slate-600 disabled:opacity-30 disabled:hover:text-slate-400"
                           aria-label={`Naikkan urutan ${item.name}`}
                         >
                           <ArrowUp className="h-3 w-3" />
@@ -807,8 +848,9 @@ export default function AdminEkskulPage() {
                         <span className="w-6 text-center text-xs font-semibold text-slate-500 tabular-nums">{item.sort_order}</span>
                         <button
                           onClick={() => handleReorder(item.id, "down")}
-                          disabled={index === paginated.length - 1}
-                          className="rounded p-0.5 text-slate-400 hover:text-slate-600 disabled:opacity-30"
+                          disabled={!canGoDown || reorderDisabled}
+                          title={reorderDisabled ? "Reset filter untuk mengubah urutan" : undefined}
+                          className="rounded p-0.5 text-slate-400 hover:text-slate-600 disabled:opacity-30 disabled:hover:text-slate-400"
                           aria-label={`Turunkan urutan ${item.name}`}
                         >
                           <ArrowDown className="h-3 w-3" />
@@ -882,32 +924,33 @@ export default function AdminEkskulPage() {
                           </button>
                         )}
                       </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
+                     </td>
+                   </tr>
+                   );
+                 })
+               )}
+             </tbody>
           </table>
         </div>
         {!loading && filtered.length > 0 && (
           <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-slate-400">
-              Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} dari {filtered.length} ekskul
+              Menampilkan {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} dari {filtered.length} ekskul
             </p>
             <div className="flex items-center gap-1">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
+              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage === 1} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
                 <CaretLeft className="h-4 w-4" />
               </button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                 <button
                   key={p}
                   onClick={() => setPage(p)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === page ? "bg-[var(--brand-primary)] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === safePage ? "bg-[var(--brand-primary)] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
                 >
                   {p}
                 </button>
               ))}
-              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
+              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safePage === totalPages} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
                 <CaretRight className="h-4 w-4" />
               </button>
             </div>
@@ -980,11 +1023,11 @@ export default function AdminEkskulPage() {
         </div>
         {!loading && filtered.length > 0 && (
           <MobilePagination
-            page={page}
+            page={safePage}
             totalPages={totalPages}
             total={filtered.length}
-            from={(page - 1) * PAGE_SIZE + 1}
-            to={Math.min(page * PAGE_SIZE, filtered.length)}
+            from={(safePage - 1) * PAGE_SIZE + 1}
+            to={Math.min(safePage * PAGE_SIZE, filtered.length)}
             onPageChange={setPage}
             itemLabel="ekskul"
           />
@@ -1058,6 +1101,11 @@ export default function AdminEkskulPage() {
               autoComplete="off"
               className={inputCls}
             />
+            {editItem && slugifyEkskul(formSlug) !== editItem.slug && (
+              <p className="mt-1 text-xs text-amber-600">
+                Mengubah slug akan mengubah URL halaman publik.
+              </p>
+            )}
           </div>
           <div>
             <label htmlFor="ekskul-description" className={labelCls}>
