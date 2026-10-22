@@ -756,7 +756,7 @@ export default async function Home() {
 
       {/* ── PROGRAM UNGGULAN ──────────────────────────────── */}
       <section className="bg-white" style={CV}>
-        <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
+        <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
           <CSSFadeIn>
             <div className="mb-12 flex items-end justify-between gap-4">
               <div>
@@ -861,7 +861,7 @@ export default async function Home() {
 
       {/* ── GURU & STAFF ────────────────────────────────── */}
       <section className="bg-white" style={CV}>
-        <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
+        <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
           <CSSFadeIn>
             <div className="mb-12 text-center">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Tim Pengajar</p>

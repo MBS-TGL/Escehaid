@@ -9,7 +9,7 @@ export default function FAQ() {
       className="bg-[#f4f7fb]"
       style={{ contentVisibility: "auto", containIntrinsicSize: "auto 640px" } as React.CSSProperties}
     >
-      <div className="mx-auto max-w-[1296px] px-6 py-10 sm:py-14 md:px-10 md:py-20">
+      <div className="mx-auto max-w-[1296px] px-6 py-12 sm:py-14 md:px-10 md:py-20">
         <CSSFadeIn>
           <div className="mb-8 text-center sm:mb-12 md:mb-14">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">FAQ</p>
