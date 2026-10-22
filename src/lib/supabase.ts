@@ -212,13 +212,13 @@ export interface Ekskul {
   slug: string;
   name: string;
   description: string;
-  /** Sejarah untuk halaman detail /ekskul/[slug] — kosong → bagian tak dirender. */
-  history: string;
+  /** Sejarah untuk halaman detail /ekskul/[slug] — null/kosong → bagian tak dirender. */
+  history: string | null;
   icon: string;
   schedule_day: number | null;
   schedule_time: string | null;
   schedule_note: string;
-  coach: string;
+  coach: string | null;
   image_url: string;
   image_alt: string;
   is_active: boolean;

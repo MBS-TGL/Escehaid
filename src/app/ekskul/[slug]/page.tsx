@@ -17,8 +17,9 @@ import { CSSFadeIn } from "@/components/CSSAnimations";
  * suntingan admin langsung terlihat tanpa revalidate tambahan.
  */
 
-/** Split teks sejarah → paragraf (pisah baris kosong). */
-function historyParagraphs(history: string): string[] {
+/** Split teks sejarah → paragraf (pisah baris kosong). Null/kolom belum ada → []. */
+function historyParagraphs(history?: string | null): string[] {
+  if (!history) return [];
   return history
     .split(/\r?\n\s*\r?\n/)
     .map((p) => p.trim().replace(/\r?\n\s*/g, " "))
@@ -56,7 +57,7 @@ export default async function EkskulDetailPage({ params }: { params: Promise<{ s
     Promise.resolve(historyParagraphs(ekskul.history)),
   ]);
   const schedule = formatEkskulSchedule(ekskul.schedule_day, ekskul.schedule_time, ekskul.schedule_note);
-  const coaches = ekskul.coach
+  const coaches = (ekskul.coach ?? "")
     .split(",")
     .map((c) => c.trim())
     .filter(Boolean);
