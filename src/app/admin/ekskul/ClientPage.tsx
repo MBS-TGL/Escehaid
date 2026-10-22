@@ -337,6 +337,8 @@ export default function AdminEkskulPage() {
   const [formSort, setFormSort] = useState("");
   const [formActive, setFormActive] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Object URL preview (dari File lokal) — harus di-revoke supaya tidak bocor.
+  const objectUrlRef = useRef<string | null>(null);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -358,6 +360,22 @@ export default function AdminEkskulPage() {
       await fetchItems();
     })().catch(() => {});
   }, [fetchItems]);
+
+  // Revoke object URL preview sesudahnya: form ditutup (selesai simpan/
+  // batal) dan terakhir saat komponen unmount.
+  useEffect(() => {
+    if (!formOpen && objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+  }, [formOpen]);
+  useEffect(
+    () =>
+      () => {
+        if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+      },
+    []
+  );
 
   const filtered = useMemo(() => {
     let result = items;
@@ -662,9 +680,19 @@ export default function AdminEkskulPage() {
       toast("File harus gambar (JPG/PNG/WebP)", "error");
       return;
     }
+    // Ganti/hapus gambar → revoke object URL sebelumnya agar tidak bocor.
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
     setImageFile(file);
-    if (file) setFormImageUrl(URL.createObjectURL(file));
-    else setFormImageUrl(null);
+    if (file) {
+      const url = URL.createObjectURL(file);
+      objectUrlRef.current = url;
+      setFormImageUrl(url);
+    } else {
+      setFormImageUrl(null);
+    }
   }
 
   const activeCount = items.filter((i) => i.is_active).length;
@@ -817,6 +845,7 @@ export default function AdminEkskulPage() {
                     type="checkbox"
                     checked={allVisibleSelected}
                     onChange={toggleSelectAll}
+                    aria-label="Pilih semua ekskul di halaman ini"
                     className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]"
                   />
                 </th>
