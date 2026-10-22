@@ -304,7 +304,28 @@ CREATE TABLE public.roles (
 CREATE TABLE public.role_permissions (
   role_key text NOT NULL,
   permission text NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT role_permissions_pkey PRIMARY KEY (role_key, permission),
   CONSTRAINT role_permissions_role_key_fkey FOREIGN KEY (role_key) REFERENCES public.roles(key)
 );
+-- Ekstrakurikuler dinamis (beranda + profil + panel admin) — migrasi lengkap:
+-- supabase/ekskul.sql (tabel + RLS + seed 6 ekskul + izin peran bawaan).
+CREATE TABLE public.ekskuls (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  slug text NOT NULL UNIQUE,
+  name text NOT NULL,
+  description text DEFAULT ''::text,
+  icon text DEFAULT ''::text,
+  schedule_day smallint,
+  schedule_time time without time zone,
+  schedule_note text DEFAULT ''::text,
+  coach text DEFAULT ''::text,
+  image_url text DEFAULT ''::text,
+  image_alt text DEFAULT ''::text,
+  is_active boolean DEFAULT true,
+  sort_order integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT ekskuls_pkey PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS ekskuls_sort_idx ON public.ekskuls (sort_order);

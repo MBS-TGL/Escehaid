@@ -77,6 +77,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "Guru", href: "/admin/teachers", icon: GraduationCap, perm: "guru:read" },
       { label: "Fasilitas", href: "/admin/facilities", icon: Buildings, perm: "fasilitas:read" },
+      { label: "Ekskul", href: "/admin/ekskul", icon: Trophy, perm: "ekskul:read" },
       { label: "Portal", href: "/admin/portal", icon: SquaresFour, perm: "portal:read" },
     ],
   },

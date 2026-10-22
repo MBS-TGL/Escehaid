@@ -153,6 +153,17 @@ export const MODULE_REGISTRY: readonly PermissionModule[] = [
     ],
   },
   {
+    key: "ekskul",
+    label: "Ekstrakurikuler",
+    description: "Ekskul (beranda & profil)",
+    actions: [
+      { key: "read", label: "Melihat" },
+      { key: "create", label: "Menambah" },
+      { key: "update", label: "Mengubah" },
+      { key: "delete", label: "Menghapus" },
+    ],
+  },
+  {
     key: "portal",
     label: "Portal",
     description: "Aplikasi portal sekolah",

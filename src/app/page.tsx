@@ -3,12 +3,11 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import type { Metadata } from "next";
 import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock, Quotes } from "@/components/Icons";
-import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList, getActiveAgendaEvents, filterUpcomingEvents } from "@/lib/queries";
+import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList, getActiveAgendaEvents, filterUpcomingEvents, getEkskulList } from "@/lib/queries";
 import { detectPrincipalGreeting, keepTogether } from "@/lib/principal-quote";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import { faqs } from "./faq-data";
-import { ekskul } from "./ekskul-data";
 import EkskulCard from "@/components/EkskulCard";
 import HeroBackground from "./HeroBackground";
 import HeroVideoModal from "./HeroVideoModal";
@@ -120,7 +119,7 @@ export default async function Home() {
   // Batasi jumlah baris sesuai yang benar-benar dipakai beranda (berita/kegiatan/
   // artikel 4, fasilitas 5, prestasi 6, guru 12) supaya payload & waktu render
   // ulang ISR lebih ringan — terutama saat dibuka dari HP.
-  const [beritaRaw, dbFacilities, activities, articles, teachers, profile, achievements, settings, agendaEvents] =
+  const [beritaRaw, dbFacilities, activities, articles, teachers, profile, achievements, settings, agendaEvents, ekskulList] =
     await Promise.all([
       getNewsList(4) as Promise<NewsItem[]>,
       getFacilityList(5),
@@ -131,6 +130,7 @@ export default async function Home() {
       getAchievementList(undefined, { featuredFirst: true, limit: 6 }),
       getSiteSettings(),
       getActiveAgendaEvents(),
+      getEkskulList(),
     ]);
 
   // Hanya acara yang belum dimulai yang layak ditayangkan di countdown.
@@ -840,24 +840,26 @@ export default async function Home() {
       </section>
 
       {/* ── EKSTRAKURIKULER ─────────────────────────────── */}
-      <section className="bg-[#f4f7fb]" style={CV}>
-        <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
-          <CSSFadeIn>
-            <div className="mb-12 flex items-end justify-between">
-              <h2 className="text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Ekstrakurikuler</h2>
-              <Link href="/profile#ekstrakurikuler" className="text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)]">
-                Lihat semua <ArrowUpRight className="inline h-4 w-4" />
-              </Link>
-            </div>
-          </CSSFadeIn>
+      {ekskulList.length > 0 && (
+        <section className="bg-[#f4f7fb]" style={CV}>
+          <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
+            <CSSFadeIn>
+              <div className="mb-12 flex items-end justify-between">
+                <h2 className="text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Ekstrakurikuler</h2>
+                <Link href="/profile#ekstrakurikuler" className="text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)]">
+                  Lihat semua <ArrowUpRight className="inline h-4 w-4" />
+                </Link>
+              </div>
+            </CSSFadeIn>
 
-          <CSSStagger className="grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-6">
-            {ekskul.map((item) => (
-              <EkskulCard key={item.slug} item={item} />
-            ))}
-          </CSSStagger>
-        </div>
-      </section>
+            <CSSStagger className="grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-6">
+              {ekskulList.map((item) => (
+                <EkskulCard key={item.id} item={item} />
+              ))}
+            </CSSStagger>
+          </div>
+        </section>
+      )}
 
       {/* ── GURU & STAFF ────────────────────────────────── */}
       <section className="bg-white" style={CV}>

@@ -317,6 +317,30 @@ Area unduhan publik (brosur, formulir, juklak) — migrasi `supabase/downloads.s
 | `created_at` | `timestamptz` | Default `now()` |
 | `updated_at` | `timestamptz` | Default `now()` |
 
+## Table `ekskuls`
+
+Ekstrakurikuler dinamis (beranda + profil + panel admin `/admin/ekskul`) — migrasi `supabase/ekskul.sql` (idempoten: tabel + RLS + seed 6 ekskul awal + izin peran bawaan). Foto tersimpan di bucket Storage `images` folder `ekskuls/<id>/`.
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary, default `gen_random_uuid()` |
+| `slug` | `text` | Unique, NOT NULL |
+| `name` | `text` | NOT NULL |
+| `description` | `text` | Default `''` |
+| `icon` | `text` | Kunci ikon (soccer/pingpong/tent/target/microphone/trophy); kosong → pemetaan slug |
+| `schedule_day` | `int2` | 0=Minggu .. 6=Sabtu, Nullable (CHECK 0-6) |
+| `schedule_time` | `time` | Nullable |
+| `schedule_note` | `text` | Default `''` |
+| `coach` | `text` | Default `''` |
+| `image_url` | `text` | Default `''` |
+| `image_alt` | `text` | Default `''` |
+| `is_active` | `bool` | Default `true` |
+| `sort_order` | `int4` | Default `0`, index `ekskuls_sort_idx` |
+| `created_at` | `timestamptz` | Default `now()` |
+| `updated_at` | `timestamptz` | Default `now()` |
+
 ## Table `notifications`
 
 ### Columns
@@ -422,6 +446,14 @@ Area unduhan publik (brosur, formulir, juklak) — migrasi `supabase/downloads.s
 |--------|---------|-------|--------|-------|------------|
 | `Public can read active facilities` | SELECT | public | PERMISSIVE | `(is_active = true)` | — |
 | `Admins can manage facilities` | ALL | public | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` |
+
+### `ekskuls`
+
+| Policy | Command | Roles | Action | USING | WITH CHECK |
+|--------|---------|-------|--------|-------|------------|
+| `Public can read active ekskul` | SELECT | public | PERMISSIVE | `(is_active = true)` | — |
+| `Admins can manage ekskul` | ALL | public | PERMISSIVE | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` | `(current_user_role() = ANY (ARRAY['developer'::user_role, 'admin'::user_role]))` |
+| `Panel roles manage ekskul` | ALL | authenticated | PERMISSIVE | `(EXISTS (SELECT 1 FROM user_profiles up WHERE up.id = auth.uid() AND up.role = ANY (ARRAY['developer'::user_role, 'admin'::user_role, 'publisher'::user_role]) AND up.is_active = true))` | idem USING |
 
 ### `school_profile`
 

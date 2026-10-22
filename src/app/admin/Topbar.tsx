@@ -43,6 +43,7 @@ const navSearchItems = [
   { label: "Kelola SPMB", href: "/admin/admission", icon: Users, perm: "spmb:read" },
   { label: "Kelola Berita", href: "/admin/news", icon: Megaphone, perm: "berita:read" },
   { label: "Kelola Fasilitas", href: "/admin/facilities", icon: ImageSquare, perm: "fasilitas:read" },
+  { label: "Kelola Ekskul", href: "/admin/ekskul", icon: Trophy, perm: "ekskul:read" },
   { label: "Kelola Artikel", href: "/admin/articles", icon: Note, perm: "artikel:read" },
   { label: "Kelola Galeri", href: "/admin/gallery", icon: ImageSquare, perm: "galeri:read" },
   { label: "Kelola Unduhan", href: "/admin/downloads", icon: Download, perm: "unduhan:read" },

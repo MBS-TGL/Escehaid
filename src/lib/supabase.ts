@@ -201,6 +201,30 @@ export interface Facility {
   created_at: string;
 }
 
+/**
+ * Ekstrakurikuler (tabel `public.ekskuls` — supabase/ekskul.sql).
+ * Jadwal terstruktur: schedule_day (0=Minggu .. 6=Sabtu, NULL = belum
+ * ditetapkan) + schedule_time + schedule_note; hanya ada setelah SQL
+ * migrasi dijalankan — fungsi list publik mengembalikan [] bila gagal.
+ */
+export interface Ekskul {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  icon: string;
+  schedule_day: number | null;
+  schedule_time: string | null;
+  schedule_note: string;
+  coach: string;
+  image_url: string;
+  image_alt: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Article {
   id: string;
   title: string;

@@ -115,6 +115,15 @@ export async function revalidateFacilities(): Promise<void> {
 }
 
 /**
+ * Invalidasi ISR untuk halaman yang menampilkan ekstrakurikuler (beranda +
+ * profil) via API route /api/revalidate. Dipanggil dari client component admin
+ * ekskul setelah create/update/delete/toggle/reorder.
+ */
+export async function revalidateEkskul(): Promise<void> {
+  await postRevalidate(["/", "/profile"], "revalidateEkskul");
+}
+
+/**
  * Invalidasi ISR halaman prestasi (/achievements + beranda) via API route
  * /api/revalidate. Dipanggil dari client component admin prestasi setelah
  * create/update/delete/bulk/duplikat+simpan.
