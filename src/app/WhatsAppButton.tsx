@@ -105,10 +105,12 @@ export default function WhatsAppButton() {
             <X className="h-6 w-6" />
           </div>
 
-          <span className="absolute -right-1 -top-1 flex h-4 w-4">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#25D366] opacity-75" />
-            <span className="relative inline-flex h-4 w-4 rounded-full bg-[#25D366]" />
-          </span>
+          {!isOpen && (
+            <span className="absolute top-0 right-0 flex h-3.5 w-3.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+            </span>
+          )}
         </button>
       </div>
     </div>
