@@ -2213,9 +2213,9 @@ export default function AdminSPMBPage() {
 
 /** Header halaman + tab "Pendaftar" / "Gelombang Pendaftaran". */
 function PageHeader({ active, onSelect, onExport, onAdd, onImport }: { active: MainTab; onSelect: (tab: MainTab) => void; onExport: () => void; onAdd: () => void; onImport: () => void }) {
-  const tabs: { key: MainTab; label: string; icon: React.ElementType }[] = [
+  const tabs: { key: MainTab; label: string; desktopLabel?: string; icon: React.ElementType }[] = [
     { key: "registrations", label: "Pendaftar", icon: Users },
-    { key: "waves", label: "Gelombang & Pengaturan", icon: CalendarBlank },
+    { key: "waves", label: "Gelombang", desktopLabel: "Gelombang & Pengaturan", icon: CalendarBlank },
   ];
   return (
     <>
@@ -2249,12 +2249,17 @@ function PageHeader({ active, onSelect, onExport, onAdd, onImport }: { active: M
       </div>
 
       {/* Tab utama */}
-      <div className="mb-6 flex w-fit flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
+      <div className="mb-6 flex w-full items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 sm:w-fit">
         {tabs.map((t) => (
           <button key={t.key} onClick={() => onSelect(t.key)}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all ${active === t.key ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+            className={`flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition-all sm:flex-none sm:px-4 ${active === t.key ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
             <t.icon className="h-4 w-4" />
-            {t.label}
+            {t.desktopLabel ? (
+              <>
+                <span className="sm:hidden">{t.label}</span>
+                <span className="hidden sm:inline">{t.desktopLabel}</span>
+              </>
+            ) : t.label}
           </button>
         ))}
       </div>
