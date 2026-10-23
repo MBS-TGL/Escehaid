@@ -8,6 +8,7 @@ import PageHero from "@/components/public/PageHero";
 import TeacherGrid from "./TeacherGrid";
 import FacilityGrid from "./FacilityGrid";
 import EkskulCard from "@/components/EkskulCard";
+import HistoryCarousel from "./HistoryCarousel";
 
 export const metadata = {
   title: "Profil",
@@ -54,44 +55,64 @@ export default async function ProfilPage() {
 
       {/* Tentang Kami */}
       <section className="bg-white py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
-        <div className="mx-auto max-w-3xl px-6">
-          <CSSFadeIn>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Tentang Kami</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Sejarah Singkat</h2>
-              <div className="mt-6 space-y-4 text-[15px] leading-relaxed text-slate-600">
-                {profil?.history ? (
-                  <p>{profil.history}</p>
-                ) : (
-                  <>
-                    <p>
-                      SMP Muhammadiyah 4 Tanggul adalah sekolah menengah pertama berasrama di bawah naungan Persyarikatan Muhammadiyah yang berkomitmen mencerdaskan generasi muda yang unggul dalam bidang akademik maupun keagamaan.
-                    </p>
-                    <p>
-                      Didirikan dengan semangat kaderisasi Da&apos;i dan Ulama Hafidz, sekolah ini hadir sebagai pusat pendidikan yang memadukan Kurikulum Merdeka dengan ISMUBA (Al-Islam, Kemuhammadiyahan, dan Bahasa Arab).
-                    </p>
-                    <p>
-                      Berlokasi di Jl. Pemandian No. 88, Patemon, Tanggul, Jember, sekolah ini menyediakan lingkungan belajar yang kondusif bagi siswa untuk tumbuh dan berkembang secara holistik.
-                    </p>
-                  </>
-                )}
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="grid items-center gap-10 lg:grid-cols-12 lg:gap-14">
+            {/* Left — Narasi Sejarah (7 cols) */}
+            <CSSFadeIn className="lg:col-span-7">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Tentang Kami</p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">
+                  Sejarah Singkat
+                </h2>
+                <div className="mt-6 space-y-4 text-[15px] leading-relaxed text-slate-600">
+                  {profil?.history ? (
+                    <p>{profil.history}</p>
+                  ) : (
+                    <>
+                      <p>
+                        SMP Muhammadiyah 4 Tanggul adalah sekolah menengah pertama berasrama di bawah naungan Persyarikatan Muhammadiyah yang berkomitmen mencerdaskan generasi muda yang unggul dalam bidang akademik maupun keagamaan.
+                      </p>
+                      <p>
+                        Didirikan dengan semangat kaderisasi Da&apos;i dan Ulama Hafidz, sekolah ini hadir sebagai pusat pendidikan yang memadukan Kurikulum Merdeka dengan ISMUBA (Al-Islam, Kemuhammadiyahan, dan Bahasa Arab).
+                      </p>
+                      <p>
+                        Berlokasi di Jl. Pemandian No. 88, Patemon, Tanggul, Jember, sekolah ini menyediakan lingkungan belajar yang kondusif bagi siswa untuk tumbuh dan berkembang secara holistik.
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                {/* Badges Akreditasi & NPSN */}
+                <div className="mt-8 flex flex-wrap items-center gap-3">
+                  <Link
+                    href={
+                      brand.npsn.trim()
+                        ? `https://dapo.kemendikdasmen.go.id/sekolah?npsn=${brand.npsn.trim()}`
+                        : "https://dapo.kemendikdasmen.go.id/"
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#f4f7fb] px-4 py-2.5 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/10"
+                  >
+                    <GraduationCap className="h-4 w-4 text-[var(--brand-accent)]" />
+                    Akreditasi {brand.accreditation.trim() || profil?.accreditation || "A"}
+                    <ArrowUpRight className="h-3.5 w-3.5 text-slate-400" />
+                  </Link>
+
+                  {brand.npsn.trim() && (
+                    <span className="inline-flex items-center gap-1.5 rounded-xl border border-[#dce3ed] px-4 py-2.5 text-sm font-medium text-slate-600">
+                      NPSN: <span className="font-semibold text-slate-900">{brand.npsn.trim()}</span>
+                    </span>
+                  )}
+                </div>
               </div>
-              <Link
-                href={
-                  brand.npsn.trim()
-                    ? `https://dapo.kemendikdasmen.go.id/sekolah?npsn=${brand.npsn.trim()}`
-                    : "https://dapo.kemendikdasmen.go.id/"
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#f4f7fb] px-4 py-2 text-sm font-medium text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/10"
-              >
-                <GraduationCap className="h-4 w-4 text-[var(--brand-accent)]" />
-                Akreditasi {brand.accreditation.trim() || profil?.accreditation || "A"}
-                <ArrowUpRight className="h-3.5 w-3.5 text-slate-400" />
-              </Link>
-            </div>
-          </CSSFadeIn>
+            </CSSFadeIn>
+
+            {/* Right — Carousel Kilas Balik Sejarah (5 cols) */}
+            <CSSFadeIn delay={0.12} className="lg:col-span-5">
+              <HistoryCarousel />
+            </CSSFadeIn>
+          </div>
         </div>
       </section>
 
