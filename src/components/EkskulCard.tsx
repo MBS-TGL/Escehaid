@@ -30,7 +30,7 @@ export default function EkskulCard({ item }: { item: Ekskul }) {
             src={item.image_url}
             alt={item.image_alt || item.name}
             fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 216px"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 320px"
             className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (

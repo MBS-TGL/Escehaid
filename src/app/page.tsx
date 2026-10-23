@@ -859,7 +859,7 @@ export default async function Home() {
               </div>
             </CSSFadeIn>
 
-            <CSSStagger className="grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-6">
+            <CSSStagger className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
               {ekskulList.map((item) => (
                 <EkskulCard key={item.id} item={item} />
               ))}
