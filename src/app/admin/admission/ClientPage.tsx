@@ -24,7 +24,7 @@ import {
   GOOGLE_FORM_URL,
   revalidatePaths,
 } from "@/lib/queries";
-import { SlideOver, SkeletonBlock, ConfirmModal } from "@/components/ui";
+import { SlideOver, SkeletonBlock } from "@/components/ui";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { normalizeName, normalizeSchool } from "@/lib/format-name";
 import { formatRelativeTime, daysSince, PENDING_SLA_DAYS } from "@/lib/admin-display";
