@@ -83,18 +83,6 @@ export default async function ProfilPage() {
 
   const daftarHref = registrationHref(profil).trim();
 
-  const profileNav = [
-    { label: "Sejarah", href: "#sejarah" },
-    { label: "Sambutan", href: "#sambutan" },
-    { label: "Visi & Misi", href: "#visi-misi" },
-    ...(facilities.length > 0 ? [{ label: "Fasilitas", href: "#fasilitas" }] : []),
-    ...(ekskulList.length > 0 ? [{ label: "Ekstrakurikuler", href: "#ekstrakurikuler" }] : []),
-    ...(achievements.length > 0 ? [{ label: "Prestasi", href: "#prestasi" }] : []),
-    ...(teachers.length > 0 ? [{ label: "Guru", href: "#guru" }] : []),
-    ...(gallery.length > 0 ? [{ label: "Galeri", href: "#galeri" }] : []),
-    { label: "Kontak", href: "#kontak" },
-  ];
-
   return (
     <div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{
@@ -115,43 +103,6 @@ export default async function ProfilPage() {
         description={`Mengenal ${profil?.school_name || "SMP Muhammadiyah 4 Tanggul"} lebih dekat`}
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Profil" }]}
       />
-
-      {/* Quick facts + navigasi bagian — data sering dicari tanpa scroll jauh */}
-      <section aria-label="Ikhtisar sekolah" className="border-b border-[#dce3ed] bg-white">
-        <div className="mx-auto max-w-7xl">
-          <dl className="grid grid-cols-2 gap-px bg-[#dce3ed] sm:grid-cols-4">
-            {[
-              { icon: GraduationCap, label: "Akreditasi", value: brand.accreditation.trim() || profil?.accreditation || "A" },
-              { icon: Checks, label: "NPSN", value: brand.npsn.trim() || "—" },
-              { icon: Users, label: "Pendidik", value: String(teachers.length) },
-              { icon: Trophy, label: "Ekstrakurikuler", value: String(ekskulList.length) },
-            ].map(({ icon: Icon, label, value }) => (
-              <div key={label} className="flex items-center gap-3 bg-white px-4 py-3.5 sm:px-6">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f4f7fb] text-[var(--brand-primary)]">
-                  <Icon className="h-5 w-5 text-[var(--brand-accent)]" weight="fill" />
-                </span>
-                <div className="min-w-0">
-                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</dt>
-                  <dd className="truncate text-sm font-bold text-slate-800">{value}</dd>
-                </div>
-              </div>
-            ))}
-          </dl>
-          <nav aria-label="Navigasi bagian profil" className="overflow-x-auto scrollbar-hide">
-            <div className="flex w-max items-center gap-2 px-4 py-3 sm:px-6">
-              {profileNav.map((item) => (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  className="shrink-0 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-[var(--brand-primary)]/40 hover:text-[var(--brand-primary)] active:scale-[0.99]"
-                >
-                  {item.label}
-                </a>
-              ))}
-            </div>
-          </nav>
-        </div>
-      </section>
 
       {/* Tentang Kami */}
       <section id="sejarah" className="scroll-mt-24 bg-white py-12 sm:py-20 md:scroll-mt-28" style={CV}>
