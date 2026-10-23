@@ -438,6 +438,20 @@ html::-webkit-scrollbar-thumb:hover {
   animation: countdownFadeIn 0.3s ease-out;
 }
 
+/* Lightbox galeri: saat berpindah item, gambar lama dilapis sebagai "ghost"
+   yang meluruh di atas konten baru sehingga perpindahan terasa satu objek
+   (crossfade), bukan konten yang saling pop. Animasi berbasis `animation`
+   supaya jalan saat mounting; reduced-motion global mematikannya. */
+@keyframes lb-ghost-out {
+  to {
+    opacity: 0;
+  }
+}
+
+.lb-ghost {
+  animation: lb-ghost-out 260ms ease-out both;
+}
+
 /* Reduced motion: disable all animations */
 @media (prefers-reduced-motion: reduce) {
 

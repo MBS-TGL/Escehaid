@@ -16,7 +16,8 @@ function subscribeMotionChange(onChange: () => void) {
  * false saat render server (hydration aman — React render ulang setelah snapshot
  * klien terbaca, tanpa setState sinkron di dalam effect).
  */
-function usePrefersReducedMotion(): boolean {
+/** Di-reuse komponen lain (lightbox galeri) — dari internal jadi ekspor publik. */
+export function usePrefersReducedMotion(): boolean {
   return useSyncExternalStore(
     subscribeMotionChange,
     () => window.matchMedia(MOTION_QUERY).matches,
