@@ -13,11 +13,13 @@ import type { MediaBucket, MediaFile } from "@/lib/queries";
 import { listMediaFiles, scanMediaReferences, type MediaScanResult } from "./actions";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useToast } from "@/components/ui/Toast";
-import { ConfirmModal } from "@/components/ui";
+import { ConfirmModal, Modal } from "@/components/ui";
 import { usePermissions } from "@/app/admin/PermissionsProvider";
 import {
   ArrowSquareOut,
   Copy,
+  Download,
+  Eye,
   FileText,
   FolderOpen,
   Trash,
@@ -123,6 +125,8 @@ export default function AdminMediaPage() {
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState<MediaFile | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [previewFile, setPreviewFile] = useState<MediaFile | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   // Muat file bucket aktif via server action (setState hanya di callback async
   // → aman untuk lint effect). Walk folder berjalan di server.
@@ -201,6 +205,45 @@ export default function AdminMediaPage() {
       return;
     }
     window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  /** Unduh file langsung ke komputer dengan nama asli (blob download + fallback). */
+  async function handleDownload(file: MediaFile) {
+    setDownloading(true);
+    const url =
+      file.bucket === "spmb-documents" ? await mediaSignedUrl(file) : mediaPublicUrl(file);
+    if (!url) {
+      setDownloading(false);
+      toast("Tidak bisa mengunduh file", "error");
+      return;
+    }
+    try {
+      toast(`Mengunduh ${file.name}…`, "info");
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Gagal mengambil file");
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      toast(`${file.name} berhasil diunduh`, "success");
+    } catch {
+      // Fallback tautan langsung
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.name;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } finally {
+      setDownloading(false);
+    }
   }
 
   async function handleDelete(file: MediaFile) {
@@ -445,8 +488,20 @@ export default function AdminMediaPage() {
                   key={file.path}
                   className="group flex flex-col overflow-hidden rounded-xl border border-[#dce3ed] bg-white shadow-sm transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-md"
                 >
-                  {/* Preview */}
-                  <div className="relative aspect-square w-full bg-slate-50">
+                  {/* Preview click to open preview modal */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setPreviewFile(file)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setPreviewFile(file);
+                      }
+                    }}
+                    className="relative aspect-square w-full cursor-pointer bg-slate-50 transition-opacity hover:opacity-95 focus-visible:outline-2 focus-visible:outline-[var(--brand-accent)]"
+                    title="Klik untuk melihat preview & detail file"
+                  >
                     {previewUrl ? (
                       <Image
                         src={previewUrl}
@@ -463,12 +518,20 @@ export default function AdminMediaPage() {
                         </span>
                       </div>
                     )}
+
+                    {/* Hover overlay hint */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-slate-900/20 opacity-0 transition-opacity group-hover:opacity-100">
+                      <span className="flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-slate-800 shadow-sm backdrop-blur-sm">
+                        <Eye className="h-3.5 w-3.5 text-[var(--brand-accent)]" /> Preview
+                      </span>
+                    </div>
+
                     {/* Badge status referensi */}
                     {referenced !== null && (
                       <span
-                        className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${referenced
-                          ? "bg-emerald-500/90 text-white"
-                          : "bg-amber-500/90 text-white"
+                        className={`absolute left-2 top-2 z-10 rounded-full px-2 py-0.5 text-[10px] font-semibold shadow-sm ${referenced
+                          ? "bg-emerald-500/95 text-white"
+                          : "bg-amber-500/95 text-white"
                           }`}
                       >
                         {referenced ? "Terpakai" : "Tidak terpakai"}
@@ -479,7 +542,16 @@ export default function AdminMediaPage() {
                   {/* Info */}
                   <div className="flex flex-1 flex-col gap-1 p-3">
                     <p
-                      className="truncate text-[13px] font-semibold text-slate-700"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setPreviewFile(file)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setPreviewFile(file);
+                        }
+                      }}
+                      className="cursor-pointer truncate text-[13px] font-semibold text-slate-700 hover:text-[var(--brand-accent)] focus-visible:outline-2 focus-visible:outline-[var(--brand-accent)]"
                       title={file.path}
                     >
                       {file.name}
@@ -513,10 +585,25 @@ export default function AdminMediaPage() {
                       ) : (
                         <div className="flex items-center gap-1.5">
                           <button
-                            onClick={() => void handleOpen(file)}
-                            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-slate-200 px-2 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-accent)]"
+                            onClick={() => setPreviewFile(file)}
+                            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-slate-50/70 px-2 py-1.5 text-[11px] font-semibold text-slate-700 transition-colors hover:border-[var(--brand-accent)]/40 hover:bg-white hover:text-[var(--brand-accent)]"
+                            title="Preview file tanpa buka link baru"
                           >
-                            <ArrowSquareOut className="h-3.5 w-3.5" /> Buka
+                            <Eye className="h-3.5 w-3.5 text-slate-500" /> Preview
+                          </button>
+                          <button
+                            onClick={() => void handleDownload(file)}
+                            className="flex items-center justify-center rounded-lg border border-slate-200 p-1.5 text-slate-500 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-accent)]"
+                            title="Unduh file langsung"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => void handleOpen(file)}
+                            className="flex items-center justify-center rounded-lg border border-slate-200 p-1.5 text-slate-500 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-accent)]"
+                            title="Buka di tab baru"
+                          >
+                            <ArrowSquareOut className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => setConfirmPath(file.path)}
@@ -597,7 +684,9 @@ export default function AdminMediaPage() {
               const canDelete = canDeleteFile(file);
               const isSelected = selectedPaths.has(file.path);
               const actions: RowAction[] = [
-                { key: "open", label: "Buka", icon: <ArrowSquareOut className="h-4 w-4" />, run: () => void handleOpen(file) },
+                { key: "preview", label: "Preview File", icon: <Eye className="h-4 w-4" />, run: () => setPreviewFile(file) },
+                { key: "download", label: "Unduh File", icon: <Download className="h-4 w-4" />, run: () => void handleDownload(file) },
+                { key: "open", label: "Buka di Tab Baru", icon: <ArrowSquareOut className="h-4 w-4" />, run: () => void handleOpen(file) },
                 { key: "copy", label: "Salin tautan", icon: <Copy className="h-4 w-4" />, run: () => void handleCopyLink(file) },
                 // Tanpa izin media:delete → aksi hapus tidak ditampilkan sama sekali;
                 // dengan izin tapi tak bisa hapus (masih dipakai/scan belum selesai)
@@ -688,7 +777,7 @@ export default function AdminMediaPage() {
                     selected={isSelected}
                     onClick={() => {
                       if (pickMode) toggleSelectPath(file.path);
-                      else void handleOpen(file);
+                      else setPreviewFile(file);
                     }}
                   />
                 </div>
@@ -748,6 +837,171 @@ export default function AdminMediaPage() {
         variant="danger"
         loading={deleting}
       />
+      {/* ── MODAL PREVIEW & DETAIL FILE ─────────────── */}
+      <Modal
+        open={previewFile !== null}
+        onClose={() => setPreviewFile(null)}
+        title="Detail & Preview File"
+        description={previewFile ? `${previewFile.bucket} • ${previewFile.path}` : ""}
+        size="xl"
+        footer={
+          previewFile ? (
+            <div className="flex w-full flex-wrap items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleCopyLink(previewFile)}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-[var(--brand-accent)]"
+                >
+                  <Copy className="h-4 w-4" />
+                  Salin Tautan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleOpen(previewFile)}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-[var(--brand-accent)]"
+                >
+                  <ArrowSquareOut className="h-4 w-4" />
+                  Buka di Tab Baru
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {canDeleteFile(previewFile) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const toDel = previewFile;
+                      setPreviewFile(null);
+                      setConfirmDelete(toDel);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100"
+                  >
+                    <Trash className="h-4 w-4" />
+                    Hapus
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void handleDownload(previewFile)}
+                  disabled={downloading}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--brand-accent)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50"
+                >
+                  <Download className="h-4 w-4" />
+                  {downloading ? "Mengunduh…" : "Unduh File"}
+                </button>
+              </div>
+            </div>
+          ) : null
+        }
+      >
+        {previewFile && (
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+            {/* Visual Preview */}
+            <div className="relative flex min-h-[260px] max-h-[460px] flex-1 items-center justify-center overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-900/[0.03] p-3">
+              {previewFile.bucket !== "spmb-documents" && previewFile.isImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={mediaPublicUrl(previewFile) || ""}
+                  alt={previewFile.name}
+                  className="max-h-[420px] w-auto max-w-full rounded-xl object-contain shadow-sm"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-3 py-10 text-slate-400">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-slate-100 text-[var(--brand-primary)] shadow-sm">
+                    <FileText className="h-10 w-10" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-bold text-slate-700">{fileExt(previewFile.name)}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {previewFile.mimetype || "Dokumen berkas"}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Metadata Detail */}
+            <div className="flex w-full flex-col gap-3.5 lg:w-80 shrink-0">
+              <div className="rounded-xl border border-slate-200/70 bg-slate-50/80 p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Status Penggunaan
+                </span>
+                <div className="mt-1.5">
+                  {refs ? (
+                    isMediaReferenced(previewFile, refs) ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200/70">
+                        <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+                        Terpakai di konten
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 border border-amber-200/70">
+                        <Warning className="h-3.5 w-3.5 text-amber-600" />
+                        Tidak terpakai (orphan)
+                      </span>
+                    )
+                  ) : (
+                    <span className="text-xs text-slate-400">Memeriksa…</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 rounded-xl border border-slate-200/70 bg-white p-3.5 text-xs text-slate-600">
+                <div>
+                  <span className="font-semibold text-slate-400 block text-[10px] uppercase tracking-wider">
+                    Nama File
+                  </span>
+                  <span className="font-medium text-slate-800 break-all select-all mt-0.5 block">
+                    {previewFile.name}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-semibold text-slate-400 block text-[10px] uppercase tracking-wider">
+                    Folder
+                  </span>
+                  <span className="font-medium text-slate-700 mt-0.5 block">
+                    {previewFile.folder ? `folder: ${previewFile.folder}` : "(root)"}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-semibold text-slate-400 block text-[10px] uppercase tracking-wider">
+                    Bucket Storage
+                  </span>
+                  <span className="font-mono text-[11px] font-semibold text-slate-700 mt-0.5 block">
+                    {previewFile.bucket}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-2.5">
+                  <div>
+                    <span className="font-semibold text-slate-400 block text-[10px] uppercase tracking-wider">
+                      Ukuran
+                    </span>
+                    <span className="font-medium text-slate-700 mt-0.5 block">
+                      {formatBytes(previewFile.size)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-slate-400 block text-[10px] uppercase tracking-wider">
+                      Ekstensi
+                    </span>
+                    <span className="font-medium text-slate-700 mt-0.5 block">
+                      {fileExt(previewFile.name)}
+                    </span>
+                  </div>
+                </div>
+                <div className="border-t border-slate-100 pt-2.5">
+                  <span className="font-semibold text-slate-400 block text-[10px] uppercase tracking-wider">
+                    Tanggal Unggah
+                  </span>
+                  <span className="font-medium text-slate-700 mt-0.5 block">
+                    {formatDate(previewFile.createdAt)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
