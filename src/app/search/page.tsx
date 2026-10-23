@@ -7,7 +7,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Pencarian",
   description:
-    "Cari berita, artikel, kegiatan, prestasi, dan ekstrakurikuler SMP Muhammadiyah 4 Tanggul dalam satu kotak pencarian.",
+    "Cari halaman situs, berita, artikel, kegiatan, prestasi, dan ekstrakurikuler SMP Muhammadiyah 4 Tanggul dalam satu kotak pencarian.",
   alternates: { canonical: "/search" },
   // Halaman hasil pencarian jangan diindeks mesin pencari.
   robots: { index: false },
@@ -31,7 +31,7 @@ export default async function SearchPage({
       <PageHero
         variant="compact"
         title="Pencarian"
-        description="Satu kotak untuk mencari berita, artikel, kegiatan, prestasi, dan ekstrakurikuler."
+        description="Satu kotak untuk mencari halaman situs, berita, artikel, kegiatan, prestasi, dan ekstrakurikuler."
         icon={MagnifyingGlass}
       />
 

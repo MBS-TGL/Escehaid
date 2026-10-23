@@ -11,18 +11,18 @@ import {
   X,
 } from "@/components/Icons";
 import type { SearchGroup } from "@/lib/queries/search";
-import { KIND_META, formatSearchDate } from "@/components/SearchMeta";
+import { KIND_META, formatSearchDate, EMPTY_STATE_LINKS } from "@/components/SearchMeta";
 import Highlight from "@/components/public/Highlight";
 
 type Status = "idle" | "loading" | "done" | "error";
 
 /**
- * Kotak pencarian menyeluruh: satu istilah menjangkau berita, artikel,
- * kegiatan, prestasi, dan ekskul. Menggunakan debounce 300ms + sinkronisasi
- * URL dangkal (`history.replaceState`) sehingga ?q= bisa dibagikan tanpa
- * memicu re-render server tiap ketikan; form GET tetap berfungsi tanpa
- * JavaScript. Query dijalankan via /api/search (server) — bukan Supabase
- * langsung.
+ * Kotak pencarian menyeluruh: satu istilah menjangkau halaman situs, berita,
+ * artikel, kegiatan, prestasi, dan ekskul. Menggunakan debounce 300ms +
+ * sinkronisasi URL dangkal (`history.replaceState`) sehingga ?q= bisa
+ * dibagikan tanpa memicu re-render server tiap ketikan; form GET tetap
+ * berfungsi tanpa JavaScript. Query dijalankan via /api/search (server) —
+ * bukan Supabase langsung.
  */
 export default function SearchView({
   initialQuery,
@@ -182,7 +182,7 @@ export default function SearchView({
               Ketik kata kunci — misalnya nama kegiatan, judul berita, atau kata kunci prestasi.
             </p>
             <p className="mt-1 text-xs text-slate-400">
-              Pencarian menjangkau berita, artikel, kegiatan, prestasi, dan ekstrakurikuler sekaligus.
+              Pencarian menjangkau halaman situs, berita, artikel, kegiatan, prestasi, dan ekstrakurikuler sekaligus.
             </p>
           </div>
         )}
@@ -194,6 +194,18 @@ export default function SearchView({
               Tidak ada hasil untuk “{searchedQuery}”
             </p>
             <p className="mt-1 text-sm text-slate-400">Coba kata kunci lain atau periksa ejaan.</p>
+            {/* Tautan cepat ke halaman sering dicari (pola bersama dgn overlay). */}
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+              {EMPTY_STATE_LINKS.map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className="rounded-full border border-[#dce3ed] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--brand-primary)] transition-colors hover:border-[var(--brand-accent)]/40 hover:bg-slate-50"
+                >
+                  {l.label}
+                </Link>
+              ))}
+            </div>
           </div>
         )}
 

@@ -5,7 +5,7 @@ import { getEkskulList } from "./ekskuls";
 import { getNewsList } from "./news";
 import { sanitizeSearchTerm } from "./shared";
 
-export type SearchKind = "berita" | "artikel" | "kegiatan" | "prestasi" | "ekskul";
+export type SearchKind = "berita" | "artikel" | "kegiatan" | "prestasi" | "ekskul" | "halaman";
 
 export interface SearchItem {
   id: string;
@@ -27,6 +27,7 @@ export interface SearchGroup {
 const MAX_PER_KIND = 8;
 
 const GROUP_ORDER: { kind: SearchKind; label: string }[] = [
+  { kind: "halaman", label: "Halaman" },
   { kind: "berita", label: "Berita" },
   { kind: "artikel", label: "Artikel" },
   { kind: "kegiatan", label: "Kegiatan" },
@@ -35,8 +36,55 @@ const GROUP_ORDER: { kind: SearchKind; label: string }[] = [
 ];
 
 /**
- * Pencarian menyeluruh: SATU istilah menjangkau berita + artikel + kegiatan +
- * prestasi + ekskul sekaligus (5 query paralel). Semua jenis memakai filter
+ * Halaman statis publik — dipasangkan dengan label/kata-kunci alias agar
+ * istilah seperti "pendaftaran" atau "biaya" menemukan halaman yang tepat.
+ * Label/href mengikuti navigasi publik; tanpa DB, tampil pada grup pertama.
+ */
+interface StaticPage {
+  title: string;
+  href: string;
+  keywords: string[];
+}
+
+const STATIC_PAGES: StaticPage[] = [
+  { title: "SPMB", href: "/admission", keywords: ["spmb", "pendaftaran", "daftar", "ppdb", "murid baru", "penerimaan", "biaya"] },
+  { title: "Berita", href: "/news", keywords: ["berita", "informasi"] },
+  { title: "Kegiatan", href: "/activities", keywords: ["kegiatan", "agenda"] },
+  { title: "Prestasi", href: "/achievements", keywords: ["prestasi", "penghargaan"] },
+  { title: "Artikel", href: "/articles", keywords: ["artikel"] },
+  { title: "Profil", href: "/profile", keywords: ["profil", "tentang", "sejarah", "guru", "fasilitas", "ekstrakurikuler", "ekskul"] },
+  { title: "Program", href: "/program", keywords: ["program", "tahfidz", "keunggulan", "golden habits"] },
+  { title: "Galeri", href: "/gallery", keywords: ["galeri", "foto"] },
+  { title: "Unduhan", href: "/downloads", keywords: ["unduhan", "download", "formulir", "brosur"] },
+  { title: "Kontak", href: "/contact", keywords: ["kontak", "hubungi", "alamat", "telepon", "email"] },
+  { title: "Portal", href: "/portal", keywords: ["portal", "siswa", "login", "masuk"] },
+  { title: "Beranda", href: "/", keywords: ["beranda", "home"] },
+];
+
+/**
+ * Pencocokan halaman statis: istilah (sudah dinormalisasi) dicocokkan sebagai
+ * substring dari "judul + kata kunci". Tanpa query DB; istilah yang gagal
+ * dinormalisasi → [] tanpa memicu pencapaian halaman.
+ */
+export function searchStaticPages(query: string): SearchItem[] {
+  const term = sanitizeSearchTerm(query).toLowerCase();
+  if (!term) return [];
+  return STATIC_PAGES.filter((p) =>
+    `${p.title} ${p.keywords.join(" ")}`.toLowerCase().includes(term)
+  ).map((p) => ({
+    id: p.href,
+    kind: "halaman" as const,
+    title: p.title,
+    href: p.href,
+    date: null,
+    excerpt: null,
+  }));
+}
+
+/**
+ * Pencarian menyeluruh: SATU istilah menjangkau halaman statis + berita +
+ * artikel + kegiatan + prestasi + ekskul (pencocokan halaman tanpa DB + 5
+ * query paralel). Semua jenis memakai filter
  * publik yang sama dengan halaman daftarnya (draft/terjadwal/ekskul nonaktif
  * tidak pernah bocor), dan aman dipanggil dari server maupun client karena
  * memakai client Supabase anon yang sama.
@@ -54,6 +102,7 @@ export async function searchAllContent(query: string): Promise<SearchItem[]> {
   ]);
 
   return [
+    ...searchStaticPages(query),
     ...news.map((n) => ({
       id: n.id,
       kind: "berita" as const,

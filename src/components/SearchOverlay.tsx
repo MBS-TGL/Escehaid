@@ -5,15 +5,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Clock, FileText, MagnifyingGlass, Warning, X } from "@/components/Icons";
 import type { SearchGroup } from "@/lib/queries/search";
-import { KIND_META, formatSearchDate } from "@/components/SearchMeta";
+import { KIND_META, formatSearchDate, EMPTY_STATE_LINKS } from "@/components/SearchMeta";
 
 type Status = "idle" | "loading" | "done" | "error";
 
 /**
  * Overlay pencarian gaya command-palette di topbar publik. Satu istilah
- * menjangkau berita, artikel, kegiatan, prestasi, dan ekskul (reuse
- * `searchAllContent` + `groupSearchResults`, sama dengan halaman /search).
- * Debounce 300ms; hasil
+ * menjangkau halaman situs, berita, artikel, kegiatan, prestasi, dan ekskul
+ * (reuse `searchAllContent` + `groupSearchResults`, sama dengan halaman
+ * /search). Debounce 300ms; hasil
  * tampil langsung tanpa navigasi. Enter membuka hasil aktif; "Lihat semua
  * hasil" tetap mengarah ke /search?q= (shareable, tanpa-JS) sehingga halaman
  * tersebut tidak tergantikan — overlay hanya pintasan cepat.
@@ -304,6 +304,19 @@ export default function SearchOverlay({
                 Tidak ada hasil untuk &ldquo;{query.trim()}&rdquo;
               </p>
               <p className="mt-1 text-xs text-slate-400">Coba kata kunci lain atau periksa ejaan.</p>
+              {/* Tautan cepat ke halaman sering dicari (pola bersama dgn SearchView). */}
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                {EMPTY_STATE_LINKS.map((l) => (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    onClick={onClose}
+                    className="rounded-full border border-[#dce3ed] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--brand-primary)] transition-colors hover:border-[var(--brand-accent)]/40 hover:bg-slate-50"
+                  >
+                    {l.label}
+                  </Link>
+                ))}
+              </div>
             </div>
           )}
 
