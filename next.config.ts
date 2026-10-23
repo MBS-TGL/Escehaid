@@ -31,6 +31,11 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  // Marker upgrade Next.js via `next upgrade --agent=security`
+  // (16.4.0 -> 16.4.2, fix advisori keamanan Okt 2026).
+  experimental: {
+    agentUpgrade: "security",
+  },
   // isomorphic-dompurify (→ jsdom) dibaca lewat require asli dari
   // node_modules, BUKAN di-bundle webpack. Alasan: jsdom versi di bawahnya
   // membaca browser/default-stylesheet.css via fs + __dirname — saat
