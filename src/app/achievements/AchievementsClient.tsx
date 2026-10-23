@@ -16,6 +16,10 @@ import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import PageHero from "@/components/public/PageHero";
 import EmptyState from "@/components/public/EmptyState";
 import VideoEmbed from "@/components/VideoEmbed";
+import {
+  AchievementItemsCardPreview,
+  AchievementItemsDetail,
+} from "@/components/AchievementItemsList";
 import type { Achievement } from "@/lib/supabase";
 import {
   ACHIEVEMENT_CATEGORIES,
@@ -134,9 +138,7 @@ function AchievementCard({
             <span>{item.organizer}</span>
           </p>
         )}
-        {item.description && (
-          <p className="mt-2 text-sm leading-relaxed text-slate-500 line-clamp-2">{item.description}</p>
-        )}
+        <AchievementItemsCardPreview description={item.description} />
         <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-[var(--brand-accent)] transition-colors group-hover:text-[var(--brand-primary)]">
           {item.video_url ? (
             <>
@@ -413,9 +415,7 @@ export default function PrestasiClient({
                   <span>{selected.organizer}</span>
                 </p>
               )}
-              {selected.description && (
-                <p className="mt-4 text-sm leading-relaxed text-slate-500">{selected.description}</p>
-              )}
+              <AchievementItemsDetail description={selected.description} />
 
               {/* Video eksternal — click-to-load; TikTok pendek tak teresolve di client → tombol "Tonton di ..." */}
               {selected.video_url && (

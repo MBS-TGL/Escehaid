@@ -1248,7 +1248,7 @@ export default function AdminAchievementsPage() {
               value={form.ekskul_id}
               onChange={(v) => setForm({ ...form, ekskul_id: v })}
             />
-            <p className="-mt-2 text-xs text-slate-400">
+            <p className="mt-1.5 text-xs text-slate-400">
               Opsional — prestasi ini juga ditampilkan di halaman detail ekskul.
             </p>
           </div>
@@ -1316,12 +1316,20 @@ export default function AdminAchievementsPage() {
 
           {/* Deskripsi */}
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Deskripsi</label>
-            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
-              rows={4}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 resize-none"
-              placeholder="Deskripsi prestasi (opsional)" />
-            <p className="mt-1 text-right text-[11px] text-slate-400">{form.description.length} karakter</p>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Deskripsi / Rincian Juara</label>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              rows={6}
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
+              placeholder="Tulis deskripsi atau daftar kejuaraan per baris, contoh:&#10;1. JUARA 1 UMUM PUTRA&#10;2. JUARA 1 PBB&#10;3. JUARA 1 GAPURA"
+            />
+            <div className="mt-1.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs text-slate-400">
+              <p>
+                <span className="font-semibold text-slate-600">Tip Multi-Prestasi:</span> Tulis bernomor per baris untuk event borong piala. Tampilan publik otomatis memformatnya jadi list medali.
+              </p>
+              <span className="shrink-0 text-[11px] text-right">{form.description.length} karakter</span>
+            </div>
           </div>
 
           {/* Unggulan */}

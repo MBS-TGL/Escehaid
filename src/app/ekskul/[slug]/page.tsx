@@ -6,8 +6,9 @@ import { Clock, User, ArrowLeft, Trophy, ArrowRight, House } from "@/components/
 import { getEkskulBySlug, getAchievementsByEkskul } from "@/lib/queries";
 import { formatEkskulSchedule } from "@/app/ekskul-data";
 import EkskulGlyph from "@/components/EkskulIcon";
-import CoverImage from "@/components/CoverImage";
+import ImageZoom from "@/app/news/[slug]/ImageZoom";
 import { CSSFadeIn } from "@/components/CSSAnimations";
+import { AchievementItemsCardPreview } from "@/components/AchievementItemsList";
 
 /**
  * Halaman detail ekskul `/ekskul/[slug]` — hero (ikon + nama + jadwal +
@@ -130,8 +131,18 @@ export default async function EkskulDetailPage({ params }: { params: Promise<{ s
         {/* Foto */}
         {ekskul.image_url && (
           <CSSFadeIn className="mb-8 md:mb-10">
-            <div className="overflow-hidden rounded-2xl border border-[#dce3ed] bg-[#f4f7fb]">
-              <CoverImage src={ekskul.image_url} alt={ekskul.image_alt || ekskul.name} priority />
+            <div className="overflow-hidden rounded-2xl border border-[#dce3ed] shadow-xs">
+              <ImageZoom src={ekskul.image_url} alt={ekskul.image_alt || ekskul.name}>
+                <Image
+                  src={ekskul.image_url}
+                  alt={ekskul.image_alt || ekskul.name}
+                  width={1200}
+                  height={675}
+                  priority
+                  sizes="(min-width: 1024px) 1024px, 100vw"
+                  className="block h-auto w-full object-cover transition-transform duration-300 group-hover:scale-[1.01]"
+                />
+              </ImageZoom>
             </div>
           </CSSFadeIn>
         )}
@@ -167,36 +178,62 @@ export default async function EkskulDetailPage({ params }: { params: Promise<{ s
                   Prestasi {ekskul.name}
                 </h2>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {achievements.map((a) => (
                   <div
                     key={a.id}
-                    className="flex h-full items-start gap-4 rounded-2xl border border-[#dce3ed] bg-white p-4 transition-colors hover:border-[var(--brand-accent)]/40"
+                    className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-md hover:shadow-[var(--brand-primary)]/5"
                   >
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#fdf6d9] text-[#b39010]">
-                      <Trophy className="h-5 w-5" weight="fill" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold leading-snug text-[var(--brand-primary)]">{a.title}</p>
-                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400">
-                        {a.rank_label && (
-                          <span className="font-semibold text-[var(--brand-accent)]">{a.rank_label}</span>
-                        )}
-                        {a.level && <span>{a.level}</span>}
-                        {a.organizer && <span className="truncate">{a.organizer}</span>}
-                        {a.year > 0 && <span>· {a.year}</span>}
+                    {/* Gambar Prestasi di Bagian Atas */}
+                    {a.image_url ? (
+                      <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
+                        <Image
+                          src={a.image_url}
+                          alt={a.image_alt || a.title}
+                          fill
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
                       </div>
-                      {a.image_url && (
-                        <div className="relative mt-2 h-24 w-36 overflow-hidden rounded-lg bg-[#f4f7fb]">
-                          <Image
-                            src={a.image_url}
-                            alt={a.image_alt || a.title}
-                            fill
-                            sizes="144px"
-                            className="object-cover"
-                          />
-                        </div>
+                    ) : (
+                      <div className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-[var(--brand-accent)]/15 to-[var(--brand-accent)]/5 text-[var(--brand-accent)]">
+                        <Trophy className="h-10 w-10" weight="fill" />
+                      </div>
+                    )}
+
+                    {/* Konten Prestasi */}
+                    <div className="flex flex-1 flex-col p-4">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {a.rank_label && (
+                          <span className="rounded-md bg-[var(--brand-accent)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                            {a.rank_label}
+                          </span>
+                        )}
+                        {a.level && (
+                          <span className="rounded-md bg-[var(--brand-primary)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+                            {a.level}
+                          </span>
+                        )}
+                        {a.year > 0 && (
+                          <span className="text-[11px] font-medium text-slate-400">
+                            {a.year}
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="mt-2 text-sm font-bold leading-snug text-[var(--brand-primary)]">
+                        {a.title}
+                      </h3>
+
+                      {a.organizer && (
+                        <p className="mt-1 text-xs text-slate-500 line-clamp-1">
+                          {a.organizer}
+                        </p>
                       )}
+
+                      <div className="mt-2 flex-1">
+                        <AchievementItemsCardPreview description={a.description} />
+                      </div>
                     </div>
                   </div>
                 ))}
