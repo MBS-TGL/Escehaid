@@ -1,10 +1,11 @@
 import { getActivityList } from "./activities";
 import { getAchievementList } from "./achievements";
 import { getArticleList } from "./articles";
+import { getEkskulList } from "./ekskuls";
 import { getNewsList } from "./news";
 import { sanitizeSearchTerm } from "./shared";
 
-export type SearchKind = "berita" | "artikel" | "kegiatan" | "prestasi";
+export type SearchKind = "berita" | "artikel" | "kegiatan" | "prestasi" | "ekskul";
 
 export interface SearchItem {
   id: string;
@@ -30,24 +31,26 @@ const GROUP_ORDER: { kind: SearchKind; label: string }[] = [
   { kind: "artikel", label: "Artikel" },
   { kind: "kegiatan", label: "Kegiatan" },
   { kind: "prestasi", label: "Prestasi" },
+  { kind: "ekskul", label: "Ekstrakurikuler" },
 ];
 
 /**
  * Pencarian menyeluruh: SATU istilah menjangkau berita + artikel + kegiatan +
- * prestasi sekaligus (4 query paralel). Semua jenis memakai filter publik yang
- * sama dengan halaman daftarnya (draft/terjadwal tidak pernah bocor), dan
- * aman dipanggil dari server maupun client karena memakai client Supabase
- * anon yang sama.
+ * prestasi + ekskul sekaligus (5 query paralel). Semua jenis memakai filter
+ * publik yang sama dengan halaman daftarnya (draft/terjadwal/ekskul nonaktif
+ * tidak pernah bocor), dan aman dipanggil dari server maupun client karena
+ * memakai client Supabase anon yang sama.
  */
 export async function searchAllContent(query: string): Promise<SearchItem[]> {
   // Istilah habis setelah sanitasi (mis. ", (") → jangan query apa pun.
   if (!sanitizeSearchTerm(query)) return [];
 
-  const [news, articles, activities, achievements] = await Promise.all([
+  const [news, articles, activities, achievements, ekskuls] = await Promise.all([
     getNewsList(MAX_PER_KIND, query),
     getArticleList(MAX_PER_KIND, query),
     getActivityList(MAX_PER_KIND, query),
     getAchievementList(query),
+    getEkskulList(MAX_PER_KIND, query),
   ]);
 
   return [
@@ -83,6 +86,15 @@ export async function searchAllContent(query: string): Promise<SearchItem[]> {
       href: "/achievements",
       date: a.created_at,
       excerpt: a.description || null,
+    })),
+    ...ekskuls.map((e) => ({
+      id: e.id,
+      kind: "ekskul" as const,
+      title: e.name,
+      href: `/ekskul/${e.slug}`,
+      // Ekskul tak punya tanggal relevan — null agar tampilan menyembunyikannya.
+      date: null,
+      excerpt: e.description || null,
     })),
   ];
 }

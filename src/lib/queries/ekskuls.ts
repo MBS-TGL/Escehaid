@@ -1,7 +1,7 @@
 import { supabase } from "../supabase";
 import type { Ekskul } from "../supabase";
 import { tryCompressImage } from "../compress-image";
-import { deleteStorageFileByUrl, storagePathFromUrl, tableHasColumn } from "./shared";
+import { deleteStorageFileByUrl, sanitizeSearchTerm, storagePathFromUrl, tableHasColumn } from "./shared";
 import { removeViaRoute, listViaRoute, uploadFileViaRoute } from "../storage-remote";
 
 /**
@@ -26,9 +26,12 @@ function friendlyError(error: { message?: string; code?: string } | null | undef
 
 /**
  * Ekskul aktif, urut `sort_order`. `limit` (opsional) membatasi baris —
- * dipakai beranda/profil. Gagal → [] (section ekskul otomatis tidak dirender).
+ * dipakai beranda/profil. `search` (opsional) menyaring nama ATAU deskripsi —
+ * dipakai pencarian menyeluruh di /search. Gagal → [] (section ekskul
+ * otomatis tidak dirender).
  */
-export async function getEkskulList(limit?: number): Promise<Ekskul[]> {
+export async function getEkskulList(limit?: number, search?: string): Promise<Ekskul[]> {
+  const term = sanitizeSearchTerm(search ?? "");
   let query = supabase
     .from("ekskuls")
     .select(
@@ -36,6 +39,9 @@ export async function getEkskulList(limit?: number): Promise<Ekskul[]> {
     )
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
+
+  // Pencarian menyeluruh (?q=): nama ATAU deskripsi.
+  if (term) query = query.or(`name.ilike.%${term}%,description.ilike.%${term}%`);
 
   if (limit) query = query.limit(limit);
 

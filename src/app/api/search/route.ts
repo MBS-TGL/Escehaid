@@ -12,7 +12,8 @@ const rateLimit = createRateLimiter(30, 60_000);
 
 /**
  * Endpoint pencarian menyeluruh untuk komponen client (SearchOverlay,
- * SearchView). Sebelumnya kedua komponen memanggil `searchAllContent` langsung
+ * SearchView) — satu istilah menjangkau berita, artikel, kegiatan, prestasi,
+ * dan ekskul. Sebelumnya kedua komponen memanggil `searchAllContent` langsung
  * dari browser — itu menarik supabase-js ke bundle publik dan membebani DB
  * tanpa batas. Kini query jalan di server (module supabase anon yang sama) dan
  * client cukup `fetch()` hasil yang sudah dikelompokkan.

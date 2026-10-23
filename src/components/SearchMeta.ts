@@ -1,4 +1,4 @@
-import { CalendarBlank, FileText, Newspaper, Trophy } from "@/components/Icons";
+import { CalendarBlank, FileText, Newspaper, Trophy, Users } from "@/components/Icons";
 import type { SearchKind } from "@/lib/queries";
 
 /**
@@ -11,6 +11,7 @@ export const KIND_META: Record<SearchKind, { icon: typeof Newspaper; chip: strin
   artikel: { icon: FileText, chip: "border-[#1767b1]/20 bg-[#1767b1]/10 text-[#1767b1]" },
   kegiatan: { icon: CalendarBlank, chip: "border-purple-200 bg-purple-50 text-purple-700" },
   prestasi: { icon: Trophy, chip: "border-amber-200 bg-amber-50 text-amber-700" },
+  ekskul: { icon: Users, chip: "border-emerald-200 bg-emerald-50 text-emerald-700" },
 };
 
 /** Tanggal ISO → "12 Okt 2026"; string rusak/kosong → "" (tampilan menyembunyikan). */

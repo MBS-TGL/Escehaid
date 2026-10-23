@@ -79,9 +79,9 @@ function applyPublicArticleFilters<T extends FilterMethods<T>>(query: T, withExp
 }
 
 /**
- * Daftar artikel publik. `search` (opsional) menyaring judul ATAU cuplikan —
- * dipakai pencarian menyeluruh di /search; istilah dinormalisasi agar aman
- * untuk sintaks `.or()`.
+ * Daftar artikel publik. `search` (opsional) menyaring judul, cuplikan, ATAU
+ * isi — dipakai pencarian menyeluruh di /search; istilah dinormalisasi agar
+ * aman untuk sintaks `.or()`.
  */
 export async function getArticleList(limit?: number, search?: string): Promise<ArticleWithAuthor[]> {
   const [newCols, hasVideo] = await Promise.all([
@@ -95,7 +95,7 @@ export async function getArticleList(limit?: number, search?: string): Promise<A
       .from("articles")
       .select(columns);
     query = applyPublicArticleFilters(query, newCols);
-    if (term) query = query.or(`title.ilike.%${term}%,excerpt.ilike.%${term}%`);
+    if (term) query = query.or(`title.ilike.%${term}%,excerpt.ilike.%${term}%,content.ilike.%${term}%`);
     // Disematkan dulu, lalu terbaru (kolom is_pinned hanya bila sudah ada)
     if (newCols) query = query.order("is_pinned", { ascending: false });
     query = query.order("published_at", { ascending: false, nullsFirst: false });
@@ -174,7 +174,7 @@ async function queryArticlePage(
   query = query.order("published_at", { ascending: false, nullsFirst: false });
 
   if (term) {
-    query = query.or(`title.ilike.%${term}%,excerpt.ilike.%${term}%`);
+    query = query.or(`title.ilike.%${term}%,excerpt.ilike.%${term}%,content.ilike.%${term}%`);
   }
   if (category) {
     query = query.eq("category", category);

@@ -114,8 +114,11 @@ async function queryNewsPage(
   }
   query = query.order("published_at", { ascending: false, nullsFirst: false });
 
-  if (search) {
-    query = query.ilike("title", `%${search}%`);
+  // Pencarian halaman daftar (?q=): judul, ringkasan, ATAU isi — istilah
+  // dinormalisasi agar aman untuk sintaks `.or()` (sama dengan /search).
+  const term = sanitizeSearchTerm(search ?? "");
+  if (term) {
+    query = query.or(`title.ilike.%${term}%,summary.ilike.%${term}%,content.ilike.%${term}%`);
   }
   if (category) {
     query = query.eq("category", category);
@@ -189,10 +192,10 @@ export async function getNewsList(limit?: number, search?: string): Promise<News
   }
   query = query.order("published_at", { ascending: false, nullsFirst: false });
 
-  // Pencarian menyeluruh (?q= / pencarian gabungan): judul ATAU ringkasan.
+  // Pencarian menyeluruh (?q= / pencarian gabungan): judul, ringkasan, ATAU isi.
   const term = sanitizeSearchTerm(search ?? "");
   if (term) {
-    query = query.or(`title.ilike.%${term}%,summary.ilike.%${term}%`);
+    query = query.or(`title.ilike.%${term}%,summary.ilike.%${term}%,content.ilike.%${term}%`);
   }
 
   if (limit) {

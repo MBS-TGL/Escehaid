@@ -279,7 +279,7 @@ export default function AdminTopbar({
             className="flex h-9 w-full items-center justify-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-400 transition-colors hover:border-slate-300 hover:bg-white"
           >
             <MagnifyingGlass className="h-4 w-4 flex-shrink-0" />
-            <span>Cari halaman...</span>
+            <span>Cari menu admin...</span>
             {/* kbd tetap di atas sm saja — ponsel tidak punya Ctrl/⌘ */}
             <kbd className="ml-auto hidden rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 sm:inline">
               {typeof navigator !== "undefined" && navigator.userAgent.includes("Mac") ? "⌘K" : "Ctrl+K"}
@@ -296,14 +296,14 @@ export default function AdminTopbar({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Ketik nama halaman..."
+                  placeholder="Cari menu admin..."
                   className="flex-1 bg-transparent text-sm text-slate-800 outline-none placeholder-slate-400"
                 />
               </div>
               <div className="max-h-64 overflow-y-auto py-1">
                 {filteredNav.length === 0 ? (
                   <p className="px-3 py-4 text-center text-xs text-slate-400">
-                    {searchQuery ? "Tidak ditemukan" : "Ketik untuk mencari halaman"}
+                    {searchQuery ? "Tidak ada menu yang cocok" : "Ketik untuk mencari menu"}
                   </p>
                 ) : (
                   filteredNav.map((item) => {

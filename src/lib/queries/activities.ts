@@ -91,7 +91,7 @@ function normalizeOptionalFields(payload: Record<string, unknown>): Record<strin
 
 /**
  * Daftar kegiatan yang tayang (is_published = true).
- * - `search` (opsional) menyaring judul ATAU deskripsi — dipakai /search.
+ * - `search` (opsional) menyaring judul, deskripsi, ATAU isi — dipakai /search.
  * - `opts` (opsional) menambah filter tipe & pagination (offset/pageSize)
  *   tanpa merusak pemanggil lama: beranda `getActivityList(4)`,
  *   /search `getActivityList(n, q)`, list & generateStaticParams tanpa argumen.
@@ -110,7 +110,7 @@ export async function getActivityList(
       .eq("is_published", true)
       .order("activity_date", { ascending: false });
 
-    if (term) query = query.or(`title.ilike.%${term}%,description.ilike.%${term}%`);
+    if (term) query = query.or(`title.ilike.%${term}%,description.ilike.%${term}%,content.ilike.%${term}%`);
     if (opts?.type) query = query.eq("activity_type", opts.type);
     if (opts?.pageSize) {
       const from = Math.max(0, opts.offset ?? 0);

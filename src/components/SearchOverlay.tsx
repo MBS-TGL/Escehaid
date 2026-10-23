@@ -3,16 +3,17 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Clock, FileText, MagnifyingGlass, X } from "@/components/Icons";
+import { Clock, FileText, MagnifyingGlass, Warning, X } from "@/components/Icons";
 import type { SearchGroup } from "@/lib/queries/search";
 import { KIND_META, formatSearchDate } from "@/components/SearchMeta";
 
-type Status = "idle" | "loading" | "done";
+type Status = "idle" | "loading" | "done" | "error";
 
 /**
  * Overlay pencarian gaya command-palette di topbar publik. Satu istilah
- * menjangkau berita, artikel, kegiatan, dan prestasi (reuse `searchAllContent`
- * + `groupSearchResults`, sama dengan halaman /search). Debounce 300ms; hasil
+ * menjangkau berita, artikel, kegiatan, prestasi, dan ekskul (reuse
+ * `searchAllContent` + `groupSearchResults`, sama dengan halaman /search).
+ * Debounce 300ms; hasil
  * tampil langsung tanpa navigasi. Enter membuka hasil aktif; "Lihat semua
  * hasil" tetap mengarah ke /search?q= (shareable, tanpa-JS) sehingga halaman
  * tersebut tidak tergantikan — overlay hanya pintasan cepat.
@@ -34,6 +35,8 @@ export default function SearchOverlay({
   const [status, setStatus] = useState<Status>("idle");
   /** Istilah yang SUDAH menghasilkan — dipakai statusText & pengumuman SR. */
   const [searchedQuery, setSearchedQuery] = useState("");
+  /** Pesan kegagalan terakhir (jaringan/429/500) — kosong bila pencarian sukses. */
+  const [errorMessage, setErrorMessage] = useState("");
   /** Indeks hasil tersorot untuk keyboard (−1 = belum ada). */
   const [activeIndex, setActiveIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -42,6 +45,8 @@ export default function SearchOverlay({
   const lastSearchedRef = useRef("");
   /** Nomor urut permintaan — jawaban dengan nomor basi dibuang. */
   const requestIdRef = useRef(0);
+  /** Naik tiap klik "Coba lagi" — memicu pencarian ulang istilah yang sama. */
+  const [retryNonce, setRetryNonce] = useState(0);
 
   // Fokus ke input saat dibuka + kunci scroll body (pola sama dengan
   // MobileBottomNav/Modal/SlideOver/GalleryLightbox di codebase ini), supaya
@@ -67,7 +72,17 @@ export default function SearchOverlay({
       const requestId = (requestIdRef.current += 1);
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(term)}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          // Ambil pesan ramah dari API (mis. 429 rate limit) bila tersedia.
+          let apiError = "";
+          try {
+            const payload = (await res.json()) as { error?: unknown };
+            if (typeof payload?.error === "string") apiError = payload.error;
+          } catch {
+            // body bukan JSON — pakai pesan generik di bawah.
+          }
+          throw new Error(apiError || `Pencarian gagal (HTTP ${res.status}). Coba lagi sebentar.`);
+        }
         // Jawaban bisa datang dari permintaan lama (basi) — nomor urut menjaga.
         const data = (await res.json()) as { groups: SearchGroup[]; count: number };
         if (cancelled || requestId !== requestIdRef.current) return; // jawaban basi
@@ -75,16 +90,22 @@ export default function SearchOverlay({
         setCount(data.count);
         setStatus("done");
         setSearchedQuery(term);
+        setErrorMessage("");
         lastSearchedRef.current = term;
         setActiveIndex(-1); // sorotan di-reset tiap hasil baru
-      } catch {
+      } catch (err) {
         if (!cancelled && requestId === requestIdRef.current) {
           setGroups([]);
           setCount(0);
-          setStatus("done");
+          setStatus("error");
           setSearchedQuery(term);
-          lastSearchedRef.current = term;
           setActiveIndex(-1);
+          // lastSearchedRef TIDAK diisi → "Coba lagi" bisa mengulang istilah ini.
+          setErrorMessage(
+            err instanceof Error && err.message
+              ? err.message
+              : "Pencarian gagal. Periksa koneksi internet Anda lalu coba lagi."
+          );
         }
       }
     }, 300);
@@ -93,7 +114,7 @@ export default function SearchOverlay({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [query, open]);
+  }, [query, open, retryNonce]);
 
   // List datar untuk navigasi ↑/↓ melintasi kelompok.
   const flat = groups.flatMap((g) => g.items);
@@ -106,6 +127,7 @@ export default function SearchOverlay({
     setCount(0);
     setStatus("idle");
     setSearchedQuery("");
+    setErrorMessage("");
     setActiveIndex(-1);
     inputRef.current?.focus();
   };
@@ -120,9 +142,11 @@ export default function SearchOverlay({
       ? "Mencari…"
       : status === "idle"
         ? "Masukkan kata kunci untuk mulai mencari."
-        : count > 0
-          ? `${count} hasil untuk “${searchedQuery}”`
-          : `Tidak ada hasil untuk “${searchedQuery}”`;
+        : status === "error"
+          ? `Pencarian gagal untuk “${searchedQuery}” — ${errorMessage}`
+          : count > 0
+            ? `${count} hasil untuk “${searchedQuery}”`
+            : `Tidak ada hasil untuk “${searchedQuery}”`;
 
   // Navigasi keyboard pada list hasil (dipakai saat fokus di input).
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -213,7 +237,7 @@ export default function SearchOverlay({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={onInputKeyDown}
-              placeholder="Cari berita, artikel, kegiatan, prestasi…"
+              placeholder="Cari berita, artikel, kegiatan, prestasi, ekskul…"
               autoComplete="off"
               spellCheck={false}
               enterKeyHint="search"
@@ -280,6 +304,23 @@ export default function SearchOverlay({
                 Tidak ada hasil untuk &ldquo;{query.trim()}&rdquo;
               </p>
               <p className="mt-1 text-xs text-slate-400">Coba kata kunci lain atau periksa ejaan.</p>
+            </div>
+          )}
+
+          {status === "error" && (
+            <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
+              <Warning className="h-10 w-10 text-amber-500/70" />
+              <p className="mt-3 text-sm font-medium text-slate-600">
+                Pencarian gagal untuk &ldquo;{searchedQuery}&rdquo;
+              </p>
+              <p className="mt-1 text-xs text-slate-400">{errorMessage}</p>
+              <button
+                type="button"
+                onClick={() => setRetryNonce((n) => n + 1)}
+                className="mt-4 rounded-lg border border-[#dce3ed] bg-white px-3.5 py-1.5 text-xs font-semibold text-[var(--brand-primary)] transition-colors hover:border-[var(--brand-accent)]/40 hover:bg-slate-50"
+              >
+                Coba lagi
+              </button>
             </div>
           )}
 
