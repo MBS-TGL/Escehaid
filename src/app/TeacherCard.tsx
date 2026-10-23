@@ -44,7 +44,7 @@ export default function TeacherCard({ teacher }: { teacher: Teacher }) {
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={handleMouseLeave}
-      className="group relative h-[210px] w-full cursor-default overflow-hidden rounded-2xl bg-[#f0f4fa] shadow-md transition-[box-shadow] duration-300 sm:h-[260px]"
+      className="group relative h-[210px] w-full cursor-default overflow-hidden rounded-2xl bg-[#f0f4fa] shadow-md transition-[box-shadow] duration-300 active:opacity-95 sm:h-[260px]"
       style={{
         ...style,
         transition: "transform 0.2s ease-out, box-shadow 0.3s ease-out",

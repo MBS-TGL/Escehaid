@@ -21,7 +21,7 @@ export default function EkskulCard({ item }: { item: Ekskul }) {
   return (
     <Link
       href={`/ekskul/${item.slug}`}
-      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white text-center transition-colors hover:border-[var(--brand-accent)]/40"
+      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white text-center transition-[color,border-color,transform] hover:border-[var(--brand-accent)]/40 active:scale-[0.99]"
     >
       {/* ── Slot gambar — selalu ada agar tinggi kartu seragam ── */}
       <div className="relative aspect-video w-full overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-light)]">

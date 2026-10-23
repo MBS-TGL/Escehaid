@@ -24,6 +24,8 @@ const SALAM_TUTUP = "Wassalamu'alaikum Warahmatullahi Wabarakatuh.";
 const PRINCIPAL_QUOTE_FALLBACK =
   "Selamat datang di SMP Muhammadiyah 4 Tanggul. Kami berkomitmen mendampingi setiap peserta didik bertumbuh dengan memadukan keunggulan akademik, akhlak karimah, dan pembentukan karakter Islami menuju generasi yang berilmu dan berdaya saing.";
 
+const CV = { contentVisibility: "auto", containIntrinsicSize: "auto 720px" } as React.CSSProperties;
+
 export default async function ProfilPage() {
   const [profil, teachers, facilities, achievements, gallery, settings, ekskulList] = await Promise.all([
     getSchoolProfile(),
@@ -81,6 +83,18 @@ export default async function ProfilPage() {
 
   const daftarHref = registrationHref(profil).trim();
 
+  const profileNav = [
+    { label: "Sejarah", href: "#sejarah" },
+    { label: "Sambutan", href: "#sambutan" },
+    { label: "Visi & Misi", href: "#visi-misi" },
+    ...(facilities.length > 0 ? [{ label: "Fasilitas", href: "#fasilitas" }] : []),
+    ...(ekskulList.length > 0 ? [{ label: "Ekstrakurikuler", href: "#ekstrakurikuler" }] : []),
+    ...(achievements.length > 0 ? [{ label: "Prestasi", href: "#prestasi" }] : []),
+    ...(teachers.length > 0 ? [{ label: "Guru", href: "#guru" }] : []),
+    ...(gallery.length > 0 ? [{ label: "Galeri", href: "#galeri" }] : []),
+    { label: "Kontak", href: "#kontak" },
+  ];
+
   return (
     <div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{
@@ -102,8 +116,45 @@ export default async function ProfilPage() {
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Profil" }]}
       />
 
+      {/* Quick facts + navigasi bagian — data sering dicari tanpa scroll jauh */}
+      <section aria-label="Ikhtisar sekolah" className="border-b border-[#dce3ed] bg-white">
+        <div className="mx-auto max-w-7xl">
+          <dl className="grid grid-cols-2 gap-px bg-[#dce3ed] sm:grid-cols-4">
+            {[
+              { icon: GraduationCap, label: "Akreditasi", value: brand.accreditation.trim() || profil?.accreditation || "A" },
+              { icon: Checks, label: "NPSN", value: brand.npsn.trim() || "—" },
+              { icon: Users, label: "Pendidik", value: String(teachers.length) },
+              { icon: Trophy, label: "Ekstrakurikuler", value: String(ekskulList.length) },
+            ].map(({ icon: Icon, label, value }) => (
+              <div key={label} className="flex items-center gap-3 bg-white px-4 py-3.5 sm:px-6">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f4f7fb] text-[var(--brand-primary)]">
+                  <Icon className="h-5 w-5 text-[var(--brand-accent)]" weight="fill" />
+                </span>
+                <div className="min-w-0">
+                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</dt>
+                  <dd className="truncate text-sm font-bold text-slate-800">{value}</dd>
+                </div>
+              </div>
+            ))}
+          </dl>
+          <nav aria-label="Navigasi bagian profil" className="overflow-x-auto scrollbar-hide">
+            <div className="flex w-max items-center gap-2 px-4 py-3 sm:px-6">
+              {profileNav.map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className="shrink-0 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-[var(--brand-primary)]/40 hover:text-[var(--brand-primary)] active:scale-[0.99]"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          </nav>
+        </div>
+      </section>
+
       {/* Tentang Kami */}
-      <section className="bg-white py-12 sm:py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+      <section id="sejarah" className="scroll-mt-24 bg-white py-12 sm:py-20 md:scroll-mt-28" style={CV}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="grid items-center gap-10 lg:grid-cols-12 lg:gap-14">
             {/* Left — Narasi Sejarah (7 cols) */}
@@ -166,7 +217,7 @@ export default async function ProfilPage() {
       </section>
 
       {/* ── SAMBUTAN KEPALA SEKOLAH ───────────────────────── */}
-      <section className="relative overflow-hidden bg-[#f4f7fb] py-12 sm:py-16 md:py-24" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+      <section id="sambutan" className="relative overflow-hidden bg-[#f4f7fb] py-12 sm:py-16 md:scroll-mt-28 md:py-24" style={CV}>
         {/* Watermark kutipan halus di pojok kanan atas */}
         <div
           aria-hidden="true"
@@ -287,7 +338,7 @@ export default async function ProfilPage() {
       </section>
 
       {/* ── VISI & MISI SEKOLAH ───────────────────────────── */}
-      <section className="bg-white py-12 sm:py-16 md:py-24" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+      <section id="visi-misi" className="scroll-mt-24 bg-white py-12 sm:py-16 md:scroll-mt-28 md:py-24" style={CV}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <CSSFadeIn>
             <div className="mb-12 text-center">
@@ -407,7 +458,7 @@ export default async function ProfilPage() {
 
       {/* Fasilitas Sekolah */}
       {facilities.length > 0 && (
-        <section id="fasilitas" className="scroll-mt-24 bg-[#f4f7fb] py-12 sm:py-20 md:scroll-mt-28" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+        <section id="fasilitas" className="scroll-mt-24 bg-[#f4f7fb] py-12 sm:py-20 md:scroll-mt-28" style={CV}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <CSSFadeIn>
               <div className="mb-12">
@@ -448,7 +499,7 @@ export default async function ProfilPage() {
 
       {/* Ekstrakurikuler — hanya dirender bila ada data ekskul aktif */}
       {ekskulList.length > 0 && (
-        <section id="ekstrakurikuler" className="scroll-mt-28 bg-white py-12 sm:py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+        <section id="ekstrakurikuler" className="scroll-mt-24 bg-white py-12 sm:py-20 md:scroll-mt-28" style={CV}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <CSSFadeIn>
               <div className="mb-12">
@@ -468,7 +519,7 @@ export default async function ProfilPage() {
 
       {/* Prestasi Highlights */}
       {achievements.length > 0 && (
-        <section className="bg-[#f4f7fb] py-12 sm:py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+        <section id="prestasi" className="scroll-mt-24 bg-[#f4f7fb] py-12 sm:py-20 md:scroll-mt-28" style={CV}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <CSSFadeIn>
               <div className="flex flex-col items-center justify-between gap-6 rounded-2xl border border-[#dce3ed] bg-white p-6 sm:flex-row">
@@ -498,11 +549,12 @@ export default async function ProfilPage() {
       )}
 
       {/* Guru & Staff */}
-      <section className="bg-white" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+      <section id="guru" className="scroll-mt-24 bg-white md:scroll-mt-28" style={CV}>
         <div className="mx-auto max-w-[1296px] px-4 py-10 sm:px-6 sm:py-12 md:px-10 md:py-16">
           <CSSFadeIn>
             <div className="mb-12 text-center">
               <h2 className="text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Guru & Staff</h2>
+              <p className="mt-2 text-sm text-slate-500">{teachers.length} pendidik & tenaga kependidikan</p>
             </div>
           </CSSFadeIn>
 
@@ -521,7 +573,7 @@ export default async function ProfilPage() {
 
       {/* Galeri Preview */}
       {gallery.length > 0 && (
-        <section className="bg-[#f4f7fb] py-12 sm:py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+        <section id="galeri" className="scroll-mt-24 bg-[#f4f7fb] py-12 sm:py-20 md:scroll-mt-28" style={CV}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <CSSFadeIn>
               <div className="mb-12 flex flex-col items-start gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -537,7 +589,7 @@ export default async function ProfilPage() {
 
             <CSSStagger stagger={60} className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
               {gallery.slice(0, 8).map((g) => (
-                <Link key={g.id} href="/gallery" className="group relative block aspect-square overflow-hidden rounded-xl">
+                <Link key={g.id} href="/gallery" className="group relative block aspect-square overflow-hidden rounded-xl transition-transform duration-150 active:scale-[0.99]">
                   <Image
                     src={g.thumbnail_url || g.url || "/images/Ruang-Kelas.jpg"}
                     alt={g.title}
@@ -549,7 +601,7 @@ export default async function ProfilPage() {
                   <div className="absolute bottom-0 left-0 right-0 p-3 transition-opacity duration-300 sm:opacity-0 sm:group-hover:opacity-100">
                     <p className="text-xs font-semibold text-white line-clamp-1">{g.title}</p>
                     {g.category && (
-                      <span className="mt-1 inline-block rounded-full bg-[var(--brand-accent)]/90 px-2 py-0.5 text-[9px] font-bold uppercase text-white">{g.category}</span>
+                      <span className="mt-1 inline-block rounded-full bg-[var(--brand-accent)]/90 px-2 py-0.5 text-[10px] font-bold uppercase text-white">{g.category}</span>
                     )}
                   </div>
                 </Link>
@@ -560,7 +612,7 @@ export default async function ProfilPage() {
       )}
 
       {/* Kontak & Lokasi */}
-      <section className="bg-white py-12 sm:py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+      <section id="kontak" className="scroll-mt-24 bg-white py-12 sm:py-20 md:scroll-mt-28" style={CV}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <CSSFadeIn>
             <div className="flex flex-col items-center justify-between gap-6 rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-6 sm:flex-row">
@@ -593,7 +645,7 @@ export default async function ProfilPage() {
             <div className="max-w-xl">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-highlight)]">Penerimaan Peserta Didik Baru</p>
               <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white md:text-4xl">Mulai langkah baru bersama kami.</h2>
-              <p className="mt-3 text-sm text-white/60">Bergabunglah menjadi bagian dari keluarga besar SMP Muhammadiyah 4 Tanggul.</p>
+              <p className="mt-3 text-sm text-white/70">Bergabunglah menjadi bagian dari keluarga besar SMP Muhammadiyah 4 Tanggul.</p>
             </div>
           </CSSFadeIn>
           <CSSFadeIn delay={0.1}>

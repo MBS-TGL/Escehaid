@@ -6,8 +6,11 @@ import { CSSStagger } from "@/components/CSSAnimations";
 import type { Teacher } from "@/lib/supabase";
 import TeacherCard from "../TeacherCard";
 
+const INITIAL_VISIBLE = 10;
+
 export default function TeacherGrid({ teachers }: { teachers: Teacher[] }) {
   const [search, setSearch] = useState("");
+  const [showAll, setShowAll] = useState(false);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return teachers;
@@ -18,6 +21,12 @@ export default function TeacherGrid({ teachers }: { teachers: Teacher[] }) {
         t.position.toLowerCase().includes(q)
     );
   }, [teachers, search]);
+
+  const searching = search.trim().length > 0;
+  const visible =
+    searching || showAll || filtered.length <= INITIAL_VISIBLE
+      ? filtered
+      : filtered.slice(0, INITIAL_VISIBLE);
 
   return (
     <div>
@@ -45,11 +54,26 @@ export default function TeacherGrid({ teachers }: { teachers: Teacher[] }) {
           )}
         </div>
       ) : (
-        <CSSStagger stagger={80} className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-5">
-          {filtered.map((t) => (
-            <TeacherCard key={t.id} teacher={t} />
-          ))}
-        </CSSStagger>
+        <>
+          <CSSStagger stagger={80} className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-5">
+            {visible.map((t) => (
+              <TeacherCard key={t.id} teacher={t} />
+            ))}
+          </CSSStagger>
+
+          {!searching && filtered.length > INITIAL_VISIBLE && (
+            <div className="mt-8 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setShowAll((prev) => !prev)}
+                aria-expanded={showAll}
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[#dce3ed] bg-white px-5 py-2.5 text-sm font-semibold text-[var(--brand-primary)] shadow-sm transition-transform hover:border-[var(--brand-primary)]/40 active:scale-[0.99]"
+              >
+                {showAll ? "Tampilkan lebih sedikit" : `Tampilkan semua ${filtered.length} guru`}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
