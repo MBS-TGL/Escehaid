@@ -124,7 +124,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       <ReadingProgress />
       {/* Sticky top bar */}
-      <div className="sticky top-16 z-40 border-b border-slate-100 bg-white/95 backdrop-blur-md md:top-[72px]">
+      <div className="sticky top-16 z-40 max-md:[[data-nav-hidden=true]_&]:top-0 border-b border-slate-100 bg-white/95 backdrop-blur-md transition-[top] duration-300 ease-out motion-reduce:transition-none md:top-[72px]">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2.5">
           <nav className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-slate-400">
             <Link href="/" className="shrink-0 transition-colors hover:text-[var(--brand-accent)]">Beranda</Link>
@@ -285,7 +285,7 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
 
           {/* Sidebar */}
           <aside className="w-full shrink-0 lg:w-80">
-            <div className="sticky top-[128px] space-y-5">
+            <div className="space-y-5 lg:sticky lg:top-[128px]">
               <div className="rounded-xl border border-slate-200 bg-white p-5">
                 <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">Cari Berita</h3>
                 <form action="/news" method="get" className="relative">

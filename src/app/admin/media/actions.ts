@@ -33,7 +33,8 @@ export async function scanMediaReferences(): Promise<MediaScanResult> {
     return { complete: false, failedTables: [], refs: [], error: check.error };
   }
 
-  const scan = await collectMediaReferences();
+  const supabase = await createClient();
+  const scan = await collectMediaReferences(supabase as unknown as Parameters<typeof collectMediaReferences>[0]);
   return {
     complete: scan.complete,
     failedTables: scan.failedTables,

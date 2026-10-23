@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "../supabase";
 import { removeViaRoute, listViaRoute, signedUrlViaRoute } from "../storage-remote";
 import { storageFrom } from "../storage";
@@ -75,7 +76,11 @@ const REFERENCE_TABLES = [
   "notifications",
   "user_profiles",
   "downloads",
+  "ekskuls",
+  "site_settings",
 ] as const;
+
+const STORAGE_BUCKETS = ["images", "documents", "spmb-documents"] as const;
 
 const MAX_FOLDER_DEPTH = 4;
 
@@ -229,19 +234,68 @@ export async function getMediaFiles(bucket: MediaBucket): Promise<MediaFile[]> {
   return walkStorageFiles(bucket, (prefix) => listViaRoute(bucket, prefix));
 }
 
-/** Tambah satu string referensi + varian ternormalisasi URL storage (lintas-origin tetap cocok). */
-function addRef(value: string, refs: Set<string>): void {
-  if (!value) return;
+/**
+ * Tambah satu string referensi + varian ternormalisasi URL storage (lintas-origin tetap cocok).
+ * Mendukung Supabase Storage, Cloudflare R2 / Custom CDN, cache-buster ?v=..., dan URL di dalam HTML/Markdown.
+ */
+export function addRef(value: string, refs: Set<string>): void {
+  if (!value || typeof value !== "string") return;
+
+  // 1. Tambah string mentah apa adanya
   refs.add(value);
+
+  // 2. Tambah varian tanpa query parameter & hash (mis. ?v=17927... atau ?token=...)
+  const clean = value.split("?")[0].split("#")[0].trim();
+  if (clean && clean !== value) {
+    refs.add(clean);
+  }
+
+  // 3. Tangani format Supabase Storage: /storage/v1/object/(public|sign)/<bucket>/<path>
   const marker = "/storage/v1/object/";
   const idx = value.indexOf(marker);
-  if (idx === -1) return;
-  const rest = value.slice(idx + marker.length);
-  if (!rest.startsWith("public/")) return;
-  const bucketPath = rest.slice(7).split("?")[0]; // "<bucket>/<path>"
-  refs.add(bucketPath);
-  const slash = bucketPath.indexOf("/");
-  if (slash !== -1) refs.add(bucketPath.slice(slash + 1)); // "<path>"
+  if (idx !== -1) {
+    const rest = value.slice(idx + marker.length);
+    const slashPublic = rest.indexOf("/");
+    if (slashPublic !== -1) {
+      const afterMode = rest.slice(slashPublic + 1);
+      const bucketPath = afterMode.split("?")[0].split("#")[0]; // "<bucket>/<path>"
+      if (bucketPath) {
+        refs.add(bucketPath);
+        const slashBucket = bucketPath.indexOf("/");
+        if (slashBucket !== -1) {
+          const pathOnly = bucketPath.slice(slashBucket + 1);
+          refs.add(pathOnly);
+          try {
+            refs.add(decodeURIComponent(pathOnly));
+          } catch {
+            // ignore
+          }
+        }
+      }
+    }
+  }
+
+  // 4. Tangani format Cloudflare R2 / Custom CDN / path absolut / relatif / teks HTML / Markdown.
+  //    Mencocokkan pola <bucket>/<path> untuk images, documents, atau spmb-documents.
+  for (const bucket of STORAGE_BUCKETS) {
+    const regex = new RegExp(`(?:^|[/"'\\s])(${bucket})\\/([^\\s"'<>?#]+)`, "g");
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(value)) !== null) {
+      const b = match[1];
+      const p = match[2].replace(/\/+$/, "");
+      if (p) {
+        refs.add(p);
+        refs.add(`${b}/${p}`);
+        try {
+          const decodedP = decodeURIComponent(p);
+          refs.add(decodedP);
+          refs.add(`${b}/${decodedP}`);
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }
 }
 
 /** Kumpulkan semua string rekursif (object/array JSON termasuk). */
@@ -270,17 +324,22 @@ export const MEDIA_SCAN_ROW_CAP = 5000;
  * masih dipakai tidak boleh terhapus). Tiap tabel dibatasi MEDIA_SCAN_ROW_CAP
  * baris; tanda `>cap` di failedTables berarti batas tersentuh (komplit=false).
  */
-export async function collectMediaReferences(): Promise<MediaReferenceScan> {
+export async function collectMediaReferences(client?: SupabaseClient): Promise<MediaReferenceScan> {
   const refs = new Set<string>();
   const failedTables: string[] = [];
+  const db = client ?? supabase;
 
   await Promise.all(
     REFERENCE_TABLES.map(async (table) => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from(table)
         .select("*")
         .limit(MEDIA_SCAN_ROW_CAP);
       if (error) {
+        // Jika tabel belum ada di database (kode 42P01 / relation does not exist), lewati diam-diam
+        if (error.code === "42P01" || error.message?.includes("does not exist")) {
+          return;
+        }
         failedTables.push(table);
         console.error(`Error scanning refs ${table}:`, JSON.stringify(error), error.message);
         return;
@@ -302,8 +361,22 @@ export async function collectMediaReferences(): Promise<MediaReferenceScan> {
 export function isMediaReferenced(file: MediaFile, refs: Set<string>): boolean {
   if (refs.has(file.path)) return true;
   if (refs.has(`${file.bucket}/${file.path}`)) return true;
+
+  // Variasi dengan decodeURIComponent bila nama/path di Storage memiliki spasi atau karakter khusus
+  try {
+    const decoded = decodeURIComponent(file.path);
+    if (refs.has(decoded) || refs.has(`${file.bucket}/${decoded}`)) return true;
+  } catch {
+    // ignore
+  }
+
   const url = mediaPublicUrl(file);
-  if (url && refs.has(url)) return true;
+  if (url) {
+    if (refs.has(url)) return true;
+    const cleanUrl = url.split("?")[0].split("#")[0];
+    if (refs.has(cleanUrl)) return true;
+  }
+
   return false;
 }
 

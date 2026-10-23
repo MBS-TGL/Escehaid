@@ -53,6 +53,32 @@ export default async function ProfilPage() {
     return { head: trimmed.slice(0, trimmed.length - tail.length), tail };
   })();
 
+  const visionText =
+    profil?.vision?.trim() ||
+    "Menjadi lembaga pencetak kader da'i dan ulama hafidz yang menguasai ilmu pengetahuan dan teknologi berwawasan global serta peduli dan berbudaya lingkungan.";
+
+  const missionItems: string[] = (() => {
+    if (!profil?.mission) {
+      return [
+        "Menanamkan kepribadian Islam dan kepedulian terhadap lingkungan",
+        "Menanamkan karakter unggul: lurus aqidah, bagus ibadah, mulia akhlak",
+        "Melaksanakan pembelajaran aktif, inovatif, kreatif, dan menyenangkan",
+        "Menumbuhkan potensi keberbakatan dalam setiap siswa",
+        "Berbasis Boarding School dan Full Day School dengan kurikulum Nasional & Muhammadiyah",
+        "Mewujudkan generasi emas 2045: One Home One Hafidz",
+      ];
+    }
+    try {
+      const parsed = JSON.parse(profil.mission);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch {}
+    const items = profil.mission
+      .split(/\d+\.\s*/)
+      .map((s: string) => s.trim())
+      .filter(Boolean);
+    return items.length > 0 ? items : [profil.mission];
+  })();
+
   const daftarHref = registrationHref(profil).trim();
 
   return (
@@ -260,85 +286,121 @@ export default async function ProfilPage() {
         </div>
       </section>
 
-      {/* Visi & Misi */}
-      <section className="bg-white py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+      {/* ── VISI & MISI SEKOLAH ───────────────────────────── */}
+      <section className="bg-white py-16 md:py-24" style={{ contentVisibility: "auto" } as React.CSSProperties}>
         <div className="mx-auto max-w-7xl px-6">
           <CSSFadeIn>
             <div className="mb-12 text-center">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Visi & Misi</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Arah dan Tujuan Sekolah</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Arah & Landasan</p>
+              <h2 className="mt-2 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">
+                Visi & Misi Sekolah
+              </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-500 md:text-base">
+                Kompas nilai dan komitmen strategis kami dalam mencetak generasi unggul berkarakter Islami.
+              </p>
             </div>
           </CSSFadeIn>
 
-          <div className="grid gap-8 md:grid-cols-2">
-            <CSSFadeIn>
-              <div className="h-full rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-8">
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--brand-primary)] shadow-lg shadow-[var(--brand-primary)]/20">
-                  <Eye className="h-5 w-5 text-[var(--brand-highlight)]" weight="bold" />
+          {/* 1. Hero Visi Card (Full Width Banner) */}
+          <CSSFadeIn delay={0.05}>
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] p-8 text-white shadow-xl shadow-[var(--brand-primary)]/15 md:p-12 lg:p-14">
+              {/* Watermark aksen latar belakang */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -right-8 -top-8 select-none text-white/[0.04] lg:-right-12 lg:-top-12"
+              >
+                <Quotes weight="fill" className="h-64 w-64 md:h-80 md:w-80" />
+              </div>
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -bottom-20 -left-20 h-72 w-72 rounded-full bg-[var(--brand-highlight)]/10 blur-3xl"
+              />
+
+              <div className="relative z-10">
+                {/* Header Badge Visi */}
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--brand-highlight)] backdrop-blur-md">
+                  <Eye className="h-4 w-4" weight="bold" />
+                  <span>Visi Utama Sekolah</span>
                 </div>
-                <h3 className="text-xl font-semibold text-[var(--brand-primary)]">Visi</h3>
-                {profil?.vision ? (
-                  <p className="mt-4 text-[15px] leading-relaxed text-slate-600">
-                    {profil.vision}
-                  </p>
-                ) : (
-                  <p className="mt-4 text-[15px] leading-relaxed text-slate-600">
-                    Menjadi lembaga pencetak kader da&apos;i dan ulama hafidz yang menguasai ilmu pengetahuan dan teknologi berwawasan global serta peduli dan berbudaya lingkungan.
-                  </p>
-                )}
+
+                {/* Teks Visi Utama */}
+                <h3 className="mt-6 font-serif-quote text-2xl font-normal leading-relaxed text-white md:text-3xl lg:text-[34px] lg:leading-[1.4] text-pretty">
+                  &ldquo;{visionText}&rdquo;
+                </h3>
+
+                {/* 3 Pilar Inti Penjabaran Visi */}
+                <div className="mt-10 grid gap-4 border-t border-white/15 pt-8 sm:grid-cols-3">
+                  <div className="flex items-start gap-3 rounded-2xl bg-white/[0.06] p-4 backdrop-blur-xs">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-highlight)] text-xs font-black text-[var(--brand-primary)]">
+                      01
+                    </span>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Kader Da&apos;i & Ulama</h4>
+                      <p className="mt-0.5 text-xs text-slate-300">Berakhlak mulia, hafidz Al-Qur&apos;an, dan berilmu amaliyah.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 rounded-2xl bg-white/[0.06] p-4 backdrop-blur-xs">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-highlight)] text-xs font-black text-[var(--brand-primary)]">
+                      02
+                    </span>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Berwawasan Global</h4>
+                      <p className="mt-0.5 text-xs text-slate-300">Penguasaan sains, teknologi, serta bahasa asing aktif.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 rounded-2xl bg-white/[0.06] p-4 backdrop-blur-xs">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-highlight)] text-xs font-black text-[var(--brand-primary)]">
+                      03
+                    </span>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Berbudaya Lingkungan</h4>
+                      <p className="mt-0.5 text-xs text-slate-300">Peduli kebersihan, keberlanjutan, dan cinta lingkungan hidup.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CSSFadeIn>
+
+          {/* 2. Grid Kartu Misi (6 Butir Terstruktur) */}
+          <div className="mt-14">
+            <CSSFadeIn delay={0.08}>
+              <div className="mb-8 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand-primary)] text-white shadow-sm">
+                    <Checks className="h-5 w-5 text-[var(--brand-highlight)]" weight="bold" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-[var(--brand-primary)] md:text-2xl">Misi Strategis</h3>
+                    <p className="text-xs text-slate-500">Langkah nyata mewujudkan visi sekolah sehari-hari</p>
+                  </div>
+                </div>
+                <span className="hidden rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 sm:inline-block">
+                  {missionItems.length} Misi Pokok
+                </span>
               </div>
             </CSSFadeIn>
 
-            <CSSFadeIn delay={0.1}>
-              <div className="h-full rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-8">
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--brand-primary)] shadow-lg shadow-[var(--brand-primary)]/20">
-                  <Checks className="h-5 w-5 text-[var(--brand-highlight)]" weight="bold" />
+            <CSSStagger stagger={50} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {missionItems.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-[#f8fafc] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-[var(--brand-accent)]/40 hover:bg-white hover:shadow-lg hover:shadow-[var(--brand-primary)]/5"
+                >
+                  <div className="flex items-start gap-3.5">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-xs font-bold tabular-nums text-[var(--brand-primary)] shadow-xs transition-colors group-hover:border-[var(--brand-accent)]/30 group-hover:bg-[var(--brand-primary)] group-hover:text-white">
+                      {String(idx + 1).padStart(2, "0")}
+                    </span>
+                    <p className="text-[14px] font-medium leading-relaxed text-slate-700 transition-colors group-hover:text-slate-900">
+                      {item}
+                    </p>
+                  </div>
+                  <div className="mt-4 h-0.5 w-6 rounded-full bg-[var(--brand-highlight)] opacity-0 transition-all duration-300 group-hover:w-12 group-hover:opacity-100" />
                 </div>
-                <h3 className="text-xl font-semibold text-[var(--brand-primary)]">Misi</h3>
-                {profil?.mission ? (
-                  <ul className="mt-4 space-y-2.5 text-[15px] leading-relaxed text-slate-600">
-                    {(() => {
-                      try {
-                        const misi = JSON.parse(profil.mission);
-                        if (Array.isArray(misi)) {
-                          return misi.map((m: string, i: number) => (
-                            <li key={i} className="flex gap-3">
-                              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand-accent)]" />
-                              <span>{m}</span>
-                            </li>
-                          ));
-                        }
-                      } catch {}
-                      const items = profil.mission
-                        .split(/\d+\.\s*/)
-                        .filter((s: string) => s.trim());
-                      return items.map((m: string, i: number) => (
-                        <li key={i} className="flex gap-3">
-                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand-accent)]" />
-                          <span>{m.trim()}</span>
-                        </li>
-                      ));
-                    })()}
-                  </ul>
-                ) : (
-                  <ul className="mt-4 space-y-2.5 text-[15px] leading-relaxed text-slate-600">
-                    {[
-                      "Menanamkan kepribadian Islam dan kepedulian terhadap lingkungan",
-                      "Menanamkan karakter unggul: lurus aqidah, bagus ibadah, mulia akhlak",
-                      "Melaksanakan pembelajaran aktif, inovatif, kreatif, dan menyenangkan",
-                      "Menumbuhkan potensi keberbakatan dalam setiap siswa",
-                      "Berbasis Boarding School dan Full Day School dengan kurikulum Nasional & Muhammadiyah",
-                      "Mewujudkan generasi emas 2045: One Home One Hafidz",
-                    ].map((m, i) => (
-                      <li key={i} className="flex gap-3">
-                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand-accent)]" />
-                        <span>{m}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </CSSFadeIn>
+              ))}
+            </CSSStagger>
           </div>
         </div>
       </section>
