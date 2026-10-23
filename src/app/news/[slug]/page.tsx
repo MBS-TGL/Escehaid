@@ -125,15 +125,15 @@ export default async function BeritaDetailPage({ params }: { params: Promise<{ s
       <ReadingProgress />
       {/* Sticky top bar */}
       <div className="sticky top-16 z-40 border-b border-slate-100 bg-white/95 backdrop-blur-md md:top-[72px]">
-        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5">
-          <nav className="flex items-center gap-1.5 text-xs text-slate-400">
-            <Link href="/" className="transition-colors hover:text-[var(--brand-accent)]">Beranda</Link>
-            <span>/</span>
-            <Link href="/news" className="transition-colors hover:text-[var(--brand-accent)]">Berita</Link>
-            <span>/</span>
-            <span className="max-w-[200px] truncate text-slate-600">{berita.title}</span>
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2.5">
+          <nav className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-slate-400">
+            <Link href="/" className="shrink-0 transition-colors hover:text-[var(--brand-accent)]">Beranda</Link>
+            <span className="shrink-0">/</span>
+            <Link href="/news" className="shrink-0 transition-colors hover:text-[var(--brand-accent)]">Berita</Link>
+            <span className="shrink-0">/</span>
+            <span className="min-w-0 truncate text-slate-600">{berita.title}</span>
           </nav>
-          <ShareButtons url={shareUrl} title={berita.title} variant="icons" className="ml-auto" />
+          <ShareButtons url={shareUrl} title={berita.title} variant="icons" className="ml-2 shrink-0" />
         </div>
       </div>
 
