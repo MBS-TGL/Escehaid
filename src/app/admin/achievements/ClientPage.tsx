@@ -12,7 +12,7 @@ import {
   revalidateAchievements,
   getEkskulListAll,
 } from "@/lib/queries";
-import { SlideOver, ConfirmModal, Select } from "@/components/ui";
+import { SlideOver, ConfirmModal, Select, Modal } from "@/components/ui";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import type { Achievement, Ekskul } from "@/lib/supabase";
 import { useToast } from "@/components/ui/Toast";
@@ -691,17 +691,17 @@ export default function AdminAchievementsPage() {
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
                     className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                 </th>
-                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">No</th>
+                <th className="hidden w-12 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell whitespace-nowrap">No</th>
                 <th className="cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("title")}>
                   <span className="flex items-center gap-1">Judul {sortIcon("title")}</span>
                 </th>
-                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none" onClick={() => toggleSort("category")}>
+                <th className="hidden w-40 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("category")}>
                   <span className="flex items-center gap-1">Kategori {sortIcon("category")}</span>
                 </th>
-                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none" onClick={() => toggleSort("year")}>
+                <th className="hidden w-24 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none whitespace-nowrap" onClick={() => toggleSort("year")}>
                   <span className="flex items-center gap-1">Tahun {sortIcon("year")}</span>
                 </th>
-                <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
+                <th className="w-28 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400 whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -745,11 +745,11 @@ export default function AdminAchievementsPage() {
               ) : (
                 paginated.map((item, index) => (
                   <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[var(--brand-primary)]/[0.03]" : ""}`}>
-                    <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
+                    <td className="hidden w-10 px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
                         className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                     </td>
-                    <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
+                    <td className="hidden w-12 px-4 py-3.5 text-sm text-slate-400 sm:table-cell whitespace-nowrap">{(page - 1) * PAGE_SIZE + index + 1}</td>
                     <td className="px-4 py-3.5 cursor-pointer" onClick={() => setViewItem(item)}>
                       <div className="flex items-center gap-3">
                         {item.image_url ? (
@@ -784,13 +784,13 @@ export default function AdminAchievementsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="hidden px-4 py-3.5 sm:table-cell">
-                      <span className={`inline-block rounded-md px-2 py-0.5 text-[11px] font-semibold ${catMeta(item.category).color}`}>
+                    <td className="hidden w-40 px-4 py-3.5 sm:table-cell whitespace-nowrap">
+                      <span className={`inline-block whitespace-nowrap rounded-md px-2.5 py-1 text-[11px] font-semibold ${catMeta(item.category).color}`}>
                         {catMeta(item.category).label}
                       </span>
                     </td>
-                    <td className="hidden px-4 py-3.5 text-sm text-slate-500 sm:table-cell">{item.year}</td>
-                    <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                    <td className="hidden w-24 px-4 py-3.5 text-sm text-slate-500 sm:table-cell whitespace-nowrap">{item.year}</td>
+                    <td className="w-28 px-4 py-3.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         <button onClick={() => setViewItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Lihat">
                           <Eye className="h-4 w-4" />
@@ -997,100 +997,151 @@ export default function AdminAchievementsPage() {
       )}
 
       {/* ── VIEW MODAL ──────────────────────────────── */}
-      {viewItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setViewItem(null)}>
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f4d21f]/10">
-                  <Medal className="h-5 w-5 text-[#f4d21f]" />
-                </div>
-                <div>
-                  <h2 className="flex items-center gap-2 text-lg font-bold text-slate-800">
-                    {viewItem.title}
-                    {viewItem.is_featured && <Star weight="fill" className="h-4 w-4 text-[#f4d21f]" aria-label="Unggulan" />}
-                  </h2>
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    <span className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${catMeta(viewItem.category).color}`}>
-                      {catMeta(viewItem.category).label}
-                    </span>
-                    {viewItem.rank_label && (
-                      <span className="inline-block rounded-md bg-[#f4d21f]/20 px-2 py-0.5 text-[10px] font-bold text-[#7a6600]">
-                        {viewItem.rank_label}
-                      </span>
-                    )}
-                    {viewItem.level && (
-                      <span className="inline-block rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-                        {levelLabel(viewItem.level)}
-                      </span>
-                    )}
-                  </div>
-                </div>
+      <Modal
+        open={!!viewItem}
+        onClose={() => setViewItem(null)}
+        title={viewItem?.title}
+        description={
+          viewItem
+            ? `${catMeta(viewItem.category).label} · Tahun ${viewItem.year}`
+            : undefined
+        }
+        size="lg"
+        footer={
+          viewItem && (
+            <div className="flex w-full flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {permCreate && (
+                  <button
+                    onClick={() => {
+                      const item = viewItem;
+                      setViewItem(null);
+                      openDuplicate(item);
+                    }}
+                    className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    <Files className="h-4 w-4" /> Duplikat
+                  </button>
+                )}
+                {permUpdate && (
+                  <button
+                    onClick={() => {
+                      const item = viewItem;
+                      setViewItem(null);
+                      openEdit(item);
+                    }}
+                    className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    <PencilSimple className="h-4 w-4" /> Edit
+                  </button>
+                )}
+                {permDelete && (
+                  <button
+                    onClick={() => {
+                      const item = viewItem;
+                      setViewItem(null);
+                      setDeleteItem(item);
+                    }}
+                    className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2 text-xs font-semibold text-red-700 hover:bg-red-100"
+                  >
+                    <Trash className="h-4 w-4" /> Hapus
+                  </button>
+                )}
               </div>
-              <button onClick={() => setViewItem(null)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
-                <X className="h-5 w-5" />
+              <button
+                onClick={() => setViewItem(null)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Tutup
               </button>
             </div>
+          )
+        }
+      >
+        {viewItem && (
+          <div className="space-y-4">
+            {/* Badges */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span
+                className={`inline-block rounded-md px-2.5 py-1 text-xs font-semibold ${
+                  catMeta(viewItem.category).color
+                }`}
+              >
+                {catMeta(viewItem.category).label}
+              </span>
+              {viewItem.rank_label && (
+                <span className="inline-block rounded-md bg-[#f4d21f]/20 px-2.5 py-1 text-xs font-bold text-[#7a6600]">
+                  {viewItem.rank_label}
+                </span>
+              )}
+              {viewItem.level && (
+                <span className="inline-block rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                  {levelLabel(viewItem.level)}
+                </span>
+              )}
+              {viewItem.is_featured && (
+                <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                  <Star weight="fill" className="h-3.5 w-3.5 text-amber-500" /> Unggulan
+                </span>
+              )}
+            </div>
+
+            {/* Gambar Prestasi */}
             {viewItem.image_url && (
-              <div className="mb-4 overflow-hidden rounded-xl">
-                <Image src={viewItem.image_url} alt={viewItem.image_alt || viewItem.title} width={640} height={160} sizes="100%" className="h-40 w-full object-cover" />
+              <div className="overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
+                <Image
+                  src={viewItem.image_url}
+                  alt={viewItem.image_alt || viewItem.title}
+                  width={640}
+                  height={260}
+                  sizes="100%"
+                  className="max-h-72 w-full object-contain bg-slate-900/5"
+                />
               </div>
             )}
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between border-b border-slate-100 pb-2">
-                <span className="text-slate-500">Tahun</span>
-                <span className="font-medium text-slate-800">{viewItem.year}</span>
+
+            {/* Detail data */}
+            <div className="space-y-2.5 rounded-xl border border-slate-100 bg-slate-50/60 p-4 text-sm">
+              <div className="flex justify-between gap-4 border-b border-slate-200/60 pb-2">
+                <span className="text-xs text-slate-500">Tahun</span>
+                <span className="font-semibold text-slate-800">{viewItem.year}</span>
               </div>
               {viewItem.participants && (
-                <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
-                  <span className="shrink-0 text-slate-500">Peraih</span>
-                  <span className="text-right font-medium text-slate-800">{normalizeName(viewItem.participants)}</span>
+                <div className="flex justify-between gap-4 border-b border-slate-200/60 pb-2">
+                  <span className="shrink-0 text-xs text-slate-500">Peraih</span>
+                  <span className="text-right font-medium text-slate-800">
+                    {normalizeName(viewItem.participants)}
+                  </span>
                 </div>
               )}
               {viewItem.organizer && (
-                <div className="flex justify-between gap-4 border-b border-slate-100 pb-2">
-                  <span className="shrink-0 text-slate-500">Penyelenggara</span>
-                  <span className="text-right font-medium text-slate-800">{normalizeSchool(viewItem.organizer)}</span>
+                <div className="flex justify-between gap-4 border-b border-slate-200/60 pb-2">
+                  <span className="shrink-0 text-xs text-slate-500">Penyelenggara</span>
+                  <span className="text-right font-medium text-slate-800">
+                    {normalizeSchool(viewItem.organizer)}
+                  </span>
                 </div>
               )}
-              <div className="flex justify-between border-b border-slate-100 pb-2">
-                <span className="text-slate-500">Unggulan</span>
-                <span className="font-medium text-slate-800">{viewItem.is_featured ? "Ya" : "Tidak"}</span>
-              </div>
               {viewItem.image_alt && (
-                <div className="border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">Teks alternatif gambar</span>
-                  <p className="mt-1 text-slate-700">{viewItem.image_alt}</p>
+                <div className="border-b border-slate-200/60 pb-2">
+                  <span className="text-xs text-slate-500">Teks Alternatif Gambar</span>
+                  <p className="mt-0.5 text-xs text-slate-700">{viewItem.image_alt}</p>
                 </div>
               )}
-              <div className="border-b border-slate-100 pb-2">
-                <span className="text-slate-500">Deskripsi</span>
-                <p className="mt-1 text-slate-700">{viewItem.description || "Tidak ada deskripsi"}</p>
-              </div>
             </div>
-            <div className="mt-4 flex flex-wrap gap-3">
-              {permCreate && (
-                <button onClick={() => openDuplicate(viewItem)}
-                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                  <Files className="h-4 w-4" /> Duplikat
-                </button>
-              )}
-              {permUpdate && (
-                <button onClick={() => { setViewItem(null); openEdit(viewItem); }}
-                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                  <PencilSimple className="h-4 w-4" /> Edit
-                </button>
-              )}
-              {permDelete && (
-                <button onClick={() => { setViewItem(null); setDeleteItem(viewItem); }}
-                  className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100">
-                  <Trash className="h-4 w-4" /> Hapus
-                </button>
-              )}
+
+            {/* Deskripsi */}
+            <div className="space-y-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Deskripsi</span>
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700">
+                  {viewItem.description || "Tidak ada deskripsi"}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* ── DELETE CONFIRM ──────────────────────────── */}
       <ConfirmModal
