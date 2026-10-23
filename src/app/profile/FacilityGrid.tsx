@@ -96,6 +96,7 @@ export default function FacilityGrid({ facilities }: { facilities: Facility[] })
   const [active, setActive] = useState<number | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
+  const dialogTouch = useRef<{ x: number; y: number } | null>(null);
   const n = facilities.length;
   const span = heroSpan(n);
   const heroSizesValue = heroSizes(n);
@@ -149,6 +150,17 @@ export default function FacilityGrid({ facilities }: { facilities: Facility[] })
     setActive(i);
   };
 
+  /* Kunci scroll latar saat dialog terbuka — <dialog> native tidak selalu
+     mencegah scroll body di iOS. */
+  useEffect(() => {
+    if (active === null) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [active]);
+
   /* Klik di luar kartu = klik latar. Koordinat dibandingkan dengan kotak dialog
      karena p-0 membuat kotak dialog persis seukuran kartu. */
   const onDialogClick = (e: ReactMouseEvent<HTMLDialogElement>) => {
@@ -168,7 +180,7 @@ export default function FacilityGrid({ facilities }: { facilities: Facility[] })
             <button
               type="button"
               onClick={() => open(i)}
-              className="group flex h-full w-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white text-left transition-all hover:shadow-xl hover:shadow-[var(--brand-primary)]/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-2"
+              className="group flex h-full w-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white text-left transition-all hover:shadow-xl hover:shadow-[var(--brand-primary)]/5 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-2"
             >
               <Media
                 facility={f}
@@ -191,6 +203,20 @@ export default function FacilityGrid({ facilities }: { facilities: Facility[] })
         ref={dialogRef}
         aria-labelledby="facility-dialog-title"
         onClick={onDialogClick}
+        style={{ touchAction: "pan-y" }}
+        onTouchStart={(e) => {
+          const t = e.touches[0];
+          dialogTouch.current = { x: t.clientX, y: t.clientY };
+        }}
+        onTouchEnd={(e) => {
+          const start = dialogTouch.current;
+          if (!start) return;
+          const t = e.changedTouches[0];
+          const dx = t.clientX - start.x;
+          const dy = t.clientY - start.y;
+          if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) step(dx < 0 ? 1 : -1);
+          dialogTouch.current = null;
+        }}
         className="m-auto max-h-[90vh] w-[min(92vw,64rem)] overflow-hidden rounded-2xl border border-[#dce3ed] bg-white p-0 shadow-2xl [&::backdrop]:bg-black/60"
       >
         {active !== null && item && (

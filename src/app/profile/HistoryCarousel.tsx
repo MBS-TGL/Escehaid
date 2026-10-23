@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { CaretLeft, CaretRight, Clock } from "@/components/Icons";
 
@@ -10,6 +10,12 @@ interface HistorySlide {
   badge: string;
   title: string;
   desc: string;
+}
+
+function subscribeMotionChange(onChange: () => void) {
+  const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
 }
 
 const defaultSlides: HistorySlide[] = [
@@ -39,25 +45,55 @@ const defaultSlides: HistorySlide[] = [
 export default function HistoryCarousel() {
   const [current, setCurrent] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [isInView, setIsInView] = useState(true);
+  const [isHidden, setIsHidden] = useState(false);
   const touchX = useRef(0);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  const reducedMotion = useSyncExternalStore(
+    subscribeMotionChange,
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () => false
+  );
 
   useEffect(() => {
-    if (isPaused) return;
+    const el = rootRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const obs = new IntersectionObserver(([entry]) => setIsInView(entry.isIntersecting), {
+      threshold: 0.2,
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const onVisibility = () => setIsHidden(document.hidden);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+
+  useEffect(() => {
+    if (isPaused || reducedMotion || !isInView || isHidden) return;
     const timer = setInterval(() => {
       setCurrent((prev) => (prev + 1) % defaultSlides.length);
-    }, 4500);
+    }, 6500);
     return () => clearInterval(timer);
-  }, [isPaused]);
+  }, [isPaused, reducedMotion, isInView, isHidden]);
 
   const slide = defaultSlides[current];
 
   return (
     <div
+      ref={rootRef}
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="Kilas balik sejarah sekolah"
       className="group relative overflow-hidden rounded-2xl border border-[#dce3ed] bg-slate-950 shadow-lg"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onTouchStart={(e) => {
         touchX.current = e.touches[0].clientX;
+        setIsPaused(true);
       }}
       onTouchEnd={(e) => {
         const dx = e.changedTouches[0].clientX - touchX.current;
@@ -68,6 +104,7 @@ export default function HistoryCarousel() {
               : (prev - 1 + defaultSlides.length) % defaultSlides.length
           );
         }
+        setIsPaused(false);
       }}
     >
       {/* Container Gambar */}
