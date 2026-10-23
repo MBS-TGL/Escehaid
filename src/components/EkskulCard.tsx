@@ -42,7 +42,7 @@ export default function EkskulCard({ item }: { item: Ekskul }) {
       </div>
 
       {/* ── Konten teks ── */}
-      <div className="flex flex-1 flex-col items-center px-4 pt-4 pb-4">
+      <div className="flex flex-1 flex-col items-center px-3 pt-4 pb-4 sm:px-4">
         {/* Ikon kecil branded — selalu tampil */}
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-light)] text-white shadow-lg shadow-[var(--brand-primary)]/20">
           <EkskulGlyph slug={item.slug} iconKey={item.icon} />
@@ -58,7 +58,7 @@ export default function EkskulCard({ item }: { item: Ekskul }) {
         )}
 
         {item.coach && (
-          <p className="mt-1 text-xs text-slate-400">Pembina: {item.coach}</p>
+          <p className="mt-1 line-clamp-1 text-xs text-slate-400">Pembina: {item.coach}</p>
         )}
 
         <div className="mt-auto pt-4">

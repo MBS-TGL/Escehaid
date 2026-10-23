@@ -103,8 +103,8 @@ export default async function ProfilPage() {
       />
 
       {/* Tentang Kami */}
-      <section className="bg-white py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
-        <div className="mx-auto max-w-7xl px-6">
+      <section className="bg-white py-12 sm:py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="grid items-center gap-10 lg:grid-cols-12 lg:gap-14">
             {/* Left — Narasi Sejarah (7 cols) */}
             <CSSFadeIn className="lg:col-span-7">
@@ -166,20 +166,20 @@ export default async function ProfilPage() {
       </section>
 
       {/* ── SAMBUTAN KEPALA SEKOLAH ───────────────────────── */}
-      <section className="relative overflow-hidden bg-[#f4f7fb] py-16 md:py-24" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+      <section className="relative overflow-hidden bg-[#f4f7fb] py-12 sm:py-16 md:py-24" style={{ contentVisibility: "auto" } as React.CSSProperties}>
         {/* Watermark kutipan halus di pojok kanan atas */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute right-4 top-4 select-none text-slate-200/60 lg:right-16 lg:top-8"
+          className="pointer-events-none absolute right-4 top-4 select-none text-slate-200/60 hidden sm:block lg:right-16 lg:top-8"
         >
           <Quotes weight="fill" className="h-44 w-44 md:h-60 md:w-60" />
         </div>
 
-        <div className="relative mx-auto max-w-7xl px-6">
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
           <div className="grid items-center gap-10 sm:gap-14 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-16 xl:grid-cols-[360px_minmax(0,1fr)]">
             {/* Kolom Foto Kepala Sekolah — Portrait Elegan Berwibawa */}
             <CSSFadeIn>
-              <div className="relative mx-auto w-full max-w-[280px] sm:max-w-[320px] lg:max-w-none">
+              <div className="relative mx-auto w-full max-w-[240px] sm:max-w-[320px] lg:max-w-none">
                 {/* Backdrop offset lembut */}
                 <div
                   aria-hidden="true"
@@ -260,7 +260,7 @@ export default async function ProfilPage() {
                 {/* Identitas Pimpinan & Komitmen Kurikulum */}
                 <div className="mt-8 border-t border-slate-200/80 pt-6">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
+                    <div className="hidden sm:block">
                       <h3 className="text-lg font-bold text-[var(--brand-primary)] sm:text-xl">
                         {profil?.principal_name || "Khoirul Anwar, S.Pd"}
                       </h3>
@@ -287,8 +287,8 @@ export default async function ProfilPage() {
       </section>
 
       {/* ── VISI & MISI SEKOLAH ───────────────────────────── */}
-      <section className="bg-white py-16 md:py-24" style={{ contentVisibility: "auto" } as React.CSSProperties}>
-        <div className="mx-auto max-w-7xl px-6">
+      <section className="bg-white py-12 sm:py-16 md:py-24" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <CSSFadeIn>
             <div className="mb-12 text-center">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Arah & Landasan</p>
@@ -303,7 +303,7 @@ export default async function ProfilPage() {
 
           {/* 1. Hero Visi Card (Full Width Banner) */}
           <CSSFadeIn delay={0.05}>
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] p-8 text-white shadow-xl shadow-[var(--brand-primary)]/15 md:p-12 lg:p-14">
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] p-5 text-white shadow-xl shadow-[var(--brand-primary)]/15 sm:p-8 md:p-12 lg:p-14">
               {/* Watermark aksen latar belakang */}
               <div
                 aria-hidden="true"
@@ -324,12 +324,12 @@ export default async function ProfilPage() {
                 </div>
 
                 {/* Teks Visi Utama */}
-                <h3 className="mt-6 font-serif-quote text-2xl font-normal leading-relaxed text-white md:text-3xl lg:text-[34px] lg:leading-[1.4] text-pretty">
+                <h3 className="mt-6 font-serif-quote text-xl font-normal leading-relaxed text-white sm:text-2xl md:text-3xl lg:text-[34px] lg:leading-[1.4] text-pretty">
                   &ldquo;{visionText}&rdquo;
                 </h3>
 
                 {/* 3 Pilar Inti Penjabaran Visi */}
-                <div className="mt-10 grid gap-4 border-t border-white/15 pt-8 sm:grid-cols-3">
+                <div className="mt-7 grid gap-4 border-t border-white/15 pt-6 sm:mt-10 sm:grid-cols-3 sm:pt-8">
                   <div className="flex items-start gap-3 rounded-2xl bg-white/[0.06] p-4 backdrop-blur-xs">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-highlight)] text-xs font-black text-[var(--brand-primary)]">
                       01
@@ -397,7 +397,7 @@ export default async function ProfilPage() {
                       {item}
                     </p>
                   </div>
-                  <div className="mt-4 h-0.5 w-6 rounded-full bg-[var(--brand-highlight)] opacity-0 transition-all duration-300 group-hover:w-12 group-hover:opacity-100" />
+                  <div className="mt-4 h-0.5 w-6 rounded-full bg-[var(--brand-highlight)] opacity-60 transition-all duration-300 group-hover:w-12 group-hover:opacity-100 sm:opacity-0" />
                 </div>
               ))}
             </CSSStagger>
@@ -407,8 +407,8 @@ export default async function ProfilPage() {
 
       {/* Fasilitas Sekolah */}
       {facilities.length > 0 && (
-        <section id="fasilitas" className="bg-[#f4f7fb] py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
-          <div className="mx-auto max-w-7xl px-6">
+        <section id="fasilitas" className="scroll-mt-24 bg-[#f4f7fb] py-12 sm:py-20 md:scroll-mt-28" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <CSSFadeIn>
               <div className="mb-12">
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Infrastruktur</p>
@@ -448,8 +448,8 @@ export default async function ProfilPage() {
 
       {/* Ekstrakurikuler — hanya dirender bila ada data ekskul aktif */}
       {ekskulList.length > 0 && (
-        <section id="ekstrakurikuler" className="scroll-mt-28 bg-white py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
-          <div className="mx-auto max-w-7xl px-6">
+        <section id="ekstrakurikuler" className="scroll-mt-28 bg-white py-12 sm:py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <CSSFadeIn>
               <div className="mb-12">
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Pengembangan Diri</p>
@@ -457,7 +457,7 @@ export default async function ProfilPage() {
               </div>
             </CSSFadeIn>
 
-            <CSSStagger stagger={80} className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
+            <CSSStagger stagger={80} className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 lg:gap-6">
               {ekskulList.map((item) => (
                 <EkskulCard key={item.id} item={item} />
               ))}
@@ -468,8 +468,8 @@ export default async function ProfilPage() {
 
       {/* Prestasi Highlights */}
       {achievements.length > 0 && (
-        <section className="bg-[#f4f7fb] py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
-          <div className="mx-auto max-w-7xl px-6">
+        <section className="bg-[#f4f7fb] py-12 sm:py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <CSSFadeIn>
               <div className="flex flex-col items-center justify-between gap-6 rounded-2xl border border-[#dce3ed] bg-white p-6 sm:flex-row">
                 <div className="flex items-center gap-4">
@@ -499,7 +499,7 @@ export default async function ProfilPage() {
 
       {/* Guru & Staff */}
       <section className="bg-white" style={{ contentVisibility: "auto" } as React.CSSProperties}>
-        <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
+        <div className="mx-auto max-w-[1296px] px-4 py-10 sm:px-6 sm:py-12 md:px-10 md:py-16">
           <CSSFadeIn>
             <div className="mb-12 text-center">
               <h2 className="text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Guru & Staff</h2>
@@ -521,16 +521,16 @@ export default async function ProfilPage() {
 
       {/* Galeri Preview */}
       {gallery.length > 0 && (
-        <section className="bg-[#f4f7fb] py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
-          <div className="mx-auto max-w-7xl px-6">
+        <section className="bg-[#f4f7fb] py-12 sm:py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <CSSFadeIn>
-              <div className="mb-12 flex items-end justify-between">
+              <div className="mb-12 flex flex-col items-start gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Dokumentasi</p>
                   <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Galeri Sekolah</h2>
                 </div>
-                <Link href="/gallery" className="text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)]">
-                  Lihat semua <ArrowUpRight className="inline h-4 w-4" />
+                <Link href="/gallery" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)]">
+                  Lihat semua <ArrowUpRight className="h-4 w-4" />
                 </Link>
               </div>
             </CSSFadeIn>
@@ -545,8 +545,8 @@ export default async function ProfilPage() {
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                     className="object-cover transition-transform duration-500 group-hover:scale-110"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                  <div className="absolute bottom-0 left-0 right-0 p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                  <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/60 via-transparent to-transparent transition-opacity duration-300 sm:opacity-0 sm:group-hover:opacity-100" />
+                  <div className="absolute bottom-0 left-0 right-0 p-3 transition-opacity duration-300 sm:opacity-0 sm:group-hover:opacity-100">
                     <p className="text-xs font-semibold text-white line-clamp-1">{g.title}</p>
                     {g.category && (
                       <span className="mt-1 inline-block rounded-full bg-[var(--brand-accent)]/90 px-2 py-0.5 text-[9px] font-bold uppercase text-white">{g.category}</span>
@@ -560,8 +560,8 @@ export default async function ProfilPage() {
       )}
 
       {/* Kontak & Lokasi */}
-      <section className="bg-white py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
-        <div className="mx-auto max-w-7xl px-6">
+      <section className="bg-white py-12 sm:py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <CSSFadeIn>
             <div className="flex flex-col items-center justify-between gap-6 rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-6 sm:flex-row">
               <div className="flex items-center gap-4">
@@ -575,7 +575,7 @@ export default async function ProfilPage() {
                   </p>
                 </div>
               </div>
-              <Link href="/contact" className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-[var(--brand-accent)]">
+              <Link href="/contact" className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-[var(--brand-accent)] sm:w-auto">
                 Hubungi Kami <ArrowUpRight className="h-4 w-4" />
               </Link>
             </div>
@@ -588,7 +588,7 @@ export default async function ProfilPage() {
         <div className="absolute inset-0 opacity-10">
           <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[var(--brand-highlight)] blur-[120px]" />
         </div>
-        <div className="relative mx-auto flex max-w-7xl flex-col items-center gap-7 px-6 py-16 text-center md:flex-row md:justify-between md:text-left">
+        <div className="relative mx-auto flex max-w-7xl flex-col items-center gap-7 px-4 py-12 text-center sm:py-16 md:flex-row md:justify-between md:text-left">
           <CSSFadeIn>
             <div className="max-w-xl">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-highlight)]">Penerimaan Peserta Didik Baru</p>
@@ -597,7 +597,7 @@ export default async function ProfilPage() {
             </div>
           </CSSFadeIn>
           <CSSFadeIn delay={0.1}>
-            <Link href={registrationHref(profil)} className="inline-flex w-fit items-center gap-2 rounded-xl bg-[var(--brand-accent)] px-7 py-4 text-sm font-bold text-white transition-all hover:bg-white hover:text-[var(--brand-primary)] hover:shadow-lg hover:shadow-[var(--brand-accent)]/20">
+            <Link href={registrationHref(profil)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-accent)] px-7 py-4 text-sm font-bold text-white transition-all hover:bg-white hover:text-[var(--brand-primary)] hover:shadow-lg hover:shadow-[var(--brand-accent)]/20 sm:w-fit">
               Daftar sekarang <ArrowUpRight className="h-4 w-4" />
             </Link>
           </CSSFadeIn>

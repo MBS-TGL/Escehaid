@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { CaretLeft, CaretRight, Clock } from "@/components/Icons";
 
@@ -39,6 +39,7 @@ const defaultSlides: HistorySlide[] = [
 export default function HistoryCarousel() {
   const [current, setCurrent] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const touchX = useRef(0);
 
   useEffect(() => {
     if (isPaused) return;
@@ -55,6 +56,19 @@ export default function HistoryCarousel() {
       className="group relative overflow-hidden rounded-2xl border border-[#dce3ed] bg-slate-950 shadow-lg"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
+      onTouchStart={(e) => {
+        touchX.current = e.touches[0].clientX;
+      }}
+      onTouchEnd={(e) => {
+        const dx = e.changedTouches[0].clientX - touchX.current;
+        if (Math.abs(dx) > 40) {
+          setCurrent((prev) =>
+            dx < 0
+              ? (prev + 1) % defaultSlides.length
+              : (prev - 1 + defaultSlides.length) % defaultSlides.length
+          );
+        }
+      }}
     >
       {/* Container Gambar */}
       <div className="relative h-72 w-full sm:h-80 lg:h-96">
@@ -97,7 +111,7 @@ export default function HistoryCarousel() {
             type="button"
             onClick={() => setCurrent((prev) => (prev - 1 + defaultSlides.length) % defaultSlides.length)}
             aria-label="Foto Sebelumnya"
-            className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xs transition hover:bg-white hover:text-slate-900 opacity-0 group-hover:opacity-100 focus:opacity-100"
+            className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xs transition hover:bg-white hover:text-slate-900 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
           >
             <CaretLeft className="h-4 w-4" />
           </button>
@@ -105,7 +119,7 @@ export default function HistoryCarousel() {
             type="button"
             onClick={() => setCurrent((prev) => (prev + 1) % defaultSlides.length)}
             aria-label="Foto Berikutnya"
-            className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xs transition hover:bg-white hover:text-slate-900 opacity-0 group-hover:opacity-100 focus:opacity-100"
+            className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xs transition hover:bg-white hover:text-slate-900 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
           >
             <CaretRight className="h-4 w-4" />
           </button>
@@ -128,10 +142,15 @@ export default function HistoryCarousel() {
                 type="button"
                 onClick={() => setCurrent(i)}
                 aria-label={`Buka slide ${i + 1}`}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  i === current ? "w-6 bg-[var(--brand-highlight)]" : "w-1.5 bg-white/40 hover:bg-white/70"
-                }`}
-              />
+                aria-current={i === current}
+                className="-m-2 rounded-full p-2"
+              >
+                <span
+                  className={`block h-1.5 rounded-full transition-all duration-300 ${
+                    i === current ? "w-6 bg-[var(--brand-highlight)]" : "w-1.5 bg-white/40 hover:bg-white/70"
+                  }`}
+                />
+              </button>
             ))}
           </div>
         </div>

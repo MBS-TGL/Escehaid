@@ -30,7 +30,7 @@ export default function TeacherGrid({ teachers }: { teachers: Teacher[] }) {
             placeholder="Cari nama atau jabatan..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-full border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
+            className="w-full rounded-full border border-slate-200 bg-white py-3 pl-11 pr-4 text-base text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 sm:text-sm"
           />
         </div>
       </div>
@@ -45,7 +45,7 @@ export default function TeacherGrid({ teachers }: { teachers: Teacher[] }) {
           )}
         </div>
       ) : (
-        <CSSStagger stagger={80} className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
+        <CSSStagger stagger={80} className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-5">
           {filtered.map((t) => (
             <TeacherCard key={t.id} teacher={t} />
           ))}

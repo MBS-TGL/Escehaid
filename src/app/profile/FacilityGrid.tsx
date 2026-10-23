@@ -16,7 +16,7 @@ const SIZES_CARD = "(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 26rem";
 const SIZES_DIALOG = "(max-width: 1023px) 92vw, 64rem";
 
 const NAV_BUTTON =
-  "inline-flex items-center gap-1.5 rounded-xl border border-[#dce3ed] px-4 py-2.5 text-sm font-semibold text-[var(--brand-primary)] transition hover:border-[var(--brand-primary)] hover:bg-[#f4f7fb] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-1";
+  "inline-flex items-center gap-1.5 rounded-xl border border-[#dce3ed] px-3 py-2 text-xs font-semibold text-[var(--brand-primary)] transition hover:border-[var(--brand-primary)] hover:bg-[#f4f7fb] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-1 sm:px-4 sm:py-2.5 sm:text-sm";
 
 /**
  * Bentuk kartu pertama supaya grid selalu terisi penuh — berapa pun jumlah
@@ -178,7 +178,7 @@ export default function FacilityGrid({ facilities }: { facilities: Facility[] })
                 iconClass="h-10 w-10 text-white/40"
                 zoom
               />
-              <div className="flex flex-1 flex-col p-6">
+              <div className="flex flex-1 flex-col p-4 sm:p-6">
                 <h3 className="text-lg font-semibold text-[var(--brand-primary)]">{f.name}</h3>
                 <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">{f.description}</p>
               </div>
@@ -223,13 +223,15 @@ export default function FacilityGrid({ facilities }: { facilities: Facility[] })
 
             <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-[#e7ecf3] px-5 py-3.5">
               <button type="button" onClick={() => step(-1)} disabled={n <= 1} className={NAV_BUTTON}>
-                <CaretLeft className="h-4 w-4" /> Sebelumnya
+                <CaretLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Sebelumnya</span>
               </button>
               <span className="text-xs font-medium tabular-nums text-slate-400">
                 {active + 1} / {n}
               </span>
               <button type="button" onClick={() => step(1)} disabled={n <= 1} className={NAV_BUTTON}>
-                Berikutnya <CaretRight className="h-4 w-4" />
+                <span className="hidden sm:inline">Berikutnya</span>
+                <CaretRight className="h-4 w-4" />
               </button>
             </footer>
           </div>
