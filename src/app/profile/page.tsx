@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Users, GraduationCap, Eye, Checks, ArrowUpRight, Trophy, MapPin } from "@/components/Icons";
+import { Users, GraduationCap, Eye, Checks, ArrowUpRight, Trophy, MapPin, Quotes } from "@/components/Icons";
 import { getSchoolProfile, getTeacherList, getFacilityList, getAchievementList, getGalleryList, getEkskulList, registrationHref } from "@/lib/queries";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
@@ -9,6 +9,7 @@ import TeacherGrid from "./TeacherGrid";
 import FacilityGrid from "./FacilityGrid";
 import EkskulCard from "@/components/EkskulCard";
 import HistoryCarousel from "./HistoryCarousel";
+import { detectPrincipalGreeting, keepTogether } from "@/lib/principal-quote";
 
 export const metadata = {
   title: "Profil",
@@ -17,6 +18,11 @@ export const metadata = {
 };
 
 export const revalidate = 3600;
+
+const SALAM_BUKA = "Assalamu'alaikum Warahmatullahi Wabarakatuh.";
+const SALAM_TUTUP = "Wassalamu'alaikum Warahmatullahi Wabarakatuh.";
+const PRINCIPAL_QUOTE_FALLBACK =
+  "Selamat datang di SMP Muhammadiyah 4 Tanggul. Kami berkomitmen mendampingi setiap peserta didik bertumbuh dengan memadukan keunggulan akademik, akhlak karimah, dan pembentukan karakter Islami menuju generasi yang berilmu dan berdaya saing.";
 
 export default async function ProfilPage() {
   const [profil, teachers, facilities, achievements, gallery, settings, ekskulList] = await Promise.all([
@@ -29,6 +35,23 @@ export default async function ProfilPage() {
     getEkskulList(),
   ]);
   const brand = toPublicBrand(settings);
+  const schoolName = settings.values.site_name.trim() || profil?.school_name || "SMP Muhammadiyah 4 Tanggul";
+
+  const principalQuote = (profil?.principal_quote || PRINCIPAL_QUOTE_FALLBACK).trim();
+  const { startsWithGreeting, endsWithGreeting } = detectPrincipalGreeting(principalQuote);
+  const quoteTypeClass =
+    principalQuote.length <= 140
+      ? "text-xl sm:text-2xl lg:text-[26px]"
+      : principalQuote.length <= 300
+        ? "text-lg sm:text-xl lg:text-[22px]"
+        : "text-base sm:text-lg";
+
+  const principalQuoteWords = (() => {
+    const trimmed = principalQuote.trim();
+    const tokens = trimmed.split(/\s+/);
+    const tail = tokens[tokens.length - 1] || "";
+    return { head: trimmed.slice(0, trimmed.length - tail.length), tail };
+  })();
 
   const daftarHref = registrationHref(profil).trim();
 
@@ -116,42 +139,120 @@ export default async function ProfilPage() {
         </div>
       </section>
 
-      {/* Kepala Sekolah */}
-      <section className="bg-[#f4f7fb] py-20" style={{ contentVisibility: "auto" } as React.CSSProperties}>
-        <div className="mx-auto max-w-7xl px-6">
-          <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.3fr] lg:gap-16">
+      {/* ── SAMBUTAN KEPALA SEKOLAH ───────────────────────── */}
+      <section className="relative overflow-hidden bg-[#f4f7fb] py-16 md:py-24" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+        {/* Watermark kutipan halus di pojok kanan atas */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute right-4 top-4 select-none text-slate-200/60 lg:right-16 lg:top-8"
+        >
+          <Quotes weight="fill" className="h-44 w-44 md:h-60 md:w-60" />
+        </div>
+
+        <div className="relative mx-auto max-w-7xl px-6">
+          <div className="grid items-center gap-10 sm:gap-14 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-16 xl:grid-cols-[360px_minmax(0,1fr)]">
+            {/* Kolom Foto Kepala Sekolah — Portrait Elegan Berwibawa */}
             <CSSFadeIn>
-              <div className="flex justify-center lg:justify-end">
-                <div className="relative">
-                  <div className="absolute -inset-4 rounded-full bg-gradient-to-br from-[var(--brand-accent)]/30 to-[var(--brand-accent)]/20 blur-xl" />
-                  <div className="relative h-64 w-64 overflow-hidden rounded-full border-4 border-[var(--brand-accent)] md:h-80 md:w-80">
-                    <Image
-                      src={profil?.principal_photo_url || "/images/Kepala-Sekolah.jpg"}
-                      alt={profil?.principal_name || "Kepala Sekolah"}
-                      fill
-                      sizes="(max-width: 768px) 256px, 320px"
-                      className="object-cover object-[center_20%]"
-                    />
+              <div className="relative mx-auto w-full max-w-[280px] sm:max-w-[320px] lg:max-w-none">
+                {/* Backdrop offset lembut */}
+                <div
+                  aria-hidden="true"
+                  className="absolute -inset-2.5 -rotate-1 rounded-3xl bg-gradient-to-br from-[var(--brand-primary)]/15 via-[var(--brand-accent)]/10 to-transparent sm:rounded-[28px]"
+                />
+
+                {/* Frame foto utama: kurva rounded-3xl modern, aspect 4/5 profesional */}
+                <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-100 shadow-xl ring-1 ring-black/5 sm:rounded-3xl">
+                  <Image
+                    src={profil?.principal_photo_url || "/images/Kepala-Sekolah.jpg"}
+                    alt={`${profil?.principal_name || "Khoirul Anwar, S.Pd"} - Kepala Sekolah`}
+                    fill
+                    sizes="(min-width: 1280px) 360px, (min-width: 1024px) 320px, (min-width: 640px) 320px, 280px"
+                    className="object-cover object-[center_16%] transition-transform duration-700 hover:scale-105"
+                  />
+
+                  {/* Overlay gradien halus di mobile */}
+                  <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-transparent sm:hidden" />
+                  <div className="absolute inset-x-4 bottom-4 sm:hidden">
+                    <p className="text-base font-bold text-white drop-shadow-sm">
+                      {profil?.principal_name || "Khoirul Anwar, S.Pd"}
+                    </p>
+                    <p className="text-xs text-slate-200 drop-shadow-sm">
+                      Kepala {schoolName}
+                    </p>
                   </div>
-                  <div className="absolute -bottom-2 -right-2 rounded-2xl bg-[var(--brand-primary)] px-4 py-2 shadow-lg">
-                    <p className="text-xs font-bold text-white">Kepala Sekolah</p>
-                  </div>
+                </div>
+
+                {/* Floating badge resmi di bawah foto (tablet & desktop) */}
+                <div className="absolute -bottom-3.5 left-1/2 z-10 hidden -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-slate-200/90 bg-white/95 px-4 py-1.5 shadow-md shadow-slate-900/5 backdrop-blur-sm sm:inline-flex">
+                  <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-xs font-semibold text-slate-700">Kepala Sekolah</span>
                 </div>
               </div>
             </CSSFadeIn>
 
+            {/* Kolom Teks Sambutan — Tipografi Editorial Bermartabat */}
             <CSSFadeIn delay={0.1}>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Kepala Sekolah</p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">
-                  {profil?.principal_name || "Khoirul Anwar, S.Pd"}
-                </h2>
-                <p className="mt-6 text-[15px] leading-relaxed text-slate-600">
-                  {profil?.principal_quote || "Memimpin sekolah dengan visi untuk mencetak kader umat yang berakhlak mulia, cerdas, dan siap menjadi Da'i serta Ulama Hafidz yang bermanfaat bagi masyarakat."}
-                </p>
-                <div className="mt-6 flex items-center gap-3">
-                  <span className="rounded-full bg-[var(--brand-primary)]/10 px-3 py-1 text-xs font-medium text-[var(--brand-primary)]">Kurikulum Merdeka</span>
-                  <span className="rounded-full bg-[var(--brand-primary)]/10 px-3 py-1 text-xs font-medium text-[var(--brand-primary)]">ISMUBA</span>
+              <div className="flex flex-col justify-center">
+                {/* Eyebrow badge */}
+                <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--brand-primary)]/15 bg-white/90 px-3.5 py-1 text-xs font-semibold text-[var(--brand-primary)] shadow-xs">
+                  <Quotes weight="fill" className="h-3.5 w-3.5 text-[var(--brand-accent)]" />
+                  <span>Sambutan Kepala Sekolah</span>
+                </div>
+
+                {/* Salam Pembuka */}
+                {!startsWithGreeting && (
+                  <p className="mt-5 text-sm font-medium text-slate-600 sm:text-base">
+                    {SALAM_BUKA}
+                  </p>
+                )}
+
+                {/* Kutipan Utama */}
+                <blockquote className={startsWithGreeting ? "mt-4" : "mt-3"}>
+                  <p className={`${quoteTypeClass} font-normal leading-[1.7] tracking-normal text-slate-800 text-pretty`}>
+                    &ldquo;{endsWithGreeting ? (
+                      <>
+                        {keepTogether(principalQuoteWords.head)}
+                        <span className="whitespace-nowrap">
+                          {keepTogether(principalQuoteWords.tail)} <span aria-hidden="true" className="font-bold text-[var(--brand-highlight)]">&rdquo;</span>
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        {keepTogether(principalQuote)} <span aria-hidden="true" className="font-bold text-[var(--brand-highlight)]">&rdquo;</span>
+                      </>
+                    )}
+                  </p>
+                </blockquote>
+
+                {/* Salam Penutup */}
+                {!endsWithGreeting && (
+                  <p className="mt-4 text-sm font-medium text-slate-600 sm:text-base">
+                    {SALAM_TUTUP}
+                  </p>
+                )}
+
+                {/* Identitas Pimpinan & Komitmen Kurikulum */}
+                <div className="mt-8 border-t border-slate-200/80 pt-6">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="text-lg font-bold text-[var(--brand-primary)] sm:text-xl">
+                        {profil?.principal_name || "Khoirul Anwar, S.Pd"}
+                      </h3>
+                      <p className="text-xs font-medium text-slate-500 sm:text-sm">
+                        Kepala {schoolName}
+                      </p>
+                    </div>
+
+                    {/* Chips Komitmen Pendidikan Terintegrasi */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--brand-primary)]/15 bg-white px-3 py-1.5 text-xs font-semibold text-[var(--brand-primary)] shadow-xs">
+                        <GraduationCap className="h-3.5 w-3.5 text-[var(--brand-accent)]" /> Kurikulum Merdeka
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--brand-primary)]/15 bg-white px-3 py-1.5 text-xs font-semibold text-[var(--brand-primary)] shadow-xs">
+                        <Checks className="h-3.5 w-3.5 text-emerald-600" /> ISMUBA Unggulan
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CSSFadeIn>
