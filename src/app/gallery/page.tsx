@@ -63,7 +63,7 @@ export default async function GalleryPage({
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Galeri" }]}
       />
 
-      <section className="mx-auto max-w-7xl px-6 py-12 md:py-16" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+      <section className="mx-auto max-w-7xl px-6 py-12 md:py-16">
         {categories.length > 1 && (
           <CSSFadeIn className="mb-8">
             <CategoryChips chips={chips} />

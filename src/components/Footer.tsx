@@ -156,8 +156,8 @@ export default function Footer({
             </ul>
           </div>
 
-          {/* Navigasi */}
-          <nav aria-label="Navigasi footer" className="grid grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-3 lg:col-span-4">
+          {/* Navigasi: 3 kolom di semua ukuran layar (hemat tinggi di mobile) */}
+          <nav aria-label="Navigasi footer" className="grid grid-cols-3 gap-x-4 gap-y-6 sm:gap-x-6 lg:col-span-4">
             {NAV_GROUPS.map((group) => (
               <div key={group.title}>
                 <h3 className="text-sm font-semibold text-white">{group.title}</h3>
@@ -184,12 +184,26 @@ export default function Footer({
                     <MapPin className="h-4 w-4 shrink-0 text-[var(--brand-highlight)]" aria-hidden="true" />
                     <span className="text-sm font-medium text-white">{campuses.length > 1 ? label : "Alamat"}</span>
                   </div>
-                  <address className="mt-1.5 text-sm not-italic leading-snug text-white/70">{address}</address>
+
+                  {/* Mobile: seluruh alamat adalah tautan ke Google Maps */}
                   <a
                     href={mapsHref(address)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`mt-1.5 inline-flex w-fit items-center gap-1 text-sm font-medium text-white/85 ${linkHover}`}
+                    className={`mt-1.5 block text-sm leading-snug text-white/70 md:hidden ${linkHover}`}
+                  >
+                    <address className="not-italic">{address}</address>
+                  </a>
+
+                  {/* Desktop: alamat + tautan eksplisit */}
+                  <address className="mt-1.5 hidden text-sm not-italic leading-snug text-white/70 md:block">
+                    {address}
+                  </address>
+                  <a
+                    href={mapsHref(address)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`mt-1.5 hidden w-fit items-center gap-1 text-sm font-medium text-white/85 md:inline-flex ${linkHover}`}
                   >
                     Buka di Google Maps
                     <ArrowSquareOut className="h-3.5 w-3.5" aria-hidden="true" />

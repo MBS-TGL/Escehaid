@@ -9,6 +9,7 @@ import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import type { Gallery } from "@/lib/supabase";
@@ -426,7 +427,7 @@ export default function GalleryLightbox({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={`Pratinjau: ${item.title}`}
+        aria-labelledby="lb-title"
         onClick={requestClose}
         className={`fixed inset-0 z-50 flex flex-col items-center justify-center overflow-y-auto p-4 md:p-6 ${
           open ? "" : "pointer-events-none"
@@ -472,7 +473,8 @@ export default function GalleryLightbox({
             </button>
             <span
               style={chipStyle}
-              className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/90 ring-1 ring-white/15"
+              aria-live="polite"
+              className="absolute left-4 top-4 z-20 flex h-10 items-center rounded-full bg-white/10 px-3.5 text-xs font-semibold text-white/90 ring-1 ring-white/15"
             >
               {idx + 1} / {items.length}
             </span>
@@ -562,7 +564,7 @@ export default function GalleryLightbox({
           </div>
 
           <div style={infoStyle} className="mt-4 max-w-[min(92vw,680px)] text-center">
-            <h3 className="text-base font-semibold text-white md:text-lg">{item.title}</h3>
+            <h2 id="lb-title" className="text-base font-semibold text-white md:text-lg">{item.title}</h2>
             {item.description && (
               <p className="mt-1 line-clamp-3 text-sm leading-relaxed text-white/70">{item.description}</p>
             )}
@@ -619,9 +621,9 @@ export default function GalleryLightbox({
                   </span>
                 </span>
               )}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100" />
               {/* Keterangan: selalu tampil di layar sentuh, muncul saat hover di desktop. */}
-              <div className="pointer-events-none absolute bottom-0 left-0 right-0 p-4 transition-opacity duration-300 md:opacity-0 md:group-hover:opacity-100">
+              <div className="pointer-events-none absolute bottom-0 left-0 right-0 p-4 transition-opacity duration-300 md:opacity-0 md:group-hover:opacity-100 md:group-focus-visible:opacity-100">
                 <p className="text-sm font-semibold text-white drop-shadow-sm">{item.title}</p>
                 {item.category && <p className="mt-1 text-xs text-white/80">{item.category}</p>}
               </div>
@@ -637,7 +639,7 @@ export default function GalleryLightbox({
               onClick={() => router.push(hrefFor(page - 1), { scroll: false })}
               className="rounded-xl border border-[#dce3ed] bg-white px-8 py-3 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:bg-[#f4f7fb]"
             >
-              Kembali
+              Sebelumnya
             </button>
           )}
           {hasMore && (
@@ -645,13 +647,18 @@ export default function GalleryLightbox({
               onClick={() => router.push(hrefFor(page + 1), { scroll: false })}
               className="rounded-xl bg-[var(--brand-primary)] px-8 py-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] hover:text-white"
             >
-              Muat Lebih Banyak
+              Selanjutnya
             </button>
           )}
         </div>
       )}
 
-      {selected && renderIndex !== null && stage !== "hidden" && modalChrome(selected, renderIndex)}
+      {/* Portal: lepas dari containing block section (content-visibility /
+          transform) supaya `fixed inset-0` benar-benar menutupi viewport. */}
+      {selected &&
+        renderIndex !== null &&
+        stage !== "hidden" &&
+        createPortal(modalChrome(selected, renderIndex), document.body)}
     </>
   );
 }
