@@ -6,8 +6,8 @@
  * mode tab.
  *
  * Aturan hydration: server merender dengan tab "Senin", tanpa badge; setelah
- * mount, tab otomatis pindah ke hari ini (Asia/Jakarta) dan badge "Sedang
- * berlangsung" baru dirender — data waktu tidak pernah ikut HTML awal.
+ * mount, tab otomatis pindah ke hari ini (Asia/Jakarta) dan badge "Berlangsung"
+ * baru dirender — data waktu tidak pernah ikut HTML awal.
  */
 import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
@@ -181,7 +181,7 @@ export default function WeeklySchedule({ slots = SLOTS }: { slots?: Slot[] } = {
                   )}
                   {isNow && (
                     <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
-                      Sedang berlangsung
+                      Berlangsung
                     </span>
                   )}
                 </div>
@@ -275,7 +275,7 @@ export default function WeeklySchedule({ slots = SLOTS }: { slots?: Slot[] } = {
                             className="mb-0.5 inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-bold text-white"
                             title={activeDayCol === ownerCol ? undefined : `Sedang berjalan pada ${DAYS[ownerCol]}`}
                           >
-                            Sedang berlangsung
+                            Berlangsung
                           </span>
                         )}
                         {dayItems.length > 0 ? (
