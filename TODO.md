@@ -25,9 +25,10 @@ diotomasi & dibuat terlihat.
       restore.
       ✅ + route `/api/admin/backup/trigger` (repository_dispatch; butuh env
       Vercel BACKUP_GH_TOKEN/BACKUP_GH_REPO bila tombol manual diinginkan).
-- [ ] c. Kartu peringatan di Dashboard admin bila backup terakhir > 7 hari
+- [x] c. Kartu peringatan di Dashboard admin bila backup terakhir > 7 hari
       (baca metadata bucket backup via service role, read-only).
-      (Halaman /admin/backup sudah menampilkan badge umur; kartu dashboard menyusul.)
+      ✅ Tercakup kartu "Status Sistem" di Dashboard (item 2c) — umur backup
+      dengan badge hijau/kuning/merah + link ke /admin/backup.
 - [x] d. Dokumen runbook restore singkat (docs/BACKUP.md): urutan restore
       DB → storage → verifikasi.
 
