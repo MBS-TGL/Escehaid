@@ -232,10 +232,13 @@ export async function resolveSearchMode(
 }
 
 /**
- * Kandidat id lewat RPC pg_trgm (dibuat di sql/pg-trgm.sql): item masuk bila
- * SALAH SATU token berada di atas ambang similarity (0.25) di kolom
- * pencarian modul. null → RPC tak ada/gagal → pemanggil wajib fallback
- * ke jalur ilike (nol crash).
+ * Kandidat id lewat RPC pg_trgm (dibuat di sql/pg-trgm.sql, v2
+ * word_similarity(token, kolom) 0.25 — kemiripan per KATA thd teks panjang,
+ * bukan seluruh-string): item masuk bila SALAH SATU token di atas ambang.
+ * null → RPC tak ada/gagal; [] → tak ada kandidat. KEDUANYA boleh jatuh ke
+ * fallback ilike — pemanggil TIDAK boleh early-return atas dasar kosong
+ * (v1: similarity seluruh-string → kandidat selalu kosong → mematikan
+ * seluruh pencarian DB sampai SQL-nya diganti).
  */
 export async function fetchTrgmIds(rpcName: string, tokens: string[], maxRows = 60): Promise<string[] | null> {
   try {

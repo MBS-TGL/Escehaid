@@ -88,22 +88,23 @@ export async function getArticleList(limit?: number, search?: string): Promise<A
     articlesHasScheduledColumns(),
     articlesHasVideoColumn(),
   ]);
-  // pg_trgm aktif → kandidat via RPC search_articles_ids (toleransi typo);
-  // tak ada/gagal → fallback substring .or() (nol crash).
+  // pg_trgm aktif → kandidat via RPC search_articles_ids (toleransi typo,
+  // word_similarity 0.25); tak ada/gagal/kosong → fallback substring .or().
   const tokens = tokenizeSearch(search ?? "");
   let simIds: string[] | null = null;
   if (tokens.length && (await resolveSearchMode("articles", tokens)) === "similarity") {
     simIds = await fetchTrgmIds("search_articles_ids", tokens);
   }
-  const orFilter = simIds ? "" : buildSearchOr(tokens, ["title", "excerpt", "content"]);
+  const orFilter = buildSearchOr(tokens, ["title", "excerpt", "content"]);
   const listColumns = `${ARTICLE_LIST_COLUMNS}${hasVideo ? ", video_url" : ""}`;
   const run = async (columns: string) => {
     let query = supabase
       .from("articles")
       .select(columns);
     query = applyPublicArticleFilters(query, newCols);
-    if (simIds) {
-      if (!simIds.length) return null; // pemicu hasil kosong
+    // Id NON-kosong dipercaya; kosong → fallback ilike (jangan early-return
+    // atas dasar kandidat kosong — bug v1 sempat mematikan pencarian DB).
+    if (simIds?.length) {
       query = query.in("id", simIds);
     } else if (orFilter) query = query.or(orFilter);
     // Disematkan dulu, lalu terbaru (kolom is_pinned hanya bila sudah ada)
@@ -192,11 +193,7 @@ async function queryArticlePage(
   }
   query = query.order("published_at", { ascending: false, nullsFirst: false });
 
-  if (tokens.length && simIds) {
-    if (!simIds.length) {
-      // Tidak ada kandidat id (semua similarity < 0.25) → halaman kosong.
-      return { data: [], error: null, count: 0 };
-    }
+  if (tokens.length && simIds?.length) {
     query = query.in("id", simIds);
   } else if (tokens.length) {
     const orFilter = buildSearchOr(tokens, ["title", "excerpt", "content"]);

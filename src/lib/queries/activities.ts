@@ -102,7 +102,8 @@ export async function getActivityList(
   search?: string,
   opts?: ActivityListOptions
 ): Promise<Activity[]> {
-  // Multi-token; pg_trgm aktif → kandidat via RPC search_activities_ids.
+  // Multi-token; pg_trgm aktif → kandidat via RPC search_activities_ids
+  // (word_similarity 0.25); tak ada/gagal/kosong → fallback .or() ilike.
   const tokens = tokenizeSearch(search ?? "");
   let simIds: string[] | null = null;
   if (tokens.length && (await resolveSearchMode("activities", tokens)) === "similarity") {
@@ -115,8 +116,7 @@ export async function getActivityList(
       .eq("is_published", true)
       .order("activity_date", { ascending: false });
 
-    if (tokens.length && simIds) {
-      if (!simIds.length) return null; // pemicu hasil kosong
+    if (tokens.length && simIds?.length) {
       query = query.in("id", simIds);
     } else if (tokens.length) {
       const orFilter = buildSearchOr(tokens, ["title", "description", "content"]);

@@ -22,7 +22,8 @@ export async function getAchievementList(
   search?: string,
   opts?: { featuredFirst?: boolean; limit?: number }
 ): Promise<Achievement[]> {
-  // Multi-token; pg_trgm aktif → kandidat via RPC search_achievements_ids.
+  // Multi-token; pg_trgm aktif → kandidat via RPC search_achievements_ids
+  // (word_similarity 0.25); tak ada/gagal/kosong → fallback .or() ilike.
   const tokens = tokenizeSearch(search ?? "");
   let simIds: string[] | null = null;
   if (tokens.length && (await resolveSearchMode("achievements", tokens)) === "similarity") {
@@ -43,8 +44,7 @@ export async function getAchievementList(
     query = query.order("sort_order", { ascending: true });
   }
 
-  if (tokens.length && simIds) {
-    if (!simIds.length) return []; // semua similarity < 0.25
+  if (tokens.length && simIds?.length) {
     query = query.in("id", simIds);
   } else if (tokens.length) {
     const orFilter = buildSearchOr(tokens, ["title", "description"]);

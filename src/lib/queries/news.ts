@@ -116,17 +116,16 @@ async function queryNewsPage(
 
   // Pencarian halaman daftar (?q=): judul, ringkasan, ATAU isi — multi-token.
   // pg_trgm aktif → kandidat via RPC `search_news_ids` (toleransi typo,
-  // similarity 0.25); tak ada/gagal → fallback substring .or() (nol crash).
+  // word_similarity 0.25); tak ada/gagal/kosong → fallback substring .or().
   const tokens = tokenizeSearch(search ?? "");
   let simIds: string[] | null = null;
   if (tokens.length && (await resolveSearchMode("news", tokens)) === "similarity") {
     simIds = await fetchTrgmIds("search_news_ids", tokens);
   }
-  if (tokens.length && simIds) {
-    if (!simIds.length) {
-      // Tidak ada kandidat id (semua similarity < 0.25) → halaman kosong.
-      return { data: [], error: null, count: 0 };
-    }
+  // Hanya id NON-kosong yang dipercaya; kosong → jangan early-return
+  // (bug v1: SQL similarity seluruh-string bikin kandidat selalu kosong →
+  // 0 hasil total) — jatuh ke fallback ilike multi-token.
+  if (tokens.length && simIds?.length) {
     query = query.in("id", simIds);
   } else if (tokens.length) {
     const orFilter = buildSearchOr(tokens, ["title", "summary", "content"]);
@@ -213,8 +212,7 @@ export async function getNewsList(limit?: number, search?: string): Promise<News
   if (tokens.length && (await resolveSearchMode("news", tokens)) === "similarity") {
     simIds = await fetchTrgmIds("search_news_ids", tokens);
   }
-  if (tokens.length && simIds) {
-    if (!simIds.length) return [];
+  if (tokens.length && simIds?.length) {
     query = query.in("id", simIds);
   } else if (tokens.length) {
     const orFilter = buildSearchOr(tokens, ["title", "summary", "content"]);

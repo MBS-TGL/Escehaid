@@ -40,14 +40,14 @@ export async function getEkskulList(limit?: number, search?: string): Promise<Ek
     .order("sort_order", { ascending: true });
 
   // Pencarian menyeluruh (?q=): nama ATAU deskripsi — multi-token;
-  // pg_trgm aktif → kandidat via RPC search_ekskuls_ids (toleransi typo).
+  // pg_trgm aktif → kandidat via RPC search_ekskuls_ids (toleransi typo,
+  // word_similarity 0.25); tak ada/gagal/kosong → fallback .or() ilike.
   const tokens = tokenizeSearch(search ?? "");
   let simIds: string[] | null = null;
   if (tokens.length && (await resolveSearchMode("ekskuls", tokens)) === "similarity") {
     simIds = await fetchTrgmIds("search_ekskuls_ids", tokens);
   }
-  if (tokens.length && simIds) {
-    if (!simIds.length) return [];
+  if (tokens.length && simIds?.length) {
     query = query.in("id", simIds);
   } else if (tokens.length) {
     const orFilter = buildSearchOr(tokens, ["name", "description"]);

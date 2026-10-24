@@ -10,10 +10,15 @@
 --   1) ekstensi pg_trgm + GIN trgm index di semua kolom pencarian publik;
 --   2) probe `search_trgm_enabled()` — jawaban runtime, bukan penebakan;
 --   3) fungsi kandidat `search_<tabel>_ids(tokens, max_rows)` — item masuk
---      bila SALAH SATU token berada di atas ambang similarity 0.25 pada kolom
---      pencarian modul (semantik sama dengan jalur ilike multi-token).
--- Ranking final tetap dihitung di aplikasi (scoreSearchItem). RLS tetap
--- berlaku di fungsi-fungsi ini (security invoker / default Supabase).
+--      bila SALAH SATU token berada di atas ambang `word_similarity` 0.25
+--      pada kolom pencarian modul. CATATAN v2: memakai word_similarity(token,
+--      kolom) — mencocokkan token thd jendela KATA terbaik di teks panjang.
+--      v1 memakai similarity(kolom, token) (kemiripan seluruh-string) yang
+--      SELALU < 0.25 thd judul panjang → kandidat selalu kosong → regresi
+--      0 hasil di semua pencarian DB. word_similarity mendukung typo
+--      ("ustadzhtub" ≈ 0.67 thd kata "Ustadzah"). Semantik OR per token sama
+--      dengan jalur ilike multi-token. Ranking final tetap dihitung di
+--      aplikasi (scoreSearchItem). RLS tetap berlaku (security invoker).
 --
 -- Cara jalan:
 --   Supabase → SQL Editor → paste seluruh file ini → Run. Per-execution idempoten.
@@ -53,7 +58,9 @@ create index if not exists ekskuls_descr_trgm    on public.ekskuls      using gi
 
 -- 3) Kandidat per tabel -------------------------------------------------------
 -- Kontrak bersama: param `tokens text[]`, `max_rows int default 60`,
--- return `setof uuid`, security invoker (RLS aktif), ambang 0.25.
+-- return `setof uuid`, security invoker (RLS aktif), ambang word_similarity
+-- 0.25. ARGUMEN DIBALIK vs similarity(): needle (token) di depan, kolom
+-- teks panjang di belakang — jangan kembalikan ke urutan v1.
 
 create or replace function public.search_news_ids(tokens text[], max_rows int default 60)
 returns setof public.news.id%type
@@ -65,9 +72,9 @@ as $$
   where exists (
     select 1
     from unnest(tokens) t
-    where similarity(n.title, t) > 0.25
-       or similarity(n.summary, t) > 0.25
-       or similarity(n.content, t) > 0.25
+    where word_similarity(t, n.title) > 0.25
+       or word_similarity(t, n.summary) > 0.25
+       or word_similarity(t, n.content) > 0.25
   )
   limit greatest(coalesce(max_rows, 60), 1);
 $$;
@@ -82,9 +89,9 @@ as $$
   where exists (
     select 1
     from unnest(tokens) t
-    where similarity(a.title, t) > 0.25
-       or similarity(a.excerpt, t) > 0.25
-       or similarity(a.content, t) > 0.25
+    where word_similarity(t, a.title) > 0.25
+       or word_similarity(t, a.excerpt) > 0.25
+       or word_similarity(t, a.content) > 0.25
   )
   limit greatest(coalesce(max_rows, 60), 1);
 $$;
@@ -99,9 +106,9 @@ as $$
   where exists (
     select 1
     from unnest(tokens) t
-    where similarity(a.title, t) > 0.25
-       or similarity(a.description, t) > 0.25
-       or similarity(a.content, t) > 0.25
+    where word_similarity(t, a.title) > 0.25
+       or word_similarity(t, a.description) > 0.25
+       or word_similarity(t, a.content) > 0.25
   )
   limit greatest(coalesce(max_rows, 60), 1);
 $$;
@@ -116,8 +123,8 @@ as $$
   where exists (
     select 1
     from unnest(tokens) t
-    where similarity(a.title, t) > 0.25
-       or similarity(a.description, t) > 0.25
+    where word_similarity(t, a.title) > 0.25
+       or word_similarity(t, a.description) > 0.25
   )
   limit greatest(coalesce(max_rows, 60), 1);
 $$;
@@ -132,8 +139,8 @@ as $$
   where exists (
     select 1
     from unnest(tokens) t
-    where similarity(e.name, t) > 0.25
-       or similarity(e.description, t) > 0.25
+    where word_similarity(t, e.name) > 0.25
+       or word_similarity(t, e.description) > 0.25
   )
   limit greatest(coalesce(max_rows, 60), 1);
 $$;
