@@ -37,3 +37,31 @@ pemilik lama-berjalan di sini. Aturan wajib saat bekerja di tree ini:
 - **Sebelum push:** `git fetch` lalu `git log --oneline @{u}..HEAD` — commit milik pemilik yang sudah ada di local main BOLEH ikut terpush, tetapi WAJIB dilaporkan di ringkasan.
 - **CI = sumber kebenaran.** Release production adalah Vercel auto-deploy (tidak menunggu CI). Setelah push, cek run GitHub Actions (`/actions/runs?head_sha=`) sampai hijau; jangan klaim selesai kalau CI merah.
 - Pre-commit `.githooks/` memblokir rahasia + lint file staged; escape: `SKIP_SECRET_SCAN=1` / `SKIP_LINT_GUARD=1`.
+
+## SQL manual: `sql/pg-trgm.sql` (pencarian typo-tolerance)
+
+Repo ini **tanpa sistem migration** — perubahan SQL tidak ikut ter-deploy bersama kode. Kode aplikasi dan isi DB bisa tidak sinkron, dan pada 24 Okt itu mematikan seluruh pencarian DB di produksi dua kali (detail: komentar header `sql/pg-trgm.sql`).
+
+**Aturan:** setiap kali `sql/pg-trgm.sql` berubah, rilisnya adalah proses 3 langkah — jangan klaim selesai sebelum ketiganya beres.
+
+1. `git push` (kode) → tunggu deploy Vercel.
+2. Jalankan **seluruh isi** `sql/pg-trgm.sql` di **Supabase → SQL Editor → Run** (idempoten: `create extension/index if not exists`, `create or replace function`).
+3. Verifikasi berurutan (gagal di salah satu = rollback pemahaman, bukan lanjut):
+
+```bash
+U="https://<project>.supabase.co/rest/v1/rpc"; H="apikey: $SUPABASE_ANON_KEY"
+curl -sS -X POST "$U/search_trgm_enabled" -H "$H" -H "Content-Type: application/json" -d '{}'
+curl -sS -X POST "$U/search_news_ids" -H "$H" -H "Content-Type: application/json" -d '{"tokens":["spmb"]}'
+curl -sS -X POST "$U/search_news_ids" -H "$H" -H "Content-Type: application/json" -d '{"tokens":["tapak"]}'
+# lalu di produksi:
+for q in spmb "tapak suci" ustadzhtub galeri; do curl -sS ".../api/search?q=$(printf %s "$q" | jq -sRr @uri)"; done
+```
+
+Ekspektasi kanonik (v3, ambang `word_similarity` 0,50): `search_trgm_enabled`→`true`, `news['spmb']`→non-kosong, `news['tapak']`→**kosong** (noise sub-kata tertolak), `tapak suci`→1 (hanya Ekstrakurikuler), typo `ustadzhtub`→≥1.
+
+**Jebakan yang sudah pernah menggigit:**
+
+- `similarity(kolom, token)` = kemiripan **seluruh-string** → selalu < 0,25 untuk judul panjang → kandidat kosong → **0 hasil total**. Jangan kembali ke bentuk ini.
+- `word_similarity` argumennya **dibalik**: needle dulu, haystack kemudian — `word_similarity(t, kolom)`.
+- Ambang 0,25 terlalu longgar (potongan kata lolos: `tapak` vs "Pendaftar"). Ambang aman 0,50; turunkan ke 0,40 hanya bila ada keluhan typo 2+ huruf pada kata pendek, dan **uji ulang presisi** sebelum rilis.
+- Klien **wajib** tetap punya fallback: kandidat trgm kosong/gagal → `.or()` ilike. Jangan pernah early-return "0 hasil" hanya karena RPC mengembalikan array kosong — itulah yang membuat DB-side bug berubah jadi outage pencarian.
