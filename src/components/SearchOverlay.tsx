@@ -7,6 +7,12 @@ import { Clock, FileText, MagnifyingGlass, Warning, X } from "@/components/Icons
 import type { SearchGroup } from "@/lib/queries/search";
 import { KIND_META, formatSearchDate, EMPTY_STATE_LINKS } from "@/components/SearchMeta";
 import Highlight from "@/components/public/Highlight";
+import {
+  clearRecentSearches,
+  readRecentSearches,
+  removeRecentSearch,
+  saveRecentSearch,
+} from "@/lib/search-recent";
 
 type Status = "idle" | "loading" | "done" | "error";
 
@@ -48,6 +54,8 @@ export default function SearchOverlay({
   const requestIdRef = useRef(0);
   /** Naik tiap klik "Coba lagi" — memicu pencarian ulang istilah yang sama. */
   const [retryNonce, setRetryNonce] = useState(0);
+  /** Riwayat "Pencarian Terakhir" (localStorage, maks 5) — dibaca saat dibuka. */
+  const [recent, setRecent] = useState<string[]>([]);
 
   // Fokus ke input saat dibuka + kunci scroll body (pola sama dengan
   // MobileBottomNav/Modal/SlideOver/GalleryLightbox di codebase ini), supaya
@@ -60,6 +68,27 @@ export default function SearchOverlay({
       document.body.style.overflow = "";
     };
   }, [open]);
+
+  // Muat ulang riwayat setiap overlay dibuka — deferred agar tidak setState
+  // sinkron di dalam effect (aturan react-hooks/set-state-in-effect repo ini)
+  // dan agar snapshot awal (server/hidrasi) selalu [].
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    const t = window.setTimeout(() => {
+      if (!cancelled) setRecent(readRecentSearches());
+    }, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [open]);
+
+  /** Klik entri riwayat = langsung ikut mencari istilah itu. */
+  const pickRecent = (term: string) => {
+    setQuery(term);
+    inputRef.current?.focus();
+  };
 
   // Debounce 300ms — ketikan cepat hanya memicu SATU pencarian.
   useEffect(() => {
@@ -164,11 +193,14 @@ export default function SearchOverlay({
       e.preventDefault();
       const picked = activeIndex >= 0 ? flat[activeIndex] : undefined;
       if (picked) {
+        // Riwayat dicatat: istilah yang membuahkan pilihan ini.
+        if (query.trim()) setRecent(saveRecentSearch(query.trim()));
         onClose();
         router.push(picked.href);
       } else if (query.trim()) {
-        // Tanpa hasil tersorot → halaman penuh (shareable).
+        // Tanpa hasil tersorot → halaman penuh (shareable). Riwayat dicatat.
         const q = query.trim();
+        setRecent(saveRecentSearch(q));
         onClose();
         router.push(`/search?q=${encodeURIComponent(q)}`);
       }
@@ -286,10 +318,52 @@ export default function SearchOverlay({
 
         {/* Hasil */}
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {status === "idle" && (
+          {status === "idle" && recent.length === 0 && (
             <p className="px-4 py-6 text-sm text-slate-500">
               Ketik untuk mulai mencari — hasil muncul langsung.
             </p>
+          )}
+
+          {status === "idle" && recent.length > 0 && (
+            <div className="px-4 py-4">
+              <div className="flex items-center justify-between px-1 pb-1.5">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                  Pencarian Terakhir
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setRecent(clearRecentSearches())}
+                  className="rounded-md px-1.5 py-0.5 text-xs font-semibold text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                >
+                  Hapus semua
+                </button>
+              </div>
+              <ul role="presentation">
+                {recent.map((term) => (
+                  <li key={term} className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => pickRecent(term)}
+                      title={term}
+                      className="min-w-0 flex-1 truncate rounded-lg px-3 py-2 text-left text-sm text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-800"
+                    >
+                      {term}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Hapus pencarian ${term}`}
+                      onClick={() => setRecent(removeRecentSearch(term))}
+                      className="shrink-0 rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <p className="px-1 pb-2 pt-1 text-sm text-slate-500">
+                Ketik untuk mulai mencari — hasil muncul langsung.
+              </p>
+            </div>
           )}
 
           {status === "loading" && (
@@ -407,7 +481,11 @@ export default function SearchOverlay({
           {query.trim() !== "" && (
             <Link
               href={`/search?q=${encodeURIComponent(query.trim())}`}
-              onClick={onClose}
+              onClick={() => {
+                // Riwayat dicatat: telusur ke halaman penuh juga berarti istilah dipakai.
+                setRecent(saveRecentSearch(query.trim()));
+                onClose();
+              }}
               className="ml-auto rounded-lg px-3 py-1.5 text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:bg-[var(--brand-accent)]/10 hover:text-[var(--brand-primary)]"
             >
               Lihat semua hasil →
