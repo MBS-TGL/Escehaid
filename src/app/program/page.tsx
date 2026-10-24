@@ -3,6 +3,7 @@ import PageHero from "@/components/public/PageHero";
 import { BookOpen } from "@/components/Icons";
 import QuranPillars from "@/components/program/QuranPillars";
 import DailyAgenda from "@/components/program/DailyAgenda";
+import { pageOpenGraph } from "@/lib/seo";
 import {
   getAgendaBlocksList,
   getAgendaSlotsList,
@@ -17,6 +18,10 @@ export const metadata: Metadata = {
   description:
     "Pembelajaran Al-Qur'an Metode Wafa dan agenda harian santri SMP Muhammadiyah 4 Tanggul - ibadah, belajar, dan kemandirian setiap hari.",
   alternates: { canonical: "/program" },
+  openGraph: pageOpenGraph({
+    title: "Program",
+    url: "/program",
+  }),
 };
 
 /**

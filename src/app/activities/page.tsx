@@ -19,12 +19,18 @@ import ContentCard from "@/components/public/ContentCard";
 import EmptyState from "@/components/public/EmptyState";
 import Pagination from "@/components/public/Pagination";
 import type { Activity } from "@/lib/supabase";
+import { pageOpenGraph } from "@/lib/seo";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Kegiatan",
   description: "Kegiatan sekolah SMP Muhammadiyah 4 Tanggul - Kajian, perlombaan, upacara, dan ekstrakurikuler.",
   alternates: { canonical: "/activities" },
+  openGraph: pageOpenGraph({
+    title: "Kegiatan",
+    description: "Kegiatan sekolah SMP Muhammadiyah 4 Tanggul - Kajian, perlombaan, upacara, dan ekstrakurikuler.",
+    url: "/activities",
+  }),
 };
 
 // Revalidasi on-demand (/activities, /activities/[slug], /, /search) sudah aktif —

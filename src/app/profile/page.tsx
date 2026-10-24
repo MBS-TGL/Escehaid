@@ -11,11 +11,17 @@ import FacilityGrid from "./FacilityGrid";
 import EkskulCard from "@/components/EkskulCard";
 import HistoryCarousel from "./HistoryCarousel";
 import { detectPrincipalGreeting, keepTogether } from "@/lib/principal-quote";
+import { pageOpenGraph } from "@/lib/seo";
 
 export const metadata = {
   title: "Profil",
   description: "Kenali SMP Muhammadiyah 4 Tanggul - Visi, misi, tenaga pengajar, dan fasilitas sekolah unggulan di Tanggul, Jember.",
   alternates: { canonical: "/profile" },
+  openGraph: pageOpenGraph({
+    title: "Profil",
+    description: "Kenali SMP Muhammadiyah 4 Tanggul - Visi, misi, tenaga pengajar, dan fasilitas sekolah unggulan di Tanggul, Jember.",
+    url: "/profile",
+  }),
 };
 
 export const revalidate = 3600;

@@ -39,6 +39,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     openGraph: {
       title: `${ekskul.name} — Ekstrakurikuler`,
       description,
+      url: `/ekskul/${ekskul.slug}`,
       images: ekskul.image_url ? [{ url: ekskul.image_url, alt: ekskul.image_alt || ekskul.name }] : [],
     },
     alternates: { canonical: `/ekskul/${ekskul.slug}` },
@@ -128,27 +129,49 @@ export default async function EkskulDetailPage({ params }: { params: Promise<{ s
       </section>
 
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 md:py-10">
-        {/* Foto */}
+        {/* Hero visual — foto portrait 9:16 + info panel (desktop: side-by-side) */}
         {ekskul.image_url && (
           <CSSFadeIn className="mb-8 md:mb-10">
-            <div className="overflow-hidden rounded-2xl border border-[#dce3ed] shadow-xs">
-              <ImageZoom src={ekskul.image_url} alt={ekskul.image_alt || ekskul.name}>
-                <Image
-                  src={ekskul.image_url}
-                  alt={ekskul.image_alt || ekskul.name}
-                  width={1200}
-                  height={675}
-                  priority
-                  sizes="(min-width: 1024px) 1024px, 100vw"
-                  className="block h-auto w-full object-cover transition-transform duration-300 group-hover:scale-[1.01]"
-                />
-              </ImageZoom>
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
+              {/* Foto portrait 9:16 */}
+              <div className="mx-auto w-full max-w-xs shrink-0 sm:mx-0 sm:w-52 md:w-64">
+                <ImageZoom src={ekskul.image_url} alt={ekskul.image_alt || ekskul.name}>
+                  <div className="relative aspect-[9/16] overflow-hidden rounded-2xl border border-[#dce3ed] shadow-md">
+                    <Image
+                      src={ekskul.image_url}
+                      alt={ekskul.image_alt || ekskul.name}
+                      fill
+                      priority
+                      sizes="(min-width: 768px) 256px, (min-width: 640px) 208px, 320px"
+                      className="object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
+                    />
+                  </div>
+                </ImageZoom>
+              </div>
+
+              {/* Info ekskul di samping foto (tampil hanya bila ada sejarah, sebagai pengantar) */}
+              {paragraphs.length > 0 && (
+                <div className="flex-1 sm:pt-2">
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="h-1 w-8 bg-[var(--brand-accent)]" />
+                    <h2 id="ekskul-history-heading" className="text-lg font-bold text-[var(--brand-primary)] md:text-xl">
+                      Sejarah
+                    </h2>
+                  </div>
+                  <div className="space-y-4">
+                    {paragraphs.map((p, i) => (
+                      <p key={i} className="text-[15px] leading-relaxed text-slate-600">
+                        {p}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </CSSFadeIn>
         )}
-
-        {/* Sejarah — hanya bila terisi */}
-        {paragraphs.length > 0 && (
+        {/* Sejarah — tampil standalone hanya bila tidak ada foto (foto sudah menampilkan sejarah di sampingnya) */}
+        {paragraphs.length > 0 && !ekskul.image_url && (
           <CSSFadeIn>
             <section aria-labelledby="ekskul-history-heading">
               <div className="mb-4 flex items-center gap-3">
@@ -168,7 +191,6 @@ export default async function EkskulDetailPage({ params }: { params: Promise<{ s
           </CSSFadeIn>
         )}
 
-        {/* Prestasi terkait — dari kolom ekskul_id di achievements */}
         {achievements.length > 0 && (
           <CSSFadeIn className={paragraphs.length > 0 ? "mt-10 md:mt-12" : ""}>
             <section aria-labelledby="ekskul-achievements-heading">

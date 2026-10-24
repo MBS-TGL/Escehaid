@@ -49,6 +49,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     openGraph: {
       title: activity.title,
       description,
+      url: `/activities/${activity.slug}`,
       type: "article",
       // Tanpa width/height palsu — dimensi asli tak diketahui (Fase A), biar crawler baca sendiri
       images: activity.image_url ? [{ url: activity.image_url }] : [],

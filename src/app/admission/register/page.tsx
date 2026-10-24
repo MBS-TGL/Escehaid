@@ -3,6 +3,7 @@ import { CSSFadeIn } from "@/components/CSSAnimations";
 import PageHero from "@/components/public/PageHero";
 import { FileText, Phone, WhatsappLogo } from "@/components/Icons";
 import { getSchoolProfile, normalizeSpmbFormSchema, GOOGLE_FORM_URL } from "@/lib/queries";
+import { pageOpenGraph } from "@/lib/seo";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
@@ -10,6 +11,11 @@ export const metadata: Metadata = {
   title: "Daftar SPMB",
   description: "Formulir pendaftaran SPMB SMP Muhammadiyah 4 Tanggul - Daftar online mudah dan cepat.",
   alternates: { canonical: "/admission/register" },
+  openGraph: pageOpenGraph({
+    title: "Daftar SPMB",
+    description: "Formulir pendaftaran SPMB SMP Muhammadiyah 4 Tanggul - Daftar online mudah dan cepat.",
+    url: "/admission/register",
+  }),
 };
 
 export const revalidate = 3600;

@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { getAchievementList } from "@/lib/queries";
 import { ACHIEVEMENT_LEVELS } from "@/lib/site-config";
+import { pageOpenGraph } from "@/lib/seo";
 import PrestasiClient from "./AchievementsClient";
 import type { Metadata } from "next";
 
@@ -17,6 +18,11 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "Prestasi",
       description: "Pencapaian siswa dan SMP Muhammadiyah 4 Tanggul.",
       alternates,
+      openGraph: pageOpenGraph({
+        title: "Prestasi",
+        description: "Pencapaian siswa dan SMP Muhammadiyah 4 Tanggul.",
+        url: "/achievements",
+      }),
       robots: { index: false, follow: true },
     };
   }
@@ -31,6 +37,13 @@ export async function generateMetadata(): Promise<Metadata> {
       `${achievements.length} prestasi siswa SMP Muhammadiyah 4 Tanggul` +
       (highest ? `, dengan capaian hingga tingkat ${highest}.` : "."),
     alternates,
+    openGraph: pageOpenGraph({
+      title: "Prestasi",
+      description:
+        `${achievements.length} prestasi siswa SMP Muhammadiyah 4 Tanggul` +
+        (highest ? `, dengan capaian hingga tingkat ${highest}.` : "."),
+      url: "/achievements",
+    }),
   };
 }
 

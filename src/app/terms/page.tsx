@@ -3,6 +3,7 @@ import { FileText } from "@/components/Icons";
 import LegalArticle, { type LegalSection } from "@/components/LegalArticle";
 import { Callout } from "@/components/LegalParts";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
+import { pageOpenGraph } from "@/lib/seo";
 
 const DESCRIPTION =
   "Ketentuan penggunaan situs resmi SMP Muhammadiyah 4 Tanggul, termasuk layanan informasi dan pendaftaran SPMB online.";
@@ -11,6 +12,11 @@ export const metadata: Metadata = {
   title: "Syarat dan Ketentuan",
   description: DESCRIPTION,
   alternates: { canonical: "/terms" },
+  openGraph: pageOpenGraph({
+    title: "Syarat dan Ketentuan",
+    description: DESCRIPTION,
+    url: "/terms",
+  }),
 };
 
 export const revalidate = 86400;

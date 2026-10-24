@@ -6,6 +6,7 @@ import FilterBar, { type FilterChip } from "@/components/public/FilterBar";
 import ContentCard from "@/components/public/ContentCard";
 import EmptyState from "@/components/public/EmptyState";
 import Pagination from "@/components/public/Pagination";
+import { pageOpenGraph } from "@/lib/seo";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -13,6 +14,10 @@ export const metadata: Metadata = {
   description:
     "Artikel dan tips pendidikan dari guru SMP Muhammadiyah 4 Tanggul - Trik belajar, parenting, dan Islam terapan.",
   alternates: { canonical: "/articles" },
+  openGraph: pageOpenGraph({
+    title: "Artikel",
+    url: "/articles",
+  }),
 };
 
 export const revalidate = 300;

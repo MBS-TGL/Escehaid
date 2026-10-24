@@ -36,6 +36,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     openGraph: {
       title: berita.title,
       description,
+      url: `/news/${berita.slug}`,
       type: "article",
       // Next 16: publishedTime FLAT di objek openGraph (→ article:published_time)
       publishedTime: berita.published_at || undefined,

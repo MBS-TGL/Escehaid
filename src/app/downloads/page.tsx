@@ -5,6 +5,7 @@ import PageHero from "@/components/public/PageHero";
 import EmptyState from "@/components/public/EmptyState";
 import CategoryChips, { type CategoryChip } from "@/components/public/CategoryChips";
 import { getDownloadList, downloadKind, formatFileSize } from "@/lib/queries";
+import { pageOpenGraph } from "@/lib/seo";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -12,6 +13,10 @@ export const metadata: Metadata = {
   description:
     "Unduhan resmi SMP Muhammadiyah 4 Tanggul - brosur, formulir pendaftaran, dan dokumen lainnya.",
   alternates: { canonical: "/downloads" },
+  openGraph: pageOpenGraph({
+    title: "Unduhan",
+    url: "/downloads",
+  }),
 };
 
 export const revalidate = 300;
