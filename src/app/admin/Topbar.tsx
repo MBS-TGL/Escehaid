@@ -31,6 +31,8 @@ import {
   markAllNotificationsAsRead,
 } from "@/lib/queries";
 import type { Notification } from "@/lib/queries";
+import { readRecentMenus, saveRecentMenu } from "@/lib/recent-menus";
+import Highlight from "@/components/public/Highlight";
 import { usePermissions } from "./PermissionsProvider";
 
 interface UserProfile {
@@ -104,6 +106,10 @@ export default function AdminTopbar({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  /** Indeks menu tersorot utk ↑/↓ + Enter (−1 = belum ada). */
+  const [activeIndex, setActiveIndex] = useState(-1);
+  /** href menu yang "Baru dibuka" (localStorage maks 4). */
+  const [recentHrefs, setRecentHrefs] = useState<string[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -129,6 +135,43 @@ export default function AdminTopbar({
         item.label.toLowerCase().includes(searchQuery.toLowerCase())
     )
     : [];
+
+  // Menu "Baru dibuka": href → item navigasi (tetap digeret hak akses).
+  const recentNavItems = recentHrefs
+    .map((href) => navSearchItems.find((item) => item.href === href))
+    .filter((item): item is (typeof navSearchItems)[number] => !!item && (!item.perm || canFn(item.perm)));
+
+  /** Daftar yang sedang ditampilkan (riwayat saat kosong, hasil filter saat mengetik). */
+  const visibleNav = searchQuery ? filteredNav : recentNavItems;
+
+  /** Buka menu dari palette: catat sebagai "Baru dibuka", lalu tutup & navigasi. */
+  const openNavItem = (item: (typeof navSearchItems)[number]) => {
+    setRecentHrefs(saveRecentMenu(item.href));
+    setSearchOpen(false);
+    setSearchQuery("");
+    setActiveIndex(-1);
+    router.push(item.href);
+  };
+
+  // Navigasi keyboard palette: ↑/↓ sorot, Enter membuka menu tersorot
+  // (tanpa pilihan → menu pertama daftar terlihat).
+  const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (visibleNav.length) setActiveIndex((i) => (i + 1) % visibleNav.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (visibleNav.length)
+        setActiveIndex((i) => (i <= 0 ? visibleNav.length - 1 : i - 1));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const chosen =
+        activeIndex >= 0 && activeIndex < visibleNav.length
+          ? visibleNav[activeIndex]
+          : visibleNav[0];
+      if (chosen) openNavItem(chosen);
+    }
+  };
 
   const fetchNotifications = useCallback(async () => {
     const count = await getUnreadNotificationCount();
@@ -188,6 +231,7 @@ export default function AdminTopbar({
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
         setSearchOpen(false);
         setSearchQuery("");
+        setActiveIndex(-1);
       }
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
         setNotifOpen(false);
@@ -204,6 +248,20 @@ export default function AdminTopbar({
     }
   }, [searchOpen]);
 
+  // Muat "Baru dibuka" tiap palette terbuka — deferred (aturan
+  // react-hooks/set-state-in-effect; snapshot awal tetap []).
+  useEffect(() => {
+    if (!searchOpen) return;
+    let cancelled = false;
+    const t = window.setTimeout(() => {
+      if (!cancelled) setRecentHrefs([...readRecentMenus()]);
+    }, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [searchOpen]);
+
   // Keyboard shortcut: Ctrl+K or Cmd+K to open search
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -214,6 +272,7 @@ export default function AdminTopbar({
       if (e.key === "Escape") {
         setSearchOpen(false);
         setSearchQuery("");
+        setActiveIndex(-1);
         setNotifOpen(false);
       }
     }
@@ -295,37 +354,64 @@ export default function AdminTopbar({
                   ref={searchInputRef}
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setActiveIndex(-1);
+                  }}
+                  onKeyDown={onSearchKeyDown}
                   placeholder="Cari menu admin..."
+                  role="combobox"
+                  aria-expanded={visibleNav.length > 0}
+                  aria-controls="admin-search-listbox"
+                  aria-activedescendant={
+                    activeIndex >= 0 && activeIndex < visibleNav.length
+                      ? `admin-search-option-${activeIndex}`
+                      : undefined
+                  }
+                  aria-label="Cari menu admin"
                   className="flex-1 bg-transparent text-sm text-slate-800 outline-none placeholder-slate-400"
                 />
               </div>
-              <div className="max-h-64 overflow-y-auto py-1">
-                {filteredNav.length === 0 ? (
-                  <p className="px-3 py-4 text-center text-xs text-slate-400">
+              <ul id="admin-search-listbox" role="listbox" aria-label="Menu admin" className="max-h-64 overflow-y-auto py-1">
+                {visibleNav.length === 0 ? (
+                  <li role="presentation" className="px-3 py-4 text-center text-xs text-slate-400">
                     {searchQuery ? "Tidak ada menu yang cocok" : "Ketik untuk mencari menu"}
-                  </p>
-                ) : (
-                  filteredNav.map((item) => {
-                    const isActive = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
-                    return (
+                  </li>
+                ) : !searchQuery && (
+                  <li role="presentation" className="flex items-center justify-between px-3 pb-1 pt-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                      Baru dibuka
+                    </span>
+                  </li>
+                )}
+                {visibleNav.map((item, index) => {
+                  const isActive = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
+                  const highlighted = index === activeIndex;
+                  return (
+                    <li key={item.href} role="none">
                       <Link
-                        key={item.href}
+                        id={`admin-search-option-${index}`}
+                        role="option"
+                        aria-selected={highlighted}
                         href={item.href}
-                        onClick={() => { setSearchOpen(false); setSearchQuery(""); }}
-                        className={`flex items-center gap-3 px-3 py-2.5 text-sm transition-colors ${isActive
-                            ? "bg-[var(--brand-primary)]/5 text-[var(--brand-primary)] font-semibold"
-                            : "text-slate-600 hover:bg-slate-50"
+                        onClick={() => openNavItem(item)}
+                        className={`flex items-center gap-3 px-3 py-2.5 text-sm transition-colors ${highlighted
+                            ? "bg-slate-100 text-slate-800"
+                            : isActive
+                              ? "bg-[var(--brand-primary)]/5 text-[var(--brand-primary)] font-semibold hover:bg-slate-50"
+                              : "text-slate-600 hover:bg-slate-50"
                           }`}
                       >
                         <item.icon className="h-4 w-4 flex-shrink-0" />
-                        {item.label}
+                        <span className="min-w-0 flex-1 truncate">
+                          <Highlight text={item.label} query={searchQuery} />
+                        </span>
                         {isActive && <span className="ml-auto text-[10px] font-bold text-[var(--brand-primary)]">Aktif</span>}
                       </Link>
-                    );
-                  })
-                )}
-              </div>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           )}
         </div>
