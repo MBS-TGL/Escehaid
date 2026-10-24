@@ -89,6 +89,17 @@ export const MODULE_REGISTRY: readonly PermissionModule[] = [
     ],
   },
   {
+    key: "faq",
+    label: "FAQ",
+    description: "FAQ beranda & halaman SPMB (tabel faqs)",
+    actions: [
+      { key: "read", label: "Melihat" },
+      { key: "create", label: "Menambah" },
+      { key: "update", label: "Mengubah" },
+      { key: "delete", label: "Menghapus" },
+    ],
+  },
+  {
     key: "galeri",
     label: "Galeri",
     actions: [

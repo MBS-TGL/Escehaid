@@ -3,7 +3,7 @@ import Link from "next/link";
 import { CSSFadeIn } from "@/components/CSSAnimations";
 import PageHero from "@/components/public/PageHero";
 import FaqList from "@/components/public/FaqList";
-import { getPublishedWaves, getWaveStatus, getSchoolProfile, registrationHref } from "@/lib/queries";
+import { getPublishedWaves, getWaveStatus, getSchoolProfile, registrationHref, getActiveFaqs } from "@/lib/queries";
 import { spmbFaqs } from "@/app/faq-data";
 import { SITE, waLink } from "@/lib/site-config";
 import type { Metadata } from "next";
@@ -59,10 +59,13 @@ function SectionHeading({ title, desc, compact }: { title: string; desc?: React.
 }
 
 export default async function SPMBPage() {
-  const [waves, profile] = await Promise.all([
+  const [waves, profile, faqItems] = await Promise.all([
     getPublishedWaves(),
     getSchoolProfile(),
+    // FAQ dari tabel `faqs` (scope 'spmb'); null → fallback statis faq-data.ts.
+    getActiveFaqs("spmb"),
   ]);
+  const spmbFaqItems = faqItems ?? spmbFaqs;
   const registerHref = registrationHref(profile);
   const brochureHref = profile?.spmb_brochure_url || DEFAULT_BROCHURE_URL;
   const offlineFormHref = profile?.spmb_offline_form_url ?? null;
@@ -118,7 +121,7 @@ export default async function SPMBPage() {
         __html: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "FAQPage",
-          mainEntity: spmbFaqs.map((f) => ({
+          mainEntity: spmbFaqItems.map((f) => ({
             "@type": "Question",
             name: f.q,
             acceptedAnswer: { "@type": "Answer", text: f.a },
@@ -342,7 +345,7 @@ export default async function SPMBPage() {
         <div className={container}>
           <CSSFadeIn>
             <SectionHeading compact title="Pertanyaan yang Sering Diajukan" desc="Hal-hal yang paling sering ditanyakan calon murid dan orang tua." />
-            <FaqList items={spmbFaqs} className="mx-auto max-w-3xl" />
+            <FaqList items={spmbFaqItems} className="mx-auto max-w-3xl" />
             <p className="mt-4 text-center text-sm text-slate-500">
               Masih ada pertanyaan?{" "}
               {spmbPhone ? (

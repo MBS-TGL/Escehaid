@@ -20,7 +20,7 @@ import {
 } from "@/lib/site-config";
 import type { Achievement } from "@/lib/supabase";
 import { BLOCKS } from "@/lib/data/mbs-schedule";
-import { getAgendaBlocksList, blockRowToSummary } from "@/lib/queries";
+import { getAgendaBlocksList, blockRowToSummary, getActiveFaqs } from "@/lib/queries";
 import { resolveVision, parseMissionItems } from "@/lib/queries/profile";
 
 const FAQ = dynamic(() => import("./FAQ"), { loading: () => <div className="h-96" /> });
@@ -121,7 +121,7 @@ export default async function Home() {
   // Batasi jumlah baris sesuai yang benar-benar dipakai beranda (berita/kegiatan/
   // artikel 4, fasilitas 5, prestasi 6, guru 12) supaya payload & waktu render
   // ulang ISR lebih ringan — terutama saat dibuka dari HP.
-  const [beritaRaw, dbFacilities, activities, articles, teachers, profile, achievements, settings, agendaEvents, ekskulList, programBlocks] =
+  const [beritaRaw, dbFacilities, activities, articles, teachers, profile, achievements, settings, agendaEvents, ekskulList, programBlocks, faqDbItems] =
     await Promise.all([
       getNewsList(4) as Promise<NewsItem[]>,
       getFacilityList(5),
@@ -134,6 +134,8 @@ export default async function Home() {
       getActiveAgendaEvents(),
       getEkskulList(),
       getAgendaBlocksList(),
+      // FAQ dari tabel `faqs` (scope 'home'); null → fallback statis faq-data.ts.
+      getActiveFaqs("home"),
     ]);
 
   // Kartu agenda harian: dari tabel agenda_blocks (supabase/program.sql); bila
@@ -147,6 +149,9 @@ export default async function Home() {
   const hasVisionMission = Boolean(profile?.vision?.trim() || profile?.mission?.trim());
   const visionText = resolveVision(profile);
   const missionItems = profile?.mission?.trim() ? parseMissionItems(profile.mission) : [];
+
+  // FAQ aktif dari DB (tabel `faqs`); fallback statis saat tabel kosong/belum ada.
+  const faqItems = faqDbItems ?? faqs;
 
   // Hanya acara yang belum dimulai yang layak ditayangkan di countdown.
   const upcomingEvents = filterUpcomingEvents(agendaEvents);
@@ -188,7 +193,7 @@ export default async function Home() {
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: faqs.map((f) => ({
+    mainEntity: faqItems.map((f) => ({
       "@type": "Question",
       name: f.q,
       acceptedAnswer: { "@type": "Answer", text: f.a },
@@ -942,7 +947,7 @@ export default async function Home() {
       )}
 
       {/* ── FAQ ───────────────────────────────────────────── */}
-      <FAQ />
+      <FAQ items={faqItems} />
 
       {/* ── FINAL CTA ─────────────────────────────────────── */}
       <section className="relative overflow-hidden border-t-8 border-[var(--brand-highlight)] bg-white">

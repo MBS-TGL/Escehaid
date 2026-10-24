@@ -3,7 +3,7 @@ import { CSSFadeIn } from "@/components/CSSAnimations";
 import FaqList from "@/components/public/FaqList";
 import { faqs } from "./faq-data";
 
-export default function FAQ() {
+export default function FAQ({ items = faqs }: { items?: { q: string; a: string }[] }) {
   return (
     <section
       className="bg-[#f4f7fb]"
@@ -26,7 +26,7 @@ export default function FAQ() {
         </CSSFadeIn>
 
         <CSSFadeIn delay={0.15}>
-          <FaqList items={faqs} className="mx-auto max-w-4xl" />
+          <FaqList items={items} className="mx-auto max-w-4xl" />
         </CSSFadeIn>
       </div>
     </section>

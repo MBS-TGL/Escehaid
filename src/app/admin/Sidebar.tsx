@@ -27,6 +27,7 @@ import {
   Flag,
   UsersThree,
   Download,
+  ChatCircle,
 } from "@/components/Icons";
 import { usePermissions } from "./PermissionsProvider";
 
@@ -71,6 +72,7 @@ export const navGroups: NavGroup[] = [
       { label: "Unduhan", href: "/admin/downloads", icon: Download, perm: "unduhan:read" },
       { label: "Media", href: "/admin/media", icon: FolderOpen, perm: "media:read" },
       { label: "Prestasi", href: "/admin/achievements", icon: Trophy, perm: "prestasi:read" },
+      { label: "FAQ", href: "/admin/faq", icon: ChatCircle, perm: "faq:read" },
     ],
   },
   {

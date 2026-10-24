@@ -9,6 +9,7 @@ export * from "./queries/contact";
 export * from "./queries/downloads";
 export * from "./queries/ekskuls";
 export * from "./queries/facilities";
+export * from "./queries/faqs";
 export * from "./queries/gallery";
 export * from "./queries/media";
 export * from "./queries/news";

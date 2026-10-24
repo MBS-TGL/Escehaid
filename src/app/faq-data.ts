@@ -1,10 +1,14 @@
 /**
- * Daftar FAQ — SATU sumber kebenaran untuk:
+ * Daftar FAQ — FALLBACK statis untuk:
  * - JSON-LD FAQPage di beranda (page.tsx)
  * - komponen FAQ terlihat (FAQ.tsx)
  *
- * Google mewajibkan isi JSON-LLD FAQ identik dengan teks yang terlihat di
- * halaman, jadi keduanya wajib impor dari sini — jangan duplikasi lagi.
+ * Sumber utama kini tabel `faqs` (supabase/faq.sql, dikelola lewat
+ * /admin/faq); file ini dipakai hanya saat tabel kosong/belum dibuat,
+ * dengan kontrak bentuk { q, a } yang sama.
+ *
+ * Google mewajibkan isi JSON-LD FAQ identik dengan teks yang terlihat di
+ * halaman, jadi keduanya wajib baca dari sumber yang sama — jangan duplikasi.
  */
 export const faqs: { q: string; a: string }[] = [
   {
