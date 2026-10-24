@@ -23,7 +23,7 @@ export async function getAchievementList(
   opts?: { featuredFirst?: boolean; limit?: number }
 ): Promise<Achievement[]> {
   // Multi-token; pg_trgm aktif → kandidat via RPC search_achievements_ids
-  // (word_similarity 0.25); tak ada/gagal/kosong → fallback .or() ilike.
+  // (word_similarity 0,50, token ≥3 huruf); gagal/kosong → fallback .or().
   const tokens = tokenizeSearch(search ?? "");
   let simIds: string[] | null = null;
   if (tokens.length && (await resolveSearchMode("achievements", tokens)) === "similarity") {

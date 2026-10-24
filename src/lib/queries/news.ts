@@ -116,7 +116,7 @@ async function queryNewsPage(
 
   // Pencarian halaman daftar (?q=): judul, ringkasan, ATAU isi — multi-token.
   // pg_trgm aktif → kandidat via RPC `search_news_ids` (toleransi typo,
-  // word_similarity 0.25); tak ada/gagal/kosong → fallback substring .or().
+  // word_similarity 0,50, token ≥3 huruf); gagal/kosong → fallback .or().
   const tokens = tokenizeSearch(search ?? "");
   let simIds: string[] | null = null;
   if (tokens.length && (await resolveSearchMode("news", tokens)) === "similarity") {

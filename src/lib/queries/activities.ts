@@ -103,7 +103,7 @@ export async function getActivityList(
   opts?: ActivityListOptions
 ): Promise<Activity[]> {
   // Multi-token; pg_trgm aktif → kandidat via RPC search_activities_ids
-  // (word_similarity 0.25); tak ada/gagal/kosong → fallback .or() ilike.
+  // (word_similarity 0,50, token ≥3 huruf); gagal/kosong → fallback .or().
   const tokens = tokenizeSearch(search ?? "");
   let simIds: string[] | null = null;
   if (tokens.length && (await resolveSearchMode("activities", tokens)) === "similarity") {

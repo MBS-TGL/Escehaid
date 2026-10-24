@@ -10,15 +10,23 @@
 --   1) ekstensi pg_trgm + GIN trgm index di semua kolom pencarian publik;
 --   2) probe `search_trgm_enabled()` — jawaban runtime, bukan penebakan;
 --   3) fungsi kandidat `search_<tabel>_ids(tokens, max_rows)` — item masuk
---      bila SALAH SATU token berada di atas ambang `word_similarity` 0.25
---      pada kolom pencarian modul. CATATAN v2: memakai word_similarity(token,
---      kolom) — mencocokkan token thd jendela KATA terbaik di teks panjang.
---      v1 memakai similarity(kolom, token) (kemiripan seluruh-string) yang
---      SELALU < 0.25 thd judul panjang → kandidat selalu kosong → regresi
---      0 hasil di semua pencarian DB. word_similarity mendukung typo
---      ("ustadzhtub" ≈ 0.67 thd kata "Ustadzah"). Semantik OR per token sama
---      dengan jalur ilike multi-token. Ranking final tetap dihitung di
---      aplikasi (scoreSearchItem). RLS tetap berlaku (security invoker).
+--      bila SALAH SATU token (≥3 huruf) memiliki `word_similarity` > 0.50
+--      terhadap kolom pencarian modul; kandidat diurut skor terbaik desc
+--      sebelum dipotong `max_rows` (bukan subset arbitrer).
+--
+--      Riwayat ambang (semua empiris, diuji live thd data produksi):
+--        v1: similarity(kolom, token) 0.25 — kemiripan SELURUH-STRING; thd
+--            judul panjang selalu < 0.25 → kandidat selalu kosong → regresi
+--            0 hasil di semua pencarian DB.
+--        v2: word_similarity(token, kolom) 0.25 — argumen dibalik, cocok per
+--            jendela kata; typo hidup, TAPI potongan kata ikut lolos
+--            ("tapak" vs "Pendaftar" ≈ 0.33) → presisi jebol.
+--        v3: ambang 0.50 + guard token ≥3 huruf + order by skor. Jurang
+--            empiris: kata utuh = 1.0 · typo asli ("ustadzhtub" thd
+--            "Ustadzah") ≈ 0.55–0.67 · noise sub-kata ≤ 0.40.
+--      Semantik OR per token sama dengan jalur ilike multi-token. Ranking
+--      final tetap dihitung di aplikasi (scoreSearchItem). RLS tetap
+--      berlaku (security invoker / default Supabase).
 --
 -- Cara jalan:
 --   Supabase → SQL Editor → paste seluruh file ini → Run. Per-execution idempoten.
@@ -59,23 +67,31 @@ create index if not exists ekskuls_descr_trgm    on public.ekskuls      using gi
 -- 3) Kandidat per tabel -------------------------------------------------------
 -- Kontrak bersama: param `tokens text[]`, `max_rows int default 60`,
 -- return `setof uuid`, security invoker (RLS aktif), ambang word_similarity
--- 0.25. ARGUMEN DIBALIK vs similarity(): needle (token) di depan, kolom
--- teks panjang di belakang — jangan kembalikan ke urutan v1.
+-- 0.50, token <3 huruf diabaikan (trigram noise; dilayani fallback ilike).
+-- ARGUMEN DIBALIK vs similarity(): needle (token) di depan, kolom teks
+-- panjang di belakang — jangan kembalikan ke urutan v1. `greatest` mengabaikan
+-- NULL (kolom opsional seperti summary/content boleh kosong).
 
 create or replace function public.search_news_ids(tokens text[], max_rows int default 60)
 returns setof public.news.id%type
 language sql
 stable
 as $$
-  select n.id
-  from public.news n
-  where exists (
-    select 1
-    from unnest(tokens) t
-    where word_similarity(t, n.title) > 0.25
-       or word_similarity(t, n.summary) > 0.25
-       or word_similarity(t, n.content) > 0.25
-  )
+  select s.id
+  from (
+    select n.id,
+           max(greatest(
+             word_similarity(t, n.title),
+             word_similarity(t, n.summary),
+             word_similarity(t, n.content)
+           )) as score
+    from public.news n
+    cross join unnest(tokens) t
+    where char_length(t) >= 3
+    group by n.id
+  ) s
+  where s.score > 0.50
+  order by s.score desc
   limit greatest(coalesce(max_rows, 60), 1);
 $$;
 
@@ -84,15 +100,21 @@ returns setof public.articles.id%type
 language sql
 stable
 as $$
-  select a.id
-  from public.articles a
-  where exists (
-    select 1
-    from unnest(tokens) t
-    where word_similarity(t, a.title) > 0.25
-       or word_similarity(t, a.excerpt) > 0.25
-       or word_similarity(t, a.content) > 0.25
-  )
+  select s.id
+  from (
+    select a.id,
+           max(greatest(
+             word_similarity(t, a.title),
+             word_similarity(t, a.excerpt),
+             word_similarity(t, a.content)
+           )) as score
+    from public.articles a
+    cross join unnest(tokens) t
+    where char_length(t) >= 3
+    group by a.id
+  ) s
+  where s.score > 0.50
+  order by s.score desc
   limit greatest(coalesce(max_rows, 60), 1);
 $$;
 
@@ -101,15 +123,21 @@ returns setof public.activities.id%type
 language sql
 stable
 as $$
-  select a.id
-  from public.activities a
-  where exists (
-    select 1
-    from unnest(tokens) t
-    where word_similarity(t, a.title) > 0.25
-       or word_similarity(t, a.description) > 0.25
-       or word_similarity(t, a.content) > 0.25
-  )
+  select s.id
+  from (
+    select a.id,
+           max(greatest(
+             word_similarity(t, a.title),
+             word_similarity(t, a.description),
+             word_similarity(t, a.content)
+           )) as score
+    from public.activities a
+    cross join unnest(tokens) t
+    where char_length(t) >= 3
+    group by a.id
+  ) s
+  where s.score > 0.50
+  order by s.score desc
   limit greatest(coalesce(max_rows, 60), 1);
 $$;
 
@@ -118,14 +146,20 @@ returns setof public.achievements.id%type
 language sql
 stable
 as $$
-  select a.id
-  from public.achievements a
-  where exists (
-    select 1
-    from unnest(tokens) t
-    where word_similarity(t, a.title) > 0.25
-       or word_similarity(t, a.description) > 0.25
-  )
+  select s.id
+  from (
+    select a.id,
+           max(greatest(
+             word_similarity(t, a.title),
+             word_similarity(t, a.description)
+           )) as score
+    from public.achievements a
+    cross join unnest(tokens) t
+    where char_length(t) >= 3
+    group by a.id
+  ) s
+  where s.score > 0.50
+  order by s.score desc
   limit greatest(coalesce(max_rows, 60), 1);
 $$;
 
@@ -134,14 +168,20 @@ returns setof public.ekskuls.id%type
 language sql
 stable
 as $$
-  select e.id
-  from public.ekskuls e
-  where exists (
-    select 1
-    from unnest(tokens) t
-    where word_similarity(t, e.name) > 0.25
-       or word_similarity(t, e.description) > 0.25
-  )
+  select s.id
+  from (
+    select e.id,
+           max(greatest(
+             word_similarity(t, e.name),
+             word_similarity(t, e.description)
+           )) as score
+    from public.ekskuls e
+    cross join unnest(tokens) t
+    where char_length(t) >= 3
+    group by e.id
+  ) s
+  where s.score > 0.50
+  order by s.score desc
   limit greatest(coalesce(max_rows, 60), 1);
 $$;
 
