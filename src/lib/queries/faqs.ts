@@ -72,3 +72,18 @@ export async function deleteFaqBulk(ids: string[]): Promise<{ error?: string }> 
   if (error) return { error: error.message };
   return {};
 }
+
+/** Simpan urutan baru hasil drag & drop — bulk update sort_order (pola
+ *  reorderPortalApps). Pemanggil bertanggung jawab renumber 1..n. */
+export async function reorderFaqs(
+  items: { id: string; sort_order: number }[]
+): Promise<{ error?: string }> {
+  const results = await Promise.all(
+    items.map((item) =>
+      supabase.from("faqs").update({ sort_order: item.sort_order }).eq("id", item.id)
+    )
+  );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) return { error: failed.error.message };
+  return {};
+}

@@ -6,6 +6,7 @@ import {
   createFaq,
   updateFaq,
   deleteFaq,
+  reorderFaqs,
   revalidatePaths,
 } from "@/lib/queries";
 import type { Faq, FaqScope } from "@/lib/queries";
@@ -19,28 +20,41 @@ import {
   Plus,
   PencilSimple,
   Trash,
-  CaretLeft,
-  CaretRight,
-  ArrowUp,
-  ArrowDown,
   CheckCircle,
   XCircle,
   MapPin,
+  DotsSixVertical,
 } from "@/components/Icons";
 import {
   MobileFilterBar,
-  MobilePagination,
   MobileListRow,
   RowActionsMenu,
+  RowGrip,
   StatusDot,
   QuietBadge,
   type RowAction,
 } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type Modifier,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 type FilterTab = "all" | "active" | "inactive";
-
-const PAGE_SIZE = 10;
 
 const SCOPE_META: Record<FaqScope, { label: string; hint: string }> = {
   home: { label: "Beranda", hint: "tampil di bagian akhir halaman depan website" },
@@ -54,6 +68,9 @@ interface FormState {
 }
 
 const EMPTY_FORM: FormState = { question: "", answer: "", is_active: true };
+
+/** Drag hanya gerak vertikal — mencegah baris "melayang" menyamping. */
+const lockY: Modifier = ({ transform }) => ({ ...transform, x: 0 });
 
 export default function FaqClientPage() {
   const { can } = usePermissions();
@@ -69,14 +86,13 @@ export default function FaqClientPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<Faq | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [formSaving, setFormSaving] = useState(false);
 
-  const [deleteItem, setDeleteItem] = useState<Faq | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Faq | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const fetchItems = useCallback(async (s: FaqScope) => {
@@ -107,6 +123,10 @@ export default function FaqClientPage() {
   const activeCount = items.filter((f) => f.is_active).length;
   const inactiveCount = items.length - activeCount;
 
+  // Urutan hanya bermakna pada daftar penuh tanpa pencarian/filter (pola
+  // Portal): drag dinonaktifkan selama salah satunya aktif.
+  const listFiltered = search.trim() !== "" || filter !== "all";
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return items.filter((f) => {
@@ -116,9 +136,6 @@ export default function FaqClientPage() {
       return f.question.toLowerCase().includes(q) || f.answer.toLowerCase().includes(q);
     });
   }, [items, filter, search]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const scopeOptions = (["home", "spmb"] as FaqScope[]).map((k) => ({
     key: k,
@@ -130,11 +147,10 @@ export default function FaqClientPage() {
     { key: "inactive", label: "Nonaktif", count: inactiveCount },
   ];
 
-  function resetList() {
-    setPage(1);
-    setSearch("");
-    setFilter("all");
-  }
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   function openCreate() {
     setEditItem(null);
@@ -180,40 +196,99 @@ export default function FaqClientPage() {
     fetchItems(scope);
   }
 
-  async function handleReorder(id: string, dir: "up" | "down") {
-    const idx = items.findIndex((f) => f.id === id);
-    if (idx < 0) return;
-    const dirStep = dir === "up" ? -1 : 1;
-    const swapWith = items[idx + dirStep];
-    if (!swapWith) return;
-    // Tukar sort_order kedua baris; bila sama (mis. 0/0), paksa nilai berbeda.
-    const a = items[idx].sort_order;
-    const b = swapWith.sort_order;
-    const [na, nb] = a === b ? [a + dirStep, a] : [b, a];
-    const r1 = await updateFaq(items[idx].id, { sort_order: na });
-    const r2 = await updateFaq(swapWith.id, { sort_order: nb });
-    if (r1.error || r2.error) {
-      toast(r1.error || r2.error || "Gagal mengubah urutan.", "error");
-      return;
-    }
-    revalidateFaq();
-    fetchItems(scope);
+  /** Drag & drop selesai — urutan dihitung ulang (1, 2, 3, ...) lalu disimpan
+   *  optimistis; gagal → rollback + toast (pola Portal). */
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const previous = items;
+    const oldIndex = items.findIndex((i) => i.id === active.id);
+    const newIndex = items.findIndex((i) => i.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const reordered = arrayMove(items, oldIndex, newIndex).map((it, idx) => ({
+      ...it,
+      sort_order: idx + 1,
+    }));
+    setItems(reordered);
+
+    reorderFaqs(reordered.map((it) => ({ id: it.id, sort_order: it.sort_order })))
+      .then(({ error }) => {
+        if (error) {
+          setItems(previous);
+          toast(`Gagal menyimpan urutan: ${error}`, "error");
+          return;
+        }
+        toast("Urutan diperbarui", "success");
+        revalidateFaq();
+      });
   }
 
   async function handleDelete() {
-    if (!deleteItem) return;
+    if (!deleteTarget) return;
     setDeleting(true);
-    const res = await deleteFaq(deleteItem.id);
+    const res = await deleteFaq(deleteTarget.id);
     setDeleting(false);
     if (res.error) {
       toast(res.error, "error");
       return;
     }
-    setDeleteItem(null);
+    setDeleteTarget(null);
     toast("FAQ dihapus.", "success");
     revalidateFaq();
     fetchItems(scope);
   }
+
+  const dndProps = {
+    sensors,
+    modifiers: [lockY] as Modifier[],
+    collisionDetection: closestCenter,
+    onDragEnd: handleDragEnd,
+    autoScroll: { threshold: { x: 0, y: 0.08 }, acceleration: 4 },
+  };
+
+  const emptyBody = (colSpan: number) => (
+    <>
+      {loading ? (
+        <tr><td colSpan={colSpan} className="px-4 py-16 text-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
+            <p className="text-sm text-slate-500">Memuat data FAQ...</p>
+          </div>
+        </td></tr>
+      ) : loadError ? (
+        <tr><td colSpan={colSpan} className="px-4 py-16 text-center">
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+              <XCircle className="h-6 w-6 text-red-400" />
+            </div>
+            <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
+            <p className="mt-0.5 text-xs text-slate-500">{loadError}</p>
+            <button onClick={() => fetchItems(scope)} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+              Coba lagi
+            </button>
+          </div>
+        </td></tr>
+      ) : filtered.length === 0 ? (
+        <tr><td colSpan={colSpan} className="px-4 py-16 text-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+              <ChatCircle className="h-8 w-8 text-slate-300" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
+              <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : `Belum ada FAQ ${SCOPE_META[scope].label}`}</p>
+            </div>
+            {!search && filter === "all" && permCreate && (
+              <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                <Plus className="h-3.5 w-3.5" /> Buat FAQ Pertama
+              </button>
+            )}
+          </div>
+        </td></tr>
+      ) : null}
+    </>
+  );
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -251,12 +326,12 @@ export default function FaqClientPage() {
           placeholder="Cari pertanyaan atau jawaban..."
           searchLabel="Cari FAQ"
           query={search}
-          onQueryChange={(v) => { setSearch(v); setPage(1); }}
+          onQueryChange={setSearch}
           filters={[
             {
               value: scope,
               options: scopeOptions,
-              onChange: (k) => { setScope(k as FaqScope); resetList(); },
+              onChange: (k) => { setScope(k as FaqScope); setSearch(""); setFilter("all"); },
               menuLabel: "Lokasi tampil",
               // MapPin, bukan Funnel default — ini pemilih lokasi, bukan
               // filter konten; mencegah terbaca sebagai sort/filter.
@@ -265,7 +340,7 @@ export default function FaqClientPage() {
             {
               value: filter,
               options: statusOptions,
-              onChange: (k) => { setFilter(k as FilterTab); setPage(1); },
+              onChange: (k) => setFilter(k as FilterTab),
               menuLabel: "Filter status",
             },
           ]}
@@ -277,220 +352,114 @@ export default function FaqClientPage() {
         placeholder="Cari pertanyaan atau jawaban…"
         searchLabel="Cari FAQ"
         query={search}
-        onQueryChange={(v) => { setSearch(v); setPage(1); }}
+        onQueryChange={setSearch}
         filter={{
           value: filter,
           options: statusOptions,
-          onChange: (k) => { setFilter(k as FilterTab); setPage(1); },
+          onChange: (k) => setFilter(k as FilterTab),
         }}
         filter2={{
           value: scope,
           options: scopeOptions,
-          onChange: (k) => { setScope(k as FaqScope); resetList(); },
+          onChange: (k) => { setScope(k as FaqScope); setSearch(""); setFilter("all"); },
           icon: <MapPin className="h-4 w-4" />,
         }}
       />
 
-      {/* Tabel desktop (md+) */}
+      {/* Tabel desktop (md+) — baris sortable (drag grip di kolom Urutan) */}
       <div className="hidden overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:block">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
               <tr>
-                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">No</th>
-                <th className="hidden w-20 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">Urutan</th>
+                <th className="w-16 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Urutan</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Pertanyaan</th>
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</th>
                 <th className="hidden px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:table-cell">Diubah</th>
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading ? (
-                <tr><td colSpan={6} className="px-4 py-16 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
-                    <p className="text-sm text-slate-500">Memuat data FAQ...</p>
-                  </div>
-                </td></tr>
-              ) : loadError ? (
-                <tr><td colSpan={6} className="px-4 py-16 text-center">
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
-                      <XCircle className="h-6 w-6 text-red-400" />
-                    </div>
-                    <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
-                    <p className="mt-0.5 text-xs text-slate-500">{loadError}</p>
-                    <button onClick={() => fetchItems(scope)} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
-                      Coba lagi
-                    </button>
-                  </div>
-                </td></tr>
-              ) : paginated.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-16 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-                      <ChatCircle className="h-8 w-8 text-slate-300" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
-                      <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : `Belum ada FAQ ${SCOPE_META[scope].label}`}</p>
-                    </div>
-                    {!search && filter === "all" && permCreate && (
-                      <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
-                        <Plus className="h-3.5 w-3.5" /> Buat FAQ Pertama
-                      </button>
-                    )}
-                  </div>
-                </td></tr>
-              ) : (
-                paginated.map((item, index) => (
-                  <tr key={item.id} className="group transition-colors hover:bg-slate-50/80">
-                    <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
-                    <td className="hidden px-4 py-3.5 sm:table-cell">
-                      <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => handleReorder(item.id, "up")} disabled={index === 0}
-                          className="rounded p-0.5 text-slate-400 hover:text-slate-600 disabled:opacity-30" title="Naik">
-                          <ArrowUp className="h-3 w-3" weight="bold" />
-                        </button>
-                        <span className="w-6 text-center text-xs font-semibold text-slate-500">{item.sort_order}</span>
-                        <button onClick={() => handleReorder(item.id, "down")} disabled={index === paginated.length - 1}
-                          className="rounded p-0.5 text-slate-400 hover:text-slate-600 disabled:opacity-30" title="Turun">
-                          <ArrowDown className="h-3 w-3" weight="bold" />
-                        </button>
-                      </div>
-                    </td>
-                    <td className="max-w-md px-4 py-3.5">
-                      <p className="text-sm font-medium text-slate-700">{item.question}</p>
-                      <p className="mt-0.5 line-clamp-1 text-xs text-slate-400" title={item.answer}>{item.answer}</p>
-                    </td>
-                    <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => handleToggle(item)} disabled={!permUpdate}
-                        title={permUpdate ? "Klik untuk ubah status" : "Tidak berizin mengubah status"}
-                        className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:cursor-default ${item.is_active
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                            : "border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200"
-                          } disabled:opacity-70`}>
-                        {item.is_active ? "Aktif" : "Nonaktif"}
-                      </button>
-                    </td>
-                    <td className="hidden whitespace-nowrap px-4 py-3.5 text-center text-sm text-slate-500 lg:table-cell" title={new Date(item.updated_at).toLocaleString("id-ID", { dateStyle: "full", timeStyle: "short" })}>
-                      {formatRelativeTime(item.updated_at)}
-                    </td>
-                    <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-center gap-1">
-                        {permUpdate && (
-                          <button onClick={() => openEdit(item)} aria-label={`Edit FAQ ${item.question.slice(0, 30)}`}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
-                            <PencilSimple className="h-4 w-4" />
-                          </button>
-                        )}
-                        {permDelete && (
-                          <button onClick={() => setDeleteItem(item)} aria-label={`Hapus FAQ ${item.question.slice(0, 30)}`}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
-                            <Trash className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
+            <DndContext {...dndProps}>
+              <SortableContext items={filtered.map((f) => f.id)} strategy={verticalListSortingStrategy}>
+                <tbody className="divide-y divide-slate-100">
+                  {loading || loadError || filtered.length === 0 ? emptyBody(5) : filtered.map((item, index) => (
+                    <SortableTr
+                      key={item.id}
+                      item={item}
+                      index={index}
+                      dragDisabled={listFiltered || !permUpdate}
+                      onEdit={openEdit}
+                      onDelete={setDeleteTarget}
+                      onToggle={handleToggle}
+                      canUpdate={permUpdate}
+                      canDelete={permDelete}
+                    />
+                  ))}
+                </tbody>
+              </SortableContext>
+            </DndContext>
           </table>
         </div>
-        {!loading && filtered.length > 0 && (
-          <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-slate-400">
-              Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} dari {filtered.length} FAQ
-            </p>
-            <div className="flex items-center gap-1">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">
-                <CaretLeft className="h-4 w-4" />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button key={p} onClick={() => setPage(p)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === page ? "bg-[var(--brand-primary)] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
-                  {p}
-                </button>
-              ))}
-              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">
-                <CaretRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Daftar mobile (<md) */}
+      {/* Daftar mobile (<md) — baris sortable via RowGrip */}
       <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden">
-        <div role="list" aria-label="Daftar FAQ">
-          {loading ? (
-            <div className="space-y-3 px-3 py-4" aria-hidden="true">
-              {Array.from({ length: 4 }, (_, i) => (
-                <div key={i} className="space-y-1.5">
-                  <SkeletonBlock className="h-3.5 w-3/4 rounded" />
-                  <SkeletonBlock className="h-3 w-1/3 rounded" />
+        <DndContext {...dndProps}>
+          <SortableContext items={filtered.map((f) => f.id)} strategy={verticalListSortingStrategy}>
+            <div role="list" aria-label="Daftar FAQ" className="divide-y divide-slate-100">
+              {loading ? (
+                <div className="space-y-3 px-3 py-4" aria-hidden="true">
+                  {Array.from({ length: 4 }, (_, i) => (
+                    <div key={i} className="space-y-1.5">
+                      <SkeletonBlock className="h-3.5 w-3/4 rounded" />
+                      <SkeletonBlock className="h-3 w-1/3 rounded" />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ) : loadError ? (
-            <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
-                <XCircle className="h-6 w-6 text-red-400" />
-              </div>
-              <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
-              <p className="mt-0.5 text-xs text-slate-500">{loadError}</p>
-              <button onClick={() => fetchItems(scope)} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
-                Coba lagi
-              </button>
-            </div>
-          ) : paginated.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
-                <ChatCircle className="h-7 w-7 text-slate-300" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
-                <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : `Belum ada FAQ ${SCOPE_META[scope].label}`}</p>
-              </div>
-              {!search && filter === "all" && permCreate && (
-                <button onClick={openCreate} className="mt-1 flex min-h-10 items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
-                  <Plus className="h-3.5 w-3.5" /> Buat FAQ Pertama
-                </button>
+              ) : loadError ? (
+                <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                    <XCircle className="h-6 w-6 text-red-400" />
+                  </div>
+                  <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
+                  <p className="mt-0.5 text-xs text-slate-500">{loadError}</p>
+                  <button onClick={() => fetchItems(scope)} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                    Coba lagi
+                  </button>
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+                    <ChatCircle className="h-7 w-7 text-slate-300" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
+                    <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : `Belum ada FAQ ${SCOPE_META[scope].label}`}</p>
+                  </div>
+                  {!search && filter === "all" && permCreate && (
+                    <button onClick={openCreate} className="mt-1 flex min-h-10 items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                      <Plus className="h-3.5 w-3.5" /> Buat FAQ Pertama
+                    </button>
+                  )}
+                </div>
+              ) : (
+                filtered.map((item, index) => (
+                  <SortableMobileRow
+                    key={item.id}
+                    item={item}
+                    index={index}
+                    dragDisabled={listFiltered || !permUpdate}
+                    onEdit={openEdit}
+                    onDelete={setDeleteTarget}
+                    onToggle={handleToggle}
+                    canUpdate={permUpdate}
+                    canDelete={permDelete}
+                  />
+                ))
               )}
             </div>
-          ) : (
-            paginated.map((item, index) => (
-              <FaqMobileRow
-                key={item.id}
-                item={item}
-                index={(page - 1) * PAGE_SIZE + index}
-                onEdit={openEdit}
-                onDelete={setDeleteItem}
-                onToggle={handleToggle}
-                onReorder={handleReorder}
-                canGoUp={index > 0}
-                canGoDown={index < paginated.length - 1}
-                canEdit={permUpdate}
-                canDelete={permDelete}
-              />
-            ))
-          )}
-        </div>
-        {!loading && filtered.length > 0 && (
-          <MobilePagination
-            page={page}
-            totalPages={totalPages}
-            total={filtered.length}
-            from={(page - 1) * PAGE_SIZE + 1}
-            to={Math.min(page * PAGE_SIZE, filtered.length)}
-            onPageChange={setPage}
-            itemLabel="FAQ"
-          />
-        )}
+          </SortableContext>
+        </DndContext>
       </div>
 
       {/* Form tambah/edit */}
@@ -554,11 +523,11 @@ export default function FaqClientPage() {
 
       {/* Konfirmasi hapus */}
       <ConfirmModal
-        open={deleteItem !== null}
-        onClose={() => setDeleteItem(null)}
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
         title="Hapus FAQ?"
-        description={deleteItem?.question}
+        description={deleteTarget?.question}
         message="FAQ akan dihapus permanen dari database."
         loading={deleting}
       />
@@ -566,41 +535,153 @@ export default function FaqClientPage() {
   );
 }
 
-function FaqMobileRow({
+function useSortableStyle(id: string, disabled: boolean) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled });
+  return {
+    attributes,
+    listeners,
+    setNodeRef,
+    style: {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      zIndex: isDragging ? 10 : undefined,
+    },
+    isDragging,
+  };
+}
+
+function GripHandle({
+  index,
+  label,
+  disabled,
+  attributes,
+  listeners,
+}: {
+  index: number;
+  label: string;
+  disabled: boolean;
+  attributes: React.ButtonHTMLAttributes<HTMLButtonElement>;
+  listeners: Record<string, unknown> | undefined;
+}) {
+  return (
+    <div className="flex items-center justify-center gap-1">
+      <button
+        type="button"
+        {...attributes}
+        {...(disabled ? {} : listeners)}
+        disabled={disabled}
+        aria-label={`Ubah urutan ${label}`}
+        title={
+          disabled
+            ? "Urutan hanya bisa diubah saat menampilkan Semua tanpa pencarian"
+            : "Tarik untuk mengubah urutan (atau tekan Space, lalu panah)"
+        }
+        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${disabled
+            ? "cursor-not-allowed text-slate-300"
+            : "cursor-grab text-slate-400 hover:bg-[var(--brand-accent)]/10 hover:text-[var(--brand-primary)] active:cursor-grabbing"
+          }`}
+      >
+        <DotsSixVertical className="h-4 w-4" />
+      </button>
+      <span className="w-5 text-center text-xs font-semibold tabular-nums text-slate-500">{index + 1}</span>
+    </div>
+  );
+}
+
+function SortableTr({
   item,
   index,
+  dragDisabled,
   onEdit,
   onDelete,
   onToggle,
-  onReorder,
-  canGoUp,
-  canGoDown,
-  canEdit,
+  canUpdate,
   canDelete,
 }: {
   item: Faq;
   index: number;
+  dragDisabled: boolean;
   onEdit: (item: Faq) => void;
   onDelete: (item: Faq) => void;
   onToggle: (item: Faq) => void;
-  onReorder: (id: string, dir: "up" | "down") => void;
-  canGoUp: boolean;
-  canGoDown: boolean;
-  canEdit: boolean;
+  canUpdate: boolean;
   canDelete: boolean;
 }) {
+  const { attributes, listeners, setNodeRef, style, isDragging } = useSortableStyle(item.id, dragDisabled);
+
+  return (
+    <tr
+      ref={setNodeRef}
+      style={style}
+      className={`relative transition-colors ${isDragging ? "bg-slate-50 opacity-70" : "hover:bg-slate-50/80"}`}
+    >
+      <td className="px-4 py-3.5">
+        <GripHandle index={index} label={item.question.slice(0, 30)} disabled={dragDisabled} attributes={attributes} listeners={listeners} />
+      </td>
+      <td className="max-w-md px-4 py-3.5">
+        <p className="text-sm font-medium text-slate-700">{item.question}</p>
+        <p className="mt-0.5 line-clamp-1 text-xs text-slate-400" title={item.answer}>{item.answer}</p>
+      </td>
+      <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+        <button onClick={() => onToggle(item)} disabled={!canUpdate}
+          title={canUpdate ? "Klik untuk ubah status" : "Tidak berizin mengubah status"}
+          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:cursor-default ${item.is_active
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+              : "border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200"
+            } disabled:opacity-70`}>
+          {item.is_active ? "Aktif" : "Nonaktif"}
+        </button>
+      </td>
+      <td className="hidden whitespace-nowrap px-4 py-3.5 text-center text-sm text-slate-500 lg:table-cell" title={new Date(item.updated_at).toLocaleString("id-ID", { dateStyle: "full", timeStyle: "short" })}>
+        {formatRelativeTime(item.updated_at)}
+      </td>
+      <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-center gap-1">
+          {canUpdate && (
+            <button onClick={() => onEdit(item)} aria-label={`Edit FAQ ${item.question.slice(0, 30)}`}
+              className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
+              <PencilSimple className="h-4 w-4" />
+            </button>
+          )}
+          {canDelete && (
+            <button onClick={() => onDelete(item)} aria-label={`Hapus FAQ ${item.question.slice(0, 30)}`}
+              className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
+              <Trash className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function SortableMobileRow({
+  item,
+  index,
+  dragDisabled,
+  onEdit,
+  onDelete,
+  onToggle,
+  canUpdate,
+  canDelete,
+}: {
+  item: Faq;
+  index: number;
+  dragDisabled: boolean;
+  onEdit: (item: Faq) => void;
+  onDelete: (item: Faq) => void;
+  onToggle: (item: Faq) => void;
+  canUpdate: boolean;
+  canDelete: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, style, isDragging } = useSortableStyle(item.id, dragDisabled);
+
   const actions: RowAction[] = [
-    ...(canEdit
+    ...(canUpdate
       ? [
           { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) },
           { key: "toggle", label: item.is_active ? "Nonaktifkan" : "Aktifkan", icon: <CheckCircle className="h-4 w-4" />, run: () => onToggle(item) },
         ]
-      : []),
-    ...(canGoUp
-      ? [{ key: "up", label: "Naik", icon: <ArrowUp className="h-4 w-4" />, run: () => onReorder(item.id, "up") }]
-      : []),
-    ...(canGoDown
-      ? [{ key: "down", label: "Turun", icon: <ArrowDown className="h-4 w-4" />, run: () => onReorder(item.id, "down") }]
       : []),
     ...(canDelete
       ? [{ key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) }]
@@ -608,12 +689,21 @@ function FaqMobileRow({
   ];
 
   return (
-    <div role="listitem">
+    <div
+      ref={setNodeRef}
+      style={style}
+      role="listitem"
+      className={`relative transition-colors ${isDragging ? "bg-slate-50 opacity-70" : ""}`}
+    >
       <MobileListRow
         lead={
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center text-[11px] font-semibold tabular-nums text-[#64748b]">
-            {index + 1}
-          </span>
+          <RowGrip
+            index={index}
+            label={item.question.slice(0, 30)}
+            disabled={dragDisabled}
+            attributes={attributes}
+            listeners={dragDisabled ? {} : listeners}
+          />
         }
         thumb={
           <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e4ecf6]">
