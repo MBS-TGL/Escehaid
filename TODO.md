@@ -63,17 +63,17 @@
 
 ### D1. Perbaiki CI (`.github/workflows/ci.yml`)
 
-- [ ] Bump `actions/checkout@v4 → v5`, `setup-node@v4 → v5` (Node 20 deprecated)
-- [ ] Tambah step `npx next typegen` sebelum `npx tsc --noEmit` (dokumentasi Next 16)
-- [ ] Tambah step `npm test` ke quality job
-- [ ] Build job: ganti gate/env basi `NEXT_PUBLIC_SUPABASE_*` → `SUPABASE_URL` + `SUPABASE_ANON_KEY` (+ `SITE_URL`), perbarui komentar
-- [ ] Tambah `NEXT_TELEMETRY_DISABLED: 1`
-- [ ] Commit + push → poll Actions API sampai quality green; catat skip/run build job
+- [x] Bump `actions/checkout@v4 → v5`, `setup-node@v4 → v5` (Node 20 deprecated)
+- [x] Tambah step `npx next typegen` sebelum `npx tsc --noEmit` (dokumentasi Next 16)
+- [x] Tambah step `npm test` ke quality job
+- [x] Build job: ganti gate/env basi `NEXT_PUBLIC_SUPABASE_*` → `SUPABASE_URL` + `SUPABASE_ANON_KEY` (+ `SITE_URL`), perbarui komentar
+- [x] Tambah `NEXT_TELEMETRY_DISABLED: 1`
+- [x] Commit + push → poll Actions API sampai quality green; catat skip/run build job — **BERHASIL: run `c3f6bb3` hijau penuh, build job jalan (secrets sudah diset), bukan skip**
 
 ### D2. Guardrails lokal
 
-- [ ] `AGENTS.md`: section "Guardrail kerja paralel" — stage path eksplisit saja (larang `add -A/-u`, `stash`, `clean`, `checkout -- .`), lint scoped saat tree kotor, dilarang `build`/`start` saat `next dev` aktif, `fetch`+`log @{u}..HEAD` sebelum push, CI = sumber kebenaran
-- [ ] `.githooks/pre-commit`: tambah lint ESLint untuk file staged `*.ts`/`*.tsx` (fail-closed, escape hatch `SKIP_LINT_GUARD=1`), uji via file temp staged tanpa commit
+- [x] `AGENTS.md`: section "Guardrail kerja paralel" — stage path eksplisit saja (larang `add -A/-u`, `stash`, `clean`, `checkout -- .`), lint scoped saat tree kotor, dilarang `build`/`start` saat `next dev` aktif, `fetch`+`log @{u}..HEAD` sebelum push, CI = sumber kebenaran
+- [x] `.githooks/pre-commit`: tambah lint ESLint untuk file staged `*.ts`/`*.tsx` (fail-closed, escape hatch `SKIP_LINT_GUARD=1`), uji via file temp staged tanpa commit — teruji: error→tolak, bersih→lolos, rahasia→tolak, skip→lolos; panggil eslint via `node` langsung (exit code asli — xargs/shim merusak rc)
 - [ ] Commit + push
 - [ ] Laporan akhir: status CI + langkah manual (set GitHub Secrets `SUPABASE_URL`, `SUPABASE_ANON_KEY` agar build job aktif)
 
