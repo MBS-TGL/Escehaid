@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import type { Metadata } from "next";
-import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Users, Checks, Megaphone, CalendarBlank, Trophy, Clock, Quotes } from "@/components/Icons";
+import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Megaphone, CalendarBlank, Trophy, Clock, Quotes, Eye } from "@/components/Icons";
 import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList, getActiveAgendaEvents, filterUpcomingEvents, getEkskulList } from "@/lib/queries";
 import { detectPrincipalGreeting, keepTogether } from "@/lib/principal-quote";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
@@ -21,6 +21,7 @@ import {
 import type { Achievement } from "@/lib/supabase";
 import { BLOCKS } from "@/lib/data/mbs-schedule";
 import { getAgendaBlocksList, blockRowToSummary } from "@/lib/queries";
+import { resolveVision, parseMissionItems } from "@/lib/queries/profile";
 
 const FAQ = dynamic(() => import("./FAQ"), { loading: () => <div className="h-96" /> });
 const WhatsAppButton = dynamic(() => import("./WhatsAppButton"));
@@ -139,6 +140,10 @@ export default async function Home() {
   // SQL belum jalan → fallback data statis (mbs-schedule.ts) — aman dua-duanya.
   const agendaBlocks =
     programBlocks.length > 0 ? programBlocks.map(blockRowToSummary) : BLOCKS;
+
+  // Visi & teaser misi (section "Mengapa MUH4TA") — dari school_profile.
+  const visionText = resolveVision(profile);
+  const missionPreview = parseMissionItems(profile?.mission).slice(0, 3);
 
   // Hanya acara yang belum dimulai yang layak ditayangkan di countdown.
   const upcomingEvents = filterUpcomingEvents(agendaEvents);
@@ -884,36 +889,48 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ── WHY MUH4TA ────────────────────────────────── */}
+      {/* ── WHY MUH4TA — Visi & Misi (dari school_profile) ── */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] text-white" style={CV}>
+        <div aria-hidden="true" className="pointer-events-none absolute -right-8 -top-8 select-none text-white/[0.04] md:-right-12 md:-top-12">
+          <Quotes weight="fill" className="h-64 w-64 md:h-80 md:w-80" />
+        </div>
         <div className="absolute inset-0 hidden opacity-10 md:block">
           <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[var(--brand-highlight)] blur-[120px]" />
         </div>
         <div className="relative mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
           <CSSFadeIn>
-            <div className="mx-auto max-w-2xl text-center">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-highlight)]">Mengapa MUH4TA</p>
-              <h2 className="mt-4 text-3xl font-semibold leading-tight md:text-4xl">
-                Sekolah yang dekat, terarah, dan terus bergerak maju.
+            <div className="mx-auto max-w-3xl text-center">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--brand-highlight)] backdrop-blur-md">
+                <Eye className="h-4 w-4" weight="bold" />
+                <span>Mengapa MUH4TA — Visi Kami</span>
+              </span>
+              <h2 className="mt-6 font-serif-quote text-xl font-normal leading-relaxed text-white sm:text-2xl md:text-3xl text-pretty">
+                &ldquo;{visionText}&rdquo;
               </h2>
             </div>
           </CSSFadeIn>
 
-          <CSSStagger stagger={120} className="mt-14 grid gap-6 md:grid-cols-3">
-            {([
-              ["Pendampingan dekat", "Guru hadir mendampingi proses belajar dan perkembangan setiap peserta didik.", Users],
-              ["Nilai yang terintegrasi", "Pembelajaran akademik berjalan bersama pembiasaan ibadah dan akhlak.", Checks],
-              ["Berani mencoba", "Siswa mendapat ruang untuk bertanya, berkarya, dan mengembangkan potensi.", Star],
-            ] as [string, string, React.ElementType][]).map(([title, description, Icon]) => (
-              <div key={title} className="group rounded-2xl border border-white/10 bg-white/5 p-6 transition-all md:backdrop-blur-sm duration-300 hover:border-white/20 hover:bg-white/10">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-highlight)]/15 text-[var(--brand-highlight)]">
-                  <Icon className="h-5 w-5" weight="fill" />
-                </div>
-                <h3 className="mt-4 font-semibold">{title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-white/60">{description}</p>
+          <CSSStagger stagger={120} className="mt-12 grid gap-6 md:grid-cols-3">
+            {missionPreview.map((item, idx) => (
+              <div key={idx} className="group flex items-start gap-3.5 rounded-2xl border border-white/10 bg-white/5 p-6 transition-all duration-300 md:backdrop-blur-sm hover:border-white/20 hover:bg-white/10">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-highlight)] text-xs font-black tabular-nums text-[var(--brand-primary)]">
+                  {String(idx + 1).padStart(2, "0")}
+                </span>
+                <p className="text-sm font-medium leading-relaxed text-white/80">{item}</p>
               </div>
             ))}
           </CSSStagger>
+
+          <CSSFadeIn delay={0.1}>
+            <div className="mt-10 text-center">
+              <Link
+                href="/profile#visi-misi"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-6 py-3 text-sm font-bold text-white backdrop-blur-md transition-all hover:border-white/40 hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-highlight)]"
+              >
+                Lihat visi &amp; misi lengkap <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </CSSFadeIn>
         </div>
       </section>
 

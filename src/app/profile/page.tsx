@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Users, GraduationCap, Eye, Checks, ArrowUpRight, Trophy, MapPin, Quotes } from "@/components/Icons";
 import { getSchoolProfile, getTeacherList, getFacilityList, getAchievementList, getGalleryList, getEkskulList, registrationHref } from "@/lib/queries";
+import { resolveVision, parseMissionItems } from "@/lib/queries/profile";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import PageHero from "@/components/public/PageHero";
@@ -55,31 +56,8 @@ export default async function ProfilPage() {
     return { head: trimmed.slice(0, trimmed.length - tail.length), tail };
   })();
 
-  const visionText =
-    profil?.vision?.trim() ||
-    "Menjadi lembaga pencetak kader da'i dan ulama hafidz yang menguasai ilmu pengetahuan dan teknologi berwawasan global serta peduli dan berbudaya lingkungan.";
-
-  const missionItems: string[] = (() => {
-    if (!profil?.mission) {
-      return [
-        "Menanamkan kepribadian Islam dan kepedulian terhadap lingkungan",
-        "Menanamkan karakter unggul: lurus aqidah, bagus ibadah, mulia akhlak",
-        "Melaksanakan pembelajaran aktif, inovatif, kreatif, dan menyenangkan",
-        "Menumbuhkan potensi keberbakatan dalam setiap siswa",
-        "Berbasis Boarding School dan Full Day School dengan kurikulum Nasional & Muhammadiyah",
-        "Mewujudkan generasi emas 2045: One Home One Hafidz",
-      ];
-    }
-    try {
-      const parsed = JSON.parse(profil.mission);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    } catch {}
-    const items = profil.mission
-      .split(/\d+\.\s*/)
-      .map((s: string) => s.trim())
-      .filter(Boolean);
-    return items.length > 0 ? items : [profil.mission];
-  })();
+  const visionText = resolveVision(profil);
+  const missionItems = parseMissionItems(profil?.mission);
 
   const daftarHref = registrationHref(profil).trim();
 
