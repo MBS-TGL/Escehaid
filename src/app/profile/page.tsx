@@ -308,7 +308,9 @@ export default async function ProfilPage() {
                   &ldquo;{visionText}&rdquo;
                 </h3>
 
-                {/* 3 Pilar Inti Penjabaran Visi */}
+                {/* 3 Pilar Inti Penjabaran Visi — hanya bila visi terisi di DB
+                    (pilar adalah penjabaran visi; tanpa visi asli janggal) */}
+                {Boolean(profil?.vision?.trim()) && (
                 <div className="mt-7 grid gap-4 border-t border-white/15 pt-6 sm:mt-10 sm:grid-cols-3 sm:pt-8">
                   <div className="flex items-start gap-3 rounded-2xl bg-white/[0.06] p-4 backdrop-blur-xs">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-highlight)] text-xs font-black text-[var(--brand-primary)]">
@@ -340,6 +342,7 @@ export default async function ProfilPage() {
                     </div>
                   </div>
                 </div>
+                )}
               </div>
             </div>
           </CSSFadeIn>

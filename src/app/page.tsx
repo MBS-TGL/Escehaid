@@ -141,9 +141,12 @@ export default async function Home() {
   const agendaBlocks =
     programBlocks.length > 0 ? programBlocks.map(blockRowToSummary) : BLOCKS;
 
-  // Visi & teaser misi (section "Mengapa MUH4TA") — dari school_profile.
+  // Visi & misi (section "Mengapa MUH4TA") — dari school_profile. Section
+  // disembunyikan bila keduanya kosong di DB; misi kosong → grid tak dirender
+  // (tanpa fallback), teks lengkap tetap tersedia di /profile#visi-misi.
+  const hasVisionMission = Boolean(profile?.vision?.trim() || profile?.mission?.trim());
   const visionText = resolveVision(profile);
-  const missionPreview = parseMissionItems(profile?.mission).slice(0, 3);
+  const missionItems = profile?.mission?.trim() ? parseMissionItems(profile.mission) : [];
 
   // Hanya acara yang belum dimulai yang layak ditayangkan di countdown.
   const upcomingEvents = filterUpcomingEvents(agendaEvents);
@@ -890,6 +893,7 @@ export default async function Home() {
       </section>
 
       {/* ── WHY MUH4TA — Visi & Misi (dari school_profile) ── */}
+      {hasVisionMission && (
       <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] text-white" style={CV}>
         <div aria-hidden="true" className="pointer-events-none absolute -right-8 -top-8 select-none text-white/[0.04] md:-right-12 md:-top-12">
           <Quotes weight="fill" className="h-64 w-64 md:h-80 md:w-80" />
@@ -910,16 +914,18 @@ export default async function Home() {
             </div>
           </CSSFadeIn>
 
-          <CSSStagger stagger={120} className="mt-12 grid gap-6 md:grid-cols-3">
-            {missionPreview.map((item, idx) => (
+          {missionItems.length > 0 && (
+          <CSSStagger stagger={100} className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {missionItems.map((item, idx) => (
               <div key={idx} className="group flex items-start gap-3.5 rounded-2xl border border-white/10 bg-white/5 p-6 transition-all duration-300 md:backdrop-blur-sm hover:border-white/20 hover:bg-white/10">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-highlight)] text-xs font-black tabular-nums text-[var(--brand-primary)]">
                   {String(idx + 1).padStart(2, "0")}
                 </span>
-                <p className="text-sm font-medium leading-relaxed text-white/80">{item}</p>
+                <p className="line-clamp-3 text-sm font-medium leading-relaxed text-white/80" title={item}>{item}</p>
               </div>
             ))}
           </CSSStagger>
+          )}
 
           <CSSFadeIn delay={0.1}>
             <div className="mt-10 text-center">
@@ -933,6 +939,7 @@ export default async function Home() {
           </CSSFadeIn>
         </div>
       </section>
+      )}
 
       {/* ── FAQ ───────────────────────────────────────────── */}
       <FAQ />
