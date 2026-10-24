@@ -28,6 +28,7 @@ import {
   UsersThree,
   Download,
   ChatCircle,
+  Database,
 } from "@/components/Icons";
 import { usePermissions } from "./PermissionsProvider";
 
@@ -89,6 +90,7 @@ export const navGroups: NavGroup[] = [
     title: "Sistem",
     items: [
       { label: "Pengaturan", href: "/admin/settings", icon: Gear, perm: "settings:manage" },
+      { label: "Cadangan", href: "/admin/backup", icon: Database, perm: "backup:read" },
       { label: "Fitur", href: "/admin/flags", icon: Flag, perm: "flags:manage" },
       { label: "Pengguna", href: "/admin/users", icon: UsersThree, perm: "users:manage" },
       { label: "Log", href: "/admin/logs", icon: Scroll, perm: "logs:read" },

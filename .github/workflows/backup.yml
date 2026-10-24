@@ -1,0 +1,65 @@
+name: Backup
+
+# Backup database harian → Cloudflare R2 (bucket privat).
+# Dijalankan oleh scripts/backup-scheduled.mjs (dump → tar.gz → upload → rotasi).
+# Status terakhir dibaca halaman admin /admin/backup via backups/manifest.json.
+#
+# Setup SEKALI di Repo → Settings → Secrets and variables → Actions:
+#   DATABASE_URL        postgres://postgres.<ref>:<password>@...pooler.supabase.com:6543/postgres
+#   R2_ACCOUNT_ID       Cloudflare account id
+#   R2_ACCESS_KEY_ID     token R2 (S3 API)
+#   R2_SECRET_ACCESS_KEY kunci token R2
+#   R2_PRIVATE_BUCKET   (opsional, default "esceha-private")
+# Opsional tombol "Backup sekarang" dari admin panel:
+#   BACKUP_GH_TOKEN     fine-grained PAT (isi "Actions: write" repo ini)
+#   BACKUP_GH_REPO      mis. "MBS-TGL/Escehaid" — juga dipakai oleh /admin/backup
+#
+# Bila DATABASE_URL belum diset: job selesai sebagai "skip" (biru + pesan),
+# bukan merah — supaya tidak membingungkan sebelum secrets diisi.
+
+on:
+  schedule:
+    - cron: "30 19 * * *" # 02:30 WIB setiap hari
+  workflow_dispatch:
+  repository_dispatch:
+    types: [run-backup]
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Backup DB → R2
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Cek secrets
+        id: check
+        run: |
+          if [ -z "${{ secrets.DATABASE_URL }}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::DATABASE_URL belum diset — backup dilewati. Isi GitHub Secrets (lihat header workflow ini)."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Backup
+        if: steps.check.outputs.skip == 'false'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_PRIVATE_BUCKET: ${{ secrets.R2_PRIVATE_BUCKET }}
+        run: node scripts/backup-scheduled.mjs
+
+      - name: Ringkasan
+        if: steps.check.outputs.skip == 'false'
+        run: ls -lh supabase_backup/ | head -20

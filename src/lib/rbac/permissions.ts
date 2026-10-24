@@ -100,6 +100,15 @@ export const MODULE_REGISTRY: readonly PermissionModule[] = [
     ],
   },
   {
+    key: "backup",
+    label: "Cadangan",
+    description: "Status backup database (halaman /admin/backup)",
+    actions: [
+      { key: "read", label: "Melihat" },
+      { key: "update", label: "Menjalankan backup" },
+    ],
+  },
+  {
     key: "galeri",
     label: "Galeri",
     actions: [

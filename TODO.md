@@ -13,16 +13,22 @@ Script sudah ada di `scripts/` (backup-db-extras.mjs, backup-full-dump.mjs,
 backup-storage.mjs, gen-restore-extras.mjs, restore-new-project.mjs) — tinggal
 diotomasi & dibuat terlihat.
 
-- [ ] a. GitHub Actions workflow (cron harian) menjalankan script backup →
+- [x] a. GitHub Actions workflow (cron harian) menjalankan script backup →
       upload hasil ke storage terpisah (R2/Supabase Storage bucket backup).
       Simpan rotasi: harian ×7, mingguan ×4.
-- [ ] b. Halaman admin `/admin/backup` (grup Sistem, perm `backup:read`):
+      ✅ `.github/workflows/backup.yml` (cron 02:30 WIB) + `scripts/backup-scheduled.mjs`
+      (dump → tar.gz → R2 privat → manifest.json → rotasi 30 hari). Menunggi
+      secrets GitHub: DATABASE_URL + R2_* (daftar di header workflow).
+- [x] b. Halaman admin `/admin/backup` (grup Sistem, perm `backup:read`):
       daftar backup terakhir (tanggal, ukuran, jenis DB/storage), tombol
       "Backup sekarang" (jalankan via workflow_dispatch), link dokumentasi
       restore.
+      ✅ + route `/api/admin/backup/trigger` (repository_dispatch; butuh env
+      Vercel BACKUP_GH_TOKEN/BACKUP_GH_REPO bila tombol manual diinginkan).
 - [ ] c. Kartu peringatan di Dashboard admin bila backup terakhir > 7 hari
       (baca metadata bucket backup via service role, read-only).
-- [ ] d. Dokumen runbook restore singkat (docs/BACKUP.md): urutan restore
+      (Halaman /admin/backup sudah menampilkan badge umur; kartu dashboard menyusul.)
+- [x] d. Dokumen runbook restore singkat (docs/BACKUP.md): urutan restore
       DB → storage → verifikasi.
 
 ## 2. Dashboard Diagnostik / Status Sistem
