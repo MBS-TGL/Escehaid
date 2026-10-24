@@ -324,6 +324,14 @@ html::-webkit-scrollbar-thumb:hover {
   margin: 0.75rem 0;
 }
 
+/* Global fallback utk <mark> hasil pencarian (komponen Highlight maupun teks
+   lain): senada brand-accent dengan warna teks mengikuti konteksnya. Override
+   milik .tiptap-editor mark tetap menang — spesifisitasnya lebih tinggi. */
+mark {
+  background-color: color-mix(in srgb, var(--brand-accent) 20%, transparent);
+  color: inherit;
+}
+
 .tiptap-editor mark {
   background-color: #fef08a;
   padding: 0.125rem 0.25rem;

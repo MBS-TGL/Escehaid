@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Clock, FileText, MagnifyingGlass, Warning, X } from "@/components/Icons";
 import type { SearchGroup } from "@/lib/queries/search";
 import { KIND_META, formatSearchDate, EMPTY_STATE_LINKS } from "@/components/SearchMeta";
+import Highlight from "@/components/public/Highlight";
 
 type Status = "idle" | "loading" | "done" | "error";
 
@@ -369,11 +370,11 @@ export default function SearchOverlay({
                             >
                               <span className="min-w-0 flex-1">
                                 <span className="block truncate text-sm font-semibold text-[var(--brand-primary)]">
-                                  {item.title}
+                                  <Highlight text={item.title} query={searchedQuery} />
                                 </span>
                                 {item.excerpt && (
                                   <span className="mt-0.5 block truncate text-xs text-slate-500">
-                                    {item.excerpt}
+                                    <Highlight text={item.excerpt} query={searchedQuery} />
                                   </span>
                                 )}
                               </span>
