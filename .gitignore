@@ -45,6 +45,9 @@ opencode.json
 # codegraph: indeks lokal (jangan di-commit)
 .codegraph/
 
+# artefak sesi tooling lokal (plan file dsb.) — jangan di-commit
+.zcode/
+
 # opencode plugin credentials — token Telegram, jangan sampai ikut ter-commit
 .opencode/**/secrets.json
 
