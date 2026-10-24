@@ -5,14 +5,46 @@ import type { SearchKind } from "@/lib/queries";
  * Ikon + warna lencana per jenis konten pencarian — sumber bersama untuk
  * halaman /search (SearchView) dan overlay pencarian di topbar (SearchOverlay)
  * agar tampilan hasil selalu sinkron. Kelas ditulis utuh agar terbaca JIT.
+ *
+ * `chip`   = lencana berlatar terang untuk dipakai DI ATAS KARTU PUTIH
+ *            (header grup, kartu hasil biasa).
+ * `icon`   = warna ikon saja — dipakai lencana yang menempel DI ATAS FOTO,
+ *            di mana `chip` (latar transparan spt artikel) tak terbaca.
  */
-export const KIND_META: Record<SearchKind, { icon: typeof Newspaper; chip: string }> = {
-  halaman: { icon: House, chip: "border-slate-200 bg-slate-50 text-slate-600" },
-  berita: { icon: Newspaper, chip: "border-blue-200 bg-blue-50 text-blue-700" },
-  artikel: { icon: FileText, chip: "border-[#1767b1]/20 bg-[#1767b1]/10 text-[#1767b1]" },
-  kegiatan: { icon: CalendarBlank, chip: "border-purple-200 bg-purple-50 text-purple-700" },
-  prestasi: { icon: Trophy, chip: "border-amber-200 bg-amber-50 text-amber-700" },
-  ekskul: { icon: Users, chip: "border-emerald-200 bg-emerald-50 text-emerald-700" },
+export const KIND_META: Record<
+  SearchKind,
+  { icon: typeof Newspaper; chip: string; iconColor: string }
+> = {
+  halaman: {
+    icon: House,
+    chip: "border-slate-200 bg-slate-50 text-slate-600",
+    iconColor: "text-slate-600",
+  },
+  berita: {
+    icon: Newspaper,
+    chip: "border-blue-200 bg-blue-50 text-blue-700",
+    iconColor: "text-blue-700",
+  },
+  artikel: {
+    icon: FileText,
+    chip: "border-[#1767b1]/20 bg-[#1767b1]/10 text-[#1767b1]",
+    iconColor: "text-[#1767b1]",
+  },
+  kegiatan: {
+    icon: CalendarBlank,
+    chip: "border-purple-200 bg-purple-50 text-purple-700",
+    iconColor: "text-purple-700",
+  },
+  prestasi: {
+    icon: Trophy,
+    chip: "border-amber-200 bg-amber-50 text-amber-700",
+    iconColor: "text-amber-700",
+  },
+  ekskul: {
+    icon: Users,
+    chip: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    iconColor: "text-emerald-700",
+  },
 };
 
 /**

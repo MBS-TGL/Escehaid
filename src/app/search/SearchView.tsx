@@ -73,8 +73,8 @@ export default function SearchView({
   const lastSearchedRef = useRef(initialQuery);
   /** Nomor urut permintaan — jawaban dengan nomor basi dibuang. */
   const requestIdRef = useRef(0);
-  /** Naik tiap klik "Coba lagi" — memicu pencarian ulang istilah yang sama. */
-  const [retryNonce, setRetryNonce] = useState(0);
+  /** Timer debounce aktif — dibatalkan saat tombol "Cari" ditekan. */
+  const debounceRef = useRef<number | null>(null);
   /** Sentinel di atas panel — dipantau IntersectionObserver utk sticky bar. */
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -117,14 +117,15 @@ export default function SearchView({
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    const term = query.trim();
-    // Kosong (sudah ditangani applyQuery) atau sudah punya hasil → selesai.
-    if (!term || term === lastSearchedRef.current) return;
-
-    let cancelled = false;
-    // Debounce 300ms — ketikan cepat hanya memicu SATU pencarian.
-    const timer = window.setTimeout(async () => {
+  /**
+   * Satu-satunya tempat yang memanggil /api/search — dipakai debounce ketikan
+   * DAN tombol "Cari" (yang ingin langsung jalan tanpa menunggu 300ms).
+   * Respons basi dibuang lewat perbandingan `requestIdRef`; pemanggil yang
+   * membatalkan (efek cleanup / reset) cukup menaikkan nomor itu.
+   */
+  const runSearch = useCallback(
+    async (term: string) => {
+      if (!term) return;
       setStatus("loading");
       const requestId = (requestIdRef.current += 1);
       try {
@@ -141,7 +142,7 @@ export default function SearchView({
           throw new Error(apiError || `Pencarian gagal (HTTP ${res.status}). Coba lagi sebentar.`);
         }
         const data = (await res.json()) as { groups: SearchGroup[]; count: number };
-        if (cancelled || requestId !== requestIdRef.current) return; // jawaban basi
+        if (requestId !== requestIdRef.current) return; // jawaban basi
         setGroups(data.groups);
         setCount(data.count);
         setSearchedQuery(term);
@@ -153,7 +154,7 @@ export default function SearchView({
         // Sinkronkan URL secara dangkal agar bisa dibagikan.
         window.history.replaceState(null, "", `${pathname}?q=${encodeURIComponent(term)}`);
       } catch (err) {
-        if (!cancelled && requestId === requestIdRef.current) {
+        if (requestId === requestIdRef.current) {
           setGroups([]);
           setCount(0);
           setSearchedQuery(term);
@@ -166,13 +167,45 @@ export default function SearchView({
           );
         }
       }
+    },
+    [pathname]
+  );
+
+  useEffect(() => {
+    const term = query.trim();
+    // Kosong (sudah ditangani applyQuery) atau sudah punya hasil → selesai.
+    if (!term || term === lastSearchedRef.current) return;
+
+    // Debounce 300ms — ketikan cepat hanya memicu SATU pencarian.
+    const timer = window.setTimeout(() => {
+      debounceRef.current = null;
+      void runSearch(term);
     }, 300);
+    debounceRef.current = timer;
 
     return () => {
-      cancelled = true;
       window.clearTimeout(timer);
+      debounceRef.current = null;
+      // Batalkan respons yang masih melayang untuk istilah yang sudah usang.
+      requestIdRef.current += 1;
     };
-  }, [query, pathname, retryNonce]);
+  }, [query, runSearch]);
+
+  /**
+   * Tombol "Cari" / submit form: jalankan SEGERA tanpa menunggu debounce.
+   * `lastSearchedRef` dikosongkan agar istilah yang sama pun diproses ulang.
+   */
+  const submitSearch = useCallback(() => {
+    const term = query.trim();
+    if (!term) return;
+    // Buang timer debounce yang belum jalan agar tidak ada request ganda.
+    if (debounceRef.current !== null) {
+      window.clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    lastSearchedRef.current = "";
+    void runSearch(term);
+  }, [query, runSearch]);
 
   /** Grup yang sudah diurutkan relevansi (khusus tab "Semua"). */
   const orderedGroups = useMemo(() => {
@@ -216,7 +249,7 @@ export default function SearchView({
             : `Tidak ada hasil untuk “${searchedQuery}”`;
 
   const inputClassName =
-    "w-full rounded-2xl border border-[#dce3ed] bg-slate-50/50 py-3.5 pl-12 pr-12 text-base text-slate-800 transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/15";
+    "w-full rounded-2xl border border-[#dce3ed] bg-slate-50/50 py-4 pl-14 pr-12 text-base text-slate-800 transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/15 sm:text-lg";
 
   /** Chip filter — dipakai versi vertikal (desktop) & horizontal (mobile). */
   const filterButtons = (
@@ -280,7 +313,10 @@ export default function SearchView({
           <form
             action="/search"
             method="get"
-            onSubmit={(e) => e.preventDefault()}
+            onSubmit={(e) => {
+              e.preventDefault();
+              submitSearch();
+            }}
             className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-2.5 sm:px-6"
           >
             <div className="relative flex-1">
@@ -314,59 +350,80 @@ export default function SearchView({
         </div>
       )}
 
-      <div className="lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start lg:gap-8">
-        {/* ── PANEL KONTROL (sticky di desktop) ───────────────────────── */}
-        <aside className="lg:sticky lg:top-20">
-          {/* Form GET = jalur tanpa JavaScript; dengan JS, submit dicegah dan
-              pencarian sudah berjalan lewat debounce. */}
-          <form
-            action="/search"
-            method="get"
-            onSubmit={(e) => e.preventDefault()}
-            className="rounded-3xl border border-[#dce3ed] bg-white p-5 shadow-sm"
+      {/* ── KOTAK PENCARIAN UTAMA (full-width, di atas grid) ─────────────
+          Sengaja DI LUAR sidebar: input pencarian butuh lebar maksimal —
+          di dalam kolom 260px sisa ruang ketik hanya ±122px. */}
+      <form
+        action="/search"
+        method="get"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submitSearch();
+        }}
+        className="rounded-3xl border border-[#dce3ed] bg-white p-5 shadow-sm sm:p-6"
+      >
+        <label htmlFor="site-search" className="block text-sm font-semibold text-[var(--brand-primary)]">
+          Cari di situs ini
+        </label>
+        <div className="mt-2.5 flex flex-col gap-2 sm:flex-row">
+          <div className="relative min-w-0 flex-1">
+            <MagnifyingGlass className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+            <input
+              id="site-search"
+              name="q"
+              type="text"
+              value={query}
+              onChange={(e) => applyQuery(e.target.value)}
+              placeholder="Misalnya: SPMB, lomba, Tapak Suci…"
+              autoComplete="off"
+              spellCheck={false}
+              enterKeyHint="search"
+              className={inputClassName}
+            />
+            {query !== "" && (
+              <button
+                type="button"
+                onClick={() => applyQuery("")}
+                aria-label="Hapus kata kunci"
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {/* Submit native saat tanpa JS; dengan JS langsung jalan (tanpa debounce). */}
+          <button
+            type="submit"
+            disabled={status === "loading"}
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-[var(--brand-primary)] px-6 py-3.5 text-sm font-bold text-white transition-all hover:bg-[var(--brand-accent)] hover:shadow-lg hover:shadow-[var(--brand-primary)]/20 focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)] focus:ring-offset-2 disabled:opacity-50"
           >
-            <label htmlFor="site-search" className="block text-sm font-semibold text-[var(--brand-primary)]">
-              Cari di situs ini
-            </label>
-            <div className="relative mt-2.5">
-              <MagnifyingGlass className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-              <input
-                id="site-search"
-                name="q"
-                type="text"
-                value={query}
-                onChange={(e) => applyQuery(e.target.value)}
-                placeholder="Misalnya: SPMB, lomba…"
-                autoComplete="off"
-                spellCheck={false}
-                enterKeyHint="search"
-                className={inputClassName}
-              />
-              {query !== "" && (
-                <button
-                  type="button"
-                  onClick={() => applyQuery("")}
-                  aria-label="Hapus kata kunci"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-            {/* Status sekaligus aria-live: perubahan jumlah hasil diumumkan pembaca layar. */}
-            <p role="status" aria-live="polite" className="mt-3 text-sm text-slate-500">
-              {statusText}
-            </p>
-          </form>
+            <MagnifyingGlass className="h-4 w-4" />
+            <span className="hidden sm:inline">
+              {status === "loading" ? "Mencari…" : "Cari"}
+            </span>
+            <span className="sm:hidden">Cari</span>
+          </button>
+        </div>
+        {/* Status sekaligus aria-live: perubahan jumlah hasil diumumkan pembaca layar. */}
+        <p role="status" aria-live="polite" className="mt-3 text-sm text-slate-500">
+          {statusText}
+        </p>
+      </form>
 
+      <div className="mt-6 lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start lg:gap-8">
+        {/* ── PANEL KIRI: filter & riwayat (sticky di desktop) ────────── */}
+        <aside className="lg:sticky lg:top-20">
           {/* Filter vertikal — hanya desktop; mobile memakai chip di atas hasil. */}
           {groups.length > 0 && (
             <div
               role="tablist"
               aria-label="Saring hasil menurut jenis"
               aria-orientation="vertical"
-              className="mt-4 hidden flex-col gap-1.5 lg:flex"
+              className="hidden flex-col gap-1.5 lg:flex"
             >
+              <span className="mb-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                Saring
+              </span>
               {filterButtons}
             </div>
           )}
@@ -529,7 +586,7 @@ export default function SearchView({
               <p className="mt-1 text-sm text-slate-400">{errorMessage}</p>
               <button
                 type="button"
-                onClick={() => setRetryNonce((n) => n + 1)}
+                onClick={submitSearch}
                 className="mt-4 rounded-lg border border-[#dce3ed] bg-white px-4 py-2 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:border-[var(--brand-accent)]/40 hover:bg-slate-50"
               >
                 Coba lagi

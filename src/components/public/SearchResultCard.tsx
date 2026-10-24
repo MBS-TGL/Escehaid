@@ -45,7 +45,7 @@ export default function SearchResultCard({
   /** "featured" = kartu papan atas (foto besar). */
   variant?: "default" | "featured";
 }) {
-  const { icon: Icon, chip } = KIND_META[item.kind];
+  const { icon: Icon, chip, iconColor } = KIND_META[item.kind];
   const relative = formatRelativeDate(item.date);
   const absolute = formatSearchDate(item.date);
   const featured = variant === "featured";
@@ -67,11 +67,14 @@ export default function SearchResultCard({
     </span>
   );
 
+  /**
+   * Lencana di atas foto: WAJIB latar solid — `chip` punya latar transparan
+   * untuk sebagian jenis (artikel: `bg-[#1767b1]/10`) sehingga navy di atas
+   * foto jadi tak terbaca. Ikon tetap berwarna per jenis lewat `iconColor`.
+   */
   const featuredBadge = (
-    <span
-      className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-bold ${chip}`}
-    >
-      <Icon className="h-3 w-3" />
+    <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#dce3ed] bg-white/95 px-2.5 py-1 text-[11px] font-bold text-slate-800 shadow-sm backdrop-blur-sm">
+      <Icon className={`h-3 w-3 ${iconColor}`} />
       Paling relevan
     </span>
   );
