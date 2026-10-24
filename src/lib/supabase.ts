@@ -166,6 +166,8 @@ export interface News {
   expires_at?: string | null;
   /** Tautan video eksternal — opsional, butuh migrasi supabase/content_video.sql. */
   video_url?: string | null;
+  /** Terisi bila item di-soft-delete (lihat /admin/trash). */
+  deleted_at?: string | null;
   created_at: string;
   updated_at: string;
 }

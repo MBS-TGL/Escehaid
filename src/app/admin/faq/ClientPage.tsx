@@ -528,7 +528,7 @@ export default function FaqClientPage() {
         onConfirm={handleDelete}
         title="Hapus FAQ?"
         description={deleteTarget?.question}
-        message="FAQ akan dihapus permanen dari database."
+        message="FAQ dipindahkan ke Sampah — hilang permanen setelah 30 hari."
         loading={deleting}
       />
     </div>

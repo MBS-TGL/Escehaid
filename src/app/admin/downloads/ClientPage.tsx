@@ -729,7 +729,7 @@ export default function AdminDownloadsPage() {
         onClose={() => setDeleteItem(null)}
         onConfirm={handleDelete}
         title="Hapus Unduhan?"
-        description={`"${deleteItem?.title}" akan dihapus permanen beserta berkasnya.`}
+        description={`"${deleteItem?.title}" dipindahkan ke Sampah — hilang permanen (beserta berkasnya) setelah 30 hari.`}
       />
 
       {/* Bulk Delete Confirm */}
@@ -738,7 +738,7 @@ export default function AdminDownloadsPage() {
         onClose={() => setBulkDelete(false)}
         onConfirm={handleBulkDelete}
         title={`Hapus ${selectedIds.size} Unduhan?`}
-        description="Semua unduhan yang dipilih akan dihapus permanen beserta berkasnya."
+        description="Semua unduhan yang dipilih dipindahkan ke Sampah — hilang permanen setelah 30 hari."
       />
     </div>
   );

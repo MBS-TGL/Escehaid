@@ -24,6 +24,7 @@ export * from "./queries/registrations";
 export * from "./queries/revalidate";
 export * from "./queries/search";
 export * from "./queries/shared";
+export * from "./queries/trash";
 export * from "./queries/spmb";
 export * from "./queries/spmb-status";
 export * from "./queries/teachers";

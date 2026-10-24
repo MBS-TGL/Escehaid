@@ -8,6 +8,8 @@ export interface Announcement {
   expires_at: string | null;
   created_at: string;
   updated_at: string;
+  /** Terisi bila item di-soft-delete (lihat /admin/trash). */
+  deleted_at?: string | null;
 }
 
 /** Tanggal hari ini (zona WIB) sebagai "YYYY-MM-DD" — pola sama dengan admission/page.tsx. */
@@ -19,6 +21,7 @@ export async function getAnnouncements(): Promise<Announcement[]> {
   const { data, error } = await supabase
     .from("announcements")
     .select("*")
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
 
   if (error) {
@@ -42,6 +45,7 @@ export async function getActiveAnnouncements(): Promise<string[]> {
     .from("announcements")
     .select("text, expires_at")
     .eq("is_active", true)
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
 
   if (error) {
@@ -50,6 +54,7 @@ export async function getActiveAnnouncements(): Promise<string[]> {
         .from("announcements")
         .select("text")
         .eq("is_active", true)
+        .is("deleted_at", null)
         .order("sort_order", { ascending: true });
       if (fallback.error) return [];
       return (fallback.data || []).map((a) => a.text);
@@ -106,14 +111,15 @@ export async function updateAnnouncement(
   return {};
 }
 
+/** Soft-delete — item pindah ke Sampah (/admin/trash). */
 export async function deleteAnnouncement(id: string): Promise<{ error?: string }> {
-  const { error } = await supabase.from("announcements").delete().eq("id", id);
+  const { error } = await supabase.from("announcements").update({ deleted_at: new Date().toISOString() }).eq("id", id);
   if (error) return { error: error.message };
   return {};
 }
 
 export async function deleteAnnouncementBulk(ids: string[]): Promise<{ error?: string }> {
-  const { error } = await supabase.from("announcements").delete().in("id", ids);
+  const { error } = await supabase.from("announcements").update({ deleted_at: new Date().toISOString() }).in("id", ids);
   if (error) return { error: error.message };
   return {};
 }

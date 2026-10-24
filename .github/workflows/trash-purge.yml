@@ -1,0 +1,40 @@
+name: Trash purge
+
+# Hapus permanen konten yang sudah di Sampah > 30 hari (soft-delete → hard
+# delete). Mingguan supaya log Actions tidak ramai; jadwal bisa diganti.
+#
+# Setup: secret DATABASE_URL (sama dengan workflow Backup).
+
+on:
+  schedule:
+    - cron: "0 20 * * 1" # Senin 03:00 WIB
+  workflow_dispatch:
+
+jobs:
+  purge:
+    name: Purge trash > 30 hari
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Cek secrets
+        id: check
+        run: |
+          if [ -z "${{ secrets.DATABASE_URL }}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::DATABASE_URL belum diset — purge dilewati."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Purge
+        if: steps.check.outputs.skip == 'false'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          npm install pg --no-save
+          node scripts/purge-trash.mjs

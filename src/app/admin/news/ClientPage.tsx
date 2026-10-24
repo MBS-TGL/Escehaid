@@ -1293,7 +1293,7 @@ export default function AdminBeritaPage() {
         onClose={() => setDeleteItem(null)}
         onConfirm={handleDelete}
         title="Hapus Berita?"
-        description={`"${deleteItem?.title}" akan dihapus permanen.`}
+        description={`"${deleteItem?.title}" dipindahkan ke Sampah — hilang permanen setelah 30 hari.`}
       />
 
       {/* ── PUBLISH CONFIRM (menu ⋯ mobile) ─────────── */}
@@ -1317,7 +1317,7 @@ export default function AdminBeritaPage() {
         onClose={() => setBulkDelete(false)}
         onConfirm={handleBulkDelete}
         title={`Hapus ${selectedIds.size} Berita?`}
-        description="Semua berita yang dipilih akan dihapus permanen."
+        description="Semua berita yang dipilih dipindahkan ke Sampah — hilang permanen setelah 30 hari."
       />
 
       {/* ── CREATE/EDIT FORM PANEL ──────────────────── */}

@@ -114,6 +114,7 @@ export async function getActivityList(
       .from("activities")
       .select(select)
       .eq("is_published", true)
+      .is("deleted_at", null)
       .order("activity_date", { ascending: false });
 
     if (tokens.length && simIds?.length) {
@@ -162,6 +163,7 @@ export async function getActivityBySlug(slug: string): Promise<Activity | null> 
     .select("*")
     .eq("slug", slug)
     .eq("is_published", true)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error) {
@@ -199,6 +201,7 @@ export async function getActivityListAll(): Promise<Activity[]> {
   const { data, error } = await supabase
     .from("activities")
     .select("*")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -319,28 +322,40 @@ export async function updateActivity(
   return { data };
 }
 
+/** Soft-delete — item + gambar tetap utuh untuk bisa dipulihkan dari Sampah. */
 export async function deleteActivity(id: string): Promise<{ error?: string }> {
-  // Ambil URL gambar SEBELUM row dihapus supaya file storage tidak jadi orphan
-  const { data: row } = await supabase.from("activities").select("image_url").eq("id", id).single();
-  const { error } = await supabase.from("activities").delete().eq("id", id);
+  const { error } = await supabase
+    .from("activities")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) {
     console.error("Error deleting activity:", error);
     return { error: error.message };
   }
-  if (row?.image_url) deleteStorageFileByUrl(row.image_url).catch(() => {});
   return {};
 }
 
 export async function deleteActivityBulk(ids: string[]): Promise<{ error?: string }> {
-  const { data: rows } = await supabase.from("activities").select("image_url").in("id", ids);
-  const { error } = await supabase.from("activities").delete().in("id", ids);
+  const { error } = await supabase
+    .from("activities")
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", ids);
   if (error) {
     console.error("Error bulk deleting activities:", error);
     return { error: error.message };
   }
-  for (const row of rows || []) {
-    if (row.image_url) deleteStorageFileByUrl(row.image_url).catch(() => {});
+  return {};
+}
+
+/** Hapus permanen satu kegiatan + gambarnya (dipanggil dari Sampah). */
+export async function purgeActivity(id: string): Promise<{ error?: string }> {
+  const { data: row } = await supabase.from("activities").select("image_url").eq("id", id).single();
+  const { error } = await supabase.from("activities").delete().eq("id", id);
+  if (error) {
+    console.error("Error purging activity:", error);
+    return { error: error.message };
   }
+  if (row?.image_url) deleteStorageFileByUrl(row.image_url).catch(() => {});
   return {};
 }
 

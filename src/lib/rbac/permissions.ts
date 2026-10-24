@@ -115,6 +115,16 @@ export const MODULE_REGISTRY: readonly PermissionModule[] = [
     actions: [{ key: "read", label: "Melihat" }],
   },
   {
+    key: "sampah",
+    label: "Sampah",
+    description: "Recycle bin konten lintas modul (halaman /admin/trash)",
+    actions: [
+      { key: "read", label: "Melihat" },
+      { key: "update", label: "Memulihkan" },
+      { key: "delete", label: "Menghapus permanen" },
+    ],
+  },
+  {
     key: "galeri",
     label: "Galeri",
     actions: [

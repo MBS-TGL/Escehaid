@@ -71,6 +71,7 @@ function applyPublicArticleFilters<T extends FilterMethods<T>>(query: T, withExp
   const nowIso = newsNowIso();
   let q: T = query
     .eq("is_published", true)
+    .is("deleted_at", null)
     .or(`published_at.is.null,published_at.lte.${nowIso}`);
   if (withExpires) {
     q = q.or(`expires_at.is.null,expires_at.gt.${nowIso}`);
@@ -370,6 +371,7 @@ export async function getArticleListAll(): Promise<ArticleWithAuthor[]> {
   const { data, error } = await supabase
     .from("articles")
     .select("*, user_profiles(full_name)")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -551,28 +553,41 @@ export async function updateArticle(
   return { data };
 }
 
+/** Soft-delete — item + gambar tetap utuh untuk bisa dipulihkan dari Sampah. */
 export async function deleteArticle(id: string): Promise<{ error?: string }> {
-  // Ambil URL gambar SEBELUM row dihapus supaya file storage tidak jadi orphan
-  const { data: row } = await supabase.from("articles").select("image_url").eq("id", id).single();
-  const { error } = await supabase.from("articles").delete().eq("id", id);
+  const { error } = await supabase
+    .from("articles")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) {
     console.error("Error deleting article:", error);
     return { error: error.message };
   }
-  if (row?.image_url) deleteStorageFileByUrl(row.image_url).catch(() => {});
   return {};
 }
 
 export async function deleteArticleBulk(ids: string[]): Promise<{ error?: string }> {
-  const { data: rows } = await supabase.from("articles").select("image_url").in("id", ids);
-  const { error } = await supabase.from("articles").delete().in("id", ids);
+  const { error } = await supabase
+    .from("articles")
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", ids);
   if (error) {
     console.error("Error bulk deleting articles:", error);
     return { error: error.message };
   }
-  for (const row of rows || []) {
-    if (row.image_url) deleteStorageFileByUrl(row.image_url).catch(() => {});
+  return {};
+}
+
+/** Hapus permanen satu artikel + gambarnya (dipanggil dari Sampah). */
+export async function purgeArticle(id: string): Promise<{ error?: string }> {
+  // Ambil URL gambar SEBELUM row dihapus supaya file storage tidak jadi orphan
+  const { data: row } = await supabase.from("articles").select("image_url").eq("id", id).single();
+  const { error } = await supabase.from("articles").delete().eq("id", id);
+  if (error) {
+    console.error("Error purging article:", error);
+    return { error: error.message };
   }
+  if (row?.image_url) deleteStorageFileByUrl(row.image_url).catch(() => {});
   return {};
 }
 

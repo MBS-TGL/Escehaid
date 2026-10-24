@@ -52,6 +52,7 @@ export async function getDownloadList(): Promise<Download[]> {
     .from("downloads")
     .select("id, title, description, category, file_url, file_name, file_size")
     .eq("is_active", true)
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
   if (error) {
@@ -171,8 +172,33 @@ async function removeDownloadFile(url?: string | null): Promise<void> {
   }
 }
 
+/** Soft-delete — berkas tetap utuh untuk bisa dipulihkan dari Sampah. */
 export async function deleteDownload(id: string): Promise<{ error?: string }> {
-  // Ambil URL berkas SEBELUM baris dihapus agar berkas tidak jadi orphan.
+  const { error } = await supabase
+    .from("downloads")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) {
+    console.error("Error deleting download:", error);
+    return { error: error.message };
+  }
+  return {};
+}
+
+export async function deleteDownloadBulk(ids: string[]): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from("downloads")
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", ids);
+  if (error) {
+    console.error("Error bulk deleting downloads:", error);
+    return { error: error.message };
+  }
+  return {};
+}
+
+/** Hapus permanen satu unduhan + berkasnya (dipanggil dari Sampah). */
+export async function purgeDownload(id: string): Promise<{ error?: string }> {
   const { data: row } = await supabase
     .from("downloads")
     .select("file_url")
@@ -180,26 +206,10 @@ export async function deleteDownload(id: string): Promise<{ error?: string }> {
     .single();
   const { error } = await supabase.from("downloads").delete().eq("id", id);
   if (error) {
-    console.error("Error deleting download:", error);
+    console.error("Error purging download:", error);
     return { error: error.message };
   }
   removeDownloadFile(row?.file_url).catch(() => {});
-  return {};
-}
-
-export async function deleteDownloadBulk(ids: string[]): Promise<{ error?: string }> {
-  const { data: rows } = await supabase
-    .from("downloads")
-    .select("file_url")
-    .in("id", ids);
-  const { error } = await supabase.from("downloads").delete().in("id", ids);
-  if (error) {
-    console.error("Error bulk deleting downloads:", error);
-    return { error: error.message };
-  }
-  for (const row of rows || []) {
-    removeDownloadFile(row.file_url).catch(() => {});
-  }
   return {};
 }
 

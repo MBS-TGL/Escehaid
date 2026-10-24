@@ -1367,7 +1367,7 @@ export default function AdminArticlesPage() {
         onClose={() => setDeleteItem(null)}
         onConfirm={handleDelete}
         title="Hapus Artikel?"
-        description={`"${deleteItem?.title}" akan dihapus permanen.`}
+        description={`"${deleteItem?.title}" dipindahkan ke Sampah — hilang permanen setelah 30 hari.`}
         confirmLabel="Ya, Hapus"
         variant="danger"
       />
@@ -1378,7 +1378,7 @@ export default function AdminArticlesPage() {
         onClose={() => setBulkDelete(false)}
         onConfirm={handleBulkDelete}
         title={`Hapus ${selectedIds.size} Artikel?`}
-        description="Semua artikel yang dipilih akan dihapus permanen."
+        description="Semua artikel yang dipilih dipindahkan ke Sampah — hilang permanen setelah 30 hari."
         confirmLabel="Ya, Hapus"
         variant="danger"
       />

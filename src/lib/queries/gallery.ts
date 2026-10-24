@@ -8,6 +8,7 @@ export async function getGalleryList(limit?: number): Promise<Gallery[]> {
   let query = supabase
     .from("gallery")
     .select("id, title, description, url, thumbnail_url, category, media_type, created_at")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (limit) {
@@ -30,6 +31,7 @@ export async function getGalleryPage(page: number, perPage: number = 20): Promis
   const { data, error } = await supabase
     .from("gallery")
     .select("id, title, description, url, thumbnail_url, category, media_type, created_at")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .range(start, end);
 
@@ -59,6 +61,7 @@ export async function getGalleryPageFiltered(
   let query = supabase
     .from("gallery")
     .select(GALLERY_PAGE_COLUMNS)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (category) query = query.eq("category", category);
@@ -78,6 +81,7 @@ export async function getGalleryCategories(): Promise<string[]> {
   const { data, error } = await supabase
     .from("gallery")
     .select("category")
+    .is("deleted_at", null)
     .not("category", "is", null)
     .limit(500);
 
@@ -99,6 +103,7 @@ export async function getGalleryListAll(): Promise<Gallery[]> {
   const { data, error } = await supabase
     .from("gallery")
     .select("*")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -163,28 +168,40 @@ export async function updateGallery(
   return { data };
 }
 
+/** Soft-delete — item + media tetap utuh untuk bisa dipulihkan dari Sampah. */
 export async function deleteGallery(id: string): Promise<{ error?: string }> {
-  // Ambil URL gambar SEBELUM row dihapus supaya file storage tidak jadi orphan
-  const { data: row } = await supabase.from("gallery").select("url").eq("id", id).single();
-  const { error } = await supabase.from("gallery").delete().eq("id", id);
+  const { error } = await supabase
+    .from("gallery")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) {
     console.error("Error deleting gallery:", error);
     return { error: error.message };
   }
-  if (row?.url) deleteStorageFileByUrl(row.url).catch(() => {});
   return {};
 }
 
 export async function deleteGalleryBulk(ids: string[]): Promise<{ error?: string }> {
-  const { data: rows } = await supabase.from("gallery").select("url").in("id", ids);
-  const { error } = await supabase.from("gallery").delete().in("id", ids);
+  const { error } = await supabase
+    .from("gallery")
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", ids);
   if (error) {
     console.error("Error bulk deleting gallery:", error);
     return { error: error.message };
   }
-  for (const row of rows || []) {
-    if (row.url) deleteStorageFileByUrl(row.url).catch(() => {});
+  return {};
+}
+
+/** Hapus permanen satu item galeri + medianya (dipanggil dari Sampah). */
+export async function purgeGallery(id: string): Promise<{ error?: string }> {
+  const { data: row } = await supabase.from("gallery").select("url").eq("id", id).single();
+  const { error } = await supabase.from("gallery").delete().eq("id", id);
+  if (error) {
+    console.error("Error purging gallery:", error);
+    return { error: error.message };
   }
+  if (row?.url) deleteStorageFileByUrl(row.url).catch(() => {});
   return {};
 }
 

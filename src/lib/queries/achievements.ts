@@ -33,7 +33,7 @@ export async function getAchievementList(
   const columns =
     "id, title, description, category, year, image_url, sort_order, created_at, rank_label, level, participants, organizer, is_featured, image_alt" +
     (hasVideo ? ", video_url" : "");
-  let query = supabase.from("achievements").select(columns);
+  let query = supabase.from("achievements").select(columns).is("deleted_at", null);
 
   if (opts?.featuredFirst) {
     query = query
@@ -68,6 +68,7 @@ export async function getAchievementListAdmin(): Promise<Achievement[]> {
   const { data, error } = await supabase
     .from("achievements")
     .select("*")
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
 
   if (error) {
@@ -238,27 +239,41 @@ export async function updateAchievement(
   return { data };
 }
 
+/** Soft-delete — item + gambar tetap utuh untuk bisa dipulihkan dari Sampah. */
 export async function deleteAchievement(id: string): Promise<{ error?: string }> {
-  // Ambil URL gambar SEBELUM row dihapus; file baru dihapus bila baris lain
-  // (mis. hasil Duplikat) tidak lagi memakainya.
-  const { data: row } = await supabase.from("achievements").select("image_url").eq("id", id).single();
-  const { error } = await supabase.from("achievements").delete().eq("id", id);
+  const { error } = await supabase
+    .from("achievements")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) {
     console.error("Error deleting achievement:", error);
     return { error: error.message };
   }
-  if (row?.image_url) await pruneAchievementImageFiles([row.image_url]);
   return {};
 }
 
 export async function deleteAchievementBulk(ids: string[]): Promise<{ error?: string }> {
-  const { data: rows } = await supabase.from("achievements").select("image_url").in("id", ids);
-  const { error } = await supabase.from("achievements").delete().in("id", ids);
+  const { error } = await supabase
+    .from("achievements")
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", ids);
   if (error) {
     console.error("Error bulk deleting achievements:", error);
     return { error: error.message };
   }
-  await pruneAchievementImageFiles((rows || []).map((r) => r.image_url));
+  return {};
+}
+
+/** Hapus permanen satu prestasi + gambarnya bila tak lagi dipakai baris lain
+ *  (bisa jadi hasil Duplikat) — dipanggil dari Sampah. */
+export async function purgeAchievement(id: string): Promise<{ error?: string }> {
+  const { data: row } = await supabase.from("achievements").select("image_url").eq("id", id).single();
+  const { error } = await supabase.from("achievements").delete().eq("id", id);
+  if (error) {
+    console.error("Error purging achievement:", error);
+    return { error: error.message };
+  }
+  if (row?.image_url) await pruneAchievementImageFiles([row.image_url]);
   return {};
 }
 

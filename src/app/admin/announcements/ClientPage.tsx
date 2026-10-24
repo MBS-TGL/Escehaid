@@ -624,7 +624,7 @@ export default function AdminAnnouncementsPage() {
         onClose={() => setDeleteItem(null)}
         onConfirm={handleDelete}
         title="Hapus Pengumuman?"
-        description={`"${deleteItem?.text}" akan dihapus permanen.`}
+        description={`"${deleteItem?.text}" dipindahkan ke Sampah — hilang permanen setelah 30 hari.`}
       />
 
       {/* Bulk Delete Confirm */}
@@ -633,7 +633,7 @@ export default function AdminAnnouncementsPage() {
         onClose={() => setBulkDelete(false)}
         onConfirm={handleBulkDelete}
         title={`Hapus ${selectedIds.size} Pengumuman?`}
-        description="Semua pengumuman yang dipilih akan dihapus permanen."
+        description="Semua pengumuman yang dipilih dipindahkan ke Sampah — hilang permanen setelah 30 hari."
       />
     </div>
   );

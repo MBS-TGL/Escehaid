@@ -30,6 +30,7 @@ import {
   ChatCircle,
   Database,
   Heartbeat,
+  Trash,
 } from "@/components/Icons";
 import { usePermissions } from "./PermissionsProvider";
 
@@ -75,6 +76,7 @@ export const navGroups: NavGroup[] = [
       { label: "Media", href: "/admin/media", icon: FolderOpen, perm: "media:read" },
       { label: "Prestasi", href: "/admin/achievements", icon: Trophy, perm: "prestasi:read" },
       { label: "FAQ", href: "/admin/faq", icon: ChatCircle, perm: "faq:read" },
+      { label: "Sampah", href: "/admin/trash", icon: Trash, perm: "sampah:read" },
     ],
   },
   {

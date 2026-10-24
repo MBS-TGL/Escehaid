@@ -585,7 +585,7 @@ export default function AdminGalleryPage() {
         onClose={() => setDeleteItem(null)}
         onConfirm={handleDelete}
         title="Hapus Media?"
-        description={`"${deleteItem?.title}" akan dihapus permanen.`}
+        description={`"${deleteItem?.title}" dipindahkan ke Sampah — hilang permanen setelah 30 hari.`}
         confirmLabel="Ya, Hapus"
         variant="danger"
       />
@@ -596,7 +596,7 @@ export default function AdminGalleryPage() {
         onClose={() => setBulkDelete(false)}
         onConfirm={handleBulkDelete}
         title={`Hapus ${selectedIds.size} Media?`}
-        description="Semua media yang dipilih akan dihapus permanen."
+        description="Semua media yang dipilih dipindahkan ke Sampah — hilang permanen setelah 30 hari."
         confirmLabel="Ya, Hapus"
         variant="danger"
       />

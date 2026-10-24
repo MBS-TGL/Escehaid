@@ -71,6 +71,7 @@ export function newsHasVideoColumn(): Promise<boolean> {
  */
 export type FilterMethods<T> = {
   eq(column: string, value: unknown): T;
+  is(column: string, value: null): T;
   or(filters: string): T;
 };
 
@@ -84,6 +85,7 @@ function applyPublicNewsFilters<T extends FilterMethods<T>>(query: T, withExpire
   const nowIso = newsNowIso();
   let q: T = query
     .eq("is_published", true)
+    .is("deleted_at", null)
     .or(`published_at.is.null,published_at.lte.${nowIso}`);
   if (withExpires) {
     q = q.or(`expires_at.is.null,expires_at.gt.${nowIso}`);
@@ -245,6 +247,7 @@ export async function getNewsListAll(): Promise<NewsWithAuthor[]> {
   const { data, error } = await supabase
     .from("news")
     .select("*, user_profiles(full_name)")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -482,7 +485,34 @@ export async function updateNews(
   return { data };
 }
 
+/** Soft-delete — item + media tetap utuh untuk bisa dipulihkan dari Sampah
+ *  (/admin/trash). Pembersihan media hanya terjadi di purgeNews (permanen). */
 export async function deleteNews(id: string): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from("news")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) {
+    console.error("Error deleting news:", error);
+    return { error: error.message };
+  }
+  return {};
+}
+
+export async function deleteNewsBulk(ids: string[]): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from("news")
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", ids);
+  if (error) {
+    console.error("Error bulk deleting news:", error);
+    return { error: error.message };
+  }
+  return {};
+}
+
+/** Hapus permanen satu berita + seluruh medianya (dipanggil dari Sampah). */
+export async function purgeNews(id: string): Promise<{ error?: string }> {
   // Ambil URL lampiran sebelum row dihapus
   const { data: row } = await supabase
     .from("news")
@@ -492,7 +522,7 @@ export async function deleteNews(id: string): Promise<{ error?: string }> {
 
   const { error } = await supabase.from("news").delete().eq("id", id);
   if (error) {
-    console.error("Error deleting news:", error);
+    console.error("Error purging news:", error);
     return { error: error.message };
   }
   // Hapus seluruh folder gambar berita ini
@@ -500,27 +530,6 @@ export async function deleteNews(id: string): Promise<{ error?: string }> {
   // Hapus lampiran via URL (bisa ada di folder berbeda)
   if (row?.attachment_url) deleteStorageFileByUrl(row.attachment_url).catch(() => {});
   cleanupNewsAttachments(id).catch(() => {});
-  return {};
-}
-
-export async function deleteNewsBulk(ids: string[]): Promise<{ error?: string }> {
-  // Ambil URL lampiran semua row sebelum dihapus
-  const { data: rows } = await supabase
-    .from("news")
-    .select("id, attachment_url")
-    .in("id", ids);
-
-  const { error } = await supabase.from("news").delete().in("id", ids);
-  if (error) {
-    console.error("Error bulk deleting news:", error);
-    return { error: error.message };
-  }
-  // Hapus folder gambar tiap berita + lampiran
-  ids.forEach((id) => cleanupNewsImageFolder(id).catch(() => {}));
-  (rows || []).forEach((row: { id: string; attachment_url: string | null }) => {
-    if (row.attachment_url) deleteStorageFileByUrl(row.attachment_url).catch(() => {});
-  });
-  ids.forEach((id) => cleanupNewsAttachments(id).catch(() => {}));
   return {};
 }
 

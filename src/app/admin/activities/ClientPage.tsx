@@ -1025,7 +1025,7 @@ export default function AdminActivitiesPage() {
         onClose={() => setDeleteItem(null)}
         onConfirm={handleDelete}
         title="Hapus Kegiatan?"
-        description={`"${deleteItem?.title}" akan dihapus permanen.`}
+        description={`"${deleteItem?.title}" dipindahkan ke Sampah — hilang permanen setelah 30 hari.`}
       />
 
       {/* ── PUBLISH CONFIRM (menu ⋯ mobile) ─────────── */}
@@ -1049,7 +1049,7 @@ export default function AdminActivitiesPage() {
         onClose={() => setBulkDelete(false)}
         onConfirm={handleBulkDelete}
         title={`Hapus ${selectedIds.size} Kegiatan?`}
-        description="Semua kegiatan yang dipilih akan dihapus permanen."
+        description="Semua kegiatan yang dipilih dipindahkan ke Sampah — hilang permanen setelah 30 hari."
       />
 
       {/* ── CREATE/EDIT FORM PANEL ──────────────────── */}
