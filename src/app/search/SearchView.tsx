@@ -3,21 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Clock,
-  FileText,
-  MagnifyingGlass,
-  Warning,
-  X,
-} from "@/components/Icons";
+import { Clock, MagnifyingGlass, X } from "@/components/Icons";
 import type { SearchGroup, SearchKind } from "@/lib/queries/search";
 import { sortGroupsByRelevance } from "@/lib/queries/search";
-import {
-  EMPTY_STATE_LINKS,
-  KIND_META,
-  SUGGEST_DICTIONARY,
-} from "@/components/SearchMeta";
+import { EMPTY_STATE_LINKS, KIND_META, SUGGEST_DICTIONARY } from "@/components/SearchMeta";
 import SearchResultCard from "@/components/public/SearchResultCard";
+import EmptyState from "@/components/public/EmptyState";
 import { suggestCorrections } from "@/lib/search-suggest";
 import {
   clearRecentSearches,
@@ -29,17 +20,21 @@ import {
 type Status = "idle" | "loading" | "done" | "error";
 type KindFilter = SearchKind | "semua";
 
-/** Jumlah maksimum item pada papan "Paling relevan". */
+/** Jumlah maksimum item pada papan "Hasil teratas". */
 const TOP_COUNT = 3;
+
+/** Kelas chip filter — disalin persis dari CategoryChips (kanonik situs). */
+const CHIP_BASE = "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors";
+const CHIP_ON = "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white shadow-sm";
+const CHIP_OFF = "border-slate-200 bg-white text-slate-600 hover:bg-slate-50";
 
 /**
  * Kotak pencarian menyeluruh: satu istilah menjangkau halaman situs, berita,
  * artikel, kegiatan, prestasi, dan ekskul.
  *
- * Tata letak: kontainer `max-w-7xl` (selaras PageHero & halaman daftar lain),
- * dua kolom di desktop — panel kontrol sticky di kiri (pencarian, filter jenis,
- * riwayat, tautan cepat) dan hasil di kanan; satu kolom di mobile dengan chip
- * filter horizontal.
+ * Tata letak: SATU kolom `max-w-7xl` — sama seperti /news, /articles,
+ * /activities, /gallery. Tidak ada sidebar: halaman daftar konten di situs ini
+ * tidak memakai pola itu, dan input pencarian butuh lebar maksimal.
  *
  * Perilaku: debounce 300ms + sinkronisasi URL dangkal (`history.replaceState`)
  * sehingga ?q= bisa dibagikan tanpa re-render server tiap ketikan; form GET
@@ -75,7 +70,7 @@ export default function SearchView({
   const requestIdRef = useRef(0);
   /** Timer debounce aktif — dibatalkan saat tombol "Cari" ditekan. */
   const debounceRef = useRef<number | null>(null);
-  /** Sentinel di atas panel — dipantau IntersectionObserver utk sticky bar. */
+  /** Sentinel di atas form — dipantau IntersectionObserver utk sticky bar. */
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   /** Kembalikan tampilan ke kondisi awal (input kosong) — dari event handler,
@@ -105,7 +100,7 @@ export default function SearchView({
     return () => window.clearTimeout(timer);
   }, []);
 
-  // Sticky bar: pantau sentinel di atas panel.
+  // Sticky bar: pantau sentinel di atas form.
   useEffect(() => {
     const node = sentinelRef.current;
     if (!node) return;
@@ -120,8 +115,7 @@ export default function SearchView({
   /**
    * Satu-satunya tempat yang memanggil /api/search — dipakai debounce ketikan
    * DAN tombol "Cari" (yang ingin langsung jalan tanpa menunggu 300ms).
-   * Respons basi dibuang lewat perbandingan `requestIdRef`; pemanggil yang
-   * membatalkan (efek cleanup / reset) cukup menaikkan nomor itu.
+   * Respons basi dibuang lewat perbandingan `requestIdRef`.
    */
   const runSearch = useCallback(
     async (term: string) => {
@@ -193,12 +187,11 @@ export default function SearchView({
 
   /**
    * Tombol "Cari" / submit form: jalankan SEGERA tanpa menunggu debounce.
-   * `lastSearchedRef` dikosongkan agar istilah yang sama pun diproses ulang.
+   * Timer yang belum jalan dibatalkan agar tidak ada request ganda.
    */
   const submitSearch = useCallback(() => {
     const term = query.trim();
     if (!term) return;
-    // Buang timer debounce yang belum jalan agar tidak ada request ganda.
     if (debounceRef.current !== null) {
       window.clearTimeout(debounceRef.current);
       debounceRef.current = null;
@@ -213,7 +206,7 @@ export default function SearchView({
     return groups.filter((group) => group.kind === activeKind);
   }, [groups, activeKind]);
 
-  /** 3 item skor tertinggi lintas jenis — papan "Paling relevan". */
+  /** 3 item skor tertinggi lintas jenis — papan "Hasil teratas". */
   const topItems = useMemo(() => {
     if (activeKind !== "semua" || count <= TOP_COUNT) return [];
     const distinctKinds = new Set(groups.map((group) => group.kind)).size;
@@ -248,68 +241,13 @@ export default function SearchView({
             ? `${count} hasil untuk “${searchedQuery}”`
             : `Tidak ada hasil untuk “${searchedQuery}”`;
 
-  const inputClassName =
-    "w-full rounded-2xl border border-[#dce3ed] bg-slate-50/50 py-4 pl-14 pr-12 text-base text-slate-800 transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/15 sm:text-lg";
-
-  /** Chip filter — dipakai versi vertikal (desktop) & horizontal (mobile). */
-  const filterButtons = (
-    <>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={activeKind === "semua"}
-        onClick={() => setActiveKind("semua")}
-        className={`flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors ${
-          activeKind === "semua"
-            ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
-            : "border-[#dce3ed] bg-white text-slate-600 hover:border-[var(--brand-accent)]/40"
-        }`}
-      >
-        <span>Semua</span>
-        <span
-          className={`rounded-full px-1.5 py-0.5 text-[10px] ${
-            activeKind === "semua" ? "bg-white/20" : "bg-slate-100 text-slate-500"
-          }`}
-        >
-          {count}
-        </span>
-      </button>
-      {groups.map((group) => {
-        const active = activeKind === group.kind;
-        return (
-          <button
-            key={group.kind}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => setActiveKind(group.kind)}
-            className={`flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors ${
-              active
-                ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
-                : "border-[#dce3ed] bg-white text-slate-600 hover:border-[var(--brand-accent)]/40"
-            }`}
-          >
-            <span className="truncate">{group.label}</span>
-            <span
-              className={`rounded-full px-1.5 py-0.5 text-[10px] ${
-                active ? "bg-white/20" : "bg-slate-100 text-slate-500"
-              }`}
-            >
-              {group.items.length}
-            </span>
-          </button>
-        );
-      })}
-    </>
-  );
-
   return (
-    <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 md:py-12">
+    <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 md:py-16">
       <div ref={sentinelRef} aria-hidden="true" className="h-px" />
 
-      {/* Bilah pencarian ringkas saat panel utama di luar layar. */}
+      {/* Bilah pencarian ringkas saat form utama di luar layar. */}
       {stickyVisible && (
-        <div className="fixed inset-x-0 top-0 z-40 border-b border-[#dce3ed] bg-white/90 backdrop-blur-md motion-reduce:transition-none">
+        <div className="fixed inset-x-0 top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur-md motion-reduce:transition-none">
           <form
             action="/search"
             method="get"
@@ -320,17 +258,17 @@ export default function SearchView({
             className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-2.5 sm:px-6"
           >
             <div className="relative flex-1">
-              <MagnifyingGlass className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={query}
                 onChange={(e) => applyQuery(e.target.value)}
-                placeholder="Cari di situs ini…"
+                placeholder="Cari di situs ini..."
                 aria-label="Cari di situs ini (bilah ringkas)"
                 autoComplete="off"
                 spellCheck={false}
                 enterKeyHint="search"
-                className="w-full rounded-xl border border-[#dce3ed] bg-white py-2 pl-10 pr-9 text-sm text-slate-800 focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/15"
+                className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-9 text-sm text-slate-700 placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
               />
               {query !== "" && (
                 <button
@@ -343,16 +281,15 @@ export default function SearchView({
                 </button>
               )}
             </div>
-            <span className="hidden text-xs text-slate-400 sm:block" aria-live="polite">
+            <span className="hidden text-xs text-slate-500 sm:block" aria-live="polite">
               {status === "done" ? `${count} hasil` : ""}
             </span>
           </form>
         </div>
       )}
 
-      {/* ── KOTAK PENCARIAN UTAMA (full-width, di atas grid) ─────────────
-          Sengaja DI LUAR sidebar: input pencarian butuh lebar maksimal —
-          di dalam kolom 260px sisa ruang ketik hanya ±122px. */}
+      {/* Form GET = jalur tanpa JavaScript; dengan JS, submit dicegah lalu
+          pencarian langsung dijalankan (tanpa menunggu debounce). */}
       <form
         action="/search"
         method="get"
@@ -360,298 +297,238 @@ export default function SearchView({
           e.preventDefault();
           submitSearch();
         }}
-        className="rounded-3xl border border-[#dce3ed] bg-white p-5 shadow-sm sm:p-6"
+        className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
       >
-        <label htmlFor="site-search" className="block text-sm font-semibold text-[var(--brand-primary)]">
+        <label
+          htmlFor="site-search"
+          className="block text-sm font-semibold text-[var(--brand-primary)]"
+        >
           Cari di situs ini
         </label>
-        <div className="mt-2.5 flex flex-col gap-2 sm:flex-row">
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
           <div className="relative min-w-0 flex-1">
-            <MagnifyingGlass className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+            <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               id="site-search"
               name="q"
               type="text"
               value={query}
               onChange={(e) => applyQuery(e.target.value)}
-              placeholder="Misalnya: SPMB, lomba, Tapak Suci…"
+              placeholder="Misalnya: SPMB, lomba, Tapak Suci..."
               autoComplete="off"
               spellCheck={false}
               enterKeyHint="search"
-              className={inputClassName}
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm text-slate-700 placeholder:text-slate-400 transition-colors focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
             />
             {query !== "" && (
               <button
                 type="button"
                 onClick={() => applyQuery("")}
                 aria-label="Hapus kata kunci"
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
               >
                 <X className="h-4 w-4" />
               </button>
             )}
           </div>
-          {/* Submit native saat tanpa JS; dengan JS langsung jalan (tanpa debounce). */}
+          {/* Submit native saat tanpa JS; dengan JS langsung jalan. */}
           <button
             type="submit"
             disabled={status === "loading"}
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-[var(--brand-primary)] px-6 py-3.5 text-sm font-bold text-white transition-all hover:bg-[var(--brand-accent)] hover:shadow-lg hover:shadow-[var(--brand-primary)]/20 focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)] focus:ring-offset-2 disabled:opacity-50"
+            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)] focus:ring-offset-2 disabled:opacity-50"
           >
             <MagnifyingGlass className="h-4 w-4" />
-            <span className="hidden sm:inline">
-              {status === "loading" ? "Mencari…" : "Cari"}
-            </span>
-            <span className="sm:hidden">Cari</span>
+            {status === "loading" ? "Mencari..." : "Cari"}
           </button>
         </div>
         {/* Status sekaligus aria-live: perubahan jumlah hasil diumumkan pembaca layar. */}
-        <p role="status" aria-live="polite" className="mt-3 text-sm text-slate-500">
+        <p role="status" aria-live="polite" className="mt-2 text-sm font-medium text-slate-500">
           {statusText}
         </p>
       </form>
 
-      <div className="mt-6 lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start lg:gap-8">
-        {/* ── PANEL KIRI: filter & riwayat (sticky di desktop) ────────── */}
-        <aside className="lg:sticky lg:top-20">
-          {/* Filter vertikal — hanya desktop; mobile memakai chip di atas hasil. */}
-          {groups.length > 0 && (
-            <div
-              role="tablist"
-              aria-label="Saring hasil menurut jenis"
-              aria-orientation="vertical"
-              className="hidden flex-col gap-1.5 lg:flex"
-            >
-              <span className="mb-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                Saring
-              </span>
-              {filterButtons}
-            </div>
-          )}
-
-          {/* Riwayat pencarian — tampil kapan pun ada, agar bisa dipakai ulang. */}
-          {recent.length > 0 && (
-            <div className="mt-4 rounded-2xl border border-[#dce3ed] bg-white p-4">
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                  <Clock className="h-3.5 w-3.5" />
-                  Pencarian Terakhir
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setRecent(clearRecentSearches())}
-                  className="rounded-lg px-2 py-1 text-xs text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600"
-                >
-                  Hapus semua
-                </button>
-              </div>
-              <ul className="mt-2 flex flex-wrap gap-2">
-                {recent.map((term) => (
-                  <li key={term} className="group relative">
-                    <button
-                      type="button"
-                      onClick={() => applyQuery(term)}
-                      className="rounded-full border border-[#dce3ed] bg-white py-1.5 pl-3 pr-8 text-xs font-medium text-slate-600 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)]"
-                    >
-                      {term}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRecent(removeRecentSearch(term))}
-                      aria-label={`Hapus riwayat “${term}”`}
-                      className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-300 transition-colors hover:bg-slate-100 hover:text-slate-500"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Tautan cepat — selalu tersedia sebagai jalan pintas navigasi. */}
-          <div className="mt-4 flex flex-wrap gap-2">
-            {EMPTY_STATE_LINKS.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className="rounded-full border border-[#dce3ed] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--brand-primary)] transition-colors hover:border-[var(--brand-accent)]/40 hover:bg-slate-50"
-              >
-                {l.label}
-              </Link>
-            ))}
-          </div>
-        </aside>
-
-        {/* ── HASIL ───────────────────────────────────────────────────── */}
-        <div className="mt-8 min-w-0 lg:mt-0">
-          {/* Chip filter horizontal — hanya mobile. */}
-          {groups.length > 0 && (
-            <div
-              role="tablist"
-              aria-label="Saring hasil menurut jenis"
-              className="-mx-1 mb-6 flex gap-2 overflow-x-auto px-1 pb-1 lg:hidden"
-            >
+      {/* Riwayat pencarian — baris chip sederhana, bukan panel. */}
+      {recent.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <Clock className="h-3 w-3" />
+            Terakhir dicari
+          </span>
+          {recent.map((term) => (
+            <span key={term} className="group relative inline-flex">
               <button
                 type="button"
-                role="tab"
-                aria-selected={activeKind === "semua"}
+                onClick={() => applyQuery(term)}
+                className="rounded-lg border border-slate-200 bg-white py-1 pl-2.5 pr-7 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+              >
+                {term}
+              </button>
+              <button
+                type="button"
+                onClick={() => setRecent(removeRecentSearch(term))}
+                aria-label={`Hapus riwayat “${term}”`}
+                className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-slate-300 transition-colors hover:bg-slate-100 hover:text-slate-500"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+          <button
+            type="button"
+            onClick={() => setRecent(clearRecentSearches())}
+            className="text-xs font-semibold text-slate-400 underline-offset-2 transition-colors hover:text-[var(--brand-primary)] hover:underline"
+          >
+            Hapus semua
+          </button>
+        </div>
+      )}
+
+      <div className="mt-6">
+        {status === "idle" && (
+          <EmptyState
+            icon={MagnifyingGlass}
+            title="Ketik kata kunci untuk mulai mencari"
+            description="Pencarian menjangkau halaman situs, berita, artikel, kegiatan, prestasi, dan ekstrakurikuler sekaligus."
+          />
+        )}
+
+        {status === "done" && groups.length === 0 && (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-16 text-center shadow-sm">
+            <EmptyState
+              compact
+              icon={MagnifyingGlass}
+              title={`Tidak ada hasil untuk “${searchedQuery}”`}
+              description="Coba kata kunci lain atau periksa ejaan."
+            />
+            {suggestions.length > 0 && (
+              <div className="-mt-8 flex flex-wrap items-center justify-center gap-2">
+                <span className="text-xs text-slate-500">Mungkin maksud Anda:</span>
+                {suggestions.map((word) => (
+                  <button
+                    key={word}
+                    type="button"
+                    onClick={() => applyQuery(word)}
+                    className={`${CHIP_BASE} border-slate-200 bg-white text-[var(--brand-primary)] hover:bg-slate-50`}
+                  >
+                    {word}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+              {EMPTY_STATE_LINKS.map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className={`${CHIP_BASE} border-slate-200 bg-white text-[var(--brand-primary)] hover:bg-slate-50`}
+                >
+                  {l.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {status === "error" && (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-16 text-center shadow-sm">
+            <EmptyState
+              compact
+              icon={MagnifyingGlass}
+              title={`Pencarian gagal untuk “${searchedQuery}”`}
+              description={errorMessage}
+            />
+            <button
+              type="button"
+              onClick={submitSearch}
+              className="-mt-8 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent)]"
+            >
+              Coba lagi
+            </button>
+          </div>
+        )}
+
+        {groups.length > 0 && (
+          <div className="space-y-8">
+            {/* Filter jenis — chip gaya CategoryChips (kanonik situs). */}
+            <nav aria-label="Filter jenis" className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                aria-pressed={activeKind === "semua"}
                 onClick={() => setActiveKind("semua")}
-                className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
-                  activeKind === "semua"
-                    ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
-                    : "border-[#dce3ed] bg-white text-slate-600 hover:border-[var(--brand-accent)]/40"
-                }`}
+                className={`${CHIP_BASE} ${activeKind === "semua" ? CHIP_ON : CHIP_OFF}`}
               >
                 Semua ({count})
               </button>
-              {groups.map((group) => {
-                const active = activeKind === group.kind;
-                return (
-                  <button
-                    key={group.kind}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => setActiveKind(group.kind)}
-                    className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
-                      active
-                        ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
-                        : "border-[#dce3ed] bg-white text-slate-600 hover:border-[var(--brand-accent)]/40"
-                    }`}
-                  >
-                    {group.label} ({group.items.length})
-                  </button>
-                );
-              })}
-            </div>
-          )}
+              {groups.map((group) => (
+                <button
+                  key={group.kind}
+                  type="button"
+                  aria-pressed={activeKind === group.kind}
+                  onClick={() => setActiveKind(group.kind)}
+                  className={`${CHIP_BASE} ${activeKind === group.kind ? CHIP_ON : CHIP_OFF}`}
+                >
+                  {group.label} ({group.items.length})
+                </button>
+              ))}
+            </nav>
 
-          {status === "idle" && (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#dce3ed] bg-white px-6 py-14 text-center">
-              <MagnifyingGlass className="h-12 w-12 text-[var(--brand-primary)]/20" />
-              <p className="mt-4 text-sm text-slate-500">
-                Ketik kata kunci — misalnya nama kegiatan, judul berita, atau kata kunci prestasi.
-              </p>
-              <p className="mt-1 max-w-lg text-xs text-slate-400">
-                Pencarian menjangkau halaman situs, berita, artikel, kegiatan, prestasi, dan
-                ekstrakurikuler sekaligus. Riwayat pencarian Anda muncul di panel kiri.
-              </p>
-            </div>
-          )}
-
-          {status === "done" && groups.length === 0 && (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white px-6 py-14 text-center">
-              <FileText className="h-12 w-12 text-[var(--brand-primary)]/15" />
-              <p className="mt-4 text-base font-medium text-slate-600">
-                Tidak ada hasil untuk “{searchedQuery}”
-              </p>
-              <p className="mt-1 text-sm text-slate-400">Coba kata kunci lain atau periksa ejaan.</p>
-
-              {suggestions.length > 0 && (
-                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                  <span className="text-xs text-slate-400">Mungkin maksud Anda:</span>
-                  {suggestions.map((word) => (
-                    <button
-                      key={word}
-                      type="button"
-                      onClick={() => applyQuery(word)}
-                      className="rounded-full border border-[var(--brand-accent)]/30 bg-[var(--brand-accent)]/5 px-3 py-1.5 text-xs font-semibold text-[var(--brand-primary)] transition-colors hover:border-[var(--brand-accent)]/60 hover:bg-[var(--brand-accent)]/10"
-                    >
-                      {word}
-                    </button>
+            {/* Papan "Hasil teratas" — tab Semua, hasil cukup banyak & beragam. */}
+            {topItems.length > 0 && (
+              <section aria-labelledby="search-top-heading">
+                <h2
+                  id="search-top-heading"
+                  className="mb-3 text-lg font-bold text-[var(--brand-primary)]"
+                >
+                  Hasil teratas
+                </h2>
+                <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {topItems.map((item) => (
+                    <li key={`${item.kind}-${item.id}`}>
+                      <SearchResultCard item={item} query={searchedQuery} variant="featured" />
+                    </li>
                   ))}
-                </div>
-              )}
+                </ul>
+              </section>
+            )}
 
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                {EMPTY_STATE_LINKS.map((l) => (
-                  <Link
-                    key={l.href}
-                    href={l.href}
-                    className="rounded-full border border-[#dce3ed] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--brand-primary)] transition-colors hover:border-[var(--brand-accent)]/40 hover:bg-slate-50"
-                  >
-                    {l.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {status === "error" && (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-[#dce3ed] bg-white px-6 py-14 text-center">
-              <Warning className="h-12 w-12 text-amber-500/70" />
-              <p className="mt-4 text-base font-medium text-slate-600">
-                Pencarian gagal untuk “{searchedQuery}”
+            {orderedGroups.length === 0 && (
+              <p className="rounded-2xl border border-slate-200 bg-white px-6 py-8 text-center text-sm text-slate-500">
+                Tidak ada hasil pada jenis ini.
               </p>
-              <p className="mt-1 text-sm text-slate-400">{errorMessage}</p>
-              <button
-                type="button"
-                onClick={submitSearch}
-                className="mt-4 rounded-lg border border-[#dce3ed] bg-white px-4 py-2 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:border-[var(--brand-accent)]/40 hover:bg-slate-50"
-              >
-                Coba lagi
-              </button>
-            </div>
-          )}
+            )}
 
-          {groups.length > 0 && (
-            <div className="space-y-8">
-              {/* Papan "Paling relevan" — tab Semua, hasil cukup banyak & beragam. */}
-              {topItems.length > 0 && (
-                <section aria-labelledby="search-top-heading">
-                  <h2
-                    id="search-top-heading"
-                    className="mb-3 text-base font-bold text-[var(--brand-primary)]"
-                  >
-                    Hasil teratas
-                  </h2>
-                  <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {topItems.map((item) => (
-                      <li key={`${item.kind}-${item.id}`}>
-                        <SearchResultCard item={item} query={searchedQuery} variant="featured" />
+            {orderedGroups.map((group) => {
+              const { icon: Icon, chip } = KIND_META[group.kind];
+              return (
+                <section key={group.kind} aria-labelledby={`search-group-${group.kind}`}>
+                  <div className="mb-3 flex items-center gap-2">
+                    <span
+                      className={`flex h-6 w-6 items-center justify-center rounded-md border ${chip}`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                    <h2
+                      id={`search-group-${group.kind}`}
+                      className="text-sm font-bold uppercase tracking-wider text-slate-500"
+                    >
+                      {group.label}
+                    </h2>
+                    <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">
+                      {group.items.length}
+                    </span>
+                  </div>
+                  <ul className="space-y-3">
+                    {group.items.map((item) => (
+                      <li key={item.id}>
+                        <SearchResultCard item={item} query={searchedQuery} />
                       </li>
                     ))}
                   </ul>
                 </section>
-              )}
-
-              {orderedGroups.length === 0 && (
-                <p className="rounded-2xl border border-dashed border-[#dce3ed] bg-white px-6 py-8 text-center text-sm text-slate-400">
-                  Tidak ada hasil pada jenis ini.
-                </p>
-              )}
-
-              {orderedGroups.map((group) => {
-                const { icon: Icon, chip } = KIND_META[group.kind];
-                return (
-                  <section key={group.kind} aria-labelledby={`search-group-${group.kind}`}>
-                    <div className="mb-3 flex items-center gap-2">
-                      <span className={`flex h-8 w-8 items-center justify-center rounded-xl border ${chip}`}>
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <h2
-                        id={`search-group-${group.kind}`}
-                        className="text-base font-bold text-[var(--brand-primary)]"
-                      >
-                        {group.label}
-                      </h2>
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
-                        {group.items.length}
-                      </span>
-                    </div>
-                    <ul className="space-y-3">
-                      {group.items.map((item) => (
-                        <li key={item.id}>
-                          <SearchResultCard item={item} query={searchedQuery} />
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                );
-              })}
-            </div>
-          )}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </section>
   );

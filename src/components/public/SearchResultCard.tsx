@@ -23,13 +23,14 @@ function safeImageUrl(url: string | null | undefined): string | null {
 }
 
 /**
- * Satu kartu hasil pencarian — dipakai papan "Paling relevan" dan daftar per
- * grup di /search.
+ * Kartu hasil pencarian — memakai kelas kanonik `ContentCard` (foto 16:9 +
+ * `text-sm font-bold` judul + `text-xs` cuplikan + border `slate-200` +
+ * `rounded-2xl`) supaya /search tidak punya bahasa visual sendiri.
  *
- * - `featured`: foto sampul 16:9 di atas (pola kanonik ContentCard) + lencana
- *   jenis, dipakai papan 3 teratas.
- * - `default` : kartu horizontal — thumbnail persegi di kiri, teks di kanan,
- *   supaya daftar panjang tetap ringkas dan mudah dipindai.
+ * - `featured`: kartu grid 3 kolom (papan "Hasil teratas") dengan lencana
+ *   "Paling relevan" menempel di atas foto.
+ * - `default` : kartu horizontal ringkas (thumbnail 80/112px) — hasil
+ *   pencarian biasanya banyak, jadi baris padat lebih mudah dipindai.
  *
  * Tanpa foto (atau URL tak valid) → panel gradient + huruf awal judul, jadi
  * kartu tak pernah kosong/gepeng. Highlight judul/cuplikan memakai
@@ -51,16 +52,17 @@ export default function SearchResultCard({
   const featured = variant === "featured";
   const imageUrl = safeImageUrl(item.imageUrl);
 
+  /** Baris meta kanonik: badge prestasi (10px uppercase) + tanggal relatif. */
   const metaRow = (
-    <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+    <span className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
       {item.meta && (
-        <span className="rounded-full bg-amber-50 px-2 py-0.5 font-semibold text-amber-700">
+        <span className="rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-amber-700">
           {item.meta}
         </span>
       )}
       {relative && (
-        <span className="flex items-center gap-1.5" title={absolute}>
-          <Clock className="h-3.5 w-3.5" />
+        <span className="flex items-center gap-1 normal-case tracking-normal" title={absolute}>
+          <Clock className="h-3 w-3" />
           {relative}
         </span>
       )}
@@ -73,18 +75,18 @@ export default function SearchResultCard({
    * foto jadi tak terbaca. Ikon tetap berwarna per jenis lewat `iconColor`.
    */
   const featuredBadge = (
-    <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#dce3ed] bg-white/95 px-2.5 py-1 text-[11px] font-bold text-slate-800 shadow-sm backdrop-blur-sm">
+    <span className="flex shrink-0 items-center gap-1 rounded-md border border-slate-200 bg-white/95 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-700 shadow-sm backdrop-blur-sm">
       <Icon className={`h-3 w-3 ${iconColor}`} />
       Paling relevan
     </span>
   );
 
-  /* ── FEATURED: foto 16:9 di atas ─────────────────────────────────── */
+  /* ── FEATURED: foto 16:9 di atas (grid 3 kolom) ──────────────────── */
   if (featured) {
     return (
       <Link
         href={item.href}
-        className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:border-[var(--brand-accent)]/40 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+        className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
       >
         <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
           {imageUrl ? (
@@ -93,26 +95,26 @@ export default function SearchResultCard({
               alt={item.title}
               width={640}
               height={360}
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 30vw"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-accent)]">
-              <span className="text-4xl font-black text-white/20">{item.title[0]}</span>
+              <span className="text-3xl font-bold text-white/20">{item.title[0]}</span>
             </div>
           )}
-          <span className="absolute left-3 top-3">{featuredBadge}</span>
+          <span className="absolute left-2 top-2">{featuredBadge}</span>
         </div>
         <div className="flex flex-1 flex-col p-4">
-          <span className="block text-[15px] font-bold leading-snug text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)]">
+          <h3 className="text-sm font-bold text-[var(--brand-primary)] line-clamp-2 transition-colors group-hover:text-[var(--brand-accent)]">
             <Highlight text={item.title} query={query} />
-          </span>
+          </h3>
           {item.excerpt && (
-            <span className="mt-1.5 line-clamp-2 text-sm text-slate-500">
+            <p className="mt-1.5 text-xs text-slate-600 line-clamp-2">
               <Highlight text={item.excerpt} query={query} />
-            </span>
+            </p>
           )}
-          <span className="mt-auto pt-3">{metaRow}</span>
+          <div className="mt-auto pt-2.5">{metaRow}</div>
         </div>
       </Link>
     );
@@ -122,9 +124,9 @@ export default function SearchResultCard({
   return (
     <Link
       href={item.href}
-      className="group flex gap-3 overflow-hidden rounded-2xl border border-[#dce3ed] bg-white p-3 transition-all hover:border-[var(--brand-accent)]/40 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] sm:gap-4 sm:p-4"
+      className="group flex gap-3 rounded-2xl border border-slate-200 bg-white p-3 transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] sm:gap-4"
     >
-      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:h-24 sm:w-28">
+      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-slate-100 sm:h-24 sm:w-28">
         {imageUrl ? (
           <Image
             src={imageUrl}
@@ -136,28 +138,26 @@ export default function SearchResultCard({
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-accent)]">
-            <span className="text-xl font-black text-white/25 sm:text-2xl">{item.title[0]}</span>
+            <span className="text-xl font-bold text-white/25">{item.title[0]}</span>
           </div>
         )}
       </div>
       <div className="flex min-w-0 flex-1 flex-col justify-center">
-        <span className="mb-1 flex items-center gap-1.5">
-          <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${chip}`}>
-            <Icon className="h-2.5 w-2.5" />
-          </span>
-          <span className="truncate text-[10px] font-bold uppercase tracking-wide text-slate-400">
-            {KIND_LABEL[item.kind]}
-          </span>
+        <span
+          className={`mb-1 inline-flex w-fit items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${chip}`}
+        >
+          <Icon className="h-2.5 w-2.5" />
+          {KIND_LABEL[item.kind]}
         </span>
-        <span className="block text-[15px] font-semibold leading-snug text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)]">
+        <h3 className="text-sm font-bold text-[var(--brand-primary)] line-clamp-2 transition-colors group-hover:text-[var(--brand-accent)]">
           <Highlight text={item.title} query={query} />
-        </span>
+        </h3>
         {item.excerpt && (
-          <span className="mt-1 line-clamp-2 text-sm text-slate-500">
+          <p className="mt-1 text-xs text-slate-600 line-clamp-2">
             <Highlight text={item.excerpt} query={query} />
-          </span>
+          </p>
         )}
-        <span className="mt-2">{metaRow}</span>
+        <div className="mt-2">{metaRow}</div>
       </div>
     </Link>
   );
