@@ -95,6 +95,16 @@ Berguna saat lupa logout di komputer bersama sekolah.
 
 ---
 
+## Tindakan pemilik (reminder)
+
+- [ ] **Reset password database Supabase** — password pernah tampil di
+      percakapan. Supabase → Project Settings → Database → Reset database
+      password, lalu perbarui secret GitHub `DATABASE_URL`
+      (Settings → Secrets and variables → Actions).
+- [ ] **Daftarkan uptime monitor** — `https://www.smpmuh4tanggul.sch.id/api/health`
+      ke UptimeRobot (gratis, cek 5 menit sekali): dapat email saat situs/DB
+      mati, bukan tahu dari orang lain.
+
 ## Catatan urutan pengerjaan
 
 1 → 2 → 3 → 4 → 5. Item 1 dan 2 saling melengkapi (backup tanpa monitoring
