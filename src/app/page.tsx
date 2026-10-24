@@ -7,7 +7,7 @@ import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeach
 import { detectPrincipalGreeting, keepTogether } from "@/lib/principal-quote";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
-import EkskulCard from "@/components/EkskulCard";
+// EkskulCard tidak dipakai di beranda — diganti EkskulCarousel (carousel portrait 9:16)
 import HeroBackground from "./HeroBackground";
 import HeroVideoModal from "./HeroVideoModal";
 import {
@@ -27,6 +27,7 @@ const WhatsAppButton = dynamic(() => import("./WhatsAppButton"));
 // HeroBackground & HeroVideoModal diimpor statis untuk LCP optimal di layar pertama.
 // Video dimuat lazy saat mendekati viewport dengan fallback poster image statis di mobile.
 const TeacherCarousel = dynamic(() => import("./TeacherCarousel"), { loading: () => <div className="h-64 rounded-2xl bg-slate-100" /> });
+const EkskulCarousel = dynamic(() => import("./EkskulCarousel"), { loading: () => <div className="h-[420px] rounded-2xl bg-slate-100" /> });
 const CountdownEvent = dynamic(() => import("@/components/CountdownEvent"));
 
 /**
@@ -865,21 +866,29 @@ export default async function Home() {
       {/* ── EKSTRAKURIKULER ─────────────────────────────── */}
       {ekskulList.length > 0 && (
         <section className="bg-[#f4f7fb]" style={CV}>
-          <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
+          <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
             <CSSFadeIn>
-              <div className="mb-12 flex items-end justify-between">
-                <h2 className="text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Ekstrakurikuler</h2>
-                <Link href="/profile#ekstrakurikuler" className="text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)]">
-                  Lihat semua <ArrowUpRight className="inline h-4 w-4" />
-                </Link>
+              <div className="mb-12 text-center">
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Kegiatan Siswa</p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Ekstrakurikuler</h2>
+                <p className="mt-3 text-sm text-slate-500">
+                  Wadah pengembangan bakat dan potensi siswa di luar kegiatan akademik.
+                </p>
               </div>
             </CSSFadeIn>
 
-            <CSSStagger className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
-              {ekskulList.map((item) => (
-                <EkskulCard key={item.id} item={item} />
-              ))}
-            </CSSStagger>
+            <CSSFadeIn delay={0.05}>
+              <EkskulCarousel ekskuls={ekskulList} />
+            </CSSFadeIn>
+
+            <div className="mt-8 flex justify-center">
+              <Link
+                href="/profile#ekstrakurikuler"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--brand-primary)]/20 bg-white px-5 py-2.5 text-sm font-semibold text-[var(--brand-primary)] shadow-sm transition-all hover:border-[var(--brand-accent)]/40 hover:bg-[var(--brand-primary)] hover:text-white hover:shadow-md"
+              >
+                Lihat semua ekstrakurikuler <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
         </section>
       )}

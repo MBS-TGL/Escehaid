@@ -951,8 +951,8 @@ export default function AdminEkskulPage() {
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-3">
                         {item.image_url ? (
-                          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-slate-100">
-                            <Image src={item.image_url} alt={item.image_alt || item.name} fill sizes="40px" className="object-cover" />
+                        <div className="relative h-12 w-9 shrink-0 overflow-hidden rounded-lg bg-slate-100">
+                            <Image src={item.image_url} alt={item.image_alt || item.name} fill sizes="36px" className="object-cover object-top" />
                           </div>
                         ) : (
                           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#e4ecf6] text-[var(--brand-primary)]">
@@ -1317,17 +1317,23 @@ export default function AdminEkskulPage() {
           </div>
           <div>
             <span className="mb-1.5 block text-sm font-semibold text-slate-700">Gambar</span>
-            <div className="flex items-center gap-3">
-              <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+            {/* Hint format portrait */}
+            <p className="mb-2.5 text-xs text-slate-500">
+              Gunakan foto <span className="font-semibold text-[var(--brand-accent)]">portrait (9:16)</span> — 1–2 orang sedang memperagakan kegiatan ekskul. Foto akan tampil di carousel beranda &amp; halaman detail.
+            </p>
+            <div className="flex items-start gap-4">
+              {/* Preview portrait 9:16 */}
+              <div className="relative h-32 w-[72px] shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
                 {formImageUrl ? (
-                  <Image src={formImageUrl} alt="Preview" fill sizes="80px" className="object-cover" unoptimized />
+                  <Image src={formImageUrl} alt="Preview" fill sizes="72px" className="object-cover object-top" unoptimized />
                 ) : (
-                  <span className="flex h-full w-full items-center justify-center">
+                  <span className="flex h-full w-full flex-col items-center justify-center gap-1">
                     <ImageSquare className="h-6 w-6 text-slate-300" />
+                    <span className="text-[9px] font-medium text-slate-300">9:16</span>
                   </span>
                 )}
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
