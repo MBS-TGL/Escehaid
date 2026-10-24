@@ -26,6 +26,8 @@ export interface SearchItem {
    * prestasi). null/absen → tidak ditampilkan.
    */
   meta?: string | null;
+  /** URL foto sampul; null/absen → kartu memakai fallback gradient. */
+  imageUrl?: string | null;
 }
 
 export interface SearchGroup {
@@ -151,6 +153,7 @@ export async function searchAllContent(query: string): Promise<SearchItem[]> {
         href: `/news/${n.slug}`,
         date: n.published_at || n.created_at,
         excerpt: n.summary || null,
+        imageUrl: n.image_url || null,
       })
     ),
     ...articles.map((a) =>
@@ -161,6 +164,7 @@ export async function searchAllContent(query: string): Promise<SearchItem[]> {
         href: `/articles/${a.slug}`,
         date: a.published_at || a.created_at,
         excerpt: a.excerpt || null,
+        imageUrl: a.image_url || null,
       })
     ),
     ...activities.map((a) =>
@@ -171,6 +175,7 @@ export async function searchAllContent(query: string): Promise<SearchItem[]> {
         href: `/activities/${a.slug}`,
         date: a.activity_date || a.created_at,
         excerpt: a.description || null,
+        imageUrl: a.image_url || null,
       })
     ),
     ...achievements.slice(0, MAX_PER_KIND).map((a) =>
@@ -184,6 +189,7 @@ export async function searchAllContent(query: string): Promise<SearchItem[]> {
         excerpt: a.description || null,
         // "Juara 1 · 2025" — hanya bagian yang tersedia.
         meta: [a.rank_label, a.year ? String(a.year) : null].filter(Boolean).join(" · ") || null,
+        imageUrl: a.image_url || null,
       })
     ),
     ...ekskuls.map((e) =>
@@ -195,6 +201,7 @@ export async function searchAllContent(query: string): Promise<SearchItem[]> {
         // Ekskul tak punya tanggal relevan — null agar tampilan menyembunyikannya.
         date: null,
         excerpt: e.description || null,
+        imageUrl: e.image_url || null,
       })
     ),
   ];

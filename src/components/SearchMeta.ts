@@ -16,6 +16,19 @@ export const KIND_META: Record<SearchKind, { icon: typeof Newspaper; chip: strin
 };
 
 /**
+ * Label jenis konten yang bisa dibaca manusia — dipakai lencana kecil pada
+ * kartu hasil (KIND_META hanya menyimpan ikon + warna).
+ */
+export const KIND_LABEL: Record<SearchKind, string> = {
+  halaman: "Halaman",
+  berita: "Berita",
+  artikel: "Artikel",
+  kegiatan: "Kegiatan",
+  prestasi: "Prestasi",
+  ekskul: "Ekstrakurikuler",
+};
+
+/**
  * Tautan cepat pada halaman kosong (tidak ada hasil) — sumber bersama agar
  * overlay dan halaman /search menawarkan tujuan yang sama tanpa mengetik ulang.
  */

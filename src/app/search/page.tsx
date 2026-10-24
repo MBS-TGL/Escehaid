@@ -33,6 +33,7 @@ export default async function SearchPage({
         title="Pencarian"
         description="Satu kotak untuk mencari halaman situs, berita, artikel, kegiatan, prestasi, dan ekstrakurikuler."
         icon={MagnifyingGlass}
+        breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Pencarian" }]}
       />
 
       <SearchView initialQuery={initialQuery} initialGroups={initialGroups} initialCount={initialCount} />
