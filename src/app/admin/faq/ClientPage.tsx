@@ -43,8 +43,8 @@ type FilterTab = "all" | "active" | "inactive";
 const PAGE_SIZE = 10;
 
 const SCOPE_META: Record<FaqScope, { label: string; hint: string }> = {
-  home: { label: "Beranda", hint: "section FAQ beranda (+ JSON-LD FAQPage)" },
-  spmb: { label: "SPMB", hint: "FAQ halaman /admission (+ JSON-LD FAQPage)" },
+  home: { label: "Beranda", hint: "tampil di bagian akhir halaman depan website" },
+  spmb: { label: "SPMB", hint: "tampil di halaman Pendaftaran (SPMB)" },
 };
 
 interface FormState {
@@ -226,7 +226,7 @@ export default function FaqClientPage() {
           <div>
             <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">FAQ</h1>
             <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">
-              Kelola FAQ {SCOPE_META[scope].label} — {SCOPE_META[scope].hint}
+              Kelola pertanyaan yang sering diajukan — FAQ yang {SCOPE_META[scope].hint}
             </p>
           </div>
         </div>
@@ -498,7 +498,7 @@ export default function FaqClientPage() {
         open={formOpen}
         onClose={() => setFormOpen(false)}
         title={editItem ? "Edit FAQ" : "Tambah FAQ"}
-        description={`Lokasi: ${SCOPE_META[scope].label} — ${SCOPE_META[scope].hint}`}
+        description={`FAQ ini akan ${SCOPE_META[scope].hint}`}
         footer={
           <div className="flex justify-end gap-2">
             <button
