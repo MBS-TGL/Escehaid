@@ -75,12 +75,13 @@ export async function generateMetadata(): Promise<Metadata> {
       locale: "id_ID",
       // og:title mengikuti judul halaman (fallback Next.js) → ikut schoolName.
       siteName: schoolName ?? undefined,
-      // `url` SENGAJA tidak diisi di sini. Metadata Next.js di-merge dangkal:
-      // nilai di layout menimpa SEMUA halaman, sehingga dulu setiap halaman
-      // melaporkan og:url = beranda (bug terverifikasi: /news, /contact,
-      // /profile, /search semuanya og:url = "/"). Tanpa `url` di sini, Next
-      // mengisi og:url dari `alternates.canonical` masing-masing halaman —
-      // semua halaman publik sudah punya canonical.
+      // `url` = DEFAULT beranda. Metadata Next.js di-merge dangkal, jadi nilai
+      // di sini menimpa SEMUA halaman yang tidak mengisi openGraph sendiri —
+      // dulu inilah bug og:url = beranda di /news, /contact, /search, dst.
+      // Kini setiap halaman publik mengisi openGraph lewat `pageOpenGraph`
+      // (src/lib/seo.ts) sehingga `url` di sini hanya berlaku untuk "/".
+      // JANGAN menambah halaman baru tanpa openGraph: ia akan mewarisi "/".
+      url: "/",
       images: [
         {
           url: ogImage,
