@@ -1,7 +1,7 @@
 import { supabase } from "../supabase";
 import type { Activity } from "../supabase";
 import { tryCompressImage } from "../compress-image";
-import { cleanupOldFiles, deleteStorageFileByUrl, sanitizeSearchTerm } from "./shared";
+import { buildSearchOr, cleanupOldFiles, deleteStorageFileByUrl, tokenizeSearch } from "./shared";
 import { uploadFileViaRoute } from "../storage-remote";
 
 export interface ActivityListOptions {
@@ -102,7 +102,7 @@ export async function getActivityList(
   search?: string,
   opts?: ActivityListOptions
 ): Promise<Activity[]> {
-  const term = sanitizeSearchTerm(search ?? "");
+  const orFilter = buildSearchOr(tokenizeSearch(search ?? ""), ["title", "description", "content"]);
   const run = async (select: string) => {
     let query = supabase
       .from("activities")
@@ -110,7 +110,7 @@ export async function getActivityList(
       .eq("is_published", true)
       .order("activity_date", { ascending: false });
 
-    if (term) query = query.or(`title.ilike.%${term}%,description.ilike.%${term}%,content.ilike.%${term}%`);
+    if (orFilter) query = query.or(orFilter);
     if (opts?.type) query = query.eq("activity_type", opts.type);
     if (opts?.pageSize) {
       const from = Math.max(0, opts.offset ?? 0);

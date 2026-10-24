@@ -1,7 +1,7 @@
 import { supabase } from "../supabase";
 import type { Achievement } from "../supabase";
 import { tryCompressImage } from "../compress-image";
-import { deleteStorageFileByUrl, sanitizeSearchTerm, storagePathFromUrl, tableHasColumn } from "./shared";
+import { buildSearchOr, deleteStorageFileByUrl, storagePathFromUrl, tableHasColumn, tokenizeSearch } from "./shared";
 import { uploadFileViaRoute } from "../storage-remote";
 
 /** Probe kolom `video_url` (migrasi supabase/content_video.sql) — memoized. */
@@ -22,7 +22,7 @@ export async function getAchievementList(
   search?: string,
   opts?: { featuredFirst?: boolean; limit?: number }
 ): Promise<Achievement[]> {
-  const term = sanitizeSearchTerm(search ?? "");
+  const orFilter = buildSearchOr(tokenizeSearch(search ?? ""), ["title", "description"]);
   const hasVideo = await achievementsHasVideoColumn();
   const columns =
     "id, title, description, category, year, image_url, sort_order, created_at, rank_label, level, participants, organizer, is_featured, image_alt" +
@@ -38,7 +38,7 @@ export async function getAchievementList(
     query = query.order("sort_order", { ascending: true });
   }
 
-  if (term) query = query.or(`title.ilike.%${term}%,description.ilike.%${term}%`);
+  if (orFilter) query = query.or(orFilter);
   if (opts?.limit) query = query.limit(opts.limit);
 
   const { data, error } = await query;

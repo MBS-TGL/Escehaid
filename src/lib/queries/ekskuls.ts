@@ -1,7 +1,7 @@
 import { supabase } from "../supabase";
 import type { Ekskul } from "../supabase";
 import { tryCompressImage } from "../compress-image";
-import { deleteStorageFileByUrl, sanitizeSearchTerm, storagePathFromUrl, tableHasColumn } from "./shared";
+import { buildSearchOr, deleteStorageFileByUrl, storagePathFromUrl, tableHasColumn, tokenizeSearch } from "./shared";
 import { removeViaRoute, listViaRoute, uploadFileViaRoute } from "../storage-remote";
 
 /**
@@ -31,7 +31,6 @@ function friendlyError(error: { message?: string; code?: string } | null | undef
  * otomatis tidak dirender).
  */
 export async function getEkskulList(limit?: number, search?: string): Promise<Ekskul[]> {
-  const term = sanitizeSearchTerm(search ?? "");
   let query = supabase
     .from("ekskuls")
     .select(
@@ -40,8 +39,10 @@ export async function getEkskulList(limit?: number, search?: string): Promise<Ek
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
 
-  // Pencarian menyeluruh (?q=): nama ATAU deskripsi.
-  if (term) query = query.or(`name.ilike.%${term}%,description.ilike.%${term}%`);
+  // Pencarian menyeluruh (?q=): nama ATAU deskripsi — multi-token
+  // (item menangkap SALAH SATU token).
+  const orFilter = buildSearchOr(tokenizeSearch(search ?? ""), ["name", "description"]);
+  if (orFilter) query = query.or(orFilter);
 
   if (limit) query = query.limit(limit);
 

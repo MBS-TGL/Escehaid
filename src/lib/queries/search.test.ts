@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { groupSearchResults, searchStaticPages, type SearchItem } from "./search";
-import { sanitizeSearchTerm } from "./shared";
+import { groupSearchResults, scoreSearchItem, searchStaticPages, type SearchItem } from "./search";
+import { buildSearchOr, sanitizeSearchTerm, tokenizeSearch } from "./shared";
 
-const item = (over: Partial<SearchItem> & Pick<SearchItem, "id" | "kind" | "title">): SearchItem => ({
+const item = (
+  over: Partial<SearchItem> & Pick<SearchItem, "id" | "kind" | "title">
+): SearchItem => ({
   href: "/contoh",
   date: null,
   excerpt: null,
@@ -57,6 +59,66 @@ describe("groupSearchResults", () => {
     expect(groups[0].items.map((i) => i.id)).toEqual(["b2", "b1"]);
     // Ekskul tanpa tanggal tetap tampil dengan label Ekstrakurikuler.
     expect(groups[1].items[0].title).toBe("Tapak Suci");
+  });
+
+  it("mengurutkan kesesuaian skor dulu — item skor tinggi menang lalu tanggal", () => {
+    const groups = groupSearchResults([
+      item({ id: "b1", kind: "berita", title: "ddd", date: "2025-12-31", score: 0.5 }),
+      item({ id: "b2", kind: "berita", title: "ccc", date: "2024-01-01", score: 1.5 }),
+      item({ id: "b3", kind: "berita", title: "bbb", date: "2020-01-01" }),
+    ]);
+
+    // b2 (skor tertinggi) → b1 (skor sama w/ b3 tapi tanggal baru) → b3
+    expect(groups[0].items.map((i) => i.id)).toEqual(["b2", "b1", "b3"]);
+  });
+});
+
+describe("scoreSearchItem", () => {
+  it("skor rendah bila token hanya mengenai cuplikan, tinggi bila judul", () => {
+    const tokens = ["ustadzah", "tahfidz"];
+    const excerptOnly = item({ id: "1", kind: "berita", title: "Judul Bebas", excerpt: "ustadzah mengajar tahfidz" });
+    const titleOnly = item({ id: "2", kind: "berita", title: "ustadzah tahfidz" });
+
+    const scoreA = scoreSearchItem(excerptOnly, tokens);
+    const scoreB = scoreSearchItem(titleOnly, tokens);
+    // Cuplikan: 2/2 token + 0 bonus; judul: 2/2 token + bonus 0.5 → judul menang.
+    expect(scoreA).toBeCloseTo(1);
+    expect(scoreB).toBeCloseTo(1.5);
+    expect(scoreB).toBeGreaterThan(scoreA);
+  });
+
+  it("token hafal tetap menyumbang bonus bila judul mengandungnya", () => {
+    const tokens = ["spmb", "khayal"];
+    const oneHit = item({ id: "1", kind: "berita", title: "jadwal spmb" });
+    // 1/2 token kena + 0,5 × 1/2 bonus judul = 0,75
+    expect(scoreSearchItem(oneHit, tokens)).toBeCloseTo(0.75);
+  });
+});
+
+describe("tokenizeSearch", () => {
+  it("memecah multi-token, membuang duplikat, maks 4 token", () => {
+    expect(tokenizeSearch("ustadzah  tahfidz spmb")).toEqual(["ustadzah", "tahfidz", "spmb"]);
+    expect(tokenizeSearch("a a b c d e")).toEqual(["a", "b", "c", "d"]);
+  });
+
+  it("menjalankan sanitasi PostgREST + batas 40 karakter per token", () => {
+    expect(tokenizeSearch("a,b(c)%")).toEqual(["a", "b", "c"]);
+    const long = "x".repeat(50);
+    expect(tokenizeSearch(`${long} y`)[0]).toHaveLength(40);
+  });
+});
+
+describe("buildSearchOr", () => {
+  it("menyilang token × kolom — OR di semua klausa", () => {
+    expect(buildSearchOr(["ustadzah"], ["title", "content"])).toBe(
+      "title.ilike.%ustadzah%,content.ilike.%ustadzah%"
+    );
+    expect(buildSearchOr(["a", "b"], ["title"])).toBe("title.ilike.%a%,title.ilike.%b%");
+  });
+
+  it("tanpa token / tanpa kolom → kosong (pemanggil dilarang kirim .or(\"\"))", () => {
+    expect(buildSearchOr([], ["title"])).toBe("");
+    expect(buildSearchOr(["a"], [])).toBe("");
   });
 });
 

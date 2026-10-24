@@ -1,7 +1,7 @@
 import { supabase } from "../supabase";
 import type { News } from "../supabase";
 import { cleanupNewsAttachments, cleanupNewsImageFolder } from "./news-media";
-import { deleteStorageFileByUrl, generateUniqueNewsSlug, sanitizeSearchTerm, slugify, tableHasColumn } from "./shared";
+import { buildSearchOr, deleteStorageFileByUrl, generateUniqueNewsSlug, slugify, tableHasColumn, tokenizeSearch } from "./shared";
 
 export interface NewsWithAuthor extends News {
   author_name?: string | null;
@@ -114,11 +114,11 @@ async function queryNewsPage(
   }
   query = query.order("published_at", { ascending: false, nullsFirst: false });
 
-  // Pencarian halaman daftar (?q=): judul, ringkasan, ATAU isi — istilah
-  // dinormalisasi agar aman untuk sintaks `.or()` (sama dengan /search).
-  const term = sanitizeSearchTerm(search ?? "");
-  if (term) {
-    query = query.or(`title.ilike.%${term}%,summary.ilike.%${term}%,content.ilike.%${term}%`);
+  // Pencarian halaman daftar (?q=): judul, ringkasan, ATAU isi — multi-token,
+  // item menangkap SALAH SATU token (aman `.or()`, sama dengan /search).
+  const orFilter = buildSearchOr(tokenizeSearch(search ?? ""), ["title", "summary", "content"]);
+  if (orFilter) {
+    query = query.or(orFilter);
   }
   if (category) {
     query = query.eq("category", category);
@@ -192,10 +192,11 @@ export async function getNewsList(limit?: number, search?: string): Promise<News
   }
   query = query.order("published_at", { ascending: false, nullsFirst: false });
 
-  // Pencarian menyeluruh (?q= / pencarian gabungan): judul, ringkasan, ATAU isi.
-  const term = sanitizeSearchTerm(search ?? "");
-  if (term) {
-    query = query.or(`title.ilike.%${term}%,summary.ilike.%${term}%,content.ilike.%${term}%`);
+  // Pencarian menyeluruh (?q= / pencarian gabungan): judul, ringkasan, ATAU isi
+  // — multi-token (item menangkap SALAH SATU token).
+  const orFilter = buildSearchOr(tokenizeSearch(search ?? ""), ["title", "summary", "content"]);
+  if (orFilter) {
+    query = query.or(orFilter);
   }
 
   if (limit) {

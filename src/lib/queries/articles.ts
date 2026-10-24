@@ -2,7 +2,7 @@ import { supabase } from "../supabase";
 import type { Article } from "../supabase";
 import { tryCompressImage } from "../compress-image";
 import { FilterMethods, newsNowIso } from "./news";
-import { cleanupOldFiles, deleteStorageFileByUrl, generateUniqueArticleSlug, sanitizeSearchTerm, slugify, tableHasColumn } from "./shared";
+import { buildSearchOr, cleanupOldFiles, deleteStorageFileByUrl, generateUniqueArticleSlug, slugify, tableHasColumn, tokenizeSearch } from "./shared";
 import { uploadFileViaRoute } from "../storage-remote";
 
 export interface ArticleWithAuthor extends Article {
@@ -88,14 +88,14 @@ export async function getArticleList(limit?: number, search?: string): Promise<A
     articlesHasScheduledColumns(),
     articlesHasVideoColumn(),
   ]);
-  const term = sanitizeSearchTerm(search ?? "");
+  const orFilter = buildSearchOr(tokenizeSearch(search ?? ""), ["title", "excerpt", "content"]);
   const listColumns = `${ARTICLE_LIST_COLUMNS}${hasVideo ? ", video_url" : ""}`;
   const run = async (columns: string) => {
     let query = supabase
       .from("articles")
       .select(columns);
     query = applyPublicArticleFilters(query, newCols);
-    if (term) query = query.or(`title.ilike.%${term}%,excerpt.ilike.%${term}%,content.ilike.%${term}%`);
+    if (orFilter) query = query.or(orFilter);
     // Disematkan dulu, lalu terbaru (kolom is_pinned hanya bila sudah ada)
     if (newCols) query = query.order("is_pinned", { ascending: false });
     query = query.order("published_at", { ascending: false, nullsFirst: false });
@@ -159,7 +159,7 @@ async function queryArticlePage(
 ) {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
-  const term = sanitizeSearchTerm(search ?? "");
+  const orFilter = buildSearchOr(tokenizeSearch(search ?? ""), ["title", "excerpt", "content"]);
 
   let query = supabase
     .from("articles")
@@ -173,8 +173,8 @@ async function queryArticlePage(
   }
   query = query.order("published_at", { ascending: false, nullsFirst: false });
 
-  if (term) {
-    query = query.or(`title.ilike.%${term}%,excerpt.ilike.%${term}%,content.ilike.%${term}%`);
+  if (orFilter) {
+    query = query.or(orFilter);
   }
   if (category) {
     query = query.eq("category", category);

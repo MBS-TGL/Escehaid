@@ -161,3 +161,34 @@ export function sanitizeSearchTerm(raw: string): string {
     .trim()
     .slice(0, 80);
 }
+
+/**
+ * Tokenisasi multi-token: istilah dipecah per kata (maks 4 token) agar query
+ * "ustadzah tahfidz" menangkap item yang memuat SALAH SATU kata — bukan hanya
+ * kombinasi persisnya. Tiap token ≤ 40 karakter dan sudah lolos
+ * `sanitizeSearchTerm` (aman untuk sintaks `.or()` PostgREST). Idempoten.
+ */
+export function tokenizeSearch(raw: string): string[] {
+  const tokens: string[] = [];
+  const seen = new Set<string>();
+  for (const word of sanitizeSearchTerm(raw).split(" ")) {
+    const token = word.slice(0, 40);
+    if (!token || seen.has(token)) continue;
+    seen.add(token);
+    tokens.push(token);
+    if (tokens.length >= 4) break;
+  }
+  return tokens;
+}
+
+/**
+ * Sintaks `.or()` gabungan token × kolom: item dianggap cocok bila SALAH SATU
+ * token mengenai SALAH SATU kolom. String kosong bila tak ada token/kolom —
+ * pemanggil dilarang mengirim `.or("")`. Aman karena token deniedinasi lewat
+ * `sanitizeSearchTerm`.
+ */
+export function buildSearchOr(tokens: string[], columns: string[]): string {
+  return tokens
+    .flatMap((token) => columns.map((column) => `${column}.ilike.%${token}%`))
+    .join(",");
+}
