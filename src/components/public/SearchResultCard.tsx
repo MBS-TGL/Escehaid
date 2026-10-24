@@ -40,11 +40,14 @@ export default function SearchResultCard({
   item,
   query,
   variant = "default",
+  priority = false,
 }: {
   item: SearchItem;
   query: string;
   /** "featured" = kartu papan atas (foto besar). */
   variant?: "default" | "featured";
+  /** true → gambar di-preload (LCP). Hanya untuk kartu pertama di viewport. */
+  priority?: boolean;
 }) {
   const { icon: Icon, chip, iconColor } = KIND_META[item.kind];
   const relative = formatRelativeDate(item.date);
@@ -96,6 +99,7 @@ export default function SearchResultCard({
               width={640}
               height={360}
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              priority={priority}
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (

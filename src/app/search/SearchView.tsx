@@ -487,9 +487,15 @@ export default function SearchView({
                   Hasil teratas
                 </h2>
                 <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  {topItems.map((item) => (
+                  {topItems.map((item, idx) => (
                     <li key={`${item.kind}-${item.id}`}>
-                      <SearchResultCard item={item} query={searchedQuery} variant="featured" />
+                      {/* Kartu pertama = elemen LCP → preload gambarnya. */}
+                      <SearchResultCard
+                        item={item}
+                        query={searchedQuery}
+                        variant="featured"
+                        priority={idx === 0}
+                      />
                     </li>
                   ))}
                 </ul>
