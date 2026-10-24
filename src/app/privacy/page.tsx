@@ -3,21 +3,24 @@ import { ShieldCheck } from "@/components/Icons";
 import LegalArticle, { type LegalSection } from "@/components/LegalArticle";
 import { Callout } from "@/components/LegalParts";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
-import { pageOpenGraph } from "@/lib/seo";
+import { ogImageOverride, pageOpenGraph } from "@/lib/seo";
 
 const DESCRIPTION =
   "Bagaimana SMP Muhammadiyah 4 Tanggul mengumpulkan, menggunakan, dan melindungi data pengunjung serta pendaftar SPMB.";
 
-export const metadata: Metadata = {
-  title: "Kebijakan Privasi",
-  description: DESCRIPTION,
-  alternates: { canonical: "/privacy" },
-  openGraph: pageOpenGraph({
+export async function generateMetadata(): Promise<Metadata> {
+  return {
     title: "Kebijakan Privasi",
     description: DESCRIPTION,
-    url: "/privacy",
-  }),
-};
+    alternates: { canonical: "/privacy" },
+    openGraph: pageOpenGraph({
+      title: "Kebijakan Privasi",
+      description: DESCRIPTION,
+      url: "/privacy",
+      image: await ogImageOverride(),
+    }),
+  };
+}
 
 export const revalidate = 86400;
 

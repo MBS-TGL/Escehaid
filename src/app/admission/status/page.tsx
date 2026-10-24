@@ -14,20 +14,23 @@ import { checkSpmbStatus } from "@/lib/queries/spmb-status";
 import { getSchoolProfile } from "@/lib/queries/profile";
 import { waLink } from "@/lib/site-config";
 import { normalizeName } from "@/lib/format-name";
-import { pageOpenGraph } from "@/lib/seo";
+import { ogImageOverride, pageOpenGraph } from "@/lib/seo";
 import PrintButton from "./PrintButton";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Cek Status Pendaftaran",
-  description:
-    "Cek status pendaftaran dan hasil seleksi SPMB SMP Muhammadiyah 4 Tanggul menggunakan NISN dan tanggal lahir calon murid.",
-  alternates: { canonical: "/admission/status" },
-  openGraph: pageOpenGraph({
+export async function generateMetadata(): Promise<Metadata> {
+  return {
     title: "Cek Status Pendaftaran",
-    url: "/admission/status",
-  }),
-};
+    description:
+      "Cek status pendaftaran dan hasil seleksi SPMB SMP Muhammadiyah 4 Tanggul menggunakan NISN dan tanggal lahir calon murid.",
+    alternates: { canonical: "/admission/status" },
+    openGraph: pageOpenGraph({
+      title: "Cek Status Pendaftaran",
+      url: "/admission/status",
+      image: await ogImageOverride(),
+    }),
+  };
+}
 
 export const revalidate = 120;
 

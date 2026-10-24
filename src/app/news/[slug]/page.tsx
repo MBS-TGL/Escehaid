@@ -14,6 +14,7 @@ import ShareButtons from "@/components/public/ShareButtons";
 import SidebarCTA from "@/components/public/SidebarCTA";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import { newsCategory, NEWS_CATEGORIES } from "@/lib/site-config";
+import { dynamicOgImageUrl, ogImageEntry } from "@/lib/seo";
 
 export const revalidate = 300;
 
@@ -41,13 +42,22 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       // Next 16: publishedTime FLAT di objek openGraph (→ article:published_time)
       publishedTime: berita.published_at || undefined,
       // Ukuran gambar TANPA hardcode — biar crawler baca dimensi asli
-      images: berita.image_url ? [{ url: berita.image_url, alt: imageAlt }] : [],
+      // Foto sampul ada → pakai; tidak ada → kartu OG dinamis (judul digambar).
+      images: [
+        berita.image_url
+          ? { url: berita.image_url, alt: imageAlt }
+          : ogImageEntry(dynamicOgImageUrl({ title: berita.title, kind: "Berita" }), imageAlt),
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: berita.title,
       description,
-      images: berita.image_url ? [{ url: berita.image_url, alt: imageAlt }] : [],
+      images: [
+        berita.image_url
+          ? { url: berita.image_url, alt: imageAlt }
+          : ogImageEntry(dynamicOgImageUrl({ title: berita.title, kind: "Berita" }), imageAlt),
+      ],
     },
     alternates: { canonical: `/news/${berita.slug}` },
   };

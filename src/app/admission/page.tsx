@@ -5,19 +5,27 @@ import PageHero from "@/components/public/PageHero";
 import FaqList from "@/components/public/FaqList";
 import { getPublishedWaves, getWaveStatus, getSchoolProfile, registrationHref, getActiveFaqs } from "@/lib/queries";
 import { SITE, waLink } from "@/lib/site-config";
+import { ogImageOverride, pageOpenGraph } from "@/lib/seo";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: `SPMB Online ${SITE.spmb.academicYear}`,
-  description: "Sistem Penerimaan Murid Baru (SPMB) SMP Muhammadiyah 4 Tanggul - jadwal gelombang, jalur pendaftaran, dan cara mendaftar.",
-  alternates: { canonical: "/admission" },
-  openGraph: {
-    title: `SPMB Online ${SITE.spmb.academicYear}`,
-    description: "Jadwal gelombang, jalur pendaftaran, dan cara mendaftar SPMB SMP Muhammadiyah 4 Tanggul secara online.",
-    url: "/admission",
-    type: "website",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const title = `SPMB Online ${SITE.spmb.academicYear}`;
+  const description =
+    "Sistem Penerimaan Murid Baru (SPMB) SMP Muhammadiyah 4 Tanggul - jadwal gelombang, jalur pendaftaran, dan cara mendaftar.";
+  return {
+    title,
+    description,
+    alternates: { canonical: "/admission" },
+    openGraph: pageOpenGraph({
+      title,
+      description:
+        "Jadwal gelombang, jalur pendaftaran, dan cara mendaftar SPMB SMP Muhammadiyah 4 Tanggul secara online.",
+      url: "/admission",
+      image: await ogImageOverride(),
+      kind: "SPMB",
+    }),
+  };
+}
 
 export const revalidate = 3600;
 

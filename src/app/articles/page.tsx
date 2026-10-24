@@ -6,19 +6,22 @@ import FilterBar, { type FilterChip } from "@/components/public/FilterBar";
 import ContentCard from "@/components/public/ContentCard";
 import EmptyState from "@/components/public/EmptyState";
 import Pagination from "@/components/public/Pagination";
-import { pageOpenGraph } from "@/lib/seo";
+import { ogImageOverride, pageOpenGraph } from "@/lib/seo";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Artikel",
-  description:
-    "Artikel dan tips pendidikan dari guru SMP Muhammadiyah 4 Tanggul - Trik belajar, parenting, dan Islam terapan.",
-  alternates: { canonical: "/articles" },
-  openGraph: pageOpenGraph({
+export async function generateMetadata(): Promise<Metadata> {
+  return {
     title: "Artikel",
-    url: "/articles",
-  }),
-};
+    description:
+      "Artikel dan tips pendidikan dari guru SMP Muhammadiyah 4 Tanggul - Trik belajar, parenting, dan Islam terapan.",
+    alternates: { canonical: "/articles" },
+    openGraph: pageOpenGraph({
+      title: "Artikel",
+      url: "/articles",
+      image: await ogImageOverride(),
+    }),
+  };
+}
 
 export const revalidate = 300;
 

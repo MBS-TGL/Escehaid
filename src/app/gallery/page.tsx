@@ -4,20 +4,23 @@ import { CSSFadeIn } from "@/components/CSSAnimations";
 import PageHero from "@/components/public/PageHero";
 import EmptyState from "@/components/public/EmptyState";
 import CategoryChips, { type CategoryChip } from "@/components/public/CategoryChips";
-import { pageOpenGraph } from "@/lib/seo";
+import { ogImageOverride, pageOpenGraph } from "@/lib/seo";
 import GalleryLightbox from "./GalleryLightbox";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Galeri",
-  description: "Galeri foto dan video kegiatan SMP Muhammadiyah 4 Tanggul - Dokumentasi momen sekolah.",
-  alternates: { canonical: "/gallery" },
-  openGraph: pageOpenGraph({
+export async function generateMetadata(): Promise<Metadata> {
+  return {
     title: "Galeri",
     description: "Galeri foto dan video kegiatan SMP Muhammadiyah 4 Tanggul - Dokumentasi momen sekolah.",
-    url: "/gallery",
-  }),
-};
+    alternates: { canonical: "/gallery" },
+    openGraph: pageOpenGraph({
+      title: "Galeri",
+      description: "Galeri foto dan video kegiatan SMP Muhammadiyah 4 Tanggul - Dokumentasi momen sekolah.",
+      url: "/gallery",
+      image: await ogImageOverride(),
+    }),
+  };
+}
 
 export const revalidate = 3600;
 

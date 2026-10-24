@@ -9,6 +9,7 @@ import EkskulGlyph from "@/components/EkskulIcon";
 import ImageZoom from "@/app/news/[slug]/ImageZoom";
 import { CSSFadeIn } from "@/components/CSSAnimations";
 import { AchievementItemsCardPreview } from "@/components/AchievementItemsList";
+import { dynamicOgImageUrl, ogImageEntry } from "@/lib/seo";
 
 /**
  * Halaman detail ekskul `/ekskul/[slug]` — hero (ikon + nama + jadwal +
@@ -40,7 +41,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       title: `${ekskul.name} — Ekstrakurikuler`,
       description,
       url: `/ekskul/${ekskul.slug}`,
-      images: ekskul.image_url ? [{ url: ekskul.image_url, alt: ekskul.image_alt || ekskul.name }] : [],
+      images: [
+        ekskul.image_url
+          ? { url: ekskul.image_url, alt: ekskul.image_alt || ekskul.name }
+          : ogImageEntry(
+              dynamicOgImageUrl({ title: ekskul.name, kind: "Ekstrakurikuler" }),
+              ekskul.image_alt || ekskul.name
+            ),
+      ],
     },
     alternates: { canonical: `/ekskul/${ekskul.slug}` },
   };

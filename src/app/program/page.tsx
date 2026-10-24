@@ -3,7 +3,7 @@ import PageHero from "@/components/public/PageHero";
 import { BookOpen } from "@/components/Icons";
 import QuranPillars from "@/components/program/QuranPillars";
 import DailyAgenda from "@/components/program/DailyAgenda";
-import { pageOpenGraph } from "@/lib/seo";
+import { ogImageOverride, pageOpenGraph } from "@/lib/seo";
 import {
   getAgendaBlocksList,
   getAgendaSlotsList,
@@ -13,16 +13,19 @@ import {
   slotRowToSlot,
 } from "@/lib/queries";
 
-export const metadata: Metadata = {
-  title: "Program",
-  description:
-    "Pembelajaran Al-Qur'an Metode Wafa dan agenda harian santri SMP Muhammadiyah 4 Tanggul - ibadah, belajar, dan kemandirian setiap hari.",
-  alternates: { canonical: "/program" },
-  openGraph: pageOpenGraph({
+export async function generateMetadata(): Promise<Metadata> {
+  return {
     title: "Program",
-    url: "/program",
-  }),
-};
+    description:
+      "Pembelajaran Al-Qur'an Metode Wafa dan agenda harian santri SMP Muhammadiyah 4 Tanggul - ibadah, belajar, dan kemandirian setiap hari.",
+    alternates: { canonical: "/program" },
+    openGraph: pageOpenGraph({
+      title: "Program",
+      url: "/program",
+      image: await ogImageOverride(),
+    }),
+  };
+}
 
 /**
  * Konten dari tabel program (supabase/program.sql, panel /admin/program).

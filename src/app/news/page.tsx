@@ -7,19 +7,22 @@ import ContentCard from "@/components/public/ContentCard";
 import EmptyState from "@/components/public/EmptyState";
 import Pagination from "@/components/public/Pagination";
 import { newsCategory, NEWS_CATEGORIES } from "@/lib/site-config";
-import { pageOpenGraph } from "@/lib/seo";
+import { ogImageOverride, pageOpenGraph } from "@/lib/seo";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Berita",
-  description: "Berita terbaru dari SMP Muhammadiyah 4 Tanggul - Informasi kegiatan, pengumuman, dan agenda sekolah.",
-  alternates: { canonical: "/news" },
-  openGraph: pageOpenGraph({
+export async function generateMetadata(): Promise<Metadata> {
+  return {
     title: "Berita",
     description: "Berita terbaru dari SMP Muhammadiyah 4 Tanggul - Informasi kegiatan, pengumuman, dan agenda sekolah.",
-    url: "/news",
-  }),
-};
+    alternates: { canonical: "/news" },
+    openGraph: pageOpenGraph({
+      title: "Berita",
+      description: "Berita terbaru dari SMP Muhammadiyah 4 Tanggul - Informasi kegiatan, pengumuman, dan agenda sekolah.",
+      url: "/news",
+      image: await ogImageOverride(),
+    }),
+  };
+}
 
 export const revalidate = 300;
 

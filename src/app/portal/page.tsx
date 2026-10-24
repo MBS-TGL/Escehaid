@@ -30,19 +30,22 @@ import type { PortalApp } from "@/lib/queries";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import PageHero from "@/components/public/PageHero";
 import { waLink } from "@/lib/site-config";
-import { pageOpenGraph } from "@/lib/seo";
+import { ogImageOverride, pageOpenGraph } from "@/lib/seo";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Portal",
-  description:
-    "Portal layanan SMP Muhammadiyah 4 Tanggul - akses cepat ke SPMB, aplikasi sekolah, dan agenda kegiatan.",
-  alternates: { canonical: "/portal" },
-  openGraph: pageOpenGraph({
+export async function generateMetadata(): Promise<Metadata> {
+  return {
     title: "Portal",
-    url: "/portal",
-  }),
-};
+    description:
+      "Portal layanan SMP Muhammadiyah 4 Tanggul - akses cepat ke SPMB, aplikasi sekolah, dan agenda kegiatan.",
+    alternates: { canonical: "/portal" },
+    openGraph: pageOpenGraph({
+      title: "Portal",
+      url: "/portal",
+      image: await ogImageOverride(),
+    }),
+  };
+}
 
 export const revalidate = 3600;
 

@@ -20,6 +20,7 @@ import {
 import { CSSStagger, CSSFadeIn } from "@/components/CSSAnimations";
 import ReadingProgress from "@/components/public/ReadingProgress";
 import ShareButtons from "@/components/public/ShareButtons";
+import { dynamicOgImageUrl, ogImageEntry } from "@/lib/seo";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -52,13 +53,24 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       url: `/activities/${activity.slug}`,
       type: "article",
       // Tanpa width/height palsu — dimensi asli tak diketahui (Fase A), biar crawler baca sendiri
-      images: activity.image_url ? [{ url: activity.image_url }] : [],
+      images: [
+        activity.image_url
+          ? { url: activity.image_url, alt: activity.title }
+          : ogImageEntry(
+              dynamicOgImageUrl({ title: activity.title, kind: "Kegiatan" }),
+              activity.title
+            ),
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: activity.title,
       description,
-      images: activity.image_url ? [activity.image_url] : [],
+      images: [
+        activity.image_url
+          ? activity.image_url
+          : dynamicOgImageUrl({ title: activity.title, kind: "Kegiatan" }),
+      ],
     },
     alternates: { canonical: `/activities/${activity.slug}` },
   };

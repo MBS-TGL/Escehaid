@@ -12,6 +12,7 @@ import ReadingProgress from "@/components/public/ReadingProgress";
 import ShareButtons from "@/components/public/ShareButtons";
 import SidebarCTA from "@/components/public/SidebarCTA";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
+import { dynamicOgImageUrl, ogImageEntry } from "@/lib/seo";
 
 export const revalidate = 300;
 
@@ -38,13 +39,21 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       url: `/articles/${article.slug}`,
       type: "article",
       publishedTime: article.published_at || undefined,
-      images: article.image_url ? [{ url: article.image_url, alt: imageAlt }] : [],
+      images: [
+        article.image_url
+          ? { url: article.image_url, alt: imageAlt }
+          : ogImageEntry(dynamicOgImageUrl({ title: article.title, kind: "Artikel" }), imageAlt),
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: article.title,
       description,
-      images: article.image_url ? [{ url: article.image_url, alt: imageAlt }] : [],
+      images: [
+        article.image_url
+          ? { url: article.image_url, alt: imageAlt }
+          : ogImageEntry(dynamicOgImageUrl({ title: article.title, kind: "Artikel" }), imageAlt),
+      ],
     },
     alternates: { canonical: `/articles/${article.slug}` },
   };
