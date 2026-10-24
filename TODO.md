@@ -101,9 +101,9 @@ Berguna saat lupa logout di komputer bersama sekolah.
       percakapan. Supabase → Project Settings → Database → Reset database
       password, lalu perbarui secret GitHub `DATABASE_URL`
       (Settings → Secrets and variables → Actions).
-- [ ] **Daftarkan uptime monitor** — `https://www.smpmuh4tanggul.sch.id/api/health`
+- [x] **Daftarkan uptime monitor** — `https://www.smpmuh4tanggul.sch.id/api/health`
       ke UptimeRobot (gratis, cek 5 menit sekali): dapat email saat situs/DB
-      mati, bukan tahu dari orang lain.
+      mati, bukan tahu dari orang lain. ✅ UptimeRobot aktif (5 monitor).
 
 ## Catatan urutan pengerjaan
 
