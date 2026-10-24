@@ -54,21 +54,24 @@ Satu halaman menjawab "sehat tidak sekarang?" — mencegah debugging tebakan
 - [x] c. Kartu ringkasan di Dashboard admin: hijau/kuning/merah per aspek.
       ✅ "Status Sistem": DB, umur backup, CI — link ke /admin/diagnostics.
 
-## 3. Recycle Bin (soft-delete) untuk konten
+## 3. Recycle Bin (soft-delete) untuk konten ✅
 
 Hapus saat ini permanen. Salah klik = data hilang (ConfirmModal hanya
 penghalang pertama).
 
-- [ ] a. Migrasi: kolom `deleted_at timestamptz` di tabel konten utama
-      (news, articles, faqs, achievements, activities, gallery, downloads) +
-      RLS publik otomatis mengecualikan `deleted_at IS NOT NULL` + index.
-- [ ] b. Query layer: exclude soft-deleted di semua getter publik; admin
-      getter punya param `includeDeleted`.
-- [ ] c. Tab "Sampah" di tiap modul admin: daftar terhapus, tombol pulihkan
-      & hapus permanen (hanya developer).
-- [ ] d. Auto-purge 30 hari via GitHub Actions cron (bukan trigger DB,
-      supaya terlihat di log Actions).
-- [ ] e. UX hapus: teks konfirmasi menyebut "masuk Sampah, dihapus permanen
+- [x] a. Migrasi: kolom `deleted_at timestamptz` di tabel konten utama
+      (news, articles, faqs, achievements, activities, gallery, downloads,
+      announcements) + partial index. ✅ supabase/soft-delete.sql (sudah
+      dijalankan); tanpa perubahan RLS — filter di query layer.
+- [x] b. Query layer: exclude soft-deleted di semua getter publik & admin;
+      deleteX/deleteXBulk → soft-delete (media tetap utuh utk restore);
+      purgeX per modul utk hapus permanen + pembersihan media.
+- [x] c. Halaman terpusat `/admin/trash` (bukan per-modul): daftar lintas
+      8 modul, tombol pulihkan & hapus permanen; perm `sampah:*` +
+      supabase/trash-perm.sql (sudah dijalankan).
+- [x] d. Auto-purge 30 hari via GitHub Actions cron mingguan
+      (scripts/purge-trash.mjs + trash-purge.yml).
+- [x] e. UX hapus: teks konfirmasi menyebut "masuk Sampah, dihapus permanen
       setelah 30 hari".
 
 ## 4. 2FA (TOTP) untuk akun admin & developer
