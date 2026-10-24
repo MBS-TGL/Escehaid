@@ -65,11 +65,11 @@ export default function ContactForm({ brand }: { brand: PublicBrand }) {
                       required
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      className="w-full rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-sm transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
+                      className="w-full rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-base transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
                       placeholder="Masukkan nama lengkap"
                     />
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <label className="mb-1.5 block text-sm font-medium text-[var(--brand-primary)]">Email *</label>
                       <input
@@ -77,7 +77,7 @@ export default function ContactForm({ brand }: { brand: PublicBrand }) {
                         required
                         value={form.email}
                         onChange={(e) => setForm({ ...form, email: e.target.value })}
-                        className="w-full rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-sm transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
+                        className="w-full rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-base transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
                         placeholder="email@contoh.com"
                       />
                     </div>
@@ -87,7 +87,7 @@ export default function ContactForm({ brand }: { brand: PublicBrand }) {
                         type="tel"
                         value={form.phone}
                         onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                        className="w-full rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-sm transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
+                        className="w-full rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-base transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
                         placeholder="08xxx"
                       />
                     </div>
@@ -98,7 +98,7 @@ export default function ContactForm({ brand }: { brand: PublicBrand }) {
                       type="text"
                       value={form.subject}
                       onChange={(e) => setForm({ ...form, subject: e.target.value })}
-                      className="w-full rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-sm transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
+                      className="w-full rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-base transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
                       placeholder="Perihal pesan"
                     />
                   </div>
@@ -109,14 +109,14 @@ export default function ContactForm({ brand }: { brand: PublicBrand }) {
                       rows={4}
                       value={form.message}
                       onChange={(e) => setForm({ ...form, message: e.target.value })}
-                      className="w-full resize-none rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-sm transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
+                      className="w-full resize-none rounded-xl border border-[#dce3ed] bg-[#f4f7fb] px-4 py-2.5 text-base transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
                       placeholder="Tulis pesan Anda..."
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={status === "loading"}
-                    className="rounded-xl bg-[var(--brand-primary)] px-6 py-3 text-sm font-bold text-white transition-all hover:bg-[var(--brand-accent)] hover:shadow-lg hover:shadow-[var(--brand-primary)]/20 disabled:opacity-50"
+                    className="w-full rounded-xl bg-[var(--brand-primary)] px-6 py-3 text-center text-sm font-bold text-white transition-all sm:w-auto hover:bg-[var(--brand-accent)] hover:shadow-lg hover:shadow-[var(--brand-primary)]/20 focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)] disabled:opacity-50"
                   >
                     {status === "loading" ? "Mengirim..." : "Kirim Pesan"}
                   </button>
@@ -152,7 +152,7 @@ export default function ContactForm({ brand }: { brand: PublicBrand }) {
                       <MapPin className="h-4 w-4 shrink-0 text-[var(--brand-accent)]" />
                       <div className="min-w-0">
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Alamat</p>
-                        <p className="truncate text-sm text-slate-600">{brand.address}</p>
+                        <p className="break-words text-sm text-slate-600">{brand.address}</p>
                       </div>
                     </a>
                     <a href={`mailto:${brand.email}`}
@@ -184,13 +184,13 @@ export default function ContactForm({ brand }: { brand: PublicBrand }) {
                       ["Ustadzah Lusi", "6282302326820", "0823-0232-6820"],
                       ["Ustadz Arif", "6285806738160", "0858-0673-8160"],
                     ].map(([name, wa, display]) => (
-                      <div key={name} className="flex items-center justify-between rounded-xl bg-[#f4f7fb] px-4 py-2.5">
-                        <span className="text-sm text-slate-600">{name}</span>
+                      <div key={name} className="flex items-center gap-3 rounded-xl bg-[#f4f7fb] px-4 py-2.5">
+                        <span className="min-w-0 truncate text-sm text-slate-600">{name}</span>
                         <a
                           href={`https://wa.me/${wa}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)]"
+                          className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)]"
                         >
                           <WhatsappLogo className="h-4 w-4" weight="fill" />
                           {display}
