@@ -289,7 +289,9 @@ export default function SearchView({
       )}
 
       {/* Form GET = jalur tanpa JavaScript; dengan JS, submit dicegah lalu
-          pencarian langsung dijalankan (tanpa menunggu debounce). */}
+          pencarian langsung dijalankan (tanpa menunggu debounce).
+          TANPA kartu pembungkus (opsi C): setinggi FilterBar di /news —
+          input + tombol saja, status/riwayat jadi baris terpisah di bawah. */}
       <form
         action="/search"
         method="get"
@@ -297,53 +299,51 @@ export default function SearchView({
           e.preventDefault();
           submitSearch();
         }}
-        className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+        className="flex gap-2"
       >
         {/* Label visual dihilangkan: hero halaman sudah "Pencarian". Tetap
             ada (sr-only) agar input punya nama aksesibel. */}
         <label htmlFor="site-search" className="sr-only">
           Cari di situs ini
         </label>
-        <div className="flex gap-2">
-          <div className="relative min-w-0 flex-1">
-            <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              id="site-search"
-              name="q"
-              type="text"
-              value={query}
-              onChange={(e) => applyQuery(e.target.value)}
-              placeholder="Misalnya: SPMB, lomba, Tapak Suci..."
-              autoComplete="off"
-              spellCheck={false}
-              enterKeyHint="search"
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm text-slate-700 placeholder:text-slate-400 transition-colors focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
-            />
-            {query !== "" && (
-              <button
-                type="button"
-                onClick={() => applyQuery("")}
-                aria-label="Hapus kata kunci"
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-          {/* Submit native saat tanpa JS; dengan JS langsung jalan. Di layar
-              sempit tinggal ikon (aria-label menjaga nama aksesibelnya). */}
-          <button
-            type="submit"
-            disabled={status === "loading"}
-            aria-label="Cari"
-            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-3 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)] focus:ring-offset-2 disabled:opacity-50 sm:px-5"
-          >
-            <MagnifyingGlass className="h-4 w-4" />
-            <span className="hidden sm:inline">
-              {status === "loading" ? "Mencari..." : "Cari"}
-            </span>
-          </button>
+        <div className="relative min-w-0 flex-1">
+          <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            id="site-search"
+            name="q"
+            type="text"
+            value={query}
+            onChange={(e) => applyQuery(e.target.value)}
+            placeholder="Cari di situs ini..."
+            autoComplete="off"
+            spellCheck={false}
+            enterKeyHint="search"
+            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm text-slate-700 placeholder:text-slate-400 transition-colors focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
+          />
+          {query !== "" && (
+            <button
+              type="button"
+              onClick={() => applyQuery("")}
+              aria-label="Hapus kata kunci"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
+        {/* Submit native saat tanpa JS; dengan JS langsung jalan. Di layar
+            sempit tinggal ikon (aria-label menjaga nama aksesibelnya). */}
+        <button
+          type="submit"
+          disabled={status === "loading"}
+          aria-label="Cari"
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-3 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)] focus:ring-offset-2 disabled:opacity-50 sm:px-5"
+        >
+          <MagnifyingGlass className="h-4 w-4" />
+          <span className="hidden sm:inline">
+            {status === "loading" ? "Mencari..." : "Cari"}
+          </span>
+        </button>
       </form>
 
       {/* Status hasil — tentang HASIL, bukan tentang kotak input. aria-live
