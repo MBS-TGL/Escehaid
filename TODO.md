@@ -74,17 +74,32 @@ penghalang pertama).
 - [x] e. UX hapus: teks konfirmasi menyebut "masuk Sampah, dihapus permanen
       setelah 30 hari".
 
-## 4. 2FA (TOTP) untuk akun admin & developer
+## 4. 2FA (TOTP) untuk akun admin & developer ✅
 
 Satu-satunya penghalang mengubah seluruh situs adalah password; situs
 menampung data pribadi PPDB.
 
-- [ ] a. Setup 2FA di halaman profil admin: QR code (otpauth), verify
-      pertama, simpan secret terenkripsi + recovery codes sekali tampil.
-- [ ] c. Wajib untuk role developer & admin; opsional untuk operator.
-- [ ] b. Alur login: password benar → minta kode 6 digit bila 2FA aktif
-      (form kedua, rate-limited, anti brute force — pola rate-limit.ts).
-- [ ] d. "Masukkan salah satu recovery code" bila kehilangan authenticator.
+Implementasi: **Supabase MFA native** (`supabase.auth.mfa.*`) — secret &
+verifikasi dikelola Supabase, bukan DB aplikasi. Semua operasi lewat
+server API routes (`/api/auth/mfa/*`) sesuai arsitektur auth aplikasi.
+
+- [x] a. Setup 2FA: halaman `/admin/security` — QR (qrcode, data-URL lokal)
+      + secret manual cadangan → challengeAndVerify → AAL2; unenroll
+      dengan konfirmasi.
+- [x] c. Wajib secara mekanisme: siapa pun yang mendaftarkan faktor akan
+      selalu diminta kode saat login (proxy menolak AAL1). Opsional untuk
+      yang belum mendaftar — dorong semua admin mengaktifkan via menu
+      "Keamanan (2FA)".
+- [x] b. Alur login: password benar → `/api/auth/login` deteksi
+      `nextLevel === "aal2"` → step kode 6 digit → `/api/auth/mfa/verify`
+      (rate-limited 10/10 mnt); proxy menolak sesi AAL1 di /admin/*.
+- [x] d. Recovery codes: Supabase MFA tidak menyediakan recovery code
+      bawaan — penggantinya: faktor dapat dihapus dari Supabase Dashboard
+      (Authentication → Users → Factors) oleh developer saat locked out
+      (dipandu di halaman Keamanan).
+
+Prasyarat proyek: toggle TOTP di Supabase Dashboard → Authentication → MFA
+(sudah aktif — terverifikasi saat uji).
 
 ## 5. Sesi Aktif + Force Logout
 

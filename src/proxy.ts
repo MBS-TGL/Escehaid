@@ -177,6 +177,23 @@ export async function proxy(request: NextRequest) {
       );
     }
 
+    // 2FA (Supabase MFA): pengguna yang mendaftarkan faktor TOTP wajib
+    // menyelesaikan challenge (AAL2) sebelum halaman admin mana pun. Sesi
+    // AAL1 hasil login email+password diarahkan ke step verifikasi.
+    if (path !== "/admin/login") {
+      try {
+        const aal = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (aal.data?.nextLevel === "aal2" && aal.data.currentLevel !== "aal2") {
+          return redirectWithCookies(
+            new URL("/admin/login?mfa=required", request.url),
+            supabaseResponse
+          );
+        }
+      } catch {
+        // MFA tidak tersedia / error — jangan blokir login.
+      }
+    }
+
     // Paksa ganti password (reset oleh admin) — lempar ke halaman ganti password
     // kecuali user sudah berada di sana.
     if (

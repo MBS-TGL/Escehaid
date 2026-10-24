@@ -4,7 +4,7 @@ import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Eye, EyeSlash, Warning, ArrowRight, ArrowLeft, GraduationCap, Users, BookOpen, CheckCircle } from "@/components/Icons";
+import { Eye, EyeSlash, Warning, ArrowRight, ArrowLeft, GraduationCap, Users, BookOpen, CheckCircle, ShieldCheck } from "@/components/Icons";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -17,10 +17,15 @@ function LoginForm() {
   const [resetEmail, setResetEmail] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
-
   const router = useRouter();
   const searchParams = useSearchParams();
   const errorParam = searchParams.get("error");
+
+  // 2FA — step kedua setelah email+password benar tapi akun punya faktor TOTP.
+  // ?mfa=required (dari proxy): sesi AAL1 ditolak → langsung tampil step kode.
+  const [mfaStep, setMfaStep] = useState(searchParams.get("mfa") === "required");
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaLoading, setMfaLoading] = useState(false);
 
   useEffect(() => {
     const timer = requestAnimationFrame(() => setMounted(true));
@@ -42,6 +47,36 @@ function LoginForm() {
     if (!res.ok) {
       setError("Email atau password salah.");
       setLoading(false);
+      return;
+    }
+
+    const data = (await res.json()) as { status?: string };
+    if (data.status === "mfa_required") {
+      // Password benar, tapi wajib kode TOTP (AAL2) sebelum masuk.
+      setMfaStep(true);
+      setLoading(false);
+      return;
+    }
+
+    router.push("/admin?success=login");
+    router.refresh();
+  };
+
+  const handleMfaVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMfaLoading(true);
+    setError("");
+
+    const res = await fetch("/api/auth/mfa/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: mfaCode }),
+    });
+    const data = (await res.json().catch(() => null)) as { error?: string } | null;
+
+    if (!res.ok) {
+      setError(data?.error || "Kode salah atau kedaluwarsa.");
+      setMfaLoading(false);
       return;
     }
 
@@ -131,7 +166,49 @@ function LoginForm() {
         <div className="w-full max-w-md relative z-10">
           <div className={`bg-white/80 backdrop-blur-xl border border-[#dce3ed]/60 rounded-2xl shadow-xl p-8 md:p-10 transition-all duration-700 ease-out ${mounted ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-90 translate-y-4"}`}>
 
-            {resetMode ? (
+            {mfaStep ? (
+              /* ── 2FA VERIFICATION FORM ──── */
+              <>
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4 shadow-lg bg-[var(--brand-accent)]/10">
+                    <ShieldCheck className="h-7 w-7 text-[var(--brand-accent)]" />
+                  </div>
+                  <h2 className="text-2xl font-extrabold text-[var(--brand-primary)] mb-2">Verifikasi Dua Langkah</h2>
+                  <p className="text-slate-500 text-sm">Masukkan 6 digit kode dari aplikasi authenticator Anda.</p>
+                </div>
+
+                {(error || errorParam) && (
+                  <div className="mb-6 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm text-red-700">
+                    <Warning className="h-4 w-4 shrink-0" />
+                    {error || "Terjadi kesalahan verifikasi."}
+                  </div>
+                )}
+
+                <form onSubmit={handleMfaVerify} className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-[var(--brand-primary)] ml-1">Kode verifikasi</label>
+                    <input
+                      type="text"
+                      required
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      value={mfaCode}
+                      onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      className="block w-full px-4 py-3 rounded-xl border border-[#dce3ed] bg-[#f4f7fb] text-center font-mono text-2xl tracking-[0.4em] text-[var(--brand-primary)] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[var(--brand-accent)]/20 focus:border-[var(--brand-accent)] transition-all"
+                      placeholder="000000"
+                      autoFocus
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={mfaLoading || mfaCode.length !== 6}
+                    className="w-full flex items-center justify-center gap-2 bg-[var(--brand-primary)] text-white py-3.5 rounded-xl font-semibold text-sm shadow-lg shadow-[var(--brand-primary)]/25 hover:bg-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/40 focus:ring-offset-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {mfaLoading ? "Memverifikasi…" : "Verifikasi & Masuk"} {!mfaLoading && <ArrowRight className="h-4 w-4" />}
+                  </button>
+                </form>
+              </>
+            ) : resetMode ? (
               /* ── RESET PASSWORD FORM ──── */
               <>
                 <div className="text-center mb-8">

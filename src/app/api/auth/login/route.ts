@@ -37,5 +37,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Email atau password salah." }, { status: 401 });
   }
 
+  // 2FA (Supabase MFA): bila pengguna punya faktor terverifikasi, sesi AAL1
+  // yang baru terbentuk belum boleh dianggap "masuk" — klien wajib
+  // menyelesaikan challenge TOTP via /api/auth/mfa/verify (AAL2).
+  const aal = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aal.data?.nextLevel === "aal2" && aal.data.currentLevel !== "aal2") {
+    return NextResponse.json({ status: "mfa_required" });
+  }
+
   return NextResponse.json({ success: true });
 }
