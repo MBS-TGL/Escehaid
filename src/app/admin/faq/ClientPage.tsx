@@ -25,6 +25,7 @@ import {
   ArrowDown,
   CheckCircle,
   XCircle,
+  MapPin,
 } from "@/components/Icons";
 import {
   MobileFilterBar,
@@ -83,9 +84,9 @@ export default function FaqClientPage() {
     setLoadError(null);
     try {
       setItems(await getFaqs(s));
-    } catch {
+    } catch (e) {
       // Query gagal → tampil empty-state "Gagal memuat", BUKAN daftar kosong palsu.
-      setLoadError("Gagal memuat FAQ. Periksa koneksi lalu coba lagi.");
+      setLoadError(e instanceof Error ? e.message : "Gagal memuat FAQ.");
       setItems([]);
     } finally {
       setLoading(false);
@@ -256,7 +257,10 @@ export default function FaqClientPage() {
               value: scope,
               options: scopeOptions,
               onChange: (k) => { setScope(k as FaqScope); resetList(); },
-              menuLabel: "Filter lokasi",
+              menuLabel: "Lokasi tampil",
+              // MapPin, bukan Funnel default — ini pemilih lokasi, bukan
+              // filter konten; mencegah terbaca sebagai sort/filter.
+              icon: <MapPin className="h-4 w-4" />,
             },
             {
               value: filter,
@@ -283,6 +287,7 @@ export default function FaqClientPage() {
           value: scope,
           options: scopeOptions,
           onChange: (k) => { setScope(k as FaqScope); resetList(); },
+          icon: <MapPin className="h-4 w-4" />,
         }}
       />
 
