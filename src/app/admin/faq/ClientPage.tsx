@@ -226,7 +226,7 @@ export default function FaqClientPage() {
           <div>
             <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">FAQ</h1>
             <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">
-              Kelola pertanyaan yang sering diajukan — FAQ yang {SCOPE_META[scope].hint}
+              Kelola pertanyaan yang sering diajukan
             </p>
           </div>
         </div>
