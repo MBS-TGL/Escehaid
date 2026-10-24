@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { CSSFadeIn } from "@/components/CSSAnimations";
 import FaqList from "@/components/public/FaqList";
-import { faqs } from "./faq-data";
 
-export default function FAQ({ items = faqs }: { items?: { q: string; a: string }[] }) {
+export default function FAQ({ items }: { items: { q: string; a: string }[] }) {
+  if (items.length === 0) return null;
   return (
     <section
       className="bg-[#f4f7fb]"

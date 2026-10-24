@@ -28,8 +28,8 @@ export async function getFaqs(scope: FaqScope): Promise<Faq[]> {
   return (data || []) as Faq[];
 }
 
-/** FAQ aktif untuk halaman publik. Mengembalikan `null` saat tabel belum ada
- *  / error supaya pemanggil jatuh ke fallback statis (`faq-data.ts`). */
+/** FAQ aktif untuk halaman publik. Mengembalikan `null` saat tabel kosong /
+ *  belum ada / error — pemanggil menangani dengan tidak merender section FAQ. */
 export async function getActiveFaqs(scope: FaqScope): Promise<{ q: string; a: string }[] | null> {
   const { data, error } = await supabase
     .from("faqs")

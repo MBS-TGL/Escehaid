@@ -7,7 +7,6 @@ import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeach
 import { detectPrincipalGreeting, keepTogether } from "@/lib/principal-quote";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
-import { faqs } from "./faq-data";
 import EkskulCard from "@/components/EkskulCard";
 import HeroBackground from "./HeroBackground";
 import HeroVideoModal from "./HeroVideoModal";
@@ -134,7 +133,8 @@ export default async function Home() {
       getActiveAgendaEvents(),
       getEkskulList(),
       getAgendaBlocksList(),
-      // FAQ dari tabel `faqs` (scope 'home'); null → fallback statis faq-data.ts.
+      // FAQ dari tabel `faqs` (scope 'home'); null (tabel kosong/error) →
+      // section FAQ tidak dirender.
       getActiveFaqs("home"),
     ]);
 
@@ -150,8 +150,9 @@ export default async function Home() {
   const visionText = resolveVision(profile);
   const missionItems = profile?.mission?.trim() ? parseMissionItems(profile.mission) : [];
 
-  // FAQ aktif dari DB (tabel `faqs`); fallback statis saat tabel kosong/belum ada.
-  const faqItems = faqDbItems ?? faqs;
+  // FAQ aktif dari DB (tabel `faqs`); null (tabel kosong/error) → section
+  // FAQ dan JSON-LD FAQPage tidak dirender.
+  const faqItems = faqDbItems ?? [];
 
   // Hanya acara yang belum dimulai yang layak ditayangkan di countdown.
   const upcomingEvents = filterUpcomingEvents(agendaEvents);
@@ -202,7 +203,9 @@ export default async function Home() {
 
   return (
     <div className="bg-white text-[#172033]">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      {faqItems.length > 0 && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      )}
       {/* ── HERO — Full Bleed Video Background ───────── */}
       <section className="relative min-h-[580px] sm:min-h-[640px] lg:min-h-[700px] flex items-center overflow-hidden">
         {/* Full-bleed video background */}
@@ -947,7 +950,7 @@ export default async function Home() {
       )}
 
       {/* ── FAQ ───────────────────────────────────────────── */}
-      <FAQ items={faqItems} />
+      {faqItems.length > 0 && <FAQ items={faqItems} />}
 
       {/* ── FINAL CTA ─────────────────────────────────────── */}
       <section className="relative overflow-hidden border-t-8 border-[var(--brand-highlight)] bg-white">

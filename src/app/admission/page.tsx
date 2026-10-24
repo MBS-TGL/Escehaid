@@ -4,7 +4,6 @@ import { CSSFadeIn } from "@/components/CSSAnimations";
 import PageHero from "@/components/public/PageHero";
 import FaqList from "@/components/public/FaqList";
 import { getPublishedWaves, getWaveStatus, getSchoolProfile, registrationHref, getActiveFaqs } from "@/lib/queries";
-import { spmbFaqs } from "@/app/faq-data";
 import { SITE, waLink } from "@/lib/site-config";
 import type { Metadata } from "next";
 
@@ -62,10 +61,11 @@ export default async function SPMBPage() {
   const [waves, profile, faqItems] = await Promise.all([
     getPublishedWaves(),
     getSchoolProfile(),
-    // FAQ dari tabel `faqs` (scope 'spmb'); null → fallback statis faq-data.ts.
+    // FAQ dari tabel `faqs` (scope 'spmb'); null (tabel kosong/error) →
+    // section FAQ tidak dirender.
     getActiveFaqs("spmb"),
   ]);
-  const spmbFaqItems = faqItems ?? spmbFaqs;
+  const spmbFaqItems = faqItems ?? [];
   const registerHref = registrationHref(profile);
   const brochureHref = profile?.spmb_brochure_url || DEFAULT_BROCHURE_URL;
   const offlineFormHref = profile?.spmb_offline_form_url ?? null;
@@ -117,6 +117,7 @@ export default async function SPMBPage() {
           ],
         })
       }} />
+      {spmbFaqItems.length > 0 && (
       <script type="application/ld+json" dangerouslySetInnerHTML={{
         __html: JSON.stringify({
           "@context": "https://schema.org",
@@ -128,6 +129,7 @@ export default async function SPMBPage() {
           })),
         })
       }} />
+      )}
       {/* Hero — compact */}
       <PageHero
         variant="compact"
@@ -340,7 +342,8 @@ export default async function SPMBPage() {
         </div>
       </section>
 
-      {/* FAQ — satu gaya accordion dengan beranda (FaqList) */}
+      {/* FAQ — satu gaya accordion dengan beranda (FaqList); hanya bila ada isinya */}
+      {spmbFaqItems.length > 0 && (
       <section className="py-10 md:py-12">
         <div className={container}>
           <CSSFadeIn>
@@ -378,6 +381,7 @@ export default async function SPMBPage() {
           </CSSFadeIn>
         </div>
       </section>
+      )}
 
       {/* CTA penutup (ramping) */}
       <section className="bg-[#f6f8fb] py-10 md:py-12">
