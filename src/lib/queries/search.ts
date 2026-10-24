@@ -21,6 +21,11 @@ export interface SearchItem {
    * Sudah terisi oleh `searchAllContent` — ranking grup memakainya.
    */
   score?: number;
+  /**
+   * Keterangan singkat tambahan per jenis (mis. "Juara 1 · 2025" untuk
+   * prestasi). null/absen → tidak ditampilkan.
+   */
+  meta?: string | null;
 }
 
 export interface SearchGroup {
@@ -177,6 +182,8 @@ export async function searchAllContent(query: string): Promise<SearchItem[]> {
         href: "/achievements",
         date: a.created_at,
         excerpt: a.description || null,
+        // "Juara 1 · 2025" — hanya bagian yang tersedia.
+        meta: [a.rank_label, a.year ? String(a.year) : null].filter(Boolean).join(" · ") || null,
       })
     ),
     ...ekskuls.map((e) =>
@@ -206,4 +213,33 @@ export function groupSearchResults(items: SearchItem[]): SearchGroup[] {
         return (b.date ?? "").localeCompare(a.date ?? "");
       }),
   })).filter((group) => group.items.length > 0);
+}
+
+/** Skor tertinggi dalam sebuah grup (0 bila kosong). */
+function groupTopScore(group: SearchGroup): number {
+  return group.items.reduce((max, item) => Math.max(max, item.score ?? 0), 0);
+}
+
+/**
+ * Urutkan grup menurut RELEVANSI (skor tertinggi anggotanya, desc) alih-alih
+ * urutan tetap — dipakai halaman /search saat tab "Semua" aktif.
+ *
+ * Grup "halaman" diperlakukan khusus: ia navigasional, jadi tetap di atas
+ * HANYA bila skornya setara grup terbaik (≥ skor tertinggi grup lain);
+ * bila kurang relevan, ia ikut turun seperti grup lain.
+ * Urutan asli dipertahankan sebagai pemecah seri → hasil stabil.
+ */
+export function sortGroupsByRelevance(groups: SearchGroup[]): SearchGroup[] {
+  const indexed = groups.map((group, index) => ({ group, index }));
+  const best = Math.max(0, ...groups.map(groupTopScore));
+  return indexed
+    .sort((a, b) => {
+      const aIsPage = a.group.kind === "halaman" && groupTopScore(a.group) >= best;
+      const bIsPage = b.group.kind === "halaman" && groupTopScore(b.group) >= best;
+      if (aIsPage !== bIsPage) return aIsPage ? -1 : 1;
+      const score = groupTopScore(b.group) - groupTopScore(a.group);
+      if (score) return score;
+      return a.index - b.index;
+    })
+    .map(({ group }) => group);
 }

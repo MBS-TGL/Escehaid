@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { groupSearchResults, scoreSearchItem, searchStaticPages, type SearchItem } from "./search";
+import {
+  groupSearchResults,
+  scoreSearchItem,
+  searchStaticPages,
+  sortGroupsByRelevance,
+  type SearchItem,
+} from "./search";
 import { buildSearchOr, sanitizeSearchTerm, tokenizeSearch } from "./shared";
 
 const item = (
@@ -70,6 +76,47 @@ describe("groupSearchResults", () => {
 
     // b2 (skor tertinggi) → b1 (skor sama w/ b3 tapi tanggal baru) → b3
     expect(groups[0].items.map((i) => i.id)).toEqual(["b2", "b1", "b3"]);
+  });
+});
+
+describe("sortGroupsByRelevance", () => {
+  it("mengurutkan grup menurut skor tertinggi anggotanya", () => {
+    const groups = groupSearchResults([
+      item({ id: "n1", kind: "berita", title: "a", score: 0.4 }),
+      item({ id: "a1", kind: "artikel", title: "b", score: 1.5 }),
+      item({ id: "k1", kind: "kegiatan", title: "c", score: 0.9 }),
+    ]);
+
+    expect(sortGroupsByRelevance(groups).map((g) => g.kind)).toEqual([
+      "artikel",
+      "kegiatan",
+      "berita",
+    ]);
+  });
+
+  it("halaman tetap di atas bila skornya setara grup terbaik, turun bila tidak", () => {
+    const high = groupSearchResults([
+      item({ id: "/admission", kind: "halaman", title: "SPMB", score: 1 }),
+      item({ id: "n1", kind: "berita", title: "a", score: 0.5 }),
+    ]);
+    expect(sortGroupsByRelevance(high)[0].kind).toBe("halaman");
+
+    const low = groupSearchResults([
+      item({ id: "/galeri", kind: "halaman", title: "Galeri", score: 0.2 }),
+      item({ id: "n1", kind: "berita", title: "a", score: 1.2 }),
+    ]);
+    expect(sortGroupsByRelevance(low)[0].kind).toBe("berita");
+  });
+
+  it("stabil saat skor sama (urutan asli dipertahankan) & tak mengubah input", () => {
+    const groups = groupSearchResults([
+      item({ id: "n1", kind: "berita", title: "a", score: 1 }),
+      item({ id: "a1", kind: "artikel", title: "b", score: 1 }),
+    ]);
+    const before = groups.map((g) => g.kind);
+    const sorted = sortGroupsByRelevance(groups);
+    expect(sorted.map((g) => g.kind)).toEqual(before);
+    expect(groups.map((g) => g.kind)).toEqual(before); // input tidak dimutasi
   });
 });
 

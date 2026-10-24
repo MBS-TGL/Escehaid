@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Clock,
   FileText,
@@ -10,19 +10,34 @@ import {
   Warning,
   X,
 } from "@/components/Icons";
-import type { SearchGroup } from "@/lib/queries/search";
-import { KIND_META, formatSearchDate, EMPTY_STATE_LINKS } from "@/components/SearchMeta";
-import Highlight from "@/components/public/Highlight";
+import type { SearchGroup, SearchKind } from "@/lib/queries/search";
+import { sortGroupsByRelevance } from "@/lib/queries/search";
+import {
+  KIND_META,
+  EMPTY_STATE_LINKS,
+  SUGGEST_DICTIONARY,
+} from "@/components/SearchMeta";
+import SearchResultCard from "@/components/public/SearchResultCard";
+import { suggestCorrections } from "@/lib/search-suggest";
+import {
+  clearRecentSearches,
+  readRecentSearches,
+  removeRecentSearch,
+  saveRecentSearch,
+} from "@/lib/search-recent";
 
 type Status = "idle" | "loading" | "done" | "error";
+type KindFilter = SearchKind | "semua";
+
+/** Jumlah maksimum item pada papan "Paling relevan". */
+const TOP_COUNT = 3;
 
 /**
  * Kotak pencarian menyeluruh: satu istilah menjangkau halaman situs, berita,
- * artikel, kegiatan, prestasi, dan ekskul. Menggunakan debounce 300ms +
- * sinkronisasi URL dangkal (`history.replaceState`) sehingga ?q= bisa
- * dibagikan tanpa memicu re-render server tiap ketikan; form GET tetap
- * berfungsi tanpa JavaScript. Query dijalankan via /api/search (server) —
- * bukan Supabase langsung.
+ * artikel, kegiatan, prestasi, dan ekskul. Debounce 300ms + sinkronisasi URL
+ * dangkal (`history.replaceState`) sehingga ?q= bisa dibagikan tanpa re-render
+ * server tiap ketikan; form GET tetap berfungsi tanpa JavaScript. Query
+ * dijalankan via /api/search (server) — bukan Supabase langsung.
  */
 export default function SearchView({
   initialQuery,
@@ -41,28 +56,60 @@ export default function SearchView({
   const [status, setStatus] = useState<Status>(initialQuery ? "done" : "idle");
   /** Pesan kegagalan terakhir (jaringan/429/500) — kosong bila pencarian sukses. */
   const [errorMessage, setErrorMessage] = useState("");
+  /** Filter jenis aktif pada daftar hasil. */
+  const [activeKind, setActiveKind] = useState<KindFilter>("semua");
+  /** Riwayat pencarian (localStorage) — tampil saat input kosong. */
+  const [recent, setRecent] = useState<string[]>([]);
+  /** Bilah pencarian ringkas muncul saat form asli tergulir keluar layar. */
+  const [stickyVisible, setStickyVisible] = useState(false);
+
   /** Istilah yang SUDAH punya hasil (awal dari server atau baru dicari). */
   const lastSearchedRef = useRef(initialQuery);
   /** Nomor urut permintaan — jawaban dengan nomor basi dibuang. */
   const requestIdRef = useRef(0);
   /** Naik tiap klik "Coba lagi" — memicu pencarian ulang istilah yang sama. */
   const [retryNonce, setRetryNonce] = useState(0);
+  /** Sentinel di atas form — dipantau IntersectionObserver utk sticky bar. */
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   /** Kembalikan tampilan ke kondisi awal (input kosong) — dari event handler,
    *  bukan dari effect, agar tidak memicu setState sinkron di dalam effect. */
-  const applyQuery = (value: string) => {
-    setQuery(value);
-    if (value.trim() === "") {
-      requestIdRef.current += 1; // batalkan permintaan yang masih melayang
-      lastSearchedRef.current = "";
-      setGroups([]);
-      setCount(0);
-      setSearchedQuery("");
-      setErrorMessage("");
-      setStatus("idle");
-      window.history.replaceState(null, "", pathname);
-    }
-  };
+  const applyQuery = useCallback(
+    (value: string) => {
+      setQuery(value);
+      if (value.trim() === "") {
+        requestIdRef.current += 1; // batalkan permintaan yang masih melayang
+        lastSearchedRef.current = "";
+        setGroups([]);
+        setCount(0);
+        setSearchedQuery("");
+        setErrorMessage("");
+        setStatus("idle");
+        setActiveKind("semua");
+        window.history.replaceState(null, "", pathname);
+      }
+    },
+    [pathname]
+  );
+
+  // Muat riwayat pencarian saat mount — deferred agar patuh aturan
+  // react-hooks/set-state-in-effect (snapshot awal tetap []).
+  useEffect(() => {
+    const timer = window.setTimeout(() => setRecent([...readRecentSearches()]), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  // Sticky bar: pantau sentinel di atas form.
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setStickyVisible(!entry.isIntersecting),
+      { rootMargin: "-8px 0px 0px 0px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const term = query.trim();
@@ -95,7 +142,9 @@ export default function SearchView({
         setErrorMessage("");
         setStatus("done");
         lastSearchedRef.current = term;
-        // Sinkkan URL secara dangkal (tanpa re-render server) agar bisa dibagikan.
+        // Catat riwayat hanya untuk pencarian yang berhasil.
+        setRecent(saveRecentSearch(term));
+        // Sinkronkan URL secara dangkal agar bisa dibagikan.
         window.history.replaceState(null, "", `${pathname}?q=${encodeURIComponent(term)}`);
       } catch (err) {
         if (!cancelled && requestId === requestIdRef.current) {
@@ -119,6 +168,31 @@ export default function SearchView({
     };
   }, [query, pathname, retryNonce]);
 
+  /** Grup yang sudah diurutkan relevansi (khusus tab "Semua"). */
+  const orderedGroups = useMemo(() => {
+    if (activeKind === "semua") return sortGroupsByRelevance(groups);
+    return groups.filter((group) => group.kind === activeKind);
+  }, [groups, activeKind]);
+
+  /** 3 item skor tertinggi lintas jenis — papan "Paling relevan". */
+  const topItems = useMemo(() => {
+    if (activeKind !== "semua" || count <= TOP_COUNT) return [];
+    return groups
+      .flatMap((group) => group.items)
+      .sort((a, b) => {
+        const score = (b.score ?? 0) - (a.score ?? 0);
+        if (score) return score;
+        return (b.date ?? "").localeCompare(a.date ?? "");
+      })
+      .slice(0, TOP_COUNT);
+  }, [groups, count, activeKind]);
+
+  /** Saran koreksi ejaan saat hasil kosong. */
+  const suggestions = useMemo(
+    () => (status === "done" && groups.length === 0 ? suggestCorrections(searchedQuery, SUGGEST_DICTIONARY) : []),
+    [status, groups.length, searchedQuery]
+  );
+
   const statusText =
     status === "loading"
       ? "Mencari…"
@@ -130,8 +204,53 @@ export default function SearchView({
             ? `${count} hasil untuk “${searchedQuery}”`
             : `Tidak ada hasil untuk “${searchedQuery}”`;
 
+  const inputClassName =
+    "w-full rounded-2xl border border-[#dce3ed] bg-slate-50/50 py-3.5 pl-12 pr-12 text-base text-slate-800 transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/15";
+
   return (
     <section className="mx-auto max-w-4xl px-6 py-10 md:py-12">
+      <div ref={sentinelRef} aria-hidden="true" className="h-px" />
+
+      {/* Bilah pencarian ringkas saat form utama di luar layar. */}
+      {stickyVisible && (
+        <div className="fixed inset-x-0 top-0 z-40 border-b border-[#dce3ed] bg-white/90 backdrop-blur-md motion-reduce:transition-none">
+          <form
+            action="/search"
+            method="get"
+            onSubmit={(e) => e.preventDefault()}
+            className="mx-auto flex max-w-4xl items-center gap-2 px-6 py-2.5"
+          >
+            <div className="relative flex-1">
+              <MagnifyingGlass className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => applyQuery(e.target.value)}
+                placeholder="Cari di situs ini…"
+                aria-label="Cari di situs ini (bilah ringkas)"
+                autoComplete="off"
+                spellCheck={false}
+                enterKeyHint="search"
+                className="w-full rounded-xl border border-[#dce3ed] bg-white py-2 pl-10 pr-9 text-sm text-slate-800 focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/15"
+              />
+              {query !== "" && (
+                <button
+                  type="button"
+                  onClick={() => applyQuery("")}
+                  aria-label="Hapus kata kunci"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            <span className="hidden text-xs text-slate-400 sm:block" aria-live="polite">
+              {status === "done" ? `${count} hasil` : ""}
+            </span>
+          </form>
+        </div>
+      )}
+
       {/* Form GET = jalur tanpa JavaScript; dengan JS, submit dicegah dan
           pencarian sudah berjalan lewat debounce. */}
       <form
@@ -155,7 +274,7 @@ export default function SearchView({
             autoComplete="off"
             spellCheck={false}
             enterKeyHint="search"
-            className="w-full rounded-2xl border border-[#dce3ed] bg-slate-50/50 py-3.5 pl-12 pr-12 text-base text-slate-800 transition-colors placeholder:text-slate-400 focus:border-[var(--brand-accent)] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/15"
+            className={inputClassName}
           />
           {query !== "" && (
             <button
@@ -184,6 +303,45 @@ export default function SearchView({
             <p className="mt-1 text-xs text-slate-400">
               Pencarian menjangkau halaman situs, berita, artikel, kegiatan, prestasi, dan ekstrakurikuler sekaligus.
             </p>
+
+            {recent.length > 0 && (
+              <div className="mt-6 w-full max-w-md text-left">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                    <Clock className="h-3.5 w-3.5" />
+                    Pencarian Terakhir
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setRecent(clearRecentSearches())}
+                    className="rounded-lg px-2 py-1 text-xs text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600"
+                  >
+                    Hapus semua
+                  </button>
+                </div>
+                <ul className="mt-2 flex flex-wrap gap-2">
+                  {recent.map((term) => (
+                    <li key={term} className="group relative">
+                      <button
+                        type="button"
+                        onClick={() => applyQuery(term)}
+                        className="rounded-full border border-[#dce3ed] bg-white py-1.5 pl-3 pr-8 text-xs font-medium text-slate-600 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)]"
+                      >
+                        {term}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRecent(removeRecentSearch(term))}
+                        aria-label={`Hapus riwayat “${term}”`}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-300 transition-colors hover:bg-slate-100 hover:text-slate-500"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
 
@@ -194,6 +352,23 @@ export default function SearchView({
               Tidak ada hasil untuk “{searchedQuery}”
             </p>
             <p className="mt-1 text-sm text-slate-400">Coba kata kunci lain atau periksa ejaan.</p>
+
+            {suggestions.length > 0 && (
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                <span className="text-xs text-slate-400">Mungkin maksud Anda:</span>
+                {suggestions.map((word) => (
+                  <button
+                    key={word}
+                    type="button"
+                    onClick={() => applyQuery(word)}
+                    className="rounded-full border border-[var(--brand-accent)]/30 bg-[var(--brand-accent)]/5 px-3 py-1.5 text-xs font-semibold text-[var(--brand-primary)] transition-colors hover:border-[var(--brand-accent)]/60 hover:bg-[var(--brand-accent)]/10"
+                  >
+                    {word}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Tautan cepat ke halaman sering dicari (pola bersama dgn overlay). */}
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
               {EMPTY_STATE_LINKS.map((l) => (
@@ -228,14 +403,77 @@ export default function SearchView({
 
         {groups.length > 0 && (
           <div className="space-y-8">
-            {groups.map((group) => {
+            {/* Tab filter jenis — menyaring daftar tanpa fetch ulang. */}
+            <div
+              role="tablist"
+              aria-label="Saring hasil menurut jenis"
+              className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeKind === "semua"}
+                onClick={() => setActiveKind("semua")}
+                className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                  activeKind === "semua"
+                    ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                    : "border-[#dce3ed] bg-white text-slate-600 hover:border-[var(--brand-accent)]/40"
+                }`}
+              >
+                Semua ({count})
+              </button>
+              {groups.map((group) => {
+                const active = activeKind === group.kind;
+                return (
+                  <button
+                    key={group.kind}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setActiveKind(group.kind)}
+                    className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                      active
+                        ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                        : "border-[#dce3ed] bg-white text-slate-600 hover:border-[var(--brand-accent)]/40"
+                    }`}
+                  >
+                    {group.label} ({group.items.length})
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Papan "Paling relevan" — hanya pada tab Semua dan bila hasil cukup banyak. */}
+            {topItems.length > 0 && (
+              <section aria-labelledby="search-top-heading">
+                <h2
+                  id="search-top-heading"
+                  className="mb-3 text-base font-bold text-[var(--brand-primary)]"
+                >
+                  Hasil teratas
+                </h2>
+                <ul className="grid gap-3 sm:grid-cols-3">
+                  {topItems.map((item) => (
+                    <li key={`${item.kind}-${item.id}`}>
+                      <SearchResultCard item={item} query={searchedQuery} variant="featured" />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {orderedGroups.length === 0 && (
+              <p className="rounded-2xl border border-dashed border-[#dce3ed] bg-white px-6 py-8 text-center text-sm text-slate-400">
+                Tidak ada hasil pada jenis ini.
+              </p>
+            )}
+
+            {orderedGroups.map((group) => {
               const { icon: Icon, chip } = KIND_META[group.kind];
               return (
                 <section key={group.kind} aria-labelledby={`search-group-${group.kind}`}>
                   <div className="mb-3 flex items-center gap-2">
-                    <span
-                      className={`flex h-8 w-8 items-center justify-center rounded-xl border ${chip}`}
-                    >
+                    <span className={`flex h-8 w-8 items-center justify-center rounded-xl border ${chip}`}>
                       <Icon className="h-4 w-4" />
                     </span>
                     <h2
@@ -251,23 +489,7 @@ export default function SearchView({
                   <ul className="space-y-3">
                     {group.items.map((item) => (
                       <li key={item.id}>
-                        <Link
-                          href={item.href}
-                          className="group block rounded-2xl border border-[#dce3ed] bg-white p-4 transition-all hover:border-[var(--brand-accent)]/40 hover:shadow-sm sm:p-5"
-                        >
-                          <span className="block text-[15px] font-semibold leading-snug text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)]">
-                            <Highlight text={item.title} query={searchedQuery} />
-                          </span>
-                          {item.excerpt && (
-                            <span className="mt-1 block line-clamp-2 text-sm text-slate-500">
-                              <Highlight text={item.excerpt} query={searchedQuery} />
-                            </span>
-                          )}
-                          <span className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
-                            <Clock className="h-3.5 w-3.5" />
-                            {formatSearchDate(item.date)}
-                          </span>
-                        </Link>
+                        <SearchResultCard item={item} query={searchedQuery} />
                       </li>
                     ))}
                   </ul>

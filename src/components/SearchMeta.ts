@@ -32,3 +32,44 @@ export function formatSearchDate(iso: string | null): string {
   if (Number.isNaN(date.getTime())) return "";
   return date.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 }
+
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+const WEEK = 7 * DAY;
+const MONTH = 30 * DAY;
+const YEAR = 365 * DAY;
+
+/**
+ * Tanggal ISO → label ramah waktu ("2 minggu lalu"); di atas setahun atau
+ * tanggal rusak → tanggal absolut (`formatSearchDate`). `now` bisa disuntik
+ * agar hasil uji deterministik.
+ */
+export function formatRelativeDate(iso: string | null, now: number = Date.now()): string {
+  if (!iso) return "";
+  const time = new Date(iso).getTime();
+  if (Number.isNaN(time)) return "";
+  const diff = now - time;
+  if (diff < 0) return formatSearchDate(iso); // tanggal masa depan → absolut
+  if (diff < MINUTE) return "baru saja";
+  if (diff < HOUR) return `${Math.floor(diff / MINUTE)} menit lalu`;
+  if (diff < DAY) return `${Math.floor(diff / HOUR)} jam lalu`;
+  if (diff < WEEK) return `${Math.floor(diff / DAY)} hari lalu`;
+  if (diff < MONTH) return `${Math.floor(diff / WEEK)} minggu lalu`;
+  if (diff < YEAR) return `${Math.floor(diff / MONTH)} bulan lalu`;
+  return formatSearchDate(iso);
+}
+
+/**
+ * Kamus kata kunci untuk saran "mungkin maksud Anda" saat pencarian kosong.
+ * Sumber bersama overlay & halaman /search agar sarannya konsisten.
+ */
+export const SUGGEST_DICTIONARY: string[] = [
+  "spmb", "pendaftaran", "daftar", "ppdb", "biaya", "penerimaan",
+  "berita", "informasi", "artikel", "kegiatan", "agenda", "prestasi",
+  "penghargaan", "profil", "sejarah", "guru", "fasilitas", "ekstrakurikuler",
+  "ekskul", "program", "tahfidz", "keunggulan", "galeri", "foto", "unduhan",
+  "download", "formulir", "brosur", "kontak", "hubungi", "alamat", "telepon",
+  "email", "portal", "siswa", "login", "beranda", "pramuka", "tapak suci",
+  "muhadharah", "ustadzah", "lomba", "osis", "ipm",
+];
