@@ -297,15 +297,14 @@ export default function SearchView({
           e.preventDefault();
           submitSearch();
         }}
-        className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+        className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
       >
-        <label
-          htmlFor="site-search"
-          className="block text-sm font-semibold text-[var(--brand-primary)]"
-        >
+        {/* Label visual dihilangkan: hero halaman sudah "Pencarian". Tetap
+            ada (sr-only) agar input punya nama aksesibel. */}
+        <label htmlFor="site-search" className="sr-only">
           Cari di situs ini
         </label>
-        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+        <div className="flex gap-2">
           <div className="relative min-w-0 flex-1">
             <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
@@ -331,25 +330,31 @@ export default function SearchView({
               </button>
             )}
           </div>
-          {/* Submit native saat tanpa JS; dengan JS langsung jalan. */}
+          {/* Submit native saat tanpa JS; dengan JS langsung jalan. Di layar
+              sempit tinggal ikon (aria-label menjaga nama aksesibelnya). */}
           <button
             type="submit"
             disabled={status === "loading"}
-            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)] focus:ring-offset-2 disabled:opacity-50"
+            aria-label="Cari"
+            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-3 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)] focus:ring-offset-2 disabled:opacity-50 sm:px-5"
           >
             <MagnifyingGlass className="h-4 w-4" />
-            {status === "loading" ? "Mencari..." : "Cari"}
+            <span className="hidden sm:inline">
+              {status === "loading" ? "Mencari..." : "Cari"}
+            </span>
           </button>
         </div>
-        {/* Status sekaligus aria-live: perubahan jumlah hasil diumumkan pembaca layar. */}
-        <p role="status" aria-live="polite" className="mt-2 text-sm font-medium text-slate-500">
-          {statusText}
-        </p>
       </form>
+
+      {/* Status hasil — tentang HASIL, bukan tentang kotak input. aria-live
+          dipertahankan agar perubahan jumlah hasil diumumkan pembaca layar. */}
+      <p role="status" aria-live="polite" className="mt-3 text-sm font-medium text-slate-500">
+        {statusText}
+      </p>
 
       {/* Riwayat pencarian — baris chip sederhana, bukan panel. */}
       {recent.length > 0 && (
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
             <Clock className="h-3 w-3" />
             Terakhir dicari
@@ -383,7 +388,7 @@ export default function SearchView({
         </div>
       )}
 
-      <div className="mt-6">
+      <div className="mt-5">
         {status === "idle" && (
           <EmptyState
             icon={MagnifyingGlass}
