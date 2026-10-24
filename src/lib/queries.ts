@@ -7,6 +7,7 @@ export * from "./queries/articles";
 export * from "./queries/audit";
 export * from "./queries/backup";
 export * from "./queries/contact";
+export * from "./queries/diagnostics";
 export * from "./queries/downloads";
 export * from "./queries/ekskuls";
 export * from "./queries/facilities";

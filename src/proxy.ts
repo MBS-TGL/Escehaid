@@ -49,6 +49,7 @@ const ROUTE_PERMISSIONS: ReadonlyArray<[prefix: string, perm: string]> = [
   ["/admin/logs", "logs:read"],
   ["/admin/settings", "settings:manage"],
   ["/admin/flags", "flags:manage"],
+  ["/admin/diagnostics", "diagnostik:read"],
 ];
 
 /** Rute yang diizinkan tanpa cek izin (masih butuh login + aktif). */

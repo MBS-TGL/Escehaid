@@ -36,17 +36,22 @@ diotomasi & dibuat terlihat.
 Satu halaman menjawab "sehat tidak sekarang?" — mencegah debugging tebakan
 (kasus nyata: migrasi `faqs` kemarin tidak terlihat sampai halaman error).
 
-- [ ] a. Endpoint `GET /api/health` (public, tanpa auth, JSON ringkas):
+- [x] a. Endpoint `GET /api/health` (public, tanpa auth, JSON ringkas):
       latensi Supabase (1 query kecil), uptime proses, versi deploy
       (GIT_SHA via env Vercel). Siap dipantau UptimeRobot.
-- [ ] b. Halaman admin `/admin/diagnostics` (perm khusus developer):
+      ✅ 200 saat DB sehat / 503 saat gagal; rate limit 30/mnt/IP.
+- [x] b. Halaman admin `/admin/diagnostics` (perm khusus developer):
       - status tabel inti + deteksi tabel baru yang belum dimigrasi
         (probe `information_schema`, pola `tableHasColumn` di queries/shared.ts)
       - kuota storage terpakai
       - env vars wajib terisi/tidak (nama saja, JANGAN nilai)
       - build/deploy terakhir + status CI (GitHub API)
       - hasil cache ISR ringkas (revalidate ages)
-- [ ] c. Kartu ringkasan di Dashboard admin: hijau/kuning/merah per aspek.
+      ✅ + probe migrasi fitur, umur backup; perm `diagnostik:read` +
+      gate proxy; R2 usage cache 6 jam, GitHub 5 menit. (ISR ages: di-skip —
+      tidak kritikal.)
+- [x] c. Kartu ringkasan di Dashboard admin: hijau/kuning/merah per aspek.
+      ✅ "Status Sistem": DB, umur backup, CI — link ke /admin/diagnostics.
 
 ## 3. Recycle Bin (soft-delete) untuk konten
 

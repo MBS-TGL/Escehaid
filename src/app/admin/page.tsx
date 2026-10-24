@@ -23,8 +23,11 @@ import {
   CheckCircle,
   Plus,
   Eye,
+  Heartbeat,
 } from "@/components/Icons";
 import { StatCard, StatCardGroup } from "@/components/ui";
+import { getBackupManifest } from "@/lib/queries/backup";
+import { getGithubStatus } from "@/lib/queries/diagnostics";
 
 type IconType = ComponentType<{ className?: string }>;
 
@@ -729,7 +732,105 @@ export default async function AdminPage() {
           )}
         </div>
       )}
+
+      {/* Status sistem — ringkasan diagnostik (admin saja; detail di /admin/diagnostics) */}
+      {isAdmin && (
+        <Suspense fallback={null}>
+          <SystemStatusCard supabase={supabase} />
+        </Suspense>
+      )}
     </div>
+  );
+}
+
+/** Data kartu status sistem — helper di luar komponen (Date.now() tak boleh
+ *  dipanggil langsung di badan render, react-hooks/purity). */
+async function collectSystemStatus(supabase: Sb) {
+  const [manifest, github] = await Promise.all([
+    getBackupManifest().catch(() => null),
+    getGithubStatus().catch(() => null),
+  ]);
+  const t0 = Date.now();
+  let dbOk = false;
+  try {
+    const { error } = await supabase.from("site_settings").select("key").limit(1);
+    dbOk = !error;
+  } catch {
+    dbOk = false;
+  }
+  const dbLatencyMs = Date.now() - t0;
+  const ageDays = manifest?.last_run
+    ? Math.floor((Date.now() - new Date(manifest.last_run).getTime()) / 86400_000)
+    : null;
+  const ci = github?.lastRun;
+  return {
+    dbOk,
+    dbLatencyMs,
+    ageDays,
+    ci,
+    repo: github?.repo ?? null,
+  };
+}
+
+/** Kartu ringkas "Status sistem": DB, umur backup, CI — satu baris tiap aspek.
+ *  Data berat (tabel inti, R2, env) sengaja tidak di sini — milik /admin/diagnostics. */
+async function SystemStatusCard({ supabase }: { supabase: Sb }) {
+  const { dbOk, dbLatencyMs, ageDays, ci } = await collectSystemStatus(supabase);
+  const ciTone = !ci ? "warn" : ci.conclusion === "success" ? "ok" : ci.conclusion === null ? "warn" : "fail";
+  const backupTone = ageDays === null ? "warn" : ageDays <= 7 ? "ok" : ageDays <= 14 ? "warn" : "fail";
+
+  const dotCls = (tone: string) =>
+    tone === "ok" ? "bg-emerald-500" : tone === "warn" ? "bg-amber-500" : "bg-red-500";
+
+  const rows: { label: string; tone: string; value: string; href?: string }[] = [
+    {
+      label: "Database",
+      tone: dbOk ? "ok" : "fail",
+      value: dbOk ? `sehat · ${dbLatencyMs} ms` : "tidak terjangkau",
+    },
+    {
+      label: "Backup terakhir",
+      tone: backupTone,
+      value: ageDays === null ? "belum ada" : `${ageDays} hari lalu`,
+      href: "/admin/backup",
+    },
+    {
+      label: "GitHub Actions",
+      tone: ciTone,
+      value: ci ? `${ci.name} · ${ci.conclusion ?? ci.status}` : "tidak tersedia",
+      href: ci?.url,
+    },
+  ];
+
+  return (
+    <section className="mt-5 rounded-xl border border-slate-200/80 bg-white shadow-sm lg:mt-6">
+      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-slate-800">
+          <Heartbeat className="h-4 w-4 text-[var(--brand-accent)]" /> Status Sistem
+        </h2>
+        <Link
+          href="/admin/diagnostics"
+          className="flex items-center gap-1 text-xs font-semibold text-[var(--brand-accent)] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+        >
+          Diagnostik lengkap <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
+      <div className="divide-y divide-slate-50">
+        {rows.map((r) => (
+          <div key={r.label} className="flex items-center gap-3 px-5 py-3">
+            <span aria-hidden className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${dotCls(r.tone)}`} />
+            <span className="w-36 shrink-0 text-xs font-semibold text-slate-600">{r.label}</span>
+            <span className="min-w-0 flex-1 truncate text-xs text-slate-500">
+              {r.href ? (
+                <a href={r.href} target="_blank" rel="noopener noreferrer" className="hover:underline">{r.value}</a>
+              ) : (
+                r.value
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

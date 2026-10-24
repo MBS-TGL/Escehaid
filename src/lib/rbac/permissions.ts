@@ -109,6 +109,12 @@ export const MODULE_REGISTRY: readonly PermissionModule[] = [
     ],
   },
   {
+    key: "diagnostik",
+    label: "Diagnostik",
+    description: "Status sistem: database, storage, env, deploy (halaman /admin/diagnostics)",
+    actions: [{ key: "read", label: "Melihat" }],
+  },
+  {
     key: "galeri",
     label: "Galeri",
     actions: [
