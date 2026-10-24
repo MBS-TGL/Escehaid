@@ -1,6 +1,6 @@
 # TODO — Kerjakan saat konfirmasi (mulai: besok)
 
-> Urutan eksekusi: A → B1 → B2 → B3 → B4 → B5 → C. Satu commit + push per fase.
+> Urutan eksekusi: D1 → D2 → A → B1 → B2 → B3 → B4 → B5 → C. Satu commit + push per fase.
 
 ## A. Perbaikan mobile `/contact` — 5 poin
 
@@ -54,6 +54,28 @@
 - [ ] `npm test`
 - [ ] `npm run build`
 - [ ] Smoke manual: overlay publik (multi-token + highlight + riwayat), halaman `/search`, palet admin, mobile `/contact`
+
+## D. CI hijau + guardrails kerja paralel (temuan 24 Okt)
+
+> D1 paling mendesak: CI gagal di 10 push terakhir (tsc tak kenal `LayoutProps`
+> karena `next-env.d.ts`/`.next` di-gitignore), padahal Vercel deploy tiap push.
+> Eksekusi D1 dulu (sebelum A), baru sisanya.
+
+### D1. Perbaiki CI (`.github/workflows/ci.yml`)
+
+- [ ] Bump `actions/checkout@v4 → v5`, `setup-node@v4 → v5` (Node 20 deprecated)
+- [ ] Tambah step `npx next typegen` sebelum `npx tsc --noEmit` (dokumentasi Next 16)
+- [ ] Tambah step `npm test` ke quality job
+- [ ] Build job: ganti gate/env basi `NEXT_PUBLIC_SUPABASE_*` → `SUPABASE_URL` + `SUPABASE_ANON_KEY` (+ `SITE_URL`), perbarui komentar
+- [ ] Tambah `NEXT_TELEMETRY_DISABLED: 1`
+- [ ] Commit + push → poll Actions API sampai quality green; catat skip/run build job
+
+### D2. Guardrails lokal
+
+- [ ] `AGENTS.md`: section "Guardrail kerja paralel" — stage path eksplisit saja (larang `add -A/-u`, `stash`, `clean`, `checkout -- .`), lint scoped saat tree kotor, dilarang `build`/`start` saat `next dev` aktif, `fetch`+`log @{u}..HEAD` sebelum push, CI = sumber kebenaran
+- [ ] `.githooks/pre-commit`: tambah lint ESLint untuk file staged `*.ts`/`*.tsx` (fail-closed, escape hatch `SKIP_LINT_GUARD=1`), uji via file temp staged tanpa commit
+- [ ] Commit + push
+- [ ] Laporan akhir: status CI + langkah manual (set GitHub Secrets `SUPABASE_URL`, `SUPABASE_ANON_KEY` agar build job aktif)
 
 ## Catatan keputusan
 
