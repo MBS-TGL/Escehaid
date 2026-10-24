@@ -55,7 +55,9 @@
 - [x] `npm run build`
 - [ ] Smoke manual (SISA — butuh browser utk sisi klien): overlay publik (multi-token + highlight + riwayat), palet admin, mobile `/contact`
 
-> Catatan C: tsc/lint/test lokal + build VERIFIED lewat CI run 1b70e8f (job Next.js build dgn env Supabase — sukses). Smoke API produksi lolos: multi-token 'spmb galeri'/'ustadzah tahfidz' bergrup & berperingkat, kueri typo 'ustadzhtub' → 0 hasil HTTP 200 (jalur ilike fallback; pg_trgm belum dmat — jalankan sql/pg-trgm.sql via SQL Editor utk aktif).
+> Catatan C: tsc/lint/test lokal + build VERIFIED lewat CI (job Next.js build dgn env Supabase — sukses). Smoke API produksi lolos: multi-token 'spmb galeri'/'ustadzah tahfidz' bergrup & berperingkat.
+>
+> **pg_trgm aktif (final, v3).** Riwayat: v1 `similarity(kolom, token)` 0.25 = kemiripan seluruh-string → kandidat selalu kosong → regresi 0 hasil di semua pencarian DB (terdeteksi setelah SQL pertama dijalankan). v2 `word_similarity(token, kolom)` 0.25 menghidupkan typo tapi presisi jebol (potongan kata 'tapak' vs 'Pendaftar' ≈0.33 → 'tapak suci' jadi 17 hasil). **v3** (`7ea86d7`): ambang **0.50** + guard token **≥3 huruf** + urut skor `greatest(...)` desc. Hasil produksi terverifikasi: `tapak suci`→1 (hanya Ekstrakurikuler), `muhadharah`→1, `galeri`→2, `spmb`→6, `spmb galeri`→6 (gabungan), typo `ustadzhtub`→4, `ustadzah tahfidz`→6, `zzzqqq`→0, `/search` HTTP 200. Klien juga di-hardening: kandidat trgm kosong → fallback `.or()` ilike (tidak pernah lebih buruk dari B1, self-heal bila SQL drift).
 
 ## D. CI hijau + guardrails kerja paralel (temuan 24 Okt)
 
