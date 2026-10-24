@@ -1,7 +1,7 @@
 import { supabase } from "../supabase";
 import type { Ekskul } from "../supabase";
 import { tryCompressImage } from "../compress-image";
-import { buildSearchOr, deleteStorageFileByUrl, storagePathFromUrl, tableHasColumn, tokenizeSearch } from "./shared";
+import { buildSearchOr, deleteStorageFileByUrl, fetchTrgmIds, resolveSearchMode, storagePathFromUrl, tableHasColumn, tokenizeSearch } from "./shared";
 import { removeViaRoute, listViaRoute, uploadFileViaRoute } from "../storage-remote";
 
 /**
@@ -39,10 +39,20 @@ export async function getEkskulList(limit?: number, search?: string): Promise<Ek
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
 
-  // Pencarian menyeluruh (?q=): nama ATAU deskripsi — multi-token
-  // (item menangkap SALAH SATU token).
-  const orFilter = buildSearchOr(tokenizeSearch(search ?? ""), ["name", "description"]);
-  if (orFilter) query = query.or(orFilter);
+  // Pencarian menyeluruh (?q=): nama ATAU deskripsi — multi-token;
+  // pg_trgm aktif → kandidat via RPC search_ekskuls_ids (toleransi typo).
+  const tokens = tokenizeSearch(search ?? "");
+  let simIds: string[] | null = null;
+  if (tokens.length && (await resolveSearchMode("ekskuls", tokens)) === "similarity") {
+    simIds = await fetchTrgmIds("search_ekskuls_ids", tokens);
+  }
+  if (tokens.length && simIds) {
+    if (!simIds.length) return [];
+    query = query.in("id", simIds);
+  } else if (tokens.length) {
+    const orFilter = buildSearchOr(tokens, ["name", "description"]);
+    if (orFilter) query = query.or(orFilter);
+  }
 
   if (limit) query = query.limit(limit);
 

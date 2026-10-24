@@ -1,7 +1,7 @@
 import { supabase } from "../supabase";
 import type { News } from "../supabase";
 import { cleanupNewsAttachments, cleanupNewsImageFolder } from "./news-media";
-import { buildSearchOr, deleteStorageFileByUrl, generateUniqueNewsSlug, slugify, tableHasColumn, tokenizeSearch } from "./shared";
+import { buildSearchOr, deleteStorageFileByUrl, fetchTrgmIds, generateUniqueNewsSlug, resolveSearchMode, slugify, tableHasColumn, tokenizeSearch } from "./shared";
 
 export interface NewsWithAuthor extends News {
   author_name?: string | null;
@@ -114,11 +114,25 @@ async function queryNewsPage(
   }
   query = query.order("published_at", { ascending: false, nullsFirst: false });
 
-  // Pencarian halaman daftar (?q=): judul, ringkasan, ATAU isi — multi-token,
-  // item menangkap SALAH SATU token (aman `.or()`, sama dengan /search).
-  const orFilter = buildSearchOr(tokenizeSearch(search ?? ""), ["title", "summary", "content"]);
-  if (orFilter) {
-    query = query.or(orFilter);
+  // Pencarian halaman daftar (?q=): judul, ringkasan, ATAU isi — multi-token.
+  // pg_trgm aktif → kandidat via RPC `search_news_ids` (toleransi typo,
+  // similarity 0.25); tak ada/gagal → fallback substring .or() (nol crash).
+  const tokens = tokenizeSearch(search ?? "");
+  let simIds: string[] | null = null;
+  if (tokens.length && (await resolveSearchMode("news", tokens)) === "similarity") {
+    simIds = await fetchTrgmIds("search_news_ids", tokens);
+  }
+  if (tokens.length && simIds) {
+    if (!simIds.length) {
+      // Tidak ada kandidat id (semua similarity < 0.25) → halaman kosong.
+      return { data: [], error: null, count: 0 };
+    }
+    query = query.in("id", simIds);
+  } else if (tokens.length) {
+    const orFilter = buildSearchOr(tokens, ["title", "summary", "content"]);
+    if (orFilter) {
+      query = query.or(orFilter);
+    }
   }
   if (category) {
     query = query.eq("category", category);
@@ -193,10 +207,20 @@ export async function getNewsList(limit?: number, search?: string): Promise<News
   query = query.order("published_at", { ascending: false, nullsFirst: false });
 
   // Pencarian menyeluruh (?q= / pencarian gabungan): judul, ringkasan, ATAU isi
-  // — multi-token (item menangkap SALAH SATU token).
-  const orFilter = buildSearchOr(tokenizeSearch(search ?? ""), ["title", "summary", "content"]);
-  if (orFilter) {
-    query = query.or(orFilter);
+  // — multi-token; pg_trgm aktif → kandidat via RPC search_news_ids.
+  const tokens = tokenizeSearch(search ?? "");
+  let simIds: string[] | null = null;
+  if (tokens.length && (await resolveSearchMode("news", tokens)) === "similarity") {
+    simIds = await fetchTrgmIds("search_news_ids", tokens);
+  }
+  if (tokens.length && simIds) {
+    if (!simIds.length) return [];
+    query = query.in("id", simIds);
+  } else if (tokens.length) {
+    const orFilter = buildSearchOr(tokens, ["title", "summary", "content"]);
+    if (orFilter) {
+      query = query.or(orFilter);
+    }
   }
 
   if (limit) {

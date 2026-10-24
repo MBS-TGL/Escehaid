@@ -2,7 +2,7 @@ import { supabase } from "../supabase";
 import type { Article } from "../supabase";
 import { tryCompressImage } from "../compress-image";
 import { FilterMethods, newsNowIso } from "./news";
-import { buildSearchOr, cleanupOldFiles, deleteStorageFileByUrl, generateUniqueArticleSlug, slugify, tableHasColumn, tokenizeSearch } from "./shared";
+import { buildSearchOr, cleanupOldFiles, deleteStorageFileByUrl, fetchTrgmIds, generateUniqueArticleSlug, resolveSearchMode, slugify, tableHasColumn, tokenizeSearch } from "./shared";
 import { uploadFileViaRoute } from "../storage-remote";
 
 export interface ArticleWithAuthor extends Article {
@@ -88,14 +88,24 @@ export async function getArticleList(limit?: number, search?: string): Promise<A
     articlesHasScheduledColumns(),
     articlesHasVideoColumn(),
   ]);
-  const orFilter = buildSearchOr(tokenizeSearch(search ?? ""), ["title", "excerpt", "content"]);
+  // pg_trgm aktif → kandidat via RPC search_articles_ids (toleransi typo);
+  // tak ada/gagal → fallback substring .or() (nol crash).
+  const tokens = tokenizeSearch(search ?? "");
+  let simIds: string[] | null = null;
+  if (tokens.length && (await resolveSearchMode("articles", tokens)) === "similarity") {
+    simIds = await fetchTrgmIds("search_articles_ids", tokens);
+  }
+  const orFilter = simIds ? "" : buildSearchOr(tokens, ["title", "excerpt", "content"]);
   const listColumns = `${ARTICLE_LIST_COLUMNS}${hasVideo ? ", video_url" : ""}`;
   const run = async (columns: string) => {
     let query = supabase
       .from("articles")
       .select(columns);
     query = applyPublicArticleFilters(query, newCols);
-    if (orFilter) query = query.or(orFilter);
+    if (simIds) {
+      if (!simIds.length) return null; // pemicu hasil kosong
+      query = query.in("id", simIds);
+    } else if (orFilter) query = query.or(orFilter);
     // Disematkan dulu, lalu terbaru (kolom is_pinned hanya bila sudah ada)
     if (newCols) query = query.order("is_pinned", { ascending: false });
     query = query.order("published_at", { ascending: false, nullsFirst: false });
@@ -108,9 +118,14 @@ export async function getArticleList(limit?: number, search?: string): Promise<A
   };
 
   // Coba dengan author_name dulu; bila kolom belum ada (42703), ulang tanpa itu.
-  let { data, error } = await run(`${listColumns}, author_name`);
+  // run() → null = pg_trgm aktif tapi tak ada kandidat id → langsung kosong.
+  const first = await run(`${listColumns}, author_name`);
+  if (first === null) return [];
+  let { data, error } = first;
   if (error && /author_name/.test(error.message || "")) {
-    ({ data, error } = await run(listColumns));
+    const second = await run(listColumns);
+    if (second === null) return [];
+    ({ data, error } = second);
   }
 
   if (error) {
@@ -159,7 +174,11 @@ async function queryArticlePage(
 ) {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
-  const orFilter = buildSearchOr(tokenizeSearch(search ?? ""), ["title", "excerpt", "content"]);
+  const tokens = tokenizeSearch(search ?? "");
+  let simIds: string[] | null = null;
+  if (tokens.length && (await resolveSearchMode("articles", tokens)) === "similarity") {
+    simIds = await fetchTrgmIds("search_articles_ids", tokens);
+  }
 
   let query = supabase
     .from("articles")
@@ -173,8 +192,17 @@ async function queryArticlePage(
   }
   query = query.order("published_at", { ascending: false, nullsFirst: false });
 
-  if (orFilter) {
-    query = query.or(orFilter);
+  if (tokens.length && simIds) {
+    if (!simIds.length) {
+      // Tidak ada kandidat id (semua similarity < 0.25) → halaman kosong.
+      return { data: [], error: null, count: 0 };
+    }
+    query = query.in("id", simIds);
+  } else if (tokens.length) {
+    const orFilter = buildSearchOr(tokens, ["title", "excerpt", "content"]);
+    if (orFilter) {
+      query = query.or(orFilter);
+    }
   }
   if (category) {
     query = query.eq("category", category);

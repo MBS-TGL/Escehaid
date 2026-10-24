@@ -1,7 +1,7 @@
 import { supabase } from "../supabase";
 import type { Achievement } from "../supabase";
 import { tryCompressImage } from "../compress-image";
-import { buildSearchOr, deleteStorageFileByUrl, storagePathFromUrl, tableHasColumn, tokenizeSearch } from "./shared";
+import { buildSearchOr, deleteStorageFileByUrl, fetchTrgmIds, resolveSearchMode, storagePathFromUrl, tableHasColumn, tokenizeSearch } from "./shared";
 import { uploadFileViaRoute } from "../storage-remote";
 
 /** Probe kolom `video_url` (migrasi supabase/content_video.sql) — memoized. */
@@ -22,7 +22,12 @@ export async function getAchievementList(
   search?: string,
   opts?: { featuredFirst?: boolean; limit?: number }
 ): Promise<Achievement[]> {
-  const orFilter = buildSearchOr(tokenizeSearch(search ?? ""), ["title", "description"]);
+  // Multi-token; pg_trgm aktif → kandidat via RPC search_achievements_ids.
+  const tokens = tokenizeSearch(search ?? "");
+  let simIds: string[] | null = null;
+  if (tokens.length && (await resolveSearchMode("achievements", tokens)) === "similarity") {
+    simIds = await fetchTrgmIds("search_achievements_ids", tokens);
+  }
   const hasVideo = await achievementsHasVideoColumn();
   const columns =
     "id, title, description, category, year, image_url, sort_order, created_at, rank_label, level, participants, organizer, is_featured, image_alt" +
@@ -38,7 +43,13 @@ export async function getAchievementList(
     query = query.order("sort_order", { ascending: true });
   }
 
-  if (orFilter) query = query.or(orFilter);
+  if (tokens.length && simIds) {
+    if (!simIds.length) return []; // semua similarity < 0.25
+    query = query.in("id", simIds);
+  } else if (tokens.length) {
+    const orFilter = buildSearchOr(tokens, ["title", "description"]);
+    if (orFilter) query = query.or(orFilter);
+  }
   if (opts?.limit) query = query.limit(opts.limit);
 
   const { data, error } = await query;

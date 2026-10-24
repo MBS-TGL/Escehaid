@@ -1,7 +1,7 @@
 import { supabase } from "../supabase";
 import type { Activity } from "../supabase";
 import { tryCompressImage } from "../compress-image";
-import { buildSearchOr, cleanupOldFiles, deleteStorageFileByUrl, tokenizeSearch } from "./shared";
+import { buildSearchOr, cleanupOldFiles, deleteStorageFileByUrl, fetchTrgmIds, resolveSearchMode, tokenizeSearch } from "./shared";
 import { uploadFileViaRoute } from "../storage-remote";
 
 export interface ActivityListOptions {
@@ -102,7 +102,12 @@ export async function getActivityList(
   search?: string,
   opts?: ActivityListOptions
 ): Promise<Activity[]> {
-  const orFilter = buildSearchOr(tokenizeSearch(search ?? ""), ["title", "description", "content"]);
+  // Multi-token; pg_trgm aktif → kandidat via RPC search_activities_ids.
+  const tokens = tokenizeSearch(search ?? "");
+  let simIds: string[] | null = null;
+  if (tokens.length && (await resolveSearchMode("activities", tokens)) === "similarity") {
+    simIds = await fetchTrgmIds("search_activities_ids", tokens);
+  }
   const run = async (select: string) => {
     let query = supabase
       .from("activities")
@@ -110,7 +115,13 @@ export async function getActivityList(
       .eq("is_published", true)
       .order("activity_date", { ascending: false });
 
-    if (orFilter) query = query.or(orFilter);
+    if (tokens.length && simIds) {
+      if (!simIds.length) return null; // pemicu hasil kosong
+      query = query.in("id", simIds);
+    } else if (tokens.length) {
+      const orFilter = buildSearchOr(tokens, ["title", "description", "content"]);
+      if (orFilter) query = query.or(orFilter);
+    }
     if (opts?.type) query = query.eq("activity_type", opts.type);
     if (opts?.pageSize) {
       const from = Math.max(0, opts.offset ?? 0);
@@ -122,9 +133,12 @@ export async function getActivityList(
   };
 
   let result = await run(LIST_COLUMNS_ALL);
-  if (result.error && isMissingOptionalColumn(result.error)) {
-    // Migrasi kolom opsional (Fase 5/6) belum dijalankan → ulang tanpa kolom baru.
+  if (result === null || (result.error && isMissingOptionalColumn(result.error))) {
+    // null → pg_trgm aktif tanpa kandidat; atau migrasi kolom opsional
+    // (Fase 5/6) belum dijalankan → ulang tanpa kolom baru.
+    if (result === null) return [];
     result = await run(LIST_COLUMNS_BASE);
+    if (result === null) return [];
   }
   const { data, error } = result;
 

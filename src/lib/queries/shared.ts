@@ -192,3 +192,57 @@ export function buildSearchOr(tokens: string[], columns: string[]): string {
     .flatMap((token) => columns.map((column) => `${column}.ilike.%${token}%`))
     .join(",");
 }
+
+// ============ PROBE pg_trgm (toleransi typo DB-level, memoized) ============
+/**
+ * Deteksi ketersediaan pg_trgm — TANPA query pg_catalog (schema itu tidak
+ * terekspose ke anon via PostgREST; uji manual menolak filter
+ * `similarity(...)` dengan PGRST100). Penanda bersih: fungsi SQL
+ * `search_trgm_enabled()` (lihat sql/pg-trgm.sql, dijalankan manual via
+ * Supabase SQL Editor) — bila belum ada → false → semua pencarian tetap
+ * memakai fallback ilike B1. Memoized sekali per proses (nama fungsi &
+ * jawabannya tidak berubah selama proses hidup).
+ */
+let trgmProbePromise: Promise<boolean> | null = null;
+
+export function trgmSearchReady(): Promise<boolean> {
+  if (!trgmProbePromise) {
+    trgmProbePromise = Promise.resolve(supabase.rpc("search_trgm_enabled")).then(
+      ({ data, error }) => !error && data === true,
+      () => false
+    );
+  }
+  return trgmProbePromise;
+}
+
+/** Mode filter pencarian sebuah modul konten. */
+export type SearchMode = "similarity" | "ilike";
+
+/**
+ * Pilih jalur filter utk modul + token: pg_trgm aktif → "similarity"
+ * (kandidat diambil lewat RPC `search_<tabel>_ids`), selain itu "ilike"
+ * (substring `.or()` B1). Token kosong → "ilike" (tanpa filter).
+ */
+export async function resolveSearchMode(
+  table: "news" | "articles" | "activities" | "achievements" | "ekskuls",
+  tokens: string[]
+): Promise<SearchMode> {
+  if (!tokens.length) return "ilike";
+  return (await trgmSearchReady()) ? "similarity" : "ilike";
+}
+
+/**
+ * Kandidat id lewat RPC pg_trgm (dibuat di sql/pg-trgm.sql): item masuk bila
+ * SALAH SATU token berada di atas ambang similarity (0.25) di kolom
+ * pencarian modul. null → RPC tak ada/gagal → pemanggil wajib fallback
+ * ke jalur ilike (nol crash).
+ */
+export async function fetchTrgmIds(rpcName: string, tokens: string[], maxRows = 60): Promise<string[] | null> {
+  try {
+    const { data, error } = await supabase.rpc(rpcName, { tokens, max_rows: maxRows });
+    if (error || !Array.isArray(data)) return null;
+    return data.filter((entry): entry is string => typeof entry === "string");
+  } catch {
+    return null;
+  }
+}
