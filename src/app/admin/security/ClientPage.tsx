@@ -39,6 +39,13 @@ interface ActiveSession {
   current: boolean;
 }
 
+/** IP siap-tampil: loopback (::1/127.0.0.1) bukan alamat yang bermakna
+ *  bagi pengguna — tampilkan label ramah. */
+function formatIp(ip: string): string {
+  if (!ip || ip === "::1" || ip === "127.0.0.1") return "Jaringan lokal";
+  return ip;
+}
+
 export default function SecurityClientPage() {
   const { toast } = useToast();
 
@@ -394,7 +401,7 @@ export default function SecurityClientPage() {
                       )}
                     </p>
                     <p className="mt-0.5 text-xs text-slate-400">
-                      {s.ip || "IP tidak tercatat"} · aktif {formatRelativeTime(s.lastSeenAt)}
+                      {formatIp(s.ip)} · aktif {formatRelativeTime(s.lastSeenAt)}
                     </p>
                   </div>
                 </div>
