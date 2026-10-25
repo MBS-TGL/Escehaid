@@ -57,6 +57,8 @@ import {
   PencilSimple,
   DeviceMobile,
   Scroll,
+  ArrowUp,
+  ArrowDown,
 } from "@/components/Icons";
 
 const PAGE_SIZE = 10;
@@ -327,12 +329,13 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
     }
   }
 
+  // Ikon sort seragam dengan halaman admin lain (achievements, activities, dsb.).
   const sortIcon = (field: SortField) => {
     if (sortField !== field) return null;
     return sortDir === "asc" ? (
-      <span aria-hidden>▲</span>
+      <ArrowUp className="h-3 w-3 text-[var(--brand-accent)]" />
     ) : (
-      <span aria-hidden>▼</span>
+      <ArrowDown className="h-3 w-3 text-[var(--brand-accent)]" />
     );
   };
 
@@ -530,24 +533,24 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                   <span className="flex items-center gap-1">Pengguna {sortIcon("full_name")}</span>
                 </th>
                 <th
-                  className="cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none"
+                  className="w-36 cursor-pointer whitespace-nowrap px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none"
                   onClick={() => toggleSort("system_role")}
                 >
                   <span className="flex items-center gap-1">Peran {sortIcon("system_role")}</span>
                 </th>
                 <th
-                  className="cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none"
+                  className="w-24 cursor-pointer px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none"
                   onClick={() => toggleSort("is_active")}
                 >
-                  <span className="flex items-center gap-1">Status {sortIcon("is_active")}</span>
+                  <span className="flex items-center justify-center gap-1">Status {sortIcon("is_active")}</span>
                 </th>
                 <th
-                  className="hidden cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none lg:table-cell"
+                  className="hidden w-44 cursor-pointer whitespace-nowrap px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none lg:table-cell"
                   onClick={() => toggleSort("last_login_at")}
                 >
                   <span className="flex items-center gap-1">Login Terakhir {sortIcon("last_login_at")}</span>
                 </th>
-                <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                <th className="w-52 whitespace-nowrap px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                   Aksi
                 </th>
               </tr>
@@ -639,7 +642,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-3.5">
+                      <td className="px-4 py-3.5 text-center">
                         <button
                           type="button"
                           disabled={busyId === item.id || isSelf}
