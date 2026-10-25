@@ -358,7 +358,7 @@ export default function SecurityClientPage() {
       </div>
 
       {/* ── Seksi 2: Password ──────────────────────────────── */}
-      <div className="mt-6 rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+      <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
         <h2 className="flex items-center gap-2 text-sm font-bold text-slate-800">
           <Key className="h-4 w-4 text-[var(--brand-accent)]" /> Password
         </h2>
