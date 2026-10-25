@@ -563,7 +563,8 @@ async function RecentNewsCard({ supabase }: { supabase: Sb }) {
       ) : (recentNews.data || []).length === 0 ? (
         <EmptyState icon={Megaphone} title="Belum ada berita" hint="Berita yang Anda tulis akan muncul di sini." />
       ) : (
-        (recentNews.data || []).map((item) => (
+        // Pratinjau maks 3 — kartu dashboard bukan arsip; sisanya via "Lihat semua".
+        (recentNews.data || []).slice(0, 3).map((item) => (
           <Row key={item.id} href="/admin/news">
             <p className="line-clamp-2 text-sm font-medium text-slate-800">{item.title}</p>
             <div className="mt-1 flex items-center gap-2">
@@ -734,9 +735,11 @@ export default async function AdminPage() {
       </Suspense>
 
       {/* Daftar terbaru — tiap kartu stream independen; kartu Status Sistem
-          (admin) menjadi item grid ke-5 sehingga xl:grid-cols-3 terisi 3+2. */}
+          (admin) menjadi item grid ke-5 sehingga xl:grid-cols-3 terisi 3+2.
+          Tanpa items-start: kartu dalam satu baris stretch sama tinggi —
+          garis bawah rata, tidak ada lubang antar kartu. */}
       {(isAdmin || canPublish) && (
-        <div className={`grid items-start gap-4 lg:gap-6 ${listGridClass}`}>
+        <div className={`grid gap-4 lg:gap-6 ${listGridClass}`}>
           {isAdmin && (
             <Suspense fallback={<ListCardSkeleton />}>
               <RecentSpmbCard supabase={supabase} />
