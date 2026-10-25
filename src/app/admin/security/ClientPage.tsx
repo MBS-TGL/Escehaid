@@ -346,7 +346,7 @@ export default function SecurityClientPage() {
       ) : (
         <>
           {/* ── Seksi 2: Keamanan (2FA) — Status */}
-          <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+          <div className="mt-6 rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status akun</p>
@@ -402,7 +402,7 @@ export default function SecurityClientPage() {
 
           {/* Enroll flow */}
           {qr && (
-            <div className="mt-5 rounded-xl border border-[var(--brand-primary)]/20 bg-white p-5 shadow-sm">
+            <div className="mt-6 rounded-xl border border-[var(--brand-primary)]/20 bg-white p-5 shadow-sm">
               <h2 className="text-sm font-bold text-slate-800">1. Pindai QR dengan aplikasi authenticator</h2>
               <p className="mt-1 text-xs text-slate-500">
                 Google Authenticator, Authy, 1Password, dsb. — atau masukkan secret manual di bawah QR.
