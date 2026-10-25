@@ -242,7 +242,7 @@ export const MODULE_REGISTRY: readonly PermissionModule[] = [
   },
   {
     key: "settings",
-    label: "Pengaturan Situs",
+    label: "Konfigurasi Situs",
     actions: [{ key: "manage", label: "Mengelola" }],
   },
   {

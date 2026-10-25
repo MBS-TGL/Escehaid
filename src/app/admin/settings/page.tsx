@@ -5,11 +5,12 @@ import { Gear } from "@/components/Icons";
 
 export const metadata: Metadata = {
   // Template root layout menambahkan "| Nama Sekolah" otomatis.
-  title: "Pengaturan Situs",
+  title: "Konfigurasi Situs",
 };
 
 /**
- * Halaman Pengaturan Situs.
+ * Halaman Konfigurasi Situs (dulu "Pengaturan Situs" — diganti supaya tidak
+ * tertukar dengan "Pengaturan Akun" di dropdown Topbar).
  *
  * Server component: nilai awal dibaca lewat `getSiteSettings()` (ter-cache per
  * request + tag "site-settings"), sehingga tidak ada kilatan nilai lama dan
@@ -29,7 +30,7 @@ export default async function AdminSettingsPage() {
           <Gear className="h-5 w-5 text-[var(--brand-primary)]" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Pengaturan Situs</h1>
+          <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Konfigurasi Situs</h1>
           <p className="text-sm text-slate-500">
             Identitas, kontak, media sosial, SEO, footer, dan tema warna situs publik
           </p>

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Form Pengaturan Situs — satu tab per grup (Identitas, Kontak, Media Sosial,
+ * Form Konfigurasi Situs — satu tab per grup (Identitas, Kontak, Media Sosial,
  * SEO, Footer, Tema).
  *
  * Semantik:
@@ -140,7 +140,7 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
       toast(result.error ?? "Gagal mereset.", "error");
       return;
     }
-    toast(`Pengaturan ${SETTING_GROUP_META[tab].label} dikembalikan ke bawaan.`, "success");
+    toast(`Konfigurasi ${SETTING_GROUP_META[tab].label} dikembalikan ke bawaan.`, "success");
     router.refresh();
   }
 
