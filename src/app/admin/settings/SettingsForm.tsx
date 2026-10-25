@@ -30,6 +30,7 @@ import {
 import { normalizeHex } from "@/lib/settings/contrast";
 import { THEME_PRESETS, findThemePreset, validateThemePair } from "@/lib/settings/theme";
 import type { SiteSettings } from "@/lib/settings";
+import { useMenu, MenuPanel, MenuItem, ADMIN_BOTTOM_NAV_H } from "@/components/admin/mobile";
 import {
   Buildings,
   EnvelopeSimple,
@@ -41,6 +42,7 @@ import {
   ArrowUUpLeft,
   CheckCircle,
   Warning,
+  CaretDown,
 } from "@/components/Icons";
 
 const GROUP_ICONS: Record<SettingGroup, typeof Buildings> = {
@@ -51,6 +53,110 @@ const GROUP_ICONS: Record<SettingGroup, typeof Buildings> = {
   footer: NotePencil,
   tema: Palette,
 };
+
+/** Lencana jumlah perubahan belum disimpan (dipakai trigger & opsi dropdown). */
+function DirtyBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span
+      className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#f4d21f] px-1.5 text-[11px] font-bold leading-none text-slate-900 tabular-nums"
+      aria-label={`${count} perubahan belum disimpan`}
+    >
+      {count > 9 ? "9+" : count}
+    </span>
+  );
+}
+
+/**
+ * Pemilih grup untuk MOBILE (< md).
+ *
+ * Di layar sempit tablist 6 tombol butuh ±604px padahal ruang konten hanya
+ * ±328px di HP 360px — akibatnya pecah jadi 3 baris dengan baris terakhir
+ * (Tema) melebar sendirian. Dropdown ini menggantikannya dengan satu tombol
+ * 44px sehingga tidak ada wrap sama sekali; seluruh 6 grup tetap terlihat
+ * sekaligus saat dibuka, dan tiap opsi membawa jumlah perubahannya sendiri
+ * sehingga perubahan di grup lain tidak "hilang" di balik tab.
+ *
+ * Geometri panel, flip atas/bawah, Esc, klik-luar, dan navigasi panah
+ * seluruhnya ditangani `useMenu` (components/admin/mobile/useMenu.ts).
+ */
+function GroupSwitcher({
+  tab,
+  onChange,
+  dirtyCount,
+  totalDirty,
+}: {
+  tab: SettingGroup;
+  onChange: (group: SettingGroup) => void;
+  dirtyCount: (group: SettingGroup) => number;
+  totalDirty: number;
+}) {
+  const { open, toggle, triggerRef, menuRef, menuId, panelStyle, onMenuKeyDown } = useMenu({
+    menuMinWidth: 240,
+    maxHeight: 320,
+  });
+  const ActiveIcon = GROUP_ICONS[tab];
+
+  return (
+    <div className="relative mb-4 md:hidden">
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
+        aria-label={`Grup pengaturan: ${SETTING_GROUP_META[tab].label}. Ketuk untuk ganti.`}
+        onClick={toggle}
+        className="flex h-11 w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:border-[var(--brand-accent)]/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+      >
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[var(--brand-primary)]/10">
+          <ActiveIcon className="h-3.5 w-3.5 text-[var(--brand-primary)]" />
+        </span>
+        <span className="min-w-0 flex-1 truncate text-left">{SETTING_GROUP_META[tab].label}</span>
+        <DirtyBadge count={totalDirty} />
+        <CaretDown
+          className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <MenuPanel
+          id={menuId}
+          label="Grup pengaturan situs"
+          innerRef={menuRef}
+          style={panelStyle}
+          onKeyDown={onMenuKeyDown}
+        >
+          {SETTING_GROUPS.map((group) => {
+            const Icon = GROUP_ICONS[group];
+            const active = group === tab;
+            return (
+              <MenuItem
+                key={group}
+                active={active}
+                onClick={() => {
+                  // Pola sama dengan MobileFilterBar: tutup panel dulu, baru
+                  // terapkan. `useMenu` otomatis memulihkan fokus ke trigger.
+                  toggle();
+                  onChange(group);
+                }}
+              >
+                <Icon
+                  className={`h-4 w-4 shrink-0 ${active ? "text-[var(--brand-primary)]" : "text-slate-400"}`}
+                />
+                <span className={`min-w-0 flex-1 truncate ${active ? "font-semibold text-[var(--brand-primary)]" : ""}`}>
+                  {SETTING_GROUP_META[group].label}
+                </span>
+                <DirtyBadge count={dirtyCount(group)} />
+                {active && <CheckCircle className="h-4 w-4 shrink-0 text-[var(--brand-accent)]" />}
+              </MenuItem>
+            );
+          })}
+        </MenuPanel>
+      )}
+    </div>
+  );
+}
 
 export function SettingsForm({ initial }: { initial: SiteSettings }) {
   const router = useRouter();
@@ -146,13 +252,29 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
 
   const groupMeta = SETTING_GROUP_META[tab];
 
+  /** Pindah grup: bersihkan galat milik grup sebelumnya. */
+  function selectGroup(group: SettingGroup) {
+    setTab(group);
+    setFieldErrors({});
+    setFormError(null);
+  }
+
   return (
     <div>
-      {/* Tab grup */}
+      {/* Pemilih grup — MOBILE: satu tombol dropdown (lihat GroupSwitcher). */}
+      <GroupSwitcher
+        tab={tab}
+        onChange={selectGroup}
+        dirtyCount={tabDirtyCount}
+        totalDirty={totalDirty}
+      />
+
+      {/* Pemilih grup — ≥ md: tablist penuh. 6 tombol butuh ±604px, jadi baru
+          muat satu baris di 768px; di bawah itu dipakai dropdown di atas. */}
       <div
         role="tablist"
         aria-label="Grup pengaturan situs"
-        className="mb-6 flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1"
+        className="mb-6 hidden gap-1 rounded-xl border border-slate-200 bg-white p-1 md:flex"
       >
         {SETTING_GROUPS.map((group) => {
           const Icon = GROUP_ICONS[group];
@@ -163,11 +285,7 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
               key={group}
               role="tab"
               aria-selected={active}
-              onClick={() => {
-                setTab(group);
-                setFieldErrors({});
-                setFormError(null);
-              }}
+              onClick={() => selectGroup(group)}
               className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 active ? "bg-[var(--brand-primary)] text-white" : "text-slate-600 hover:bg-slate-50"
               }`}
@@ -182,9 +300,10 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
         })}
       </div>
 
-      {/* Judul grup */}
+      {/* Judul grup — disembunyikan di mobile: dropdown di atas sudah
+          menyebutkan nama grup yang sama, jadi judul hanya mengulang. */}
       <div className="mb-4">
-        <h2 className="text-lg font-bold text-slate-800">{groupMeta.label}</h2>
+        <h2 className="hidden text-lg font-bold text-slate-800 md:block">{groupMeta.label}</h2>
         <p className="text-sm text-slate-500">{groupMeta.description}</p>
       </div>
 
@@ -233,8 +352,18 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
           )}
         </div>
 
-        {/* Aksi */}
-        <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-5">
+        {/* Aksi — MOBILE: sticky di atas bottom nav admin sehingga Simpan selalu
+            terjangkau tanpa scroll (tab Identitas punya 8 field). `sticky` (bukan
+            `fixed`) dipilih supaya elemen tetap menempati ruangnya di alur
+            dokumen: tidak perlu menghitung ulang padding `main`, dan saat
+            halaman di-scroll sampai dasar bar duduk di posisi naturalnya
+            sehingga field terakhir tidak pernah tertutup.
+            `bottom` = tinggi bottom nav (ADMIN_BOTTOM_NAV_H) + safe-area; bar
+            kembali polos (statis) di lg karena bottom nav hilang di lg. */}
+        <div
+          className="sticky z-20 mt-6 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white/95 px-3 py-3 shadow-lg shadow-slate-900/5 backdrop-blur-md lg:static lg:z-auto lg:rounded-none lg:border-x-0 lg:border-b-0 lg:border-t lg:border-slate-100 lg:bg-transparent lg:px-0 lg:pb-0 lg:pt-5 lg:shadow-none lg:backdrop-blur-none"
+          style={{ bottom: `calc(${ADMIN_BOTTOM_NAV_H}px + env(safe-area-inset-bottom, 0px))` }}
+        >
           <button
             type="button"
             onClick={() => void handleSave()}
