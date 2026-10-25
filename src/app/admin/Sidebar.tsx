@@ -31,7 +31,6 @@ import {
   Database,
   Heartbeat,
   Trash,
-  ShieldCheck,
 } from "@/components/Icons";
 import { usePermissions } from "./PermissionsProvider";
 
@@ -99,7 +98,8 @@ export const navGroups: NavGroup[] = [
       { label: "Fitur", href: "/admin/flags", icon: Flag, perm: "flags:manage" },
       { label: "Pengguna", href: "/admin/users", icon: UsersThree, perm: "users:manage" },
       { label: "Log", href: "/admin/logs", icon: Scroll, perm: "logs:read" },
-      { label: "Pengaturan Akun", href: "/admin/security", icon: ShieldCheck },
+      // Catatan: "Pengaturan Akun" (urusan pribadi per-user) tidak ada di sini —
+      // rumahnya di dropdown avatar Topbar (pola GitHub). Grup ini murni alat sistem.
     ],
   },
 ];
