@@ -7,6 +7,7 @@ import AdminTopbar from "./Topbar";
 import AdminMobileNav from "./MobileNav";
 import { PermissionsProvider } from "./PermissionsProvider";
 import { useToast } from "@/components/ui/Toast";
+import { readSidebarCollapsed, saveSidebarCollapsed } from "@/lib/admin-sidebar-state";
 import type { PermissionSubject } from "@/lib/rbac";
 
 interface UserProfile {
@@ -25,6 +26,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [subject, setSubject] = useState<PermissionSubject | null>(null);
   const [loading, setLoading] = useState(true);
+  /**
+   * Sidebar desktop dilipat (mode rail 72px) atau tidak.
+   *
+   * Dibaca sebagai lazy initializer, BUKAN di `useEffect`: layout ini
+   * me-render spinner selama `loading`, sehingga sidebar belum ada di HTML
+   * server maupun render pertama klien — tidak ada risiko hydration mismatch,
+   * dan tidak ada kedip "melebar lalu mengecil" saat preferensi tersimpan
+   * langsung terpakai. Membacanya di effect juga akan memicu aturan
+   * react-hooks/set-state-in-effect.
+   */
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
 
   useEffect(() => {
     // Halaman login tidak perlu fetch profil. Tidak perlu setLoading(false) di sini:
@@ -107,10 +119,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <PermissionsProvider subject={subject}>
       <div className="min-h-screen bg-slate-50">
-        <AdminSidebar />
+        <AdminSidebar
+          collapsed={sidebarCollapsed}
+          onToggle={() => {
+            const next = !sidebarCollapsed;
+            setSidebarCollapsed(next);
+            saveSidebarCollapsed(next);
+          }}
+        />
 
-        {/* Main content area */}
-        <div className="min-h-screen transition-all duration-300 lg:ml-[270px]">
+        {/* Main content area — margin kiri mengikuti lebar sidebar (270px penuh /
+            72px rail) agar konten tidak pernah tertutup maupun menyisakan celah. */}
+        <div
+          className={`min-h-screen transition-all duration-300 motion-reduce:transition-none ${
+            sidebarCollapsed ? "lg:ml-[72px]" : "lg:ml-[270px]"
+          }`}
+        >
           <AdminTopbar profile={profile} />
           {/* pb-24 lg:pb-0 — bottom nav setinggi ±54px + safe-area; tanpa padding
               ini baris terakhir tabel/pagination tertutup bar navigasi. */}

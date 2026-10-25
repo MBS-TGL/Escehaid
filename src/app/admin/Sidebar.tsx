@@ -20,6 +20,7 @@ import {
   SquaresFour,
   BookOpen,
   CaretRight,
+  CaretLeft,
   ArrowSquareOut,
   FolderOpen,
   Scroll,
@@ -149,14 +150,27 @@ export function filterNavGroups(
  *
  * Di bawah breakpoint `lg` sidebar TIDAK dirender sama sekali: navigasi mobile
  * memakai bottom nav + master sheet (lihat MobileNav.tsx). Karena itu tidak ada
- * lagi overlay, state buka/tutup, atau tombol X — ketiganya dulu dipakai untuk
- * sidebar geser yang kini hanya milik layar lebar.
+ * overlay geser maupun tombol X.
+ *
+ * Yang ADA: mode lipat (rail) untuk desktop — `collapsed` menyempitkan sidebar
+ * 270px → 72px dan hanya menyisakan ikon; `onToggle` merender tombol lipat di
+ * tengah tepi kanan. State-nya dipegang DashboardLayout dan disimpan di
+ * localStorage (src/lib/admin-sidebar-state.ts), jadi bertahan antar-reload.
  */
 export default function AdminSidebar({
   badges = {},
+  collapsed = false,
+  onToggle,
 }: {
   /** Jumlah notifikasi per menu, key = href. Contoh: { "/admin/contact": 3 } */
   badges?: Record<string, number>;
+  /** true = mode rail (hanya ikon, lebar 72px). Default false = lebar penuh. */
+  collapsed?: boolean;
+  /**
+   * Bila diberikan, tombol lipat dirender di tengah tepi kanan sidebar.
+   * Tanpa prop ini tombol tidak ada — komponen tetap bisa dipakai apa adanya.
+   */
+  onToggle?: () => void;
 }) {
   const pathname = usePathname() ?? "";
   const navRef = useRef<HTMLElement | null>(null);
@@ -177,9 +191,44 @@ export default function AdminSidebar({
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-50 hidden w-[270px] flex-col border-r border-slate-200/80 bg-white lg:flex">
+      <aside
+        id="admin-sidebar"
+        // `transition-[width]` + `motion-reduce` supaya lipat/lebar halus, dan
+        // diam total bagi pengguna yang meminta gerak dikurangi.
+        className={`fixed inset-y-0 left-0 z-50 hidden flex-col border-r border-slate-200/80 bg-white transition-[width] duration-300 motion-reduce:transition-none lg:flex ${
+          collapsed ? "lg:w-[72px]" : "lg:w-[270px]"
+        }`}
+      >
+        {/* Tombol lipat — menempel di TENGAH tepi kanan sidebar (garis batas
+            dengan area Topbar/konten). Anak dari `aside` sehingga posisinya ikut
+            lebar induk tanpa perlu sinkronisasi angka apa pun. `-right-3` (12px)
+            menaruhnya tepat di atas border 1px; `aside` tidak punya `overflow`
+            jadi tonjolan ini tidak ter-clip. Otomatis tak terlihat di mobile
+            karena induknya `hidden lg:flex`. */}
+        {onToggle && (
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={!collapsed}
+            aria-controls="admin-sidebar"
+            aria-label={collapsed ? "Perbesar menu samping" : "Perkecil menu samping"}
+            title={collapsed ? "Perbesar menu samping" : "Perkecil menu samping"}
+            className="absolute -right-3 top-1/2 z-10 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
+          >
+            <CaretLeft
+              className={`h-3.5 w-3.5 transition-transform duration-300 motion-reduce:transition-none ${
+                collapsed ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+        )}
+
         {/* Brand */}
-        <div className="flex h-16 flex-shrink-0 items-center gap-3 border-b border-slate-200/80 px-5">
+        <div
+          className={`flex h-16 flex-shrink-0 items-center border-b border-slate-200/80 ${
+            collapsed ? "justify-center" : "gap-3 px-5"
+          }`}
+        >
           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg">
             <Image
               src="/images/Logo-Sekolah.png"
@@ -190,7 +239,10 @@ export default function AdminSidebar({
               className="h-10 w-10 rounded-lg object-contain"
             />
           </div>
-          <div className="min-w-0 flex-1">
+          {/* `sr-only` (bukan dihapus) saat rail: nama sekolah tetap terbaca
+              pembaca layar. `sr-only` = position:absolute → keluar dari alur
+              flex, jadi `justify-center` tetap memusatkan logo. */}
+          <div className={`min-w-0 flex-1 ${collapsed ? "sr-only" : ""}`}>
             <p className="truncate text-sm font-bold text-[var(--brand-primary)]">SMP Muhammadiyah 4</p>
             <p className="truncate text-[11px] text-slate-500">Tanggul</p>
           </div>
@@ -203,19 +255,32 @@ export default function AdminSidebar({
         <nav
           ref={navRef}
           aria-label="Menu admin"
-          className="min-h-0 flex-1 space-y-5 overflow-y-auto scrollbar-hide px-3 pb-6 pt-4"
+          className={`min-h-0 flex-1 space-y-5 overflow-y-auto scrollbar-hide pb-6 pt-4 ${
+            collapsed ? "px-2" : "px-3"
+          }`}
         >
           {groups.map((group, i) => (
             <div key={group.title ?? i}>
-              {group.title && (
-                <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                  {group.title}
-                </p>
-              )}
+              {group.title &&
+                (collapsed ? (
+                  // Judul teks mustahil muat di 72px → garis pemisah sebagai
+                  // penanda grup, sementara teksnya tetap ada untuk pembaca layar.
+                  <>
+                    <div aria-hidden="true" className="mx-auto mb-1.5 h-px w-6 bg-slate-200" />
+                    <span className="sr-only">{group.title}</span>
+                  </>
+                ) : (
+                  <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                    {group.title}
+                  </p>
+                ))}
               <ul className="space-y-0.5">
                 {group.items.map((item) => {
                   const isActive = isNavActive(item.href, pathname);
                   const count = badges[item.href] ?? 0;
+                  // Label lengkap untuk tooltip `title` di mode rail — sekaligus
+                  // menyertakan jumlah notifikasi agar tak hilang saat menyempit.
+                  const railTitle = count > 0 ? `${item.label} (${count} baru)` : item.label;
 
                   return (
                     <li key={item.href}>
@@ -224,30 +289,69 @@ export default function AdminSidebar({
                           href={item.href}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-all hover:bg-slate-50 hover:text-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
+                          title={collapsed ? railTitle : undefined}
+                          className={`group flex items-center rounded-lg py-2.5 text-sm font-medium text-slate-600 transition-all hover:bg-slate-50 hover:text-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1 ${
+                            collapsed ? "justify-center px-2" : "gap-3 px-3"
+                          }`}
                         >
-                          <item.icon className="h-[18px] w-[18px] flex-shrink-0 text-slate-400 group-hover:text-[var(--brand-primary)]" />
-                          <span className="truncate">{item.label}</span>
-                          <ArrowSquareOut className="ml-auto h-3.5 w-3.5 text-slate-300 group-hover:text-[var(--brand-primary)]" />
+                          <span className="relative flex-shrink-0">
+                            <item.icon className="h-[18px] w-[18px] flex-shrink-0 text-slate-400 group-hover:text-[var(--brand-primary)]" />
+                            {collapsed && count > 0 && (
+                              <span
+                                aria-hidden="true"
+                                className="absolute -right-1.5 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white"
+                              >
+                                {count > 9 ? "9+" : count}
+                              </span>
+                            )}
+                          </span>
+                          <span className={collapsed ? "sr-only" : "truncate"}>{item.label}</span>
+                          {collapsed && count > 0 && (
+                            <span className="sr-only">, {count} baru</span>
+                          )}
+                          {!collapsed && (
+                            <ArrowSquareOut className="ml-auto h-3.5 w-3.5 text-slate-300 group-hover:text-[var(--brand-primary)]" />
+                          )}
                         </a>
                       ) : (
                       <Link
                         href={item.href}
                         aria-current={isActive ? "page" : undefined}
-                        className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1 ${isActive
+                        title={collapsed ? railTitle : undefined}
+                        className={`group flex items-center rounded-lg py-2.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1 ${
+                          collapsed ? "justify-center px-2" : "gap-3 px-3"
+                        } ${isActive
                             ? "bg-[var(--brand-primary)] text-white shadow-md shadow-[var(--brand-primary)]/20"
                             : "text-slate-600 hover:bg-slate-50 hover:text-[var(--brand-primary)]"
                           }`}
                       >
-                        <item.icon
-                          className={`h-[18px] w-[18px] flex-shrink-0 ${isActive
-                              ? "text-white"
-                              : "text-slate-400 group-hover:text-[var(--brand-primary)]"
-                            }`}
-                        />
-                        <span className="truncate">{item.label}</span>
+                        <span className="relative flex-shrink-0">
+                          <item.icon
+                            className={`h-[18px] w-[18px] flex-shrink-0 ${isActive
+                                ? "text-white"
+                                : "text-slate-400 group-hover:text-[var(--brand-primary)]"
+                              }`}
+                          />
+                          {/* Badge menempel di pojok ikon saat rail — `ml-auto`
+                              tidak punya ruang di 72px. */}
+                          {collapsed && count > 0 && (
+                            <span
+                              aria-hidden="true"
+                              className={`absolute -right-1.5 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-1 text-[9px] font-bold leading-none ${
+                                isActive ? "bg-white text-[var(--brand-primary)]" : "bg-red-500 text-white"
+                              }`}
+                            >
+                              {count > 9 ? "9+" : count}
+                            </span>
+                          )}
+                        </span>
+                        <span className={collapsed ? "sr-only" : "truncate"}>{item.label}</span>
 
-                        {count > 0 && (
+                        {collapsed && count > 0 && (
+                          <span className="sr-only">, {count} baru</span>
+                        )}
+
+                        {!collapsed && count > 0 && (
                           <span
                             className={`ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${isActive
                                 ? "bg-white text-[var(--brand-primary)]"
@@ -259,7 +363,7 @@ export default function AdminSidebar({
                           </span>
                         )}
 
-                        {isActive && count === 0 && (
+                        {!collapsed && isActive && count === 0 && (
                           <CaretRight className="ml-auto h-3.5 w-3.5 text-white/60" />
                         )}
                       </Link>
@@ -280,10 +384,13 @@ export default function AdminSidebar({
             href="/"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
+            title={collapsed ? "Lihat website" : undefined}
+            className={`flex items-center rounded-lg py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] ${
+              collapsed ? "justify-center px-2" : "gap-3 px-3"
+            }`}
           >
             <ArrowSquareOut className="h-[18px] w-[18px] flex-shrink-0 text-slate-400" />
-            Lihat website
+            <span className={collapsed ? "sr-only" : undefined}>Lihat website</span>
           </a>
         </div>
       </aside>
