@@ -16,10 +16,17 @@ export interface SqlMigrationStatus {
   applied: boolean;
 }
 
-/** Probe RPC ada/tidak: panggil tanpa argumen — error "function not found"
- *  (PGRST202) berarti belum dibuat; error validasi lain berarti ADA. */
-async function rpcExists(name: string): Promise<boolean> {
-  const { error } = await supabase.rpc(name);
+/**
+ * Probe RPC ada/tidak. PostgREST mencocokkan RPC berdasarkan SIGNATURE
+ * argumen yang dikirim — memanggil tanpa argumen akan mencari varian
+ * 0-parameter dan melaporkan PGRST202 walaupun fungsinya ada (bug probe
+ * v1). Karena itu panggil DENGAN argumen tidak-valid:
+ *   - PGRST202 / "Could not find the function" → belum dibuat ❌
+ *   - error lain (permission denied 42501 / validasi P0001) → fungsi ADA ✅
+ * Argumen tidak-valid dipilih yang gagal validasi SEBELUM menyentuh data.
+ */
+async function rpcExists(name: string, invalidArgs: Record<string, unknown>): Promise<boolean> {
+  const { error } = await supabase.rpc(name, invalidArgs);
   if (!error) return true;
   return !(error.code === "PGRST202" || /Could not find the function|does not exist/i.test(error.message ?? ""));
 }
@@ -74,7 +81,7 @@ const MIGRATIONS: MigrationDef[] = [
   {
     file: "supabase/profile-name.sql",
     description: "RPC update_own_full_name (edit nama di Pengaturan Akun)",
-    check: () => rpcExists("update_own_full_name"),
+    check: () => rpcExists("update_own_full_name", { p_full_name: "x" }),
   },
   {
     file: "supabase/backup-perm.sql",
