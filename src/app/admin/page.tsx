@@ -286,7 +286,7 @@ async function TodoRail({ supabase, isAdmin, canPublish }: { supabase: Sb; isAdm
 
   if (todo.length === 0) {
     return (
-      <p className="mb-4 flex items-center gap-1.5 px-1 text-xs font-medium text-emerald-700">
+      <p className="mb-6 flex items-center gap-1.5 px-1 text-xs font-medium text-emerald-700">
         <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" />
         Semua beres, tidak ada yang perlu ditindaklanjuti.
       </p>
@@ -294,7 +294,7 @@ async function TodoRail({ supabase, isAdmin, canPublish }: { supabase: Sb; isAdm
   }
 
   return (
-    <section aria-labelledby="todo-title" className="mb-4">
+    <section aria-labelledby="todo-title" className="mb-6">
       <h2 id="todo-title" className="mb-2 text-sm font-bold text-slate-800">
         Perlu perhatian
       </h2>
@@ -403,15 +403,33 @@ async function StatsSection({ supabase, isAdmin, canPublish }: { supabase: Sb; i
     },
   ];
 
-  const stats = allStats.filter((s) => s.show);
+  // Dua kelompok: Interaksi (butuh tindakan admin) dulu, lalu Konten
+  // (informasional) — hierarki visual, mata tahu harus lihat mana dulu.
+  const interactionStats = allStats.filter((s) => s.show && (s.label === "Pendaftar" || s.label === "Pesan"));
+  const contentStats = allStats.filter((s) => s.show && !interactionStats.includes(s));
+  const stats = [...interactionStats, ...contentStats];
   if (stats.length === 0) return null;
 
+  const card = (stat: (typeof allStats)[number]) => (
+    <Link
+      key={stat.label}
+      href={stat.href}
+      aria-label={`${stat.label}: ${stat.value === null ? "gagal memuat" : stat.value}`}
+      className="block h-full rounded-2xl transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+    >
+      <StatCard label={stat.label} value={stat.value === null ? "—" : stat.value} icon={stat.icon} variant={stat.variant}>
+        {stat.detail}
+      </StatCard>
+    </Link>
+  );
+
   return (
-    <>
+    <section className="mb-6">
       {/* Mobile: grid padat, semua angka terlihat tanpa scroll panjang.
           Rincian status sengaja disembunyikan di HP (grid tetap padat).
           Selalu 2 kolom — 3 kolom menyisakan ±104px per kartu di layar 360px
-          sehingga label & angka saling mendesak. */}
+          sehingga label & angka saling mendesak. Interaksi dulu (urutan sama
+          dengan desktop). */}
       <div className="grid grid-cols-2 gap-2 md:hidden">
         {stats.map((stat) => (
           <Link
@@ -429,24 +447,24 @@ async function StatsSection({ supabase, isAdmin, canPublish }: { supabase: Sb; i
         ))}
       </div>
 
-      {/* Tablet & desktop: StatCard bawaan + rincian status */}
+      {/* Tablet & desktop: dua sub-grup berlabel — Interaksi lalu Konten. */}
       <div className="hidden md:block">
-        <StatCardGroup>
-          {stats.map((stat) => (
-            <Link
-              key={stat.label}
-              href={stat.href}
-              aria-label={`${stat.label}: ${stat.value === null ? "gagal memuat" : stat.value}`}
-              className="block h-full rounded-2xl transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-            >
-              <StatCard label={stat.label} value={stat.value === null ? "—" : stat.value} icon={stat.icon} variant={stat.variant}>
-                {stat.detail}
-              </StatCard>
-            </Link>
-          ))}
-        </StatCardGroup>
+        {interactionStats.length > 0 && (
+          <>
+            <h2 className="mb-2 text-sm font-bold text-slate-800">Interaksi</h2>
+            <StatCardGroup className="mb-4">{interactionStats.map(card)}</StatCardGroup>
+          </>
+        )}
+        {contentStats.length > 0 && (
+          <>
+            {interactionStats.length > 0 && (
+              <h2 className="mb-2 text-sm font-bold text-slate-800">Konten</h2>
+            )}
+            <StatCardGroup>{contentStats.map(card)}</StatCardGroup>
+          </>
+        )}
       </div>
-    </>
+    </section>
   );
 }
 
@@ -678,7 +696,7 @@ export default async function AdminPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Banner ringkas: sapaan + tanggal + aksi cepat (1 baris yang bisa digeser di HP) */}
-      <header className="mb-4 flex flex-col gap-3 rounded-2xl bg-gradient-to-r from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-accent)] p-4 text-white shadow-lg shadow-[var(--brand-primary)]/20 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+      <header className="mb-6 flex flex-col gap-3 rounded-2xl bg-gradient-to-r from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-accent)] p-4 text-white shadow-lg shadow-[var(--brand-primary)]/20 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <p className="text-xs text-white/70">{today}</p>
           <h1 className="mt-0.5 truncate text-lg font-bold sm:text-xl">
@@ -688,13 +706,13 @@ export default async function AdminPage() {
         </div>
         <nav
           aria-label="Aksi cepat"
-          className={`grid gap-2 lg:flex lg:flex-wrap ${mobileActionCount > 1 ? "grid-cols-2" : "grid-cols-1"}`}
+          className={`grid gap-2 lg:flex lg:flex-nowrap lg:overflow-x-auto ${mobileActionCount > 1 ? "grid-cols-2" : "grid-cols-1"}`}
         >
           {actions.map((action) => (
             <Link
               key={action.label}
               href={action.href}
-              className={`${action.mobile ? "flex" : "hidden lg:flex"} min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:min-h-0 lg:rounded-lg`}
+              className={`${action.mobile ? "flex" : "hidden lg:flex"} min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:min-h-0 lg:shrink-0 lg:rounded-lg lg:whitespace-nowrap`}
             >
               <action.icon className="h-3.5 w-3.5 flex-shrink-0" />
               <span className="truncate">{action.label}</span>
@@ -715,9 +733,10 @@ export default async function AdminPage() {
         <StatsSection supabase={supabase} isAdmin={isAdmin} canPublish={canPublish} />
       </Suspense>
 
-      {/* Daftar terbaru — tiap kartu stream independen */}
+      {/* Daftar terbaru — tiap kartu stream independen; kartu Status Sistem
+          (admin) menjadi item grid ke-5 sehingga xl:grid-cols-3 terisi 3+2. */}
       {(isAdmin || canPublish) && (
-        <div className={`mt-5 grid items-start gap-4 lg:mt-6 lg:gap-6 ${listGridClass}`}>
+        <div className={`grid items-start gap-4 lg:gap-6 ${listGridClass}`}>
           {isAdmin && (
             <Suspense fallback={<ListCardSkeleton />}>
               <RecentSpmbCard supabase={supabase} />
@@ -738,14 +757,13 @@ export default async function AdminPage() {
               <AgendaCard supabase={supabase} />
             </Suspense>
           )}
+          {/* Status sistem — ringkasan diagnostik (admin saja; detail di /admin/diagnostics) */}
+          {isAdmin && (
+            <Suspense fallback={null}>
+              <SystemStatusCard supabase={supabase} />
+            </Suspense>
+          )}
         </div>
-      )}
-
-      {/* Status sistem — ringkasan diagnostik (admin saja; detail di /admin/diagnostics) */}
-      {isAdmin && (
-        <Suspense fallback={null}>
-          <SystemStatusCard supabase={supabase} />
-        </Suspense>
       )}
     </div>
   );
@@ -811,7 +829,7 @@ async function SystemStatusCard({ supabase }: { supabase: Sb }) {
   ];
 
   return (
-    <section className="mt-5 rounded-xl border border-slate-200/80 bg-white shadow-sm lg:mt-6">
+    <section className="rounded-xl border border-slate-200/80 bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
         <h2 className="flex items-center gap-2 text-sm font-bold text-slate-800">
           <Heartbeat className="h-4 w-4 text-[var(--brand-accent)]" /> Status Sistem
