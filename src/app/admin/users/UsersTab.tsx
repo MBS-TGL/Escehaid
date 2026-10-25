@@ -9,6 +9,7 @@
  * ditegakkan server-side; di sini hanya penyaringan kenyamanan.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   getRoleList,
   rbacTablesReady,
@@ -22,6 +23,12 @@ import {
   toggleUserActive,
   resetUserPassword,
   deleteUser,
+  renameUser,
+  toggleUsersActiveBulk,
+  deleteUsersBulk,
+  getUserSessions,
+  forceLogoutUser,
+  type UserSessionInfo,
 } from "./actions";
 import { RbacSqlNotice } from "./RolesTab";
 import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
@@ -29,6 +36,7 @@ import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useToast } from "@/components/ui/Toast";
 import { ConfirmModal } from "@/components/ui";
 import { Input } from "@/components/ui/Input";
+import { formatRelativeTime } from "@/lib/admin-display";
 import {
   User,
   UserPlus,
@@ -46,6 +54,9 @@ import {
   ShieldCheck,
   Envelope,
   Clock,
+  PencilSimple,
+  DeviceMobile,
+  Scroll,
 } from "@/components/Icons";
 
 const PAGE_SIZE = 10;
@@ -62,6 +73,7 @@ type SortDir = "asc" | "desc";
 
 export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
   const { toast } = useToast();
+  const router = useRouter();
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState({
@@ -93,6 +105,23 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
   const [editRoleKey, setEditRoleKey] = useState("");
   const [deleteItem, setDeleteItem] = useState<AdminUserRow | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  // Bulk (aksi massal) — hanya baris terlihat; akun sendiri tidak bisa dipilih.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkConfirm, setBulkConfirm] = useState<"activate" | "deactivate" | "delete" | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  // Edit nama
+  const [renameItem, setRenameItem] = useState<AdminUserRow | null>(null);
+  const [renameName, setRenameName] = useState("");
+  const [renameSaving, setRenameSaving] = useState(false);
+
+  // Sesi perangkat user
+  const [sessionsItem, setSessionsItem] = useState<AdminUserRow | null>(null);
+  const [sessionsList, setSessionsList] = useState<UserSessionInfo[] | null>(null);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [kickConfirmItem, setKickConfirmItem] = useState<AdminUserRow | null>(null);
+  const [kickBusy, setKickBusy] = useState(false);
 
   // Pencarian di-debounce 300ms sebelum diteruskan ke server.
   useEffect(() => {
@@ -145,6 +174,108 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
     if (roles.length > 0) return roles.map((r) => r.key);
     return ["SUPER_ADMIN", "ADMIN_SEKOLAH", "OPERATOR_KONTEN", "PANITIA_SPMB"];
   }, [roles]);
+
+  // ── Bulk ────────────────────────────────────────────────────────────────
+  const selectable = users.filter((u) => u.id !== currentUserId);
+  const allVisibleSelected = selectable.length > 0 && selectable.every((u) => selectedIds.has(u.id));
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  function toggleSelectAll() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) selectable.forEach((u) => next.delete(u.id));
+      else selectable.forEach((u) => next.add(u.id));
+      return next;
+    });
+  }
+
+  async function handleBulkActive(active: boolean) {
+    setBulkBusy(true);
+    const res = await toggleUsersActiveBulk(Array.from(selectedIds), active);
+    setBulkBusy(false);
+    if (!res.success) {
+      toast(res.error || "Aksi massal gagal.", "error");
+      if (res.skipped && res.success === false && res.error?.includes("dilewati")) {
+        setSelectedIds(new Set());
+      }
+      return;
+    }
+    toast(
+      res.skipped
+        ? `${selectedIds.size - res.skipped} pengguna ${active ? "diaktifkan" : "dinonaktifkan"}, ${res.skipped} dilewati.`
+        : `Berhasil ${active ? "mengaktifkan" : "menonaktifkan"} pengguna terpilih.`,
+      "success"
+    );
+    setSelectedIds(new Set());
+    load().catch(() => {});
+  }
+
+  async function handleBulkDelete() {
+    setBulkBusy(true);
+    const res = await deleteUsersBulk(Array.from(selectedIds));
+    setBulkBusy(false);
+    if (!res.success) {
+      toast(res.error || "Hapus massal gagal.", "error");
+      return;
+    }
+    toast(
+      res.skipped ? `${selectedIds.size - res.skipped} dihapus, ${res.skipped} dilewati.` : "Pengguna terpilih dihapus.",
+      "success"
+    );
+    setSelectedIds(new Set());
+    load().catch(() => {});
+  }
+
+  // ── Rename ──────────────────────────────────────────────────────────────
+  async function handleRename() {
+    if (!renameItem) return;
+    setRenameSaving(true);
+    const res = await renameUser(renameItem.id, renameName);
+    setRenameSaving(false);
+    if (!res.success) {
+      toast(res.error || "Gagal mengganti nama.", "error");
+      return;
+    }
+    toast("Nama pengguna diperbarui.", "success");
+    setRenameItem(null);
+    load().catch(() => {});
+  }
+
+  // ── Sesi perangkat ──────────────────────────────────────────────────────
+  async function openSessions(item: AdminUserRow) {
+    setSessionsItem(item);
+    setSessionsList(null);
+    setSessionsLoading(true);
+    const res = await getUserSessions(item.id);
+    setSessionsLoading(false);
+    if (!res.success || !res.sessions) {
+      toast(res.error || "Gagal memuat sesi pengguna.", "error");
+      setSessionsList([]);
+      return;
+    }
+    setSessionsList(res.sessions);
+  }
+
+  async function handleForceLogout() {
+    if (!kickConfirmItem) return;
+    setKickBusy(true);
+    const res = await forceLogoutUser(kickConfirmItem.id);
+    setKickBusy(false);
+    if (!res.success) {
+      toast(res.error || "Gagal mengeluarkan sesi.", "error");
+      return;
+    }
+    toast(`Semua sesi ${kickConfirmItem.full_name} telah dikeluarkan.`, "success");
+    setKickConfirmItem(null);
+    if (sessionsItem) openSessions(sessionsItem);
+  }
 
   const roleFilterGroup: FilterGroup = {
     value: roleFilter,
@@ -334,12 +465,64 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
         }
       />
 
+      {/* Bulk bar — muncul saat ada pilihan */}
+      {selectedIds.size > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5">
+          <CheckCircle className="h-4 w-4 text-[var(--brand-primary)]" />
+          <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() => handleBulkActive(true)}
+              className="rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+            >
+              Aktifkan
+            </button>
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() => setBulkConfirm("deactivate")}
+              className="rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-50 disabled:opacity-60"
+            >
+              Nonaktifkan
+            </button>
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() => setBulkConfirm("delete")}
+              className="rounded-lg bg-red-600 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+            >
+              Hapus
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set())}
+              aria-label="Hapus pilihan"
+              title="Hapus pilihan"
+              className="rounded-lg p-1 text-slate-400 hover:text-slate-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Tabel */}
       <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
               <tr>
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={toggleSelectAll}
+                    aria-label="Pilih semua yang tampil"
+                    className="h-4 w-4 rounded border-slate-300 accent-[var(--brand-primary)]"
+                  />
+                </th>
                 <th
                   className="cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none"
                   onClick={() => toggleSort("full_name")}
@@ -372,7 +555,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
             <tbody className="divide-y divide-slate-100">
               {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-16 text-center">
+                  <td colSpan={6} className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
                         <Users className="h-8 w-8 text-slate-300" />
@@ -394,6 +577,17 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                   const isSelf = currentUserId === item.id;
                   return (
                     <tr key={item.id} className="transition-colors hover:bg-slate-50/80">
+                      <td className="px-4 py-3.5">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(item.id)}
+                          onChange={() => toggleSelect(item.id)}
+                          disabled={isSelf}
+                          aria-label={`Pilih ${item.full_name}${isSelf ? " (akun sendiri tidak bisa dipilih)" : ""}`}
+                          title={isSelf ? "Akun sendiri tidak bisa dipilih untuk aksi massal" : undefined}
+                          className="h-4 w-4 rounded border-slate-300 accent-[var(--brand-primary)] disabled:opacity-30"
+                        />
+                      </td>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/10">
@@ -479,6 +673,39 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                       </td>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRenameItem(item);
+                              setRenameName(item.full_name);
+                            }}
+                            title="Edit Nama"
+                            aria-label={`Edit nama ${item.full_name}`}
+                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                          >
+                            <PencilSimple className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isSelf}
+                            onClick={() => openSessions(item)}
+                            title={isSelf ? "Sesi Anda ada di Pengaturan Akun" : "Sesi Perangkat"}
+                            aria-label={`Sesi perangkat ${item.full_name}`}
+                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-cyan-50 hover:text-cyan-600 disabled:opacity-40 disabled:hover:bg-transparent"
+                          >
+                            <DeviceMobile className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              router.push(`/admin/logs?user=${encodeURIComponent(item.id)}&nama=${encodeURIComponent(item.full_name)}`)
+                            }
+                            title="Riwayat Aktivitas"
+                            aria-label={`Riwayat aktivitas ${item.full_name}`}
+                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                          >
+                            <Scroll className="h-4 w-4" />
+                          </button>
                           <button
                             type="button"
                             disabled={isSelf}
@@ -734,6 +961,153 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
         confirmLabel="Ya, Hapus"
         variant="danger"
         loading={busyId === deleteItem?.id}
+      />
+
+      {/* ── Aksi massal ─────────────────────────────── */}
+      <ConfirmModal
+        open={bulkConfirm === "deactivate"}
+        onClose={() => setBulkConfirm(null)}
+        onConfirm={() => { setBulkConfirm(null); handleBulkActive(false); }}
+        title={`Nonaktifkan ${selectedIds.size} pengguna?`}
+        message="Pengguna terpilih akan langsung tidak bisa login. Akun sendiri & Super Admin terakhir otomatis dilewati."
+        confirmLabel="Ya, Nonaktifkan"
+        variant="danger"
+        loading={bulkBusy}
+      />
+      <ConfirmModal
+        open={bulkConfirm === "delete"}
+        onClose={() => setBulkConfirm(null)}
+        onConfirm={() => { setBulkConfirm(null); handleBulkDelete(); }}
+        title={`Hapus ${selectedIds.size} pengguna?`}
+        message="Pengguna terpilih dihapus permanen beserta akun auth-nya. Akun sendiri & Super Admin terakhir otomatis dilewati."
+        confirmLabel="Ya, Hapus Permanen"
+        variant="danger"
+        loading={bulkBusy}
+      />
+
+      {/* ── Edit nama ───────────────────────────────── */}
+      {renameItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={() => setRenameItem(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-slate-800">Edit Nama Pengguna</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Nama tampilan <span className="font-semibold">{renameItem.email || renameItem.full_name}</span>.
+            </p>
+            <div className="mt-4">
+              <Input
+                label="Nama tampilan"
+                required
+                value={renameName}
+                onChange={(e) => setRenameName(e.target.value)}
+                placeholder="Nama lengkap"
+                minLength={2}
+                maxLength={100}
+                autoFocus
+              />
+            </div>
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setRenameItem(null)}
+                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleRename}
+                disabled={renameSaving || renameName.trim().length < 2}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-60"
+              >
+                {renameSaving ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <PencilSimple className="h-4 w-4" />
+                )}
+                Simpan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Sesi perangkat user ─────────────────────── */}
+      {sessionsItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={() => setSessionsItem(null)}>
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">Sesi Perangkat</h3>
+                <p className="mt-0.5 text-sm text-slate-500 truncate">{sessionsItem.full_name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSessionsItem(null)}
+                aria-label="Tutup"
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 max-h-72 space-y-2 overflow-y-auto">
+              {sessionsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--brand-primary)] border-t-transparent" />
+                </div>
+              ) : !sessionsList || sessionsList.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 py-8 text-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+                    <DeviceMobile className="h-7 w-7 text-slate-300" />
+                  </div>
+                  <p className="text-sm font-medium text-slate-600">Tidak ada sesi aktif tercatat</p>
+                  <p className="text-xs text-slate-400">
+                    Sesi tercatat saat pengguna membuka panel admin (maks. 30 hari terakhir).
+                  </p>
+                </div>
+              ) : (
+                sessionsList.map((s) => (
+                  <div key={s.sessionId} className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3">
+                    <p className="text-sm font-semibold text-slate-700">{s.device}</p>
+                    <p className="mt-0.5 text-xs text-slate-400">
+                      {s.ip || "IP tidak tercatat"} · aktif {formatRelativeTime(s.lastSeenAt)}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {sessionsList && sessionsList.length > 0 && (
+              <>
+                <div className="mt-4 border-t border-slate-100 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setKickConfirmItem(sessionsItem)}
+                    className="w-full rounded-xl border border-red-200 bg-white py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                  >
+                    Keluarkan semua sesi user ini
+                  </button>
+                  <p className="mt-1.5 text-center text-[11px] text-slate-400">
+                    Semua perangkat user dipaksa login ulang.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Konfirmasi force logout ─────────────────── */}
+      <ConfirmModal
+        open={!!kickConfirmItem}
+        onClose={() => setKickConfirmItem(null)}
+        onConfirm={handleForceLogout}
+        title="Keluarkan semua sesi?"
+        description={kickConfirmItem?.full_name}
+        message="Semua perangkat yang login dengan akun ini akan langsung ter-logout."
+        confirmLabel="Ya, Keluarkan"
+        variant="danger"
+        loading={kickBusy}
       />
     </div>
   );

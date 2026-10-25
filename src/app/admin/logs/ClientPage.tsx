@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   AUDIT_ACTION_LABELS,
   AUDIT_ENTITY_LABELS,
@@ -17,6 +18,7 @@ import {
   Warning,
   Users,
   CalendarBlank,
+  X,
 } from "@/components/Icons";
 import { FilterBar } from "@/components/admin/FilterBar";
 import { MobileFilterBar, MobileListRow, MobilePagination } from "@/components/admin/mobile";
@@ -62,6 +64,20 @@ function formatTime(iso: string): string {
  * tanpa error). Halaman ini hanya-baca.
  */
 export default function AdminLogsPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminLogsInner />
+    </Suspense>
+  );
+}
+
+function AdminLogsInner() {
+  // Filter aktor via URL: /admin/logs?user=<id>&nama=<nama> (dari halaman
+  // Users → "Riwayat aktivitas"). useSearchParams butuh Suspense.
+  const searchParams = useSearchParams();
+  const [actorId, setActorId] = useState(searchParams.get("user") ?? "");
+  const [actorName, setActorName] = useState(searchParams.get("nama") ?? "");
+
   // Input pencarian di-debounce 300ms sebelum jadi kunci query.
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
@@ -80,12 +96,12 @@ export default function AdminLogsPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const filterKey = JSON.stringify({ action, entity, search, page });
+  const filterKey = JSON.stringify({ action, entity, search, page, actorId });
 
   useEffect(() => {
     let cancelled = false;
-    const key = JSON.stringify({ action, entity, search, page });
-    getAuditLogs({ action, entity, search, page })
+    const key = JSON.stringify({ action, entity, search, page, actorId });
+    getAuditLogs({ action, entity, search, page, actorId: actorId || undefined })
       .then((res) => {
         if (!cancelled) setResult({ key, ...res });
       })
@@ -103,7 +119,7 @@ export default function AdminLogsPage() {
     return () => {
       cancelled = true;
     };
-  }, [action, entity, search, page]);
+  }, [action, entity, search, page, actorId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -170,6 +186,24 @@ export default function AdminLogsPage() {
           <StatPill icon={Users} label="Total Aktivitas" value={stats.total} tone="neutral" />
           <StatPill icon={CalendarBlank} label="Hari Ini" value={stats.today} tone="info" />
         </StatPillGroup>
+      )}
+
+      {/* Chip aktor — aktif bila diarahkan dari halaman Users (?user=&nama=). */}
+      {actorId && (
+        <div className="mb-4 flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-3 py-1.5 text-xs font-semibold text-[var(--brand-primary)]">
+            <Users className="h-3.5 w-3.5" />
+            Aktor: {actorName || "pengguna"}
+            <button
+              type="button"
+              onClick={() => { setActorId(""); setActorName(""); setPage(1); }}
+              aria-label="Lepas filter aktor"
+              className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--brand-primary)]/10"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        </div>
       )}
 
       {/* Filter — mobile: toolbar dua baris (cari + pill aksi/objek);

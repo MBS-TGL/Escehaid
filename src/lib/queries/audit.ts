@@ -84,6 +84,8 @@ export interface AuditLogFilters {
   action?: AuditAction | "";
   entity?: string | "";
   search?: string;
+  /** Filter per aktor (dari halaman Users: "Riwayat aktivitas"). */
+  actorId?: string;
 }
 
 export interface AuditLogResult {
@@ -108,6 +110,7 @@ export async function getAuditLogs(filters: AuditLogFilters = {}): Promise<Audit
 
   if (filters.action) query = query.eq("action", filters.action);
   if (filters.entity) query = query.eq("entity_type", filters.entity);
+  if (filters.actorId) query = query.eq("actor_id", filters.actorId);
 
   const term = sanitizeSearchTerm(filters.search ?? "");
   if (term) query = query.or(`actor_name.ilike.%${term}%,entity_id.ilike.%${term}%`);

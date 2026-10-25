@@ -536,3 +536,242 @@ export async function resetRoleToDefault(roleKey: string): Promise<ActionResult>
   const defaults = Array.from(defaultPermissionsForRole(roleKey));
   return saveRolePermissions(roleKey, defaults);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PENGGUNA — pengelolaan lanjutan (rename, bulk, sesi, force logout)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Ubah nama tampilan pengguna (oleh admin). */
+export async function renameUser(userId: string, fullName: string): Promise<ActionResult> {
+  const guard = requirePermission("users:manage");
+  const check = await guard();
+  if (!check.ok) return { success: false, error: check.error };
+
+  const name = fullName.trim();
+  if (name.length < 2 || name.length > 100) {
+    return { success: false, error: "Nama tampilan harus 2-100 karakter." };
+  }
+
+  const supabase = await createSessionClient();
+  const { data: before } = await supabase
+    .from("user_profiles")
+    .select("id, full_name")
+    .eq("id", userId)
+    .single();
+  if (!before) return { success: false, error: "Pengguna tidak ditemukan." };
+
+  const { error } = await supabase.from("user_profiles").update({ full_name: name }).eq("id", userId);
+  if (error) return { success: false, error: error.message };
+
+  await logSystem(supabase, "update", "user_profiles", userId, {
+    before: { full_name: before.full_name },
+    after: { full_name: name },
+  });
+
+  revalidatePath("/admin/users");
+  return { success: true };
+}
+
+/** Aktif/nonaktifkan BANYAK pengguna sekaligus. Akun sendiri dan Super Admin
+ *  terakhir otomatis dilewati (dilaporkan di hasil). */
+export async function toggleUsersActiveBulk(
+  ids: string[],
+  active: boolean
+): Promise<ActionResult & { skipped?: number }> {
+  const guard = requirePermission("users:manage");
+  const check = await guard();
+  if (!check.ok) return { success: false, error: check.error };
+  const actorId = check.ctx.userId;
+  if (ids.length === 0) return { success: false, error: "Tidak ada pengguna dipilih." };
+
+  const supabase = await createSessionClient();
+
+  // Ambil profil target + daftar super admin aktif lain utk guard.
+  const { data: targets } = await supabase
+    .from("user_profiles")
+    .select("id, full_name, system_role, is_active")
+    .in("id", ids);
+  if (!targets || targets.length === 0) return { success: false, error: "Pengguna tidak ditemukan." };
+
+  const { data: superAdmins } = await supabase
+    .from("user_profiles")
+    .select("id, is_active")
+    .eq("system_role", "SUPER_ADMIN");
+  const otherActiveSuperAdmins = (superAdmins ?? []).filter((s) => s.is_active).length;
+
+  const applicable = targets.filter((t) => {
+    if (t.id === actorId) return false; // akun sendiri
+    // Nonaktifkan: jangan ikut menonaktifkan super admin terakhir.
+    if (!active && t.system_role === "SUPER_ADMIN" && t.is_active && otherActiveSuperAdmins < 2) {
+      return false;
+    }
+    return true;
+  });
+  const skipped = ids.length - applicable.length;
+  if (applicable.length === 0) {
+    return {
+      success: false,
+      error: "Semua pilihan dilewati (akun sendiri / Super Admin terakhir).",
+      skipped,
+    };
+  }
+
+  const { error } = await supabase
+    .from("user_profiles")
+    .update({ is_active: active })
+    .in("id", applicable.map((t) => t.id));
+  if (error) return { success: false, error: error.message, skipped };
+
+  await logSystem(supabase, "update", "user_profiles", applicable.map((t) => t.id).join(","), {
+    before: null,
+    after: { bulk_active: active, count: applicable.length },
+  });
+
+  revalidatePath("/admin/users");
+  return { success: true, skipped };
+}
+
+/** Hapus BANYAK pengguna sekaligus. Guard sama dengan hapus tunggal. */
+export async function deleteUsersBulk(
+  ids: string[]
+): Promise<ActionResult & { skipped?: number }> {
+  const guard = requirePermission("users:manage");
+  const check = await guard();
+  if (!check.ok) return { success: false, error: check.error };
+  const actorId = check.ctx.userId;
+  if (ids.length === 0) return { success: false, error: "Tidak ada pengguna dipilih." };
+
+  const supabase = await createSessionClient();
+  const { data: targets } = await supabase
+    .from("user_profiles")
+    .select("id, full_name, email, system_role, is_active")
+    .in("id", ids);
+  if (!targets || targets.length === 0) return { success: false, error: "Pengguna tidak ditemukan." };
+
+  const { data: superAdmins } = await supabase
+    .from("user_profiles")
+    .select("id, is_active")
+    .eq("system_role", "SUPER_ADMIN");
+  const otherActiveSuperAdmins = (superAdmins ?? []).filter((s) => s.is_active).length;
+
+  const applicable = targets.filter((t) => {
+    if (t.id === actorId) return false;
+    if (t.system_role === "SUPER_ADMIN" && t.is_active && otherActiveSuperAdmins < 2) return false;
+    return true;
+  });
+  const skipped = ids.length - applicable.length;
+  if (applicable.length === 0) {
+    return { success: false, error: "Semua pilihan dilewati (akun sendiri / Super Admin terakhir).", skipped };
+  }
+
+  const { error } = await supabase
+    .from("user_profiles")
+    .delete()
+    .in("id", applicable.map((t) => t.id));
+  if (error) return { success: false, error: error.message, skipped };
+
+  // Hapus auth user penuh bila service role tersedia.
+  const admin = serviceRoleClient();
+  if (admin) {
+    await Promise.all(
+      applicable.map((t) => admin.auth.admin.deleteUser(t.id).catch(() => undefined))
+    );
+  }
+
+  await logSystem(supabase, "delete", "user_profiles", applicable.map((t) => t.id).join(","), {
+    before: { count: applicable.length, emails: applicable.map((t) => t.email) },
+    after: null,
+  });
+
+  revalidatePath("/admin/users");
+  return { success: true, skipped };
+}
+
+export interface UserSessionInfo {
+  sessionId: string;
+  device: string;
+  ip: string;
+  lastSeenAt: string;
+  createdAt: string;
+}
+
+/** Daftar sesi/perangkat aktif seorang pengguna (butuh service role utk baca
+ *  lintas RLS; tanpa key → error jelas). */
+export async function getUserSessions(userId: string): Promise<ActionResult & { sessions?: UserSessionInfo[] }> {
+  const guard = requirePermission("users:manage");
+  const check = await guard();
+  if (!check.ok) return { success: false, error: check.error };
+
+  const admin = serviceRoleClient();
+  if (!admin) {
+    return {
+      success: false,
+      error: "Melihat sesi pengguna memerlukan SUPABASE_SERVICE_ROLE_KEY yang belum di-set di server.",
+    };
+  }
+
+  const { data, error } = await admin
+    .from("sessions")
+    .select("session_id, user_agent, ip, last_seen_at, created_at")
+    .eq("user_id", userId)
+    .is("revoked_at", null)
+    .gte("last_seen_at", new Date(Date.now() - 30 * 86400_000).toISOString())
+    .order("last_seen_at", { ascending: false })
+    .limit(50);
+
+  if (error) return { success: false, error: error.message };
+
+  return {
+    success: true,
+    sessions: (data ?? []).map((s: { session_id: string; user_agent: string; ip: string; last_seen_at: string; created_at: string }) => ({
+      sessionId: s.session_id,
+      device: s.user_agent || "Perangkat tidak dikenal",
+      ip: s.ip,
+      lastSeenAt: s.last_seen_at,
+      createdAt: s.created_at,
+    })),
+  };
+}
+
+/** Keluarkan SEMUA sesi seorang pengguna (semua perangkat dipaksa login
+ *  ulang). Tidak bisa dipakai untuk akun sendiri. */
+export async function forceLogoutUser(userId: string): Promise<ActionResult> {
+  const guard = requirePermission("users:manage");
+  const check = await guard();
+  if (!check.ok) return { success: false, error: check.error };
+  const actorId = check.ctx.userId;
+
+  if (guardSelfDelete(actorId, userId)) {
+    return { success: false, error: "Gunakan halaman Pengaturan Akun untuk sesi Anda sendiri." };
+  }
+
+  const admin = serviceRoleClient();
+  if (!admin) {
+    return {
+      success: false,
+      error: "Force logout memerlukan SUPABASE_SERVICE_ROLE_KEY yang belum di-set di server.",
+    };
+  }
+
+  const { error } = await admin.auth.admin.signOut(userId);
+  if (error) return { success: false, error: error.message };
+
+  // Tandai baris sesi revoked (agar daftar langsung bersih).
+  const rev = await admin
+    .from("sessions")
+    .update({ revoked_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .is("revoked_at", null);
+  if (rev.error) {
+    // Non-fatal — sesi sudah dicabut di level auth.
+    console.warn("Ganti tanda revoked sesi gagal (non-fatal):", rev.error.message);
+  }
+
+  const supabase = await createSessionClient();
+  await logSystem(supabase, "update", "user_profiles", userId, {
+    before: null,
+    after: { force_logout: true },
+  });
+
+  return { success: true };
+}
