@@ -130,10 +130,10 @@ const nextConfig: NextConfig = {
 // ── Sentry ──────────────────────────────────────────────────────────────────
 // Upload source map hanya berjalan saat SENTRY_AUTH_TOKEN tersedia (Vercel).
 // Tanpa token (lokal/CI) wrapper ini pass-through — build tidak terganggu.
-// Ganti org/project sesuai akun Sentry sekolah saat setup DSN.
+// Slug sesuai akun: https://esceha.sentry.io/projects/escehaid/
 export default withSentryConfig(nextConfig, {
   org: "esceha",
-  project: "esceha-id",
+  project: "escehaid",
   silent: true,
   telemetry: false,
   // Next 16 + build --webpack: pastikan file client ikut di-bundle.
