@@ -9,13 +9,21 @@
 
 ## Tier 1 — prioritas
 
-- [ ] **1. Error tracking (Sentry)** — error produksi saat ini hanya masuk
+- [~] **1. Error tracking (Sentry)** — error produksi saat ini hanya masuk
       `console.error`; tidak ada stack trace, frekuensi, atau notifikasi.
       Setup: `@sentry/nextjs` (wizard) + env `SENTRY_DSN` di Vercel.
       Pelengkap UptimeRobot (yang hanya tahu hidup/mati). ±30 menit.
-  - [ ] a. Install wizard + inject DSN (server + client).
+  - [x] a. Install wizard + inject DSN (server + client).
+      ✅ @sentry/nextjs v11; src/instrumentation.ts (+onRequestError) &
+      instrumentation-client.ts (no-op tanpa DSN); global-error.tsx baru +
+      captureException di error.tsx; withSentryConfig di next.config.ts
+      (org "esceha" / project "esceha-id" — GANTI sesuai akun).
   - [ ] b. Uji: trigger error sengaja di produksi → terima notifikasi.
-  - [ ] c. Filter noise (bot 404 dsb.) + alert email/WhatsApp.
+      (Menunggi env Vercel: SENTRY_DSN, NEXT_PUBLIC_SENTRY_DSN,
+      SENTRY_AUTH_TOKEN + org/project di next.config.ts diganti.)
+  - [x] c. Filter noise (bot 404 dsb.) + alert email/WhatsApp.
+      ✅ Filter dasar di kedua init (ignoreErrors + denyUrls sw.js/ekstensi);
+      alert email via pengaturan akun Sentry saat setup.
 
 - [ ] **2. Environment staging (preview)** — dev lokal saat ini memakai DB
       PRODUKSI; insiden "SQL belum jalan" (FAQ, soft-delete) hanya selamat

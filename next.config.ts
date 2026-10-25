@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 import { setDefaultResultOrder } from "node:dns";
+// v11: withSentryConfig pindah ke subpath /config (bukan root export).
+import { withSentryConfig } from "@sentry/nextjs/config";
 
 // Jaringan lokal memakai DNS64/NAT64 → DNS mengembalikan alamat IPv6 lebih
 // dulu, tetapi jalur IPv6 dari mesin ini ke Supabase/host lain sering putus
@@ -125,4 +127,15 @@ const nextConfig: NextConfig = {
   ],
 };
 
-export default nextConfig;
+// ── Sentry ──────────────────────────────────────────────────────────────────
+// Upload source map hanya berjalan saat SENTRY_AUTH_TOKEN tersedia (Vercel).
+// Tanpa token (lokal/CI) wrapper ini pass-through — build tidak terganggu.
+// Ganti org/project sesuai akun Sentry sekolah saat setup DSN.
+export default withSentryConfig(nextConfig, {
+  org: "esceha",
+  project: "esceha-id",
+  silent: true,
+  telemetry: false,
+  // Next 16 + build --webpack: pastikan file client ikut di-bundle.
+  widenClientFileUpload: true,
+});
