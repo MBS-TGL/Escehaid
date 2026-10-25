@@ -31,6 +31,9 @@ import {
   Database,
   Heartbeat,
   Trash,
+  Code,
+  Warning,
+  ChartLine,
 } from "@/components/Icons";
 import { usePermissions } from "./PermissionsProvider";
 
@@ -40,6 +43,8 @@ type NavItem = {
   icon: React.ComponentType<{ className?: string }>;
   /** Izin yang dibutuhkan agar item tampil (penyaringan UI saja). */
   perm?: string;
+  /** true = tautan luar (dibuka tab baru), bukan route internal. */
+  external?: boolean;
 };
 
 type NavGroup = {
@@ -100,6 +105,14 @@ export const navGroups: NavGroup[] = [
       { label: "Log", href: "/admin/logs", icon: Scroll, perm: "logs:read" },
       // Catatan: "Pengaturan Akun" (urusan pribadi per-user) tidak ada di sini —
       // rumahnya di dropdown avatar Topbar (pola GitHub). Grup ini murni alat sistem.
+    ],
+  },
+  {
+    title: "Developer",
+    items: [
+      { label: "Migrasi SQL", href: "/admin/sql", icon: Code, perm: "users:manage" },
+      { label: "Sentry (error)", href: "https://esceha.sentry.io/projects/escehaid/", icon: Warning, perm: "users:manage", external: true },
+      { label: "Uptime Monitor", href: "https://uptimerobot.com/dashboard", icon: ChartLine, perm: "users:manage", external: true },
     ],
   },
 ];
@@ -206,6 +219,18 @@ export default function AdminSidebar({
 
                   return (
                     <li key={item.href}>
+                      {item.external ? (
+                        <a
+                          href={item.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-all hover:bg-slate-50 hover:text-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
+                        >
+                          <item.icon className="h-[18px] w-[18px] flex-shrink-0 text-slate-400 group-hover:text-[var(--brand-primary)]" />
+                          <span className="truncate">{item.label}</span>
+                          <ArrowSquareOut className="ml-auto h-3.5 w-3.5 text-slate-300 group-hover:text-[var(--brand-primary)]" />
+                        </a>
+                      ) : (
                       <Link
                         href={item.href}
                         aria-current={isActive ? "page" : undefined}
@@ -238,6 +263,7 @@ export default function AdminSidebar({
                           <CaretRight className="ml-auto h-3.5 w-3.5 text-white/60" />
                         )}
                       </Link>
+                      )}
                     </li>
                   );
                 })}

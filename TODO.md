@@ -68,3 +68,13 @@
 
 1 → 2 → 3 (deteksi dulu, lalu isolasi risiko, lalu jaring pengaman otomatis).
 Tier 2 kapan saja (4 paling murah — bisa langsung). Tier 3 menunggu kebutuhan.
+
+## Tambahan (25 Okt)
+
+- [x] **Grup "Developer" di Sidebar** ✅ — Migrasi SQL (/admin/sql: status
+      per file via probe efek), Sentry ↗, Uptime Monitor ↗ (link eksternal,
+      perm users:manage).
+- [ ] "Pembersih Media" masuk grup Developer saat halamannya dibuat
+      (relasi item TODO #5 media yatim).
+- [ ] "Jobs GitHub" (status backup/purge) masuk grup Developer saat
+      halamannya dibuat.

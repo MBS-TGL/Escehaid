@@ -22,6 +22,8 @@ type NavItem = {
   icon: React.ComponentType<{ className?: string; weight?: "regular" | "fill" }>;
   /** Izin yang dibutuhkan agar item tampil (penyaringan UI saja). */
   perm?: string;
+  /** true = tautan luar (tab baru), bukan route internal. */
+  external?: boolean;
 };
 
 /**
@@ -206,6 +208,18 @@ export default function AdminMobileNav({ badges = {} }: { badges?: Record<string
                     const isActive = isNavActive(item.href, pathname);
                     return (
                       <li key={item.href}>
+                        {item.external ? (
+                          <a
+                            href={item.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-all hover:bg-slate-50 hover:text-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
+                          >
+                            <item.icon className="h-[18px] w-[18px] flex-shrink-0 text-slate-400 group-hover:text-[var(--brand-primary)]" />
+                            <span className="truncate">{item.label}</span>
+                            <span aria-hidden className="ml-auto text-slate-300">↗</span>
+                          </a>
+                        ) : (
                         <Link
                           href={item.href}
                           onClick={() => setSheetOpen(false)}
@@ -226,6 +240,7 @@ export default function AdminMobileNav({ badges = {} }: { badges?: Record<string
                             </span>
                           )}
                         </Link>
+                        )}
                       </li>
                     );
                   })}
