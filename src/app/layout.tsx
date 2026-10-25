@@ -144,9 +144,19 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     values.social_x,
   ].filter((url) => /^https?:\/\//.test(url));
 
+  // Catatan properti (diverifikasi thd schema.org/docs/jsonldcontext.json v30.1):
+  //  - `MiddleSchool` = subtipe sah EducationalOrganization → cara benar menyatakan
+  //    jenjang SMP. Dulu dipakai string `schoolType`, yang TIDAK ada di schema.org.
+  //  - `motto`/`schoolType`/`curriculum`/`numberOfStudents` juga tidak ada (404 di
+  //    schema.org & pending.schema.org) → dihapus. Motto dipindah ke `slogan`
+  //    (sah pada Organization). Jumlah siswa sengaja tidak diklaim: nilainya
+  //    hardcoded tanpa UI admin sehingga pasti basi.
+  //  - `availableLanguage` SAH, tetapi hanya untuk ContactPoint/Course/
+  //    LodgingBusiness/ServiceChannel/TouristAttraction — bukan EducationalOrganization.
+  //    Klaim bahasa karenanya hanya ada di contactPoint (["id"]).
   const schoolJsonLd = {
     "@context": "https://schema.org",
-    "@type": ["EducationalOrganization", "School"],
+    "@type": ["EducationalOrganization", "School", "MiddleSchool"],
     name: schoolName,
     alternateName: values.site_short_name,
     url: siteUrl,
@@ -170,15 +180,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     email: values.contact_email,
     sameAs: socialSameAs,
     foundingDate: "2016",
-    motto: "Pusat Kaderisasi Da'i & Ulama Hafidz",
-    schoolType: "Sekolah Menengah Pertama (SMP)",
+    slogan: "Pusat Kaderisasi Da'i & Ulama Hafidz",
     educationalLevel: "Sekolah Menengah Pertama",
-    curriculum: "Kurikulum Merdeka",
-    numberOfStudents: {
-      "@type": "QuantitativeValue",
-      value: 164,
-    },
-    availableLanguage: ["id", "ar", "en"],
     contactPoint: {
       "@type": "ContactPoint",
       telephone: values.contact_phone,
