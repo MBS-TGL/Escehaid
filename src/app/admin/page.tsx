@@ -107,7 +107,7 @@ function greeting(now: Date) {
 /** Kerangka card daftar: judul + link "Lihat semua" + isi. */
 function ListCard({ title, href, children }: { title: string; href: string; children: ReactNode }) {
   return (
-    <section className="rounded-xl border border-slate-200/80 bg-white shadow-sm">
+    <section className="flex flex-col rounded-xl border border-slate-200/80 bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
         <h2 className="text-sm font-bold text-slate-800">{title}</h2>
         <Link
@@ -117,15 +117,17 @@ function ListCard({ title, href, children }: { title: string; href: string; chil
           Lihat semua <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
-      <div className="divide-y divide-slate-50">{children}</div>
+      {/* flex-1: mengisi sisa tinggi kartu yang distretch grid — empty state
+          bisa center vertikal; kartu berisi baris tetap top-aligned. */}
+      <div className="flex-1 divide-y divide-slate-50">{children}</div>
     </section>
   );
 }
 
 function EmptyState({ icon: Icon, title, hint }: { icon: IconType; title: string; hint: string }) {
   return (
-    <div className="px-5 py-5 text-center">
-      <Icon className="mx-auto h-6 w-6 text-slate-300" />
+    <div className="flex h-full flex-col items-center justify-center px-5 py-5 text-center">
+      <Icon className="h-6 w-6 text-slate-300" />
       <p className="mt-1.5 text-sm font-medium text-slate-600">{title}</p>
       <p className="mt-0.5 text-xs text-slate-500">{hint}</p>
     </div>
