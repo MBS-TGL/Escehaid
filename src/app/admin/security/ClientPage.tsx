@@ -314,8 +314,9 @@ export default function SecurityClientPage() {
         </div>
       </div>
 
-      {/* Grid 2 kolom (lg): Profil|Password lalu Keamanan|Sesi; mobile stack. */}
-      <div className="grid items-start gap-4 lg:grid-cols-2 lg:gap-6">
+      {/* Grid 2 kolom (lg): Profil|Password lalu Keamanan|Sesi; mobile stack.
+          Kartu meregang setinggi barisnya (default stretch) — garis bawah rata. */}
+      <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
 
       {/* ── Seksi 1: Profil ─────────────────────────────────── */}
       <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
