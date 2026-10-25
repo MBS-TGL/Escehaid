@@ -136,8 +136,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }`}
         >
           <AdminTopbar profile={profile} />
-          {/* pb-24 lg:pb-0 — bottom nav setinggi ±54px + safe-area; tanpa padding
-              ini baris terakhir tabel/pagination tertutup bar navigasi. */}
+          {/* pb-24 (96px) lg:pb-0 — bottom nav setinggi ±72px + safe-area
+              (ADMIN_BOTTOM_NAV_CONTENT_H 60 + 12 minimum); tanpa padding ini
+              baris terakhir tabel/pagination tertutup bar navigasi. */}
           <main className="pb-24 lg:pb-0">{children}</main>
         </div>
 

@@ -30,7 +30,7 @@ import {
 import { normalizeHex } from "@/lib/settings/contrast";
 import { THEME_PRESETS, findThemePreset, validateThemePair } from "@/lib/settings/theme";
 import type { SiteSettings } from "@/lib/settings";
-import { useMenu, MenuPanel, MenuItem, ADMIN_BOTTOM_NAV_H } from "@/components/admin/mobile";
+import { useMenu, MenuPanel, MenuItem, adminBarBottom } from "@/components/admin/mobile";
 import {
   Buildings,
   EnvelopeSimple,
@@ -358,34 +358,42 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
             dokumen: tidak perlu menghitung ulang padding `main`, dan saat
             halaman di-scroll sampai dasar bar duduk di posisi naturalnya
             sehingga field terakhir tidak pernah tertutup.
-            `bottom` = tinggi bottom nav (ADMIN_BOTTOM_NAV_H) + safe-area; bar
-            kembali polos (statis) di lg karena bottom nav hilang di lg. */}
+            `bottom` = adminBarBottom() — tinggi nav + safe-area + jarak 8px
+            (lihat MobileSelectBar.tsx). Bar kembali polos (statis) di lg
+            karena bottom nav hilang di lg.
+            `flex-nowrap` di mobile: dua tombol wajib satu baris, tidak boleh
+            wrap jadi dua baris yang memakan ruang layar. */}
         <div
-          className="sticky z-20 mt-6 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white/95 px-3 py-3 shadow-lg shadow-slate-900/5 backdrop-blur-md lg:static lg:z-auto lg:rounded-none lg:border-x-0 lg:border-b-0 lg:border-t lg:border-slate-100 lg:bg-transparent lg:px-0 lg:pb-0 lg:pt-5 lg:shadow-none lg:backdrop-blur-none"
-          style={{ bottom: `calc(${ADMIN_BOTTOM_NAV_H}px + env(safe-area-inset-bottom, 0px))` }}
+          className="sticky z-20 mt-6 flex flex-nowrap items-center gap-2 rounded-xl border border-slate-200 bg-white/95 px-3 py-3 shadow-lg shadow-slate-900/5 backdrop-blur-md sm:flex-wrap sm:gap-3 lg:static lg:z-auto lg:rounded-none lg:border-x-0 lg:border-b-0 lg:border-t lg:border-slate-100 lg:bg-transparent lg:px-0 lg:pb-0 lg:pt-5 lg:shadow-none lg:backdrop-blur-none"
+          style={{ bottom: adminBarBottom() }}
         >
           <button
             type="button"
             onClick={() => void handleSave()}
             disabled={saving || tabDirtyCount(tab) === 0 || !permManage}
             title={permManage ? undefined : "Tidak berizin menyimpan pengaturan"}
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-primary-mid)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-[var(--brand-primary)] px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-primary-mid)] disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none sm:gap-2 sm:px-5"
           >
-            <FloppyDisk className="h-4 w-4" />
-            {saving ? "Menyimpan…" : "Simpan perubahan"}
+            <FloppyDisk className="h-4 w-4 shrink-0" />
+            <span className="sm:hidden">Simpan</span>
+            <span className="hidden sm:inline">{saving ? "Menyimpan…" : "Simpan perubahan"}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setResetOpen(true)}
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-800 disabled:opacity-40"
+            className="inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-800 disabled:opacity-40 sm:flex-none sm:gap-2 sm:px-4"
           >
-            <ArrowUUpLeft className="h-4 w-4" />
-            Kembalikan ke bawaan
+            <ArrowUUpLeft className="h-4 w-4 shrink-0" />
+            <span className="sm:hidden">Kembalikan</span>
+            <span className="hidden sm:inline">Kembalikan ke bawaan</span>
           </button>
 
-          <span className="text-xs text-slate-500">
+          {/* Hint disembunyikan di mobile: jumlah perubahan sudah tampil sebagai
+              badge kuning di tombol pemilih grup, jadi informasinya tidak hilang
+              — hanya pindah tempat, dan bar tetap satu baris. */}
+          <span className="hidden text-xs text-slate-500 sm:inline">
             {totalDirty > 0
               ? `${totalDirty} perubahan belum disimpan${tabDirtyCount(tab) === 0 ? " (di tab lain)" : ""}.`
               : "Kolom yang dikosongkan akan kembali memakai nilai profil sekolah / bawaan."}

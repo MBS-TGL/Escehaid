@@ -4,11 +4,32 @@ import type { ReactNode } from "react";
 import { Checks } from "@/components/Icons";
 
 /**
- * Tinggi bar navigasi bawah admin (MobileNav.tsx): py-2.5 (20px) + ikon 20px
- * + gap 4px + teks 10px = 54px, belum termasuk safe-area-inset-bottom.
- * Bar aksi massal diletakkan DI ATAS nav ini, bukan menimpanya.
+ * Tinggi KONTEN bar navigasi bawah admin (MobileNav.tsx), TANPA safe-area.
+ *
+ * Dihitung dari kelas CSS MobileNav yang sebenarnya:
+ *   border-t 1 + <Link> py-2 (8+8) 16 + kotak ikon h-7 28 + gap-1 4
+ *   + label text-[11px] leading-none 11 = 60px
+ *
+ * Angka ini dulu tertulis 54 dengan alasan "py-2.5 + ikon 20px + teks 10px" —
+ * yaitu versi MobileNav yang SUDAH BERUBAH. Akibatnya setiap bar yang
+ * mengambang di atas nav (aksi massal di 15 halaman admin, bar Simpan
+ * Konfigurasi Situs) duduk 18px TERLALU RENDAH dan tertutup nav.
  */
-export const ADMIN_BOTTOM_NAV_H = 54;
+export const ADMIN_BOTTOM_NAV_CONTENT_H = 60;
+
+/**
+ * Nilai `bottom` untuk bar yang mengambang DI ATAS bottom nav admin.
+ *
+ * Safe-area di-`max()` dengan 12px PERSIS seperti padding nav
+ * (`pb-[max(env(safe-area-inset-bottom),12px)]`). Dulu rumusnya
+ * `54px + env(safe-area-inset-bottom)` sehingga safe-area terhitung DUA KALI
+ * (nav sudah memasukkannya lewat padding) — di iPhone bar malah menimpa nav.
+ *
+ * @param gap jarak terlihat antara bar dan nav, px (default 8).
+ */
+export function adminBarBottom(gap = 8): string {
+  return `calc(${ADMIN_BOTTOM_NAV_CONTENT_H}px + max(env(safe-area-inset-bottom, 0px), 12px) + ${gap}px)`;
+}
 
 /**
  * Bar aksi massal sticky untuk mobile — muncul di bawah layar (di atas bottom
@@ -36,7 +57,7 @@ export function MobileSelectBar({
       role="region"
       aria-label="Aksi massal"
       className="fixed inset-x-0 z-40 border-t border-[var(--brand-accent)]/20 bg-white/95 backdrop-blur-md md:hidden"
-      style={{ bottom: `calc(${ADMIN_BOTTOM_NAV_H}px + env(safe-area-inset-bottom, 0px))` }}
+      style={{ bottom: adminBarBottom() }}
     >
       {/* flex-wrap: aksi massal (mis. Dibaca + Belum Dibaca + Hapus + Batal)
           bisa melebihi 360px — baris kedua turun, bukan overflow horizontal. */}
