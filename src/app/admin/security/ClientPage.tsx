@@ -314,6 +314,9 @@ export default function SecurityClientPage() {
         </div>
       </div>
 
+      {/* Grid 2 kolom (lg): Profil|Password lalu Keamanan|Sesi; mobile stack. */}
+      <div className="grid items-start gap-4 lg:grid-cols-2 lg:gap-6">
+
       {/* ── Seksi 1: Profil ─────────────────────────────────── */}
       <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
         <h2 className="flex items-center gap-2 text-sm font-bold text-slate-800">
@@ -429,7 +432,7 @@ export default function SecurityClientPage() {
       ) : (
         <>
           {/* ── Seksi 3: Keamanan (2FA) — Status */}
-          <div className="mt-6 rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+          <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status akun</p>
@@ -482,61 +485,11 @@ export default function SecurityClientPage() {
               </div>
             )}
           </div>
-
-          {/* Enroll flow */}
-          {qr && (
-            <div className="mt-6 rounded-xl border border-[var(--brand-primary)]/20 bg-white p-5 shadow-sm">
-              <h2 className="text-sm font-bold text-slate-800">1. Pindai QR dengan aplikasi authenticator</h2>
-              <p className="mt-1 text-xs text-slate-500">
-                Google Authenticator, Authy, 1Password, dsb. — atau masukkan secret manual di bawah QR.
-              </p>
-              <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:gap-6">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={qr} alt="QR kode 2FA" width={220} height={220} className="rounded-lg border border-slate-200" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Secret manual</p>
-                  <code className="mt-1 block break-all rounded-lg bg-slate-100 px-3 py-2 font-mono text-xs text-slate-700">
-                    {secret}
-                  </code>
-                </div>
-              </div>
-
-              <h2 className="mt-6 text-sm font-bold text-slate-800">2. Masukkan kode 6 digit dari aplikasi</h2>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <input
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  placeholder="000000"
-                  className="w-36 rounded-lg border border-slate-200 px-3.5 py-2.5 text-center font-mono text-lg tracking-[0.3em] text-slate-700 focus:border-[var(--brand-primary)] focus:outline-none"
-                />
-                <button
-                  onClick={verifyCode}
-                  disabled={verifying || code.length !== 6}
-                  className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-60"
-                >
-                  {verifying ? "Memverifikasi…" : "Verifikasi & Aktifkan"}
-                </button>
-                <button
-                  onClick={() => {
-                    setQr(null);
-                    setSecret(null);
-                    setFactorId(null);
-                    setCode("");
-                  }}
-                  className="min-h-11 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-                >
-                  Batal
-                </button>
-              </div>
-            </div>
-          )}
         </>
       )}
 
       {/* ── Seksi 4: Perangkat & Sesi Aktif ─────────────────── */}
-      <div className="mt-6 rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+      <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="flex items-center gap-2 text-sm font-bold text-slate-800">
@@ -593,6 +546,57 @@ export default function SecurityClientPage() {
           )}
         </div>
       </div>
+      </div>{/* tutup grid 2 kolom */}
+
+      {/* Enroll flow — full-width di luar grid (QR + secret butuh ruang lebar) */}
+      {qr && (
+        <div className="mt-6 rounded-xl border border-[var(--brand-primary)]/20 bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-bold text-slate-800">1. Pindai QR dengan aplikasi authenticator</h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Google Authenticator, Authy, 1Password, dsb. — atau masukkan secret manual di bawah QR.
+          </p>
+          <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:gap-6">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={qr} alt="QR kode 2FA" width={220} height={220} className="rounded-lg border border-slate-200" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Secret manual</p>
+              <code className="mt-1 block break-all rounded-lg bg-slate-100 px-3 py-2 font-mono text-xs text-slate-700">
+                {secret}
+              </code>
+            </div>
+          </div>
+
+          <h2 className="mt-6 text-sm font-bold text-slate-800">2. Masukkan kode 6 digit dari aplikasi</h2>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <input
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="000000"
+              className="w-36 rounded-lg border border-slate-200 px-3.5 py-2.5 text-center font-mono text-lg tracking-[0.3em] text-slate-700 focus:border-[var(--brand-primary)] focus:outline-none"
+            />
+            <button
+              onClick={verifyCode}
+              disabled={verifying || code.length !== 6}
+              className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-60"
+            >
+              {verifying ? "Memverifikasi…" : "Verifikasi & Aktifkan"}
+            </button>
+            <button
+              onClick={() => {
+                setQr(null);
+                setSecret(null);
+                setFactorId(null);
+                setCode("");
+              }}
+              className="min-h-11 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Konfirmasi keluarkan sesi lain */}
       <ConfirmModal
