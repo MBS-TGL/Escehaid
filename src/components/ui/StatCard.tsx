@@ -41,11 +41,19 @@ export function StatCard({
      semi-transparan: dia menyerap warna di belakangnya sehingga kelihatan pudar
      dan tidak merata di setiap sisi. */
   return (
+    /* `h-full` + `flex flex-col` WAJIB: kartu hidup di dalam sel grid, dan
+       pembungkusnya (mis. <Link> di dashboard) sudah `h-full`. Tanpa ini kotak
+       putih mengikuti tinggi kontennya sendiri sehingga kartu yang punya
+       rincian 2 baris lebih tinggi daripada yang tanpa rincian — tepi bawah
+       satu baris jadi bergerigi. */
     <div
-      className={`group rounded-2xl border border-[#dce3ed] bg-white p-4 sm:p-5 transition-all duration-200 hover:border-[var(--brand-accent)]/30 hover:shadow-[0_2px_12px_-2px_rgba(0,0,0,0.08)] snap-start ${className}`}
+      className={`group flex h-full flex-col rounded-2xl border border-[#dce3ed] bg-white p-4 sm:p-5 transition-all duration-200 hover:border-[var(--brand-accent)]/30 hover:shadow-[0_2px_12px_-2px_rgba(0,0,0,0.08)] snap-start ${className}`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
+      {/* `items-stretch` (bukan `items-start`) supaya kolom teks mengisi tinggi
+          kartu sehingga rincian bisa didorong ke dasar lewat `mt-auto`. Ikon
+          tetap 40×40 karena `h-10 w-10` eksplisit mengalahkan stretch. */}
+      <div className="flex flex-1 items-stretch justify-between gap-3">
+        <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex items-baseline gap-2">
             <p className="text-2xl font-bold tracking-tight tabular-nums text-slate-800 sm:text-3xl">
               {value}
@@ -56,19 +64,36 @@ export function StatCard({
             {label}
           </p>
           {/* Slot rincian status di bawah angka utama (opsional), mis.
-              "34 menunggu · 1 diterima". Render tersyarat agar kartu lain
-              yang tak memberi children tidak berubah tinggi. */}
-          {children && <div className="mt-2 text-[11px] leading-snug text-slate-400 tabular-nums">{children}</div>}
+              "34 menunggu · 1 diterima". `mt-auto` menempelkannya ke dasar
+              kartu, jadi rincian di semua kartu satu baris sejajar. */}
+          {children && <div className="mt-auto pt-2 text-[11px] leading-snug text-slate-400 tabular-nums">{children}</div>}
         </div>
 
         {icon && (
-          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${v.iconBg} transition-transform duration-200 group-hover:scale-105`}>
+          <div className={`flex h-10 w-10 shrink-0 items-center justify-center self-start rounded-xl ${v.iconBg} transition-transform duration-200 group-hover:scale-105`}>
             {icon}
           </div>
         )}
       </div>
     </div>
   );
+}
+
+/**
+ * Kelas grid kartu statistik untuk `count` kartu.
+ *
+ * Diekspor karena skeleton Suspense WAJIB memakai kelas yang sama — kalau
+ * skeleton memakai kolom berbeda, grid melompat saat konten asli selesai
+ * dimuat (CLS). Dua bentuk yang benar-benar terjadi di dashboard:
+ *   4 kartu (publisher)         → 1 baris 4 kolom, tanpa sel kosong
+ *   6 kartu (admin/developer)   → 2 baris × 3 kolom, kartu cukup lebar
+ *                                 agar rincian status terbaca (di 6 kolom
+ *                                 kartu hanya ±171px dan teksnya ter-truncate)
+ * Mobile selalu 2 kolom: 3 kolom menyisakan ±104px per kartu di layar 360px.
+ */
+export function statGridClass(count: number): string {
+  const lg = count === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3";
+  return `grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 ${lg}`;
 }
 
 export function StatCardGroup({
@@ -78,8 +103,9 @@ export function StatCardGroup({
   children: ReactNode;
   className?: string;
 }) {
+  // Jarak antar-blok diatur pemanggil (satu sumber), bukan `mb-6` di sini.
   return (
-    <div className={`mb-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6 ${className}`}>
+    <div className={`${statGridClass(Children.count(children))} ${className}`}>
       {children}
     </div>
   );

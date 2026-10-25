@@ -25,7 +25,7 @@ import {
   Eye,
   Heartbeat,
 } from "@/components/Icons";
-import { StatCard, StatCardGroup } from "@/components/ui";
+import { StatCard, StatCardGroup, statGridClass } from "@/components/ui";
 import { getBackupManifest } from "@/lib/queries/backup";
 import { getGithubStatus } from "@/lib/queries/diagnostics";
 
@@ -409,8 +409,10 @@ async function StatsSection({ supabase, isAdmin, canPublish }: { supabase: Sb; i
   return (
     <>
       {/* Mobile: grid padat, semua angka terlihat tanpa scroll panjang.
-          Rincian status sengaja disembunyikan di HP (grid tetap padat). */}
-      <div className={`grid gap-2 md:hidden ${stats.length === 4 ? "grid-cols-2" : stats.length % 3 === 0 ? "grid-cols-3" : "grid-cols-2"}`}>
+          Rincian status sengaja disembunyikan di HP (grid tetap padat).
+          Selalu 2 kolom — 3 kolom menyisakan ±104px per kartu di layar 360px
+          sehingga label & angka saling mendesak. */}
+      <div className="grid grid-cols-2 gap-2 md:hidden">
         {stats.map((stat) => (
           <Link
             key={stat.label}
@@ -585,16 +587,18 @@ function TodoSkeleton() {
   return <div className="mb-4 h-9 animate-pulse rounded-xl bg-slate-100" aria-hidden="true" />;
 }
 
-function StatsSkeleton() {
+function StatsSkeleton({ count }: { count: number }) {
   return (
     <div aria-hidden="true">
       <div className="grid grid-cols-2 gap-2 md:hidden">
-        {Array.from({ length: 4 }, (_, i) => (
+        {Array.from({ length: count }, (_, i) => (
           <div key={i} className="h-[72px] animate-pulse rounded-xl bg-slate-100" />
         ))}
       </div>
-      <div className="hidden gap-4 md:grid md:grid-cols-3">
-        {Array.from({ length: 3 }, (_, i) => (
+      {/* Kolom & jumlah placeholder SAMA dengan konten asli (statGridClass) —
+          kalau berbeda, grid melompat begitu query selesai. */}
+      <div className={`hidden md:grid ${statGridClass(count)}`}>
+        {Array.from({ length: count }, (_, i) => (
           <div key={i} className="h-28 animate-pulse rounded-2xl bg-slate-100" />
         ))}
       </div>
@@ -667,6 +671,10 @@ export default async function AdminPage() {
   // agenda bisa muncul/hilang saat streaming tanpa menggeser layout dasar.
   const listGridClass = isAdmin && canPublish ? "lg:grid-cols-2 xl:grid-cols-3" : "lg:grid-cols-2";
 
+  // Jumlah kartu statistik juga sudah pasti dari role (canPublish → 4,
+  // isAdmin → +2). Dipakai skeleton agar grid tidak melompat saat streaming.
+  const statCount = (canPublish ? 4 : 0) + (isAdmin ? 2 : 0);
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Banner ringkas: sapaan + tanggal + aksi cepat (1 baris yang bisa digeser di HP) */}
@@ -703,7 +711,7 @@ export default async function AdminPage() {
       )}
 
       {/* Statistik — stream sendiri */}
-      <Suspense fallback={<StatsSkeleton />}>
+      <Suspense fallback={<StatsSkeleton count={statCount} />}>
         <StatsSection supabase={supabase} isAdmin={isAdmin} canPublish={canPublish} />
       </Suspense>
 
