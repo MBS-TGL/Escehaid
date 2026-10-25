@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import SecurityClientPage from "./ClientPage";
 
 export const metadata: Metadata = {
-  title: "Keamanan",
+  title: "Pengaturan Akun",
 };
 
 // Status faktor & AAL dibaca client-side (butuh sesi browser).

@@ -24,7 +24,6 @@ import {
   Scroll,
   Download,
   ShieldCheck,
-  Key,
 } from "@/components/Icons";
 import {
   getUnreadNotificationCount,
@@ -560,17 +559,7 @@ export default function AdminTopbar({
                 className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-800"
               >
                 <ShieldCheck className="h-4 w-4 text-slate-400" />
-                Keamanan &amp; Sesi
-              </button>
-              <button
-                onClick={() => {
-                  setDropdownOpen(false);
-                  router.push("/admin/change-password");
-                }}
-                className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-800"
-              >
-                <Key className="h-4 w-4 text-slate-400" />
-                Ganti Password
+                Pengaturan Akun
               </button>
               <div className="my-1 border-t border-slate-100" />
               <button

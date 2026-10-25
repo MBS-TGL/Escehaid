@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { ConfirmModal } from "@/components/ui";
+import { Input } from "@/components/ui/Input";
 import { formatRelativeTime } from "@/lib/admin-display";
 import {
   ShieldCheck,
@@ -11,13 +12,19 @@ import {
   CheckCircle,
   Plus,
   DeviceMobile,
+  Key,
+  Eye,
+  EyeSlash,
 } from "@/components/Icons";
 
 /**
- * Keamanan akun — 2FA TOTP via Supabase MFA native + daftar perangkat/sesi.
- * SEMUA operasi lewat server API route (/api/auth/mfa/*, /api/auth/sessions)
- * karena sesi login aplikasi dikelola server (pola login & change-password).
- * Prasyarat 2FA: toggle TOTP di Supabase Dashboard → Authentication → MFA.
+ * Pengaturan Akun — satu halaman tiga seksi (pola GitHub Settings):
+ *   1. Password (self-service; verifikasi password lama di server)
+ *   2. Keamanan — 2FA TOTP via Supabase MFA native
+ *   3. Perangkat & Sesi Aktif
+ * SEMUA operasi lewat server API route (/api/auth/*) karena sesi login
+ * aplikasi dikelola server. Prasyarat 2FA: toggle TOTP di Supabase
+ * Dashboard → Authentication → MFA.
  */
 
 interface MfaFactor {
@@ -63,6 +70,41 @@ export default function SecurityClientPage() {
   const [verifying, setVerifying] = useState(false);
 
   const [removingId, setRemovingId] = useState<string | null>(null);
+
+  // Seksi Password (self-service)
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwShow, setPwShow] = useState(false);
+  const [pwSaving, setPwSaving] = useState(false);
+
+  async function submitPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (pwNew.length < 8) {
+      toast("Password baru minimal 8 karakter.", "error");
+      return;
+    }
+    if (pwNew !== pwConfirm) {
+      toast("Konfirmasi password baru tidak cocok.", "error");
+      return;
+    }
+    setPwSaving(true);
+    const res = await fetch("/api/auth/change-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ current: pwCurrent, password: pwNew }),
+    });
+    const data = (await res.json().catch(() => null)) as { error?: string } | null;
+    setPwSaving(false);
+    if (!res.ok) {
+      toast(data?.error || "Gagal mengganti password.", "error");
+      return;
+    }
+    toast("Password berhasil diganti.", "success");
+    setPwCurrent("");
+    setPwNew("");
+    setPwConfirm("");
+  }
 
   // Sesi aktif
   const [sessions, setSessions] = useState<ActiveSession[] | null>(null);
@@ -222,11 +264,69 @@ export default function SecurityClientPage() {
           <ShieldCheck className="h-5 w-5 text-[var(--brand-accent)]" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Keamanan</h1>
+          <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Pengaturan Akun</h1>
           <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">
-            Verifikasi dua langkah (2FA) untuk akun admin ini
+            Password, verifikasi dua langkah, dan sesi login akun Anda
           </p>
         </div>
+      </div>
+
+      {/* ── Seksi 1: Password ──────────────────────────────── */}
+      <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-slate-800">
+          <Key className="h-4 w-4 text-[var(--brand-accent)]" /> Password
+        </h2>
+        <p className="mt-0.5 text-xs text-slate-400">
+          Password saat ini diverifikasi sebelum diganti. Minimal 8 karakter.
+        </p>
+        <form onSubmit={submitPassword} className="mt-4 max-w-md space-y-4">
+          <Input
+            label="Password saat ini"
+            required
+            type={pwShow ? "text" : "password"}
+            value={pwCurrent}
+            onChange={(e) => setPwCurrent(e.target.value)}
+            placeholder="Password yang sedang dipakai"
+            autoComplete="current-password"
+          />
+          <div className="relative">
+            <Input
+              label="Password baru"
+              required
+              type={pwShow ? "text" : "password"}
+              value={pwNew}
+              onChange={(e) => setPwNew(e.target.value)}
+              placeholder="Minimal 8 karakter"
+              minLength={8}
+              autoComplete="new-password"
+            />
+            <button
+              type="button"
+              onClick={() => setPwShow((s) => !s)}
+              className="absolute right-3 top-[38px] text-slate-400 hover:text-slate-600"
+              aria-label={pwShow ? "Sembunyikan password" : "Tampilkan password"}
+            >
+              {pwShow ? <EyeSlash className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+          <Input
+            label="Ulangi password baru"
+            required
+            type={pwShow ? "text" : "password"}
+            value={pwConfirm}
+            onChange={(e) => setPwConfirm(e.target.value)}
+            placeholder="Ketik ulang password baru"
+            minLength={8}
+            autoComplete="new-password"
+          />
+          <button
+            type="submit"
+            disabled={pwSaving || !pwCurrent || pwNew.length < 8 || pwNew !== pwConfirm}
+            className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-60"
+          >
+            {pwSaving ? "Menyimpan…" : "Ganti Password"}
+          </button>
+        </form>
       </div>
 
       {loading ? (
@@ -245,7 +345,7 @@ export default function SecurityClientPage() {
         </div>
       ) : (
         <>
-          {/* Status */}
+          {/* ── Seksi 2: Keamanan (2FA) — Status */}
           <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -352,7 +452,7 @@ export default function SecurityClientPage() {
         </>
       )}
 
-      {/* ── Perangkat & Sesi Aktif ─────────────────────────── */}
+      {/* ── Seksi 3: Perangkat & Sesi Aktif ─────────────────── */}
       <div className="mt-6 rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
