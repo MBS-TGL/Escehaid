@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import { ConfirmModal } from "@/components/ui";
 import { Input } from "@/components/ui/Input";
@@ -15,13 +16,15 @@ import {
   Key,
   Eye,
   EyeSlash,
+  User,
 } from "@/components/Icons";
 
 /**
- * Pengaturan Akun — satu halaman tiga seksi (pola GitHub Settings):
- *   1. Password (self-service; verifikasi password lama di server)
- *   2. Keamanan — 2FA TOTP via Supabase MFA native
- *   3. Perangkat & Sesi Aktif
+ * Pengaturan Akun — satu halaman empat seksi (pola GitHub Settings):
+ *   1. Profil (nama tampilan; email read-only)
+ *   2. Password (self-service; verifikasi password lama di server)
+ *   3. Keamanan — 2FA TOTP via Supabase MFA native
+ *   4. Perangkat & Sesi Aktif
  * SEMUA operasi lewat server API route (/api/auth/*) karena sesi login
  * aplikasi dikelola server. Prasyarat 2FA: toggle TOTP di Supabase
  * Dashboard → Authentication → MFA.
@@ -55,6 +58,7 @@ function formatIp(ip: string): string {
 
 export default function SecurityClientPage() {
   const { toast } = useToast();
+  const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [mfaNotEnabled, setMfaNotEnabled] = useState(false);
@@ -77,6 +81,11 @@ export default function SecurityClientPage() {
   const [pwConfirm, setPwConfirm] = useState("");
   const [pwShow, setPwShow] = useState(false);
   const [pwSaving, setPwSaving] = useState(false);
+
+  // Seksi Profil
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [nameSaving, setNameSaving] = useState(false);
 
   async function submitPassword(e: React.FormEvent) {
     e.preventDefault();
@@ -131,6 +140,41 @@ export default function SecurityClientPage() {
     }
   }, []);
 
+  const loadProfile = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/profile");
+      if (!res.ok) return;
+      const data = (await res.json()) as { fullName?: string; email?: string };
+      setFullName(data.fullName ?? "");
+      setEmail(data.email ?? "");
+    } catch {
+      // Profil tidak kritis — biarkan kosong.
+    }
+  }, []);
+
+  async function submitName(e: React.FormEvent) {
+    e.preventDefault();
+    const name = fullName.trim();
+    if (name.length < 2) {
+      toast("Nama tampilan minimal 2 karakter.", "error");
+      return;
+    }
+    setNameSaving(true);
+    const res = await fetch("/api/auth/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fullName: name }),
+    });
+    const data = (await res.json().catch(() => null)) as { error?: string } | null;
+    setNameSaving(false);
+    if (!res.ok) {
+      toast(data?.error || "Gagal menyimpan nama.", "error");
+      return;
+    }
+    toast("Nama tampilan tersimpan.", "success");
+    router.refresh(); // Nama di Topbar ikut ter-update.
+  }
+
   const loadSessions = useCallback(async () => {
     try {
       const res = await fetch("/api/auth/sessions");
@@ -147,10 +191,9 @@ export default function SecurityClientPage() {
 
   useEffect(() => {
     (async () => {
-      await refresh();
-      await loadSessions();
+      await Promise.all([refresh(), loadSessions(), loadProfile()]);
     })().catch(() => {});
-  }, [refresh, loadSessions]);
+  }, [refresh, loadSessions, loadProfile]);
 
   async function kickOthers() {
     setKicking(true);
@@ -271,8 +314,48 @@ export default function SecurityClientPage() {
         </div>
       </div>
 
-      {/* ── Seksi 1: Password ──────────────────────────────── */}
+      {/* ── Seksi 1: Profil ─────────────────────────────────── */}
       <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-slate-800">
+          <User className="h-4 w-4 text-[var(--brand-accent)]" /> Profil
+        </h2>
+        <p className="mt-0.5 text-xs text-slate-400">
+          Nama tampilan dipakai di seluruh panel admin. Email tidak bisa diganti sendiri.
+        </p>
+        <form onSubmit={submitName} className="mt-4 max-w-md space-y-4">
+          <Input
+            label="Nama tampilan"
+            required
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Nama Anda"
+            minLength={2}
+            maxLength={100}
+          />
+          <div>
+            <label className="text-xs font-semibold text-slate-500">Email (login)</label>
+            <div className="mt-1.5 flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5">
+              <span className="truncate text-sm text-slate-500">{email || "—"}</span>
+              <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                Terkunci
+              </span>
+            </div>
+            <p className="mt-1 text-[11px] text-slate-400">
+              Hubungi developer untuk mengganti email login.
+            </p>
+          </div>
+          <button
+            type="submit"
+            disabled={nameSaving || fullName.trim().length < 2}
+            className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-60"
+          >
+            {nameSaving ? "Menyimpan…" : "Simpan Nama"}
+          </button>
+        </form>
+      </div>
+
+      {/* ── Seksi 2: Password ──────────────────────────────── */}
+      <div className="mt-6 rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
         <h2 className="flex items-center gap-2 text-sm font-bold text-slate-800">
           <Key className="h-4 w-4 text-[var(--brand-accent)]" /> Password
         </h2>
@@ -345,7 +428,7 @@ export default function SecurityClientPage() {
         </div>
       ) : (
         <>
-          {/* ── Seksi 2: Keamanan (2FA) — Status */}
+          {/* ── Seksi 3: Keamanan (2FA) — Status */}
           <div className="mt-6 rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -452,7 +535,7 @@ export default function SecurityClientPage() {
         </>
       )}
 
-      {/* ── Seksi 3: Perangkat & Sesi Aktif ─────────────────── */}
+      {/* ── Seksi 4: Perangkat & Sesi Aktif ─────────────────── */}
       <div className="mt-6 rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

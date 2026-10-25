@@ -323,10 +323,13 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
           <button
             type="button"
             onClick={() => setInviteOpen(true)}
-            className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]"
+            aria-label="Undang Pengguna"
+            title="Undang Pengguna"
+            className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-3.5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] sm:px-4"
           >
             <UserPlus className="h-4 w-4" />
-            Undang Pengguna
+            {/* Teks disembunyikan <sm — baris filter mobile sempit; ikon + title cukup. */}
+            <span className="hidden sm:inline">Undang Pengguna</span>
           </button>
         }
       />
