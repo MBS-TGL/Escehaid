@@ -314,12 +314,13 @@ export default function SecurityClientPage() {
         </div>
       </div>
 
-      {/* Grid 2 kolom (lg): Profil|Password lalu Keamanan|Sesi; mobile stack.
-          Kartu meregang setinggi barisnya (default stretch) — garis bawah rata. */}
-      <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
+      {/* Masonry-style (lg): kartu mengalir ke bawah kolom kiri lalu kanan —
+          lubang di bawah kartu pendek otomatis terisi kartu berikutnya yang
+          naik (compact). Mobile: 1 kolom urutan sama. */}
+      <div className="columns-1 gap-4 lg:columns-2 lg:gap-6">
 
       {/* ── Seksi 1: Profil ─────────────────────────────────── */}
-      <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+      <div className="mb-4 break-inside-avoid rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
         <h2 className="flex items-center gap-2 text-sm font-bold text-slate-800">
           <User className="h-4 w-4 text-[var(--brand-accent)]" /> Profil
         </h2>
@@ -359,7 +360,7 @@ export default function SecurityClientPage() {
       </div>
 
       {/* ── Seksi 2: Password ──────────────────────────────── */}
-      <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+      <div className="mb-4 break-inside-avoid rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
         <h2 className="flex items-center gap-2 text-sm font-bold text-slate-800">
           <Key className="h-4 w-4 text-[var(--brand-accent)]" /> Password
         </h2>
@@ -433,7 +434,7 @@ export default function SecurityClientPage() {
       ) : (
         <>
           {/* ── Seksi 3: Keamanan (2FA) — Status */}
-          <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+          <div className="mb-4 break-inside-avoid rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm lg:break-before-column">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status akun</p>
@@ -490,7 +491,7 @@ export default function SecurityClientPage() {
       )}
 
       {/* ── Seksi 4: Perangkat & Sesi Aktif ─────────────────── */}
-      <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+      <div className="mb-4 break-inside-avoid rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="flex items-center gap-2 text-sm font-bold text-slate-800">
