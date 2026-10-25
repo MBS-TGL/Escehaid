@@ -2,19 +2,22 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/components/ui/Toast";
+import { ConfirmModal } from "@/components/ui";
+import { formatRelativeTime } from "@/lib/admin-display";
 import {
   ShieldCheck,
   Shield,
   Lock,
   CheckCircle,
   Plus,
+  DeviceMobile,
 } from "@/components/Icons";
 
 /**
- * Keamanan akun — 2FA TOTP via Supabase MFA native. SEMUA operasi lewat
- * server API route (/api/auth/mfa/*) karena sesi login aplikasi dikelola
- * server (pola sama dengan login & change-password).
- * Prasyarat: toggle TOTP di Supabase Dashboard → Authentication → MFA.
+ * Keamanan akun — 2FA TOTP via Supabase MFA native + daftar perangkat/sesi.
+ * SEMUA operasi lewat server API route (/api/auth/mfa/*, /api/auth/sessions)
+ * karena sesi login aplikasi dikelola server (pola login & change-password).
+ * Prasyarat 2FA: toggle TOTP di Supabase Dashboard → Authentication → MFA.
  */
 
 interface MfaFactor {
@@ -26,6 +29,14 @@ interface StatusRes {
   factors: MfaFactor[];
   aal: { current: string | null; next: string | null } | null;
   error?: string;
+}
+interface ActiveSession {
+  sessionId: string;
+  device: string;
+  ip: string;
+  lastSeenAt: string;
+  createdAt: string;
+  current: boolean;
 }
 
 export default function SecurityClientPage() {
@@ -45,6 +56,11 @@ export default function SecurityClientPage() {
   const [verifying, setVerifying] = useState(false);
 
   const [removingId, setRemovingId] = useState<string | null>(null);
+
+  // Sesi aktif
+  const [sessions, setSessions] = useState<ActiveSession[] | null>(null);
+  const [kicking, setKicking] = useState(false);
+  const [kickConfirm, setKickConfirm] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -66,11 +82,44 @@ export default function SecurityClientPage() {
     }
   }, []);
 
+  const loadSessions = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/sessions");
+      if (!res.ok) {
+        setSessions(null);
+        return;
+      }
+      const data = (await res.json()) as { sessions?: ActiveSession[] };
+      setSessions(data.sessions ?? []);
+    } catch {
+      setSessions(null);
+    }
+  }, []);
+
   useEffect(() => {
     (async () => {
       await refresh();
+      await loadSessions();
     })().catch(() => {});
-  }, [refresh]);
+  }, [refresh, loadSessions]);
+
+  async function kickOthers() {
+    setKicking(true);
+    const res = await fetch("/api/auth/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "sign_out_others" }),
+    });
+    const data = (await res.json().catch(() => null)) as { error?: string } | null;
+    setKicking(false);
+    setKickConfirm(false);
+    if (!res.ok) {
+      toast(data?.error || "Gagal mengeluarkan sesi lain.", "error");
+      return;
+    }
+    toast("Semua sesi lain telah dikeluarkan.", "success");
+    loadSessions();
+  }
 
   async function startEnroll() {
     setEnrolling(true);
@@ -295,6 +344,76 @@ export default function SecurityClientPage() {
           )}
         </>
       )}
+
+      {/* ── Perangkat & Sesi Aktif ─────────────────────────── */}
+      <div className="mt-6 rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 text-sm font-bold text-slate-800">
+              <DeviceMobile className="h-4 w-4 text-[var(--brand-accent)]" /> Perangkat &amp; Sesi Aktif
+            </h2>
+            <p className="mt-0.5 text-xs text-slate-400">
+              Perangkat yang sedang login dengan akun ini — lupa logout di komputer sekolah? Keluarkan dari sini.
+            </p>
+          </div>
+          {sessions && sessions.filter((s) => !s.current).length > 0 && (
+            <button
+              onClick={() => setKickConfirm(true)}
+              disabled={kicking}
+              className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+            >
+              Keluarkan semua sesi lain
+            </button>
+          )}
+        </div>
+
+        <div className="mt-4 space-y-2">
+          {sessions === null ? (
+            <p className="py-2 text-xs text-slate-400">
+              Daftar sesi tersedia setelah tabel `sessions` dimigrasi (supabase/sessions.sql).
+            </p>
+          ) : sessions.length === 0 ? (
+            <p className="py-2 text-xs text-slate-400">Belum ada sesi tercatat.</p>
+          ) : (
+            sessions.map((s) => (
+              <div
+                key={s.sessionId}
+                className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#e4ecf6]">
+                    <DeviceMobile className="h-4.5 w-4.5 text-[var(--brand-accent)]" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-700">
+                      {s.device}
+                      {s.current && (
+                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                          Perangkat ini
+                        </span>
+                      )}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-400">
+                      {s.ip || "IP tidak tercatat"} · aktif {formatRelativeTime(s.lastSeenAt)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Konfirmasi keluarkan sesi lain */}
+      <ConfirmModal
+        open={kickConfirm}
+        onClose={() => setKickConfirm(false)}
+        onConfirm={kickOthers}
+        title="Keluarkan semua sesi lain?"
+        message="Semua perangkat lain yang login dengan akun ini akan langsung ter-logout dan harus login ulang. Perangkat ini tetap aman."
+        confirmLabel="Ya, Keluarkan"
+        loading={kicking}
+      />
     </div>
   );
 }

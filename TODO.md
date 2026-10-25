@@ -101,15 +101,21 @@ server API routes (`/api/auth/mfa/*`) sesuai arsitektur auth aplikasi.
 Prasyarat proyek: toggle TOTP di Supabase Dashboard → Authentication → MFA
 (sudah aktif — terverifikasi saat uji).
 
-## 5. Sesi Aktif + Force Logout
+## 5. Sesi Aktif + Force Logout ✅
 
 Berguna saat lupa logout di komputer bersama sekolah.
 
-- [ ] a. Daftar sesi aktif per user (device/user-agent, IP, lokasi kasar,
-      waktu terakhir) — tabel `sessions` atau metadata Supabase auth.
-- [ ] b. Tombol "Keluarkan sesi ini" per baris + "Keluarkan semua sesi
-      lain" (sesi saat ini tetap).
-- [ ] c. Email/notifikasi bila login dari device baru.
+- [x] a. Daftar sesi aktif per user — tabel `sessions` (supabase/sessions.sql),
+      di-upsert setiap halaman admin dibuka (GET /api/auth/session):
+      perangkat (parse user-agent), IP, waktu aktif terakhir. Ditampilkan di
+      `/admin/security` → "Perangkat & Sesi Aktif", sesi saat ini diberi badge.
+- [x] b. "Keluarkan semua sesi lain" — signOut({scope:"others"}) native
+      Supabase (invalidasi token sungguhan) + baris ditandai revoked.
+      Catatan: kick per-satu-sesi butuh SUPABASE_SERVICE_ROLE_KEY — tidak
+      dibuat; skenario utama sudah tertutup tombol semua-sesi-lain.
+- [~] c. Email/notifikasi bila login dari device baru — DEFER: butuh
+      provider email (RESEND/API key belum ada di proyek). Terpisah bila
+      nanti dibutuhkan.
 
 ---
 
