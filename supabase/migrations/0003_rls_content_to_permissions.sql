@@ -30,9 +30,9 @@
 -- ── PREFLIGHT ───────────────────────────────────────────────────────────────
 do $$
 declare
-  v_orphan int;
-  v_no_role int;
-  v_list   text;
+  v_no_role   int;
+  v_bare_role text;
+  v_bare_cnt  int;
 begin
   -- (1) Tidak boleh ada akun panel aktif tanpa system_role — kalau ada,
   --     `has_permission()` akan menolak semuanya dan operator kehilangan
@@ -49,42 +49,34 @@ begin
       v_no_role;
   end if;
 
-  -- (2) Setiap akun panel aktif harus lolos minimal satu izin tulis konten.
-  --     Akun yang hanya punya izin baca memang sah — jadi yang dicari adalah
-  --     akun yang TIDAK punya satu pun izin tulis pada modul apa pun.
-  select count(*), string_agg(coalesce(p.email, p.id::text), ', ')
-    into v_orphan, v_list
-    from public.user_profiles p
-   where p.is_active = true
-     and p.system_role is not null
-     and p.system_role <> 'SUPER_ADMIN'
-     and not (
-       public.has_permission(p.id, 'berita:create')
-       or public.has_permission(p.id, 'artikel:create')
-       or public.has_permission(p.id, 'pengumuman:create')
-       or public.has_permission(p.id, 'kegiatan:create')
-       or public.has_permission(p.id, 'agenda:create')
-       or public.has_permission(p.id, 'galeri:create')
-       or public.has_permission(p.id, 'unduhan:create')
-       or public.has_permission(p.id, 'prestasi:create')
-       or public.has_permission(p.id, 'guru:create')
-       or public.has_permission(p.id, 'fasilitas:create')
-       or public.has_permission(p.id, 'ekskul:create')
-       or public.has_permission(p.id, 'portal:create')
-       or public.has_permission(p.id, 'faq:create')
-       or public.has_permission(p.id, 'program:update')
-       or public.has_permission(p.id, 'spmb:update')
-       or public.has_permission(p.id, 'kontak:update')
-       or public.has_permission(p.id, 'sampah:update')
-     );
+  -- (2) Setiap PERAN yang dipakai akun aktif harus punya minimal satu izin di
+  --     role_permissions. Kalau sebuah peran kosong sama sekali, seluruh
+  --     pemegangnya langsung kehilangan kemampuan menyimpan setelah policy ini
+  --     berlaku — itu kegagalan yang ingin dicegah.
+  --
+  --     Catatan desain: yang diperiksa adalah peran, BUKAN tiap akun. Akun
+  --     read-only yang memang sengaja hanya diberi `*:read` adalah konfigurasi
+  --     sah dan tidak boleh memblokir migrasi.
+  select pr.role_key, count(*)
+    into v_bare_role, v_bare_cnt
+    from (
+      select distinct system_role as role_key
+        from public.user_profiles
+       where is_active = true and system_role is not null and system_role <> 'SUPER_ADMIN'
+    ) pr
+   where not exists (
+     select 1 from public.role_permissions rp where rp.role_key = pr.role_key
+   )
+   group by pr.role_key
+   limit 1;
 
-  if v_orphan > 0 then
+  if v_bare_role is not null then
     raise exception
-      'PREFLIGHT GAGAL: % akun aktif tidak punya izin tulis apa pun (%). Periksa role_permissions untuk peran mereka sebelum mengaktifkan penegakan RLS.',
-      v_orphan, coalesce(v_list, '-');
+      'PREFLIGHT GAGAL: peran % dipakai % akun aktif tetapi tidak punya satu pun izin di role_permissions. Seed izin peran itu (atau jalankan ulang supabase/*.sql terkait) sebelum mengaktifkan penegakan RLS.',
+      v_bare_role, v_bare_cnt;
   end if;
 
-  raise notice 'PREFLIGHT OK: semua akun panel aktif punya setidaknya satu izin tulis.';
+  raise notice 'PREFLIGHT OK: semua peran yang dipakai akun aktif punya izin ter-seed.';
 end $$;
 
 -- ── Ketahanan: lewati tabel yang belum ada ──────────────────────────────────

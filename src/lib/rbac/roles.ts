@@ -164,6 +164,14 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       "kontak:delete",
       // Purge permanen dari Sampah — hanya admin sekolah & super admin.
       "sampah:delete",
+      // Infrastruktur (read-only / operasional), sesuai seed SQL:
+      // supabase/backup-perm.sql dan supabase/diagnostics-perm.sql.
+      // Tanpa ini, "Kembalikan ke default" akan MENCABUT grant yang sudah
+      // di-seed, dan /admin/backup + /admin/diagnostics tertutup bagi peran
+      // ini ketika role_permissions masih kosong.
+      "backup:read",
+      "backup:update",
+      "diagnostik:read",
     ],
   },
   {
