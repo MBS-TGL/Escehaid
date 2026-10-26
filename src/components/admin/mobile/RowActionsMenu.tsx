@@ -20,18 +20,22 @@ export type RowAction = {
  * daftar Portal (`app/admin/portal/SortableRow.tsx`) yang merender trigger
  * sendiri. Jangan menyalin kelas ini ke tempat lain.
  *
- * Kontras: ikon `slate-600` (#475569) = 7.58:1 di atas `slate-50` → lolos WCAG
- * AA untuk ikon fungsional. Sebelumnya `slate-400` (2.56:1) gagal. Border
- * `slate-300` hanya penguat bentuk (di bawah 3:1 batas komponen 1.4.11) —
- * penanda utama kontrol adalah ikonnya.
+ * Bentuk: kotak lembut `bg-slate-100` TANPA border. Border + latar terang
+ * (slate-300/slate-50) terbaca seperti kotak isian di samping avatar + teks
+ * baris; tint datar sudah cukup memberi bentuk tombol tanpa kesan "field".
+ *
+ * Kontras: ikon `slate-600` (#475569) = 6.9:1 di atas `slate-100` (7.58:1 di
+ * atas putih) → lolos WCAG AA untuk ikon fungsional; sebelumnya `slate-400`
+ * 2.56:1 gagal. Latar solid juga membuat trigger tetap terbaca di atas foto
+ * (Gallery menaruhnya di pojok gambar).
  *
  * Saat menu terbuka tombol memakai warna merek supaya tetap terlihat aktif.
  */
 export function rowActionsTriggerClass(open: boolean) {
-  return `flex h-11 w-9 shrink-0 items-center justify-center rounded-lg border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-40 ${
+  return `flex h-11 w-9 shrink-0 items-center justify-center rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-40 ${
     open
-      ? "border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-      : "border-slate-300 bg-slate-50 text-slate-600 hover:border-[var(--brand-accent)]/40 hover:bg-white hover:text-[var(--brand-primary)] active:bg-slate-100"
+      ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+      : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-[var(--brand-primary)] active:bg-slate-200"
   }`;
 }
 
