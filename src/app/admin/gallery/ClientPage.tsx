@@ -444,10 +444,15 @@ export default function AdminGalleryPage() {
                     </button>
                   </div>
                   {/* Menu ⋯ mobile — area sentuh 44px, di pojok kanan-atas gambar.
-                      Trigger sudah punya chip sendiri (border + bg solid), jadi
-                      tidak perlu lapisan gelap tambahan di sini. */}
+                      Trigger ikon-saja, jadi di atas foto memakai tone="onDark"
+                      (ikon putih + halo) agar tidak hilang di foto terang/gelap. */}
                   <div className="absolute right-1 top-1 z-10 md:hidden" onClick={(e) => e.stopPropagation()}>
-                    <RowActionsMenu label={item.title} actions={menuActions} disabled={pickMode && !isSelected} />
+                    <RowActionsMenu
+                      label={item.title}
+                      actions={menuActions}
+                      disabled={pickMode && !isSelected}
+                      tone="onDark"
+                    />
                   </div>
                   <div
                     onClick={() => (pickMode ? toggleSelect(item.id) : setViewItem(item))}

@@ -17,7 +17,6 @@ import {
   ArrowSquareOut,
   Copy,
   DotsSixVertical,
-  DotsThreeVertical,
   PencilSimple,
   SquaresFour,
   Trash,
@@ -30,7 +29,7 @@ import {
 } from "@/lib/portal-theme";
 import { useFloatingPanel } from "@/components/ui/useFloatingPanel";
 import { StatusPill, statusOf, type PortalStatus } from "./StatusControl";
-import { RowGrip, rowActionsTriggerClass } from "@/components/admin/mobile";
+import { RowGrip, RowActionsTriggerIcon, rowActionsTriggerClass } from "@/components/admin/mobile";
 
 /**
  * Kolom grid desktop (dipakai header di page.tsx supaya sejajar):
@@ -334,7 +333,7 @@ function RowActionsMenu({
         }}
         className={rowActionsTriggerClass(open)}
       >
-        <DotsThreeVertical className="h-5 w-5" />
+        <RowActionsTriggerIcon />
       </button>
 
       {open &&

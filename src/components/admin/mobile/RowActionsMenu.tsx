@@ -20,23 +20,43 @@ export type RowAction = {
  * daftar Portal (`app/admin/portal/SortableRow.tsx`) yang merender trigger
  * sendiri. Jangan menyalin kelas ini ke tempat lain.
  *
- * Bentuk: kotak lembut `bg-slate-100` TANPA border. Border + latar terang
- * (slate-300/slate-50) terbaca seperti kotak isian di samping avatar + teks
- * baris; tint datar sudah cukup memberi bentuk tombol tanpa kesan "field".
+ * Bentuk: IKON SAJA, tanpa border & tanpa latar. Kotak (border/tint) terbaca
+ * seperti kotak isian di samping avatar + teks baris. Karena ikon jadi satu-
+ * satunya penanda, ikonnya dibuat tegas (`weight="bold"`, lihat
+ * `RowActionsTriggerIcon`) — bukan garis tipis yang tenggelam.
  *
- * Kontras: ikon `slate-600` (#475569) = 6.9:1 di atas `slate-100` (7.58:1 di
- * atas putih) → lolos WCAG AA untuk ikon fungsional; sebelumnya `slate-400`
- * 2.56:1 gagal. Latar solid juga membuat trigger tetap terbaca di atas foto
- * (Gallery menaruhnya di pojok gambar).
+ * Kontras: `slate-600` (#475569) = 7.58:1 di atas putih → lolos WCAG AA untuk
+ * ikon fungsional; sebelumnya `slate-400` 2.56:1 gagal.
+ *
+ * `onDark` untuk trigger yang menempel di atas foto (Gallery) — tanpa latar,
+ * ikon gelap akan hilang di foto gelap. Varian ini memakai ikon putih dengan
+ * halo gelap tipis agar tetap terbaca di foto terang maupun gelap.
  *
  * Saat menu terbuka tombol memakai warna merek supaya tetap terlihat aktif.
  */
-export function rowActionsTriggerClass(open: boolean) {
-  return `flex h-11 w-9 shrink-0 items-center justify-center rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-40 ${
+export function rowActionsTriggerClass(open: boolean, tone: RowActionsTone = "default") {
+  const base =
+    "flex h-11 w-9 shrink-0 items-center justify-center rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-40";
+  if (tone === "onDark") {
+    return `${base} text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.65)] hover:text-white/80 active:text-white/70`;
+  }
+  return `${base} ${
     open
-      ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-      : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-[var(--brand-primary)] active:bg-slate-200"
+      ? "text-[var(--brand-primary)]"
+      : "text-slate-600 hover:bg-slate-100 hover:text-[var(--brand-primary)] active:bg-slate-200"
   }`;
+}
+
+/** Varian warna trigger ⋯ — `onDark` untuk trigger di atas foto. */
+export type RowActionsTone = "default" | "onDark";
+
+/**
+ * Ikon ⋯ tebal (Phosphor `weight="bold"`) — dipakai trigger di sini dan di
+ * baris Portal. Varian `regular` terlalu tipis: titiknya radius 12 dan
+ * tenggelam saat berdiri sendiri tanpa kotak.
+ */
+export function RowActionsTriggerIcon() {
+  return <DotsThreeVertical weight="bold" className="h-5 w-5" />;
 }
 
 /**
@@ -55,12 +75,15 @@ export function RowActionsMenu({
   actions,
   disabled = false,
   menuMinWidth = 200,
+  tone = "default",
 }: {
   /** Nama item — dipakai aria-label ("Aksi untuk …"). */
   label: string;
   actions: RowAction[];
   disabled?: boolean;
   menuMinWidth?: number;
+  /** `onDark` bila trigger menempel di atas foto (ikon putih + halo). */
+  tone?: RowActionsTone;
 }) {
   const { open, toggle, triggerRef, menuRef, menuId, panelStyle, onMenuKeyDown } = useMenu({
     menuMinWidth,
@@ -81,9 +104,9 @@ export function RowActionsMenu({
           e.stopPropagation();
           toggle();
         }}
-        className={rowActionsTriggerClass(open)}
+        className={rowActionsTriggerClass(open, tone)}
       >
-        <DotsThreeVertical className="h-5 w-5" />
+        <RowActionsTriggerIcon />
       </button>
 
       <MenuPanel
