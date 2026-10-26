@@ -74,6 +74,11 @@ export default function SqlStatusClientPage({ statuses }: { statuses: SqlMigrati
                   <code className="rounded bg-slate-100 px-2 py-1 font-mono text-xs font-semibold text-slate-700">
                     {s.file}
                   </code>
+                  {s.source === "ledger" && (
+                    <span className="ml-1.5 rounded bg-[var(--brand-accent)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--brand-accent)]">
+                      runner
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3.5 text-sm text-slate-600">{s.description}</td>
                 <td className="px-4 py-3.5 text-center">
@@ -94,8 +99,11 @@ export default function SqlStatusClientPage({ statuses }: { statuses: SqlMigrati
       </div>
 
       <p className="mt-4 text-xs text-slate-400">
-        Status dicek dengan membuktikan efek file di database (kolom/tabel/permission/RPC) — bukan
-        membaca riwayat eksekusi. Semua file bersifat idempoten: menjalankan ulang tidak merusak.
+        Dua sumber status: <strong>runner</strong> (tercatat di tabel{" "}
+        <code className="font-mono">schema_migrations</code> oleh{" "}
+        <code className="font-mono">npm run db:migrate</code>) dan{" "}
+        <strong>probe</strong> (disimpulkan dari efek file di database — untuk SQL lama
+        yang dijalankan manual sebelum runner ada). Semua file bersifat idempoten.
       </p>
     </div>
   );

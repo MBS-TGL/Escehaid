@@ -12,7 +12,10 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "db:migrate:status": "node scripts/db-migrate.mjs --status",
+    "db:migrate:dry": "node scripts/db-migrate.mjs --dry-run"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1152.0",

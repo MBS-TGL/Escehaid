@@ -14,6 +14,15 @@ export interface SqlMigrationStatus {
   file: string;
   description: string;
   applied: boolean;
+  /**
+   * Sumber kebenaran status:
+   *  - `ledger`   — tercatat di `schema_migrations` oleh `npm run db:migrate`
+   *                 (paling kuat: bukti berkas itu benar-benar dieksekusi),
+   *  - `probe`    — disimpulkan dari EFEK di DB (kolom/tabel/RPC/permission),
+   *                 dipakai untuk SQL lama yang dijalankan manual sebelum
+   *                 runner ada.
+   */
+  source: "ledger" | "probe";
 }
 
 /**
@@ -46,6 +55,47 @@ interface MigrationDef {
   description: string;
   check: () => Promise<boolean>;
 }
+
+/**
+ * Migrasi berurutan di `supabase/migrations/` — diterapkan lewat
+ * `npm run db:migrate`. Statusnya dibaca dari `schema_migrations`, bukan
+ * diprobe, karena runner mencatatnya sendiri.
+ *
+ * Urutan penting: 0001 harus sebelum 0002 (backfill sebelum pengetatan
+ * has_permission), dan 0003 menolak jalan bila 0001 belum beres.
+ */
+const LEDGER_MIGRATIONS: MigrationDef[] = [
+  {
+    file: "supabase/migrations/0001_backfill_system_role.sql",
+    description: "Backfill system_role untuk admin legacy (prasyarat pengetatan RBAC)",
+    check: async () => false, // status asli dari ledger
+  },
+  {
+    file: "supabase/migrations/0002_has_permission_hardening.sql",
+    description: "Tutup fallback has_permission + REVOKE fungsi internal & TRUNCATE anon",
+    check: async () => false,
+  },
+  {
+    file: "supabase/migrations/0003_rls_content_to_permissions.sql",
+    description: "RLS konten: role legacy → izin halus (punya preflight)",
+    check: async () => false,
+  },
+  {
+    file: "supabase/migrations/0004_audit_before_after.sql",
+    description: "log_audit() menyimpan nilai sebelum + entity_id untuk tabel ber-PK key",
+    check: async () => false,
+  },
+  {
+    file: "supabase/migrations/0005_audit_triggers_missing.sql",
+    description: "Audit trigger untuk faqs, downloads, ekskuls, program, settings, flags, categories",
+    check: async () => false,
+  },
+  {
+    file: "supabase/migrations/0006_migration_ledger_access.sql",
+    description: "Akses baca schema_migrations untuk halaman ini",
+    check: async () => false,
+  },
+];
 
 const MIGRATIONS: MigrationDef[] = [
   {
@@ -100,13 +150,37 @@ const MIGRATIONS: MigrationDef[] = [
   },
 ];
 
+/** Baca ledger `schema_migrations`. Kosong bila tabel belum ada / tanpa akses. */
+async function readLedger(): Promise<Set<string>> {
+  const { data, error } = await supabase.from("schema_migrations").select("filename");
+  if (error) {
+    // Tabel belum dibuat (runner belum pernah jalan) atau RLS menolak —
+    // keduanya bukan kondisi error bagi halaman ini.
+    return new Set();
+  }
+  return new Set((data ?? []).map((r) => r.filename as string));
+}
+
 /** Cek semua migrasi — tiap probe gagal ditelan sebagai `false`. */
 export async function getSqlMigrationStatuses(): Promise<SqlMigrationStatus[]> {
-  return Promise.all(
+  const ledger = await readLedger();
+
+  const probed = await Promise.all(
     MIGRATIONS.map(async (m): Promise<SqlMigrationStatus> => ({
       file: m.file,
       description: m.description,
       applied: await m.check().catch(() => false),
+      source: "probe" as const,
     }))
   );
+
+  const fromLedger: SqlMigrationStatus[] = LEDGER_MIGRATIONS.map((m) => ({
+    file: m.file,
+    description: m.description,
+    applied: ledger.has(m.file),
+    source: "ledger" as const,
+  }));
+
+  // Migrasi berurutan ditampilkan lebih dulu (paling relevan untuk tindakan).
+  return [...fromLedger, ...probed];
 }

@@ -32,6 +32,10 @@ jobs:
   quality:
     name: TypeScript, ESLint & test
     runs-on: ubuntu-latest
+    env:
+      # Opsional: bila diisi, langkah "Status migrasi SQL" menjalankan
+      # `db:migrate:status` (hanya melapor, tidak pernah menggagalkan job).
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
       - uses: actions/checkout@v5
 
@@ -65,6 +69,20 @@ jobs:
       # memverifikasi hal yang sama.
       - name: Test
         run: npm run test
+
+      # Drift SQL: bandingkan berkas di supabase/migrations dengan ledger
+      # schema_migrations. HANYA MELAPORKAN (`|| true`) — deploy tidak boleh
+      # diblokir oleh SQL yang belum dijalankan, karena rilis SQL memang manual
+      # dan sengaja dipisah dari rilis kode. Tujuannya supaya "kode sudah deploy
+      # tapi SQL belum jalan" terlihat di CI, bukan ketahuan dari insiden
+      # produksi (seperti pg-trgm pada 24 Okt).
+      #
+      # `if` memakai `env.DATABASE_URL` (job-level), bukan `secrets.*` langsung:
+      # konteks `secrets` tidak dapat diandalkan di `if` tingkat step. Pola ini
+      # sama dengan job build di bawah.
+      - name: Status migrasi SQL (informasional)
+        if: env.DATABASE_URL != ''
+        run: npm run db:migrate:status || true
 
   build:
     name: Next.js build

@@ -1,54 +1,16 @@
 import { supabase } from "../supabase";
 
-export async function updateProfileRole(
-  id: string,
-  role: string
-): Promise<{ success: boolean; error?: string }> {
-  const { error } = await supabase
-    .from("user_profiles")
-    .update({ role })
-    .eq("id", id);
-
-  if (error) {
-    console.error("Error updating profile role:", error);
-    return { success: false, error: error.message };
-  }
-  return { success: true };
-}
-
-export async function updateProfileStatus(
-  id: string,
-  is_active: boolean
-): Promise<{ success: boolean; error?: string }> {
-  const { error } = await supabase
-    .from("user_profiles")
-    .update({ is_active })
-    .eq("id", id);
-
-  if (error) {
-    console.error("Error updating profile status:", error);
-    return { success: false, error: error.message };
-  }
-  return { success: true };
-}
-
-export async function deleteProfile(id: string): Promise<{ error?: string }> {
-  const { error } = await supabase.from("user_profiles").delete().eq("id", id);
-  if (error) {
-    console.error("Error deleting profile:", error);
-    return { error: error.message };
-  }
-  return {};
-}
-
-export async function deleteProfileBulk(ids: string[]): Promise<{ error?: string }> {
-  const { error } = await supabase.from("user_profiles").delete().in("id", ids);
-  if (error) {
-    console.error("Error bulk deleting profiles:", error);
-    return { error: error.message };
-  }
-  return {};
-}
+/*
+ * CATATAN: helper tulis profil (updateProfileRole, updateProfileStatus,
+ * deleteProfile, deleteProfileBulk) sudah DIHAPUS dari berkas ini.
+ *
+ * Alasannya: semuanya menulis `user_profiles` langsung dari klien browser
+ * (klien anon) sehingga hanya dijaga RLS — melewati `requirePermission`
+ * sepenuhnya. Tidak ada satu pun pemanggil yang tersisa (sudah diverifikasi),
+ * jadi keberadaannya hanya menyediakan jalur tulis tanpa guard bagi kode
+ * berikutnya. Semua mutasi pengguna sekarang lewat server action di
+ * `src/app/admin/users/actions.ts`.
+ */
 
 // ============ ANNOUNCEMENTS ============
 

@@ -38,11 +38,26 @@ pemilik lama-berjalan di sini. Aturan wajib saat bekerja di tree ini:
 - **CI = sumber kebenaran.** Release production adalah Vercel auto-deploy (tidak menunggu CI). Setelah push, cek run GitHub Actions (`/actions/runs?head_sha=`) sampai hijau; jangan klaim selesai kalau CI merah.
 - Pre-commit `.githooks/` memblokir rahasia + lint file staged; escape: `SKIP_SECRET_SCAN=1` / `SKIP_LINT_GUARD=1`.
 
-## SQL manual: `sql/pg-trgm.sql` (pencarian typo-tolerance)
+## SQL manual: runner migrasi + `sql/pg-trgm.sql`
 
-Repo ini **tanpa sistem migration** — perubahan SQL tidak ikut ter-deploy bersama kode. Kode aplikasi dan isi DB bisa tidak sinkron, dan pada 24 Okt itu mematikan seluruh pencarian DB di produksi dua kali (detail: komentar header `sql/pg-trgm.sql`).
+Repo ini **tidak punya migration otomatis saat deploy** — rilis SQL sengaja dipisah dari rilis kode. Kode aplikasi dan isi DB bisa tidak sinkron; pada 24 Okt itu mematikan seluruh pencarian DB di produksi dua kali (detail: komentar header `sql/pg-trgm.sql`).
 
-**Aturan:** setiap kali `sql/pg-trgm.sql` berubah, rilisnya adalah proses 3 langkah — jangan klaim selesai sebelum ketiganya beres.
+**Sejak Okt 2026 ada runner manual** yang mencatat riwayat, supaya "kode sudah deploy tapi SQL belum jalan" terlihat:
+
+```bash
+npm run db:migrate:status   # daftar berkas + applied/pending (dari schema_migrations)
+npm run db:migrate:dry      # tampilkan SQL yang AKAN dijalankan
+npm run db:migrate          # terapkan yang pending, satu transaksi per berkas
+```
+
+- Berkas di `supabase/migrations/`, bernomor urut, **idempoten**.
+- Env: `DATABASE_URL`. Tidak auto-apply; CI hanya melapor (`|| true`).
+- Berkas yang sudah diterapkan **tidak boleh diubah** (runner menolak via checksum) — buat berkas baru bernomor lanjut.
+- `/admin/sql` menampilkan status: label **runner** = dari ledger, **probe** = disimpulkan dari efek di DB (untuk SQL lama yang dijalankan manual sebelum runner ada).
+
+**Urutan wajib untuk rangkaian RBAC:** `0001` (backfill `system_role`) → `0002` (pengetatan `has_permission`) → `0003` (RLS konten). `0003` punya preflight yang membatalkan seluruh transaksi bila ada akun panel aktif yang belum punya izin tulis — itu pengaman, bukan error.
+
+**Aturan `sql/pg-trgm.sql`:** setiap kali berkas itu berubah, rilisnya proses 3 langkah — jangan klaim selesai sebelum ketiganya beres.
 
 1. `git push` (kode) → tunggu deploy Vercel.
 2. Jalankan **seluruh isi** `sql/pg-trgm.sql` di **Supabase → SQL Editor → Run** (idempoten: `create extension/index if not exists`, `create or replace function`).

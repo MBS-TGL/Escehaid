@@ -4,12 +4,16 @@ import { sanitizeSearchTerm } from "./shared";
 /**
  * Log aktivitas admin (P2.8) — pembacaan tabel `audit_logs`.
  *
- * Penulisan bukan urusan kode ini: trigger `log_audit()` (migrasi tabel
- * `audit_logs`, sudah dijalankan 12 Okt 2026 — berkas SQL dihapus dari repo)
- * mencatat setiap INSERT/UPDATE/DELETE di tabel
- * konten & SPMB dengan `auth.uid()` sebagai aktor. Kode di sini hanya membaca,
- * dengan degradasi anggun: bila tabel belum dibuat (user belum menjalankan
- * SQL), halaman menampilkan panel "jalankan SQL" — tanpa error.
+ * Penulisan bukan urusan kode ini: trigger `log_audit()` mencatat setiap
+ * INSERT/UPDATE/DELETE di tabel konten & SPMB dengan `auth.uid()` sebagai
+ * aktor. Untuk UPDATE, `detail` berisi `{ before, after }` (sejak migrasi
+ * 0004 — sebelumnya hanya nilai sesudah). Modul sistem menulis lewat RPC
+ * `log_activity()` dengan bentuk `{ before, after }` atau
+ * `{ module, changes }`.
+ *
+ * Kode di sini hanya membaca, dengan degradasi anggun: bila tabel belum
+ * dibuat (user belum menjalankan SQL), halaman menampilkan panel "jalankan
+ * SQL" — tanpa error.
  */
 
 export type AuditAction = "create" | "update" | "delete";
@@ -32,7 +36,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   delete: "Hapus",
 };
 
-/** Label Indonesia untuk tabel yang dicatat trigger (15 tabel). */
+/** Label Indonesia untuk tabel yang dicatat trigger. */
 export const AUDIT_ENTITY_LABELS: Record<string, string> = {
   news: "Berita",
   articles: "Artikel",
@@ -49,6 +53,15 @@ export const AUDIT_ENTITY_LABELS: Record<string, string> = {
   contact_messages: "Pesan Masuk",
   user_profiles: "Pengguna",
   school_profile: "Profil Sekolah",
+  // ── Ditambahkan lewat migrasi 0005 (sebelumnya tak tercatat sama sekali) ──
+  faqs: "FAQ",
+  downloads: "Unduhan",
+  ekskuls: "Ekstrakurikuler",
+  quran_pillars: "Program — Pilar",
+  agenda_blocks: "Program — Blok Agenda",
+  agenda_slots: "Program — Slot Agenda",
+  feature_flags: "Feature Flags",
+  categories: "Kategori",
   // ── Modul SISTEM (Phase A+) — dicatat via fungsi log_activity() ──
   roles: "Peran",
   role_permissions: "Izin Peran",
