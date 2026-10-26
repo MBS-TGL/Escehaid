@@ -95,6 +95,11 @@ const LEDGER_MIGRATIONS: MigrationDef[] = [
     description: "Akses baca schema_migrations untuk halaman ini",
     check: async () => false,
   },
+  {
+    file: "supabase/migrations/0007_handle_new_user_email.sql",
+    description: "Trigger signup mengisi email profil + backfill akun lama",
+    check: async () => false,
+  },
 ];
 
 const MIGRATIONS: MigrationDef[] = [
