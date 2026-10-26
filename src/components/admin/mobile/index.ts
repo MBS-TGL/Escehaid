@@ -1,4 +1,4 @@
-export { RowActionsMenu, type RowAction } from "./RowActionsMenu";
+export { RowActionsMenu, rowActionsTriggerClass, type RowAction } from "./RowActionsMenu";
 export {
   MobileFilterBar,
   MobilePickButton,

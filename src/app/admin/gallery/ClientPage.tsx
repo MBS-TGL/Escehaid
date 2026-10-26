@@ -443,11 +443,11 @@ export default function AdminGalleryPage() {
                       <Trash className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  {/* Menu ⋯ mobile — area sentuh 44px, di pojok kanan-atas gambar */}
+                  {/* Menu ⋯ mobile — area sentuh 44px, di pojok kanan-atas gambar.
+                      Trigger sudah punya chip sendiri (border + bg solid), jadi
+                      tidak perlu lapisan gelap tambahan di sini. */}
                   <div className="absolute right-1 top-1 z-10 md:hidden" onClick={(e) => e.stopPropagation()}>
-                    <span className="flex h-11 w-9 items-center justify-center rounded-lg bg-black/45">
-                      <RowActionsMenu label={item.title} actions={menuActions} disabled={pickMode && !isSelected} />
-                    </span>
+                    <RowActionsMenu label={item.title} actions={menuActions} disabled={pickMode && !isSelected} />
                   </div>
                   <div
                     onClick={() => (pickMode ? toggleSelect(item.id) : setViewItem(item))}

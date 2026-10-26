@@ -16,6 +16,26 @@ export type RowAction = {
 };
 
 /**
+ * Kelas tombol pemicu ⋯ — SATU sumber kebenaran, dipakai juga oleh baris
+ * daftar Portal (`app/admin/portal/SortableRow.tsx`) yang merender trigger
+ * sendiri. Jangan menyalin kelas ini ke tempat lain.
+ *
+ * Kontras: ikon `slate-600` (#475569) = 7.58:1 di atas `slate-50` → lolos WCAG
+ * AA untuk ikon fungsional. Sebelumnya `slate-400` (2.56:1) gagal. Border
+ * `slate-300` hanya penguat bentuk (di bawah 3:1 batas komponen 1.4.11) —
+ * penanda utama kontrol adalah ikonnya.
+ *
+ * Saat menu terbuka tombol memakai warna merek supaya tetap terlihat aktif.
+ */
+export function rowActionsTriggerClass(open: boolean) {
+  return `flex h-11 w-9 shrink-0 items-center justify-center rounded-lg border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-40 ${
+    open
+      ? "border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+      : "border-slate-300 bg-slate-50 text-slate-600 hover:border-[var(--brand-accent)]/40 hover:bg-white hover:text-[var(--brand-primary)] active:bg-slate-100"
+  }`;
+}
+
+/**
  * Tombol ⋯ + menu aksi floating untuk baris daftar mobile.
  *
  * Di-portal ke document.body (position:fixed, flip atas/bawah, re-posisi saat
@@ -57,7 +77,7 @@ export function RowActionsMenu({
           e.stopPropagation();
           toggle();
         }}
-        className="flex h-11 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-40"
+        className={rowActionsTriggerClass(open)}
       >
         <DotsThreeVertical className="h-5 w-5" />
       </button>

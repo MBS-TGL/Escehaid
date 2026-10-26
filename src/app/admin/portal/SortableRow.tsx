@@ -30,7 +30,7 @@ import {
 } from "@/lib/portal-theme";
 import { useFloatingPanel } from "@/components/ui/useFloatingPanel";
 import { StatusPill, statusOf, type PortalStatus } from "./StatusControl";
-import { RowGrip } from "@/components/admin/mobile";
+import { RowGrip, rowActionsTriggerClass } from "@/components/admin/mobile";
 
 /**
  * Kolom grid desktop (dipakai header di page.tsx supaya sejajar):
@@ -332,7 +332,7 @@ function RowActionsMenu({
           e.stopPropagation();
           toggle();
         }}
-        className="flex h-11 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-40"
+        className={rowActionsTriggerClass(open)}
       >
         <DotsThreeVertical className="h-5 w-5" />
       </button>
