@@ -588,9 +588,10 @@ export default function AdminContactPage() {
             <div className="flex w-full flex-wrap items-center gap-2">
               <a
                 href={`mailto:${detailItem.email}?subject=Re: ${detailItem.subject || "Pesan dari Website"}`}
+                aria-label="Balas via Email"
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)]">
                 <Envelope className="h-4 w-4" />
-                Balas Email
+                <span className="whitespace-nowrap">Email</span>
               </a>
               {detailItem.phone && (
                 <a
