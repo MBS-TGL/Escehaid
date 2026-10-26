@@ -9,17 +9,50 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { Lock, House } from "@/components/Icons";
+import { MODULE_LABELS } from "@/lib/rbac/permissions";
 
-/** Label Indonesia untuk izin `modul:aksi` yang umum diminta. */
+/** Label Indonesia untuk izin `modul:aksi`. */
 const PERMISSION_LABELS: Record<string, string> = {
   "users:manage": "mengelola Pengguna & Peran",
   "settings:manage": "mengubah Pengaturan Situs",
   "flags:manage": "mengelola Feature Flags",
   "logs:read": "melihat Log Aktivitas",
+  "backup:read": "melihat status Cadangan",
+  "backup:update": "menjalankan Cadangan",
+  "diagnostik:read": "melihat Diagnostik sistem",
+  "sampah:read": "membuka Sampah",
 };
 
+/**
+ * Label izin: entri khusus dulu, lalu turunkan dari registry
+ * (`modul` → nama modul, `aksi` → kata kerja). Dengan begitu izin modul
+ * konten (mis. `spmb:verify`) tetap terbaca manusia tanpa perlu menambah
+ * entri manual setiap kali ada modul baru.
+ */
 function labelFor(perm: string): string {
-  return PERMISSION_LABELS[perm] ?? perm;
+  const explicit = PERMISSION_LABELS[perm];
+  if (explicit) return explicit;
+
+  const [moduleKey, action] = perm.split(":");
+  const moduleLabel = MODULE_LABELS[moduleKey];
+  if (!moduleLabel) return perm;
+
+  const actionLabels: Record<string, string> = {
+    read: "melihat",
+    create: "menambah",
+    update: "mengubah",
+    delete: "menghapus",
+    publish: "mempublikasikan",
+    verify: "memverifikasi",
+    import: "mengimpor",
+    export: "mengekspor",
+    view_sensitive: "melihat data sensitif",
+    upload: "mengunggah",
+    manage: "mengelola",
+  };
+  const actionLabel = actionLabels[action];
+  if (!actionLabel) return perm;
+  return `${actionLabel} ${moduleLabel}`;
 }
 
 function ForbiddenContent() {
@@ -33,7 +66,13 @@ function ForbiddenContent() {
       </div>
       <h1 className="text-2xl font-bold text-slate-800">Akses Ditolak</h1>
       <p className="mt-2 max-w-md text-sm text-slate-500">
-        {perm ? (
+        {perm === "unknown" ? (
+          <>
+            Halaman admin ini belum dipetakan ke izin apa pun, sehingga aksesnya
+            ditolak secara default. Laporkan ke developer agar rute ini
+            didaftarkan di <code className="font-mono text-xs">admin-routes.ts</code>.
+          </>
+        ) : perm ? (
           <>
             Akun Anda tidak memiliki izin untuk {labelFor(perm)}. Hubungi
             Super Admin bila Anda merasa seharusnya memiliki akses.

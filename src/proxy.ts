@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { setDefaultResultOrder } from "node:dns";
 import { can } from "@/lib/rbac";
+import { requiredPermissionFor } from "@/lib/rbac/admin-routes";
 import { unstable_cache } from "next/cache";
 
 // Sebaris pengaman yang sama dengan next.config.ts: bila proses proxy berjalan
@@ -37,27 +38,6 @@ const getMaintenanceMode = unstable_cache(
 );
 
 /**
- * Peta rute admin → izin yang dibutuhkan. Hanya rute SISTEM yang digate di
- * sini; modul legacy tetap mengandalkan RLS + guard aplikasi (lihat ringkasan
- * akhir — jalur tulis legacy langsung dari browser ke PostgREST).
- *
- * `/admin/403` dan `/admin/change-password` sengaja tidak digate agar halaman
- * tujuan bisa dimuat (masih butuh login).
- */
-const ROUTE_PERMISSIONS: ReadonlyArray<[prefix: string, perm: string]> = [
-  ["/admin/users", "users:manage"],
-  ["/admin/logs", "logs:read"],
-  ["/admin/settings", "settings:manage"],
-  ["/admin/flags", "flags:manage"],
-  ["/admin/diagnostics", "diagnostik:read"],
-  ["/admin/trash", "sampah:read"],
-  ["/admin/sql", "users:manage"],
-];
-
-/** Rute yang diizinkan tanpa cek izin (masih butuh login + aktif). */
-const EXEMPT_PREFIXES = ["/admin/403", "/admin/change-password"];
-
-/**
  * Redirect yang ikut menyalin SEMUA cookie dari `supabaseResponse` — wajib
  * untuk redirect yang didahului `auth.signOut()`. Cookie penghapus sesi hanya
  * ditulis ke `supabaseResponse` (lewat `setAll`); tanpa disalin ke response
@@ -70,16 +50,6 @@ function redirectWithCookies(url: URL, supabaseResponse: NextResponse) {
     redirect.cookies.set(cookie);
   }
   return redirect;
-}
-
-function requiredPermissionFor(pathname: string): string | null {
-  for (const prefix of EXEMPT_PREFIXES) {
-    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return null;
-  }
-  for (const [prefix, perm] of ROUTE_PERMISSIONS) {
-    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return perm;
-  }
-  return null;
 }
 
 export async function proxy(request: NextRequest) {
@@ -204,10 +174,23 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/admin/change-password", request.url));
     }
 
-    // Gate izin untuk rute SISTEM → halaman 403 ramah bila tidak punya izin.
-    const needed = requiredPermissionFor(path);
-    if (needed) {
-      // Resolve izin (role_permissions) hanya untuk rute tergated (hemat query).
+    // Gate izin per-rute (DEFAULT-DENY).
+    //
+    // Peta & semantik ada di `@/lib/rbac/admin-routes`: rute yang tidak
+    // terdaftar → ditolak, bukan diloloskan. Resolusi `role_permissions`
+    // dilakukan SEKALI di luar percabangan supaya perilakunya seragam dan
+    // tidak bergantung pada apakah rute ini punya izin atau tidak.
+    const decision = requiredPermissionFor(path);
+
+    if (decision.kind === "unmapped") {
+      // Rute admin yang belum dipetakan. Jangan diloloskan: itu persis pola
+      // default-allow yang membuat /admin/admission & /admin/backup terbuka.
+      // Test `admin-routes.test.ts` mencegah ini terjadi di build, jadi
+      // cabang ini hanya tercapai untuk halaman yang ditambahkan tanpa entri.
+      return NextResponse.redirect(new URL("/admin/403?perlu=unknown", request.url));
+    }
+
+    if (decision.kind === "required") {
       let permissions: string[] = [];
       if (profile.system_role) {
         const { data: rows } = await supabase
@@ -222,9 +205,9 @@ export async function proxy(request: NextRequest) {
         is_active: profile.is_active,
         permissions,
       };
-      if (!can(subject, needed)) {
+      if (!can(subject, decision.perm)) {
         return NextResponse.redirect(
-          new URL(`/admin/403?perlu=${encodeURIComponent(needed)}`, request.url)
+          new URL(`/admin/403?perlu=${encodeURIComponent(decision.perm)}`, request.url)
         );
       }
     }

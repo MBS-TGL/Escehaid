@@ -211,6 +211,18 @@ export const MODULE_REGISTRY: readonly PermissionModule[] = [
     ],
   },
   {
+    key: "program",
+    label: "Program",
+    description:
+      "Konten halaman publik /program (pilar Wafa, blok & slot agenda). " +
+      "Tanpa entri ini `can()` menolak program:* untuk semua peran non-Super " +
+      "dan `resetRoleToDefault` gagal karena izin dianggap tidak dikenal.",
+    actions: [
+      { key: "read", label: "Melihat" },
+      { key: "update", label: "Mengubah" },
+    ],
+  },
+  {
     key: "kontak",
     label: "Pesan Masuk",
     description: "Pesan dari formulir kontak publik",

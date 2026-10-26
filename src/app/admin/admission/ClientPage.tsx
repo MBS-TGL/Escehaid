@@ -24,6 +24,7 @@ import {
   GOOGLE_FORM_URL,
   revalidatePaths,
 } from "@/lib/queries";
+import { usePermissions } from "@/app/admin/PermissionsProvider";
 import { SlideOver, SkeletonBlock } from "@/components/ui";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { normalizeName, normalizeSchool } from "@/lib/format-name";
@@ -158,6 +159,17 @@ function formatWaveDate(dateStr: string): string {
 
 export default function AdminSPMBPage() {
   const { toast } = useToast();
+  const { can } = usePermissions();
+  // Gate UI aksi SPMB — penegakan sesungguhnya di proxy.ts + RLS + trigger.
+  // Sebelumnya halaman ini NOL pengecekan izin: siapa pun yang bisa membuka
+  // /admin/admission bisa memverifikasi, mengekspor, dan menghapus pendaftar.
+  const permCreate = can("spmb:create");
+  const permUpdate = can("spmb:update");
+  const permVerify = can("spmb:verify");
+  const permImport = can("spmb:import");
+  const permExport = can("spmb:export");
+  const permDelete = can("spmb:delete");
+  const permSensitive = can("spmb:view_sensitive");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("all");
   const [data, setData] = useState<SpmbRegistration[]>([]);
@@ -922,7 +934,7 @@ export default function AdminSPMBPage() {
     return (
       <div className="p-4 sm:p-6 lg:p-8">
         {/* Header + Tab */}
-        <PageHeader active={mainTab} onSelect={setMainTab} onExport={handleExportCsv} onAdd={() => setAddOpen(true)} onImport={() => setImportOpen(true)} />
+        <PageHeader active={mainTab} onSelect={setMainTab} onExport={handleExportCsv} onAdd={() => setAddOpen(true)} onImport={() => setImportOpen(true)} canCreate={permCreate} canImport={permImport} canExport={permExport} />
 
         {/* ── MODAL LINK GOOGLE FORM ─────────────────────── */}
         {googleModal && (
@@ -1583,7 +1595,7 @@ export default function AdminSPMBPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Header + Tab */}
-      <PageHeader active={mainTab} onSelect={setMainTab} onExport={handleExportCsv} onAdd={() => setAddOpen(true)} onImport={() => setImportOpen(true)} />
+      <PageHeader active={mainTab} onSelect={setMainTab} onExport={handleExportCsv} onAdd={() => setAddOpen(true)} onImport={() => setImportOpen(true)} canCreate={permCreate} canImport={permImport} canExport={permExport} />
 
       {/* Stats — StatPillGroup: pill kompak satu baris */}
       <StatPillGroup>
@@ -1598,9 +1610,15 @@ export default function AdminSPMBPage() {
         <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex">
           <Checks className="h-4 w-4 text-[var(--brand-primary)]" />
           <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
-          <button onClick={() => setConfirmAction({ id: "bulk", status: "accepted" })} aria-label={`Terima ${selectedIds.size} pendaftar terpilih`} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Terima</button>
-          <button onClick={() => setConfirmAction({ id: "bulk", status: "rejected" })} aria-label={`Tolak ${selectedIds.size} pendaftar terpilih`} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Tolak</button>
-          <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} pendaftar terpilih`} className="rounded-lg bg-slate-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-slate-700">Hapus</button>
+          {permVerify && (
+            <>
+              <button onClick={() => setConfirmAction({ id: "bulk", status: "accepted" })} aria-label={`Terima ${selectedIds.size} pendaftar terpilih`} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Terima</button>
+              <button onClick={() => setConfirmAction({ id: "bulk", status: "rejected" })} aria-label={`Tolak ${selectedIds.size} pendaftar terpilih`} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Tolak</button>
+            </>
+          )}
+          {permDelete && (
+            <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} pendaftar terpilih`} className="rounded-lg bg-slate-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-slate-700">Hapus</button>
+          )}
           <button onClick={() => setSelectedIds(new Set())} aria-label="Batalkan pilihan" title="Batalkan pilihan" className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
         </div>
       )}
@@ -1857,6 +1875,8 @@ export default function AdminSPMBPage() {
                   else setConfirmAction({ id: r.id, status: s });
                 }}
                 onDelete={setDeleteItem}
+                canVerify={permVerify}
+                canDelete={permDelete}
               />
             ))
           )}
@@ -1880,27 +1900,31 @@ export default function AdminSPMBPage() {
       {pickMode && (
         <MobileSelectBar
           count={selectedIds.size}
-          onDelete={() => setBulkDelete(true)}
+          onDelete={permDelete ? () => setBulkDelete(true) : undefined}
           onCancel={exitPickMode}
         >
-          <button
-            type="button"
-            onClick={() => setConfirmAction({ id: "bulk", status: "accepted" })}
-            disabled={selectedIds.size === 0}
-            aria-label="Terima pendaftar terpilih"
-            className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Terima
-          </button>
-          <button
-            type="button"
-            onClick={() => setConfirmAction({ id: "bulk", status: "rejected" })}
-            disabled={selectedIds.size === 0}
-            aria-label="Tolak pendaftar terpilih"
-            className="min-h-10 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Tolak
-          </button>
+          {permVerify && (
+            <>
+              <button
+                type="button"
+                onClick={() => setConfirmAction({ id: "bulk", status: "accepted" })}
+                disabled={selectedIds.size === 0}
+                aria-label="Terima pendaftar terpilih"
+                className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Terima
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmAction({ id: "bulk", status: "rejected" })}
+                disabled={selectedIds.size === 0}
+                aria-label="Tolak pendaftar terpilih"
+                className="min-h-10 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Tolak
+              </button>
+            </>
+          )}
         </MobileSelectBar>
       )}
 
@@ -1950,7 +1974,8 @@ export default function AdminSPMBPage() {
                 { key: "ibu" as const, label: "Ibu" },
                 // Hanya tampil bila pendaftar mengisi pertanyaan tambahan.
                 ...(customAnswers.length > 0 ? [{ key: "tambahan" as const, label: "Tambahan" }] : []),
-                { key: "berkas" as const, label: "Berkas" },
+                // Berkas = dokumen pribadi (KK, akta, KTP ortu) → data sensitif.
+                ...(permSensitive ? [{ key: "berkas" as const, label: "Berkas" }] : []),
               ];
               const docCount = viewItem.documents ? [viewItem.documents.kk, viewItem.documents.akta, viewItem.documents.surat_sekolah, viewItem.documents.ktp_ortu, viewItem.documents.bukti_transfer].filter((v) => typeof v === "string" && v.length > 0).length : 0;
               // flex-wrap, BUKAN overflow-x-auto: tab aktif ditandai garis
@@ -2041,7 +2066,7 @@ export default function AdminSPMBPage() {
                 </div>
               )}
 
-              {viewTab === "berkas" && (
+              {viewTab === "berkas" && permSensitive && (
                 <div className="space-y-2">
                   {([
                     ["kk", "Kartu Keluarga"],
@@ -2071,11 +2096,13 @@ export default function AdminSPMBPage() {
 
             {/* Footer */}
             <div className="flex gap-3 border-t border-slate-100 px-6 py-4">
-              <button onClick={() => { setViewItem(null); setEditItem(viewItem); }}
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                <PencilSimple className="h-4 w-4" /> Edit Data
-              </button>
-              {viewItem.status === "pending" && (
+              {permUpdate && (
+                <button onClick={() => { setViewItem(null); setEditItem(viewItem); }}
+                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  <PencilSimple className="h-4 w-4" /> Edit Data
+                </button>
+              )}
+              {permVerify && viewItem.status === "pending" && (
                 <>
                   <button onClick={() => { setViewItem(null); setConfirmAction({ id: viewItem.id, status: "rejected" }); }}
                     className="flex-1 rounded-xl border border-red-200 bg-red-50 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100">
@@ -2212,7 +2239,17 @@ export default function AdminSPMBPage() {
 }
 
 /** Header halaman + tab "Pendaftar" / "Gelombang Pendaftaran". */
-function PageHeader({ active, onSelect, onExport, onAdd, onImport }: { active: MainTab; onSelect: (tab: MainTab) => void; onExport: () => void; onAdd: () => void; onImport: () => void }) {
+function PageHeader({ active, onSelect, onExport, onAdd, onImport, canCreate, canImport, canExport }: {
+  active: MainTab;
+  onSelect: (tab: MainTab) => void;
+  onExport: () => void;
+  onAdd: () => void;
+  onImport: () => void;
+  /** Izin aksi tombol header — sembunyikan yang tidak dimiliki. */
+  canCreate: boolean;
+  canImport: boolean;
+  canExport: boolean;
+}) {
   const tabs: { key: MainTab; label: string; desktopLabel?: string; icon: React.ElementType }[] = [
     { key: "registrations", label: "Pendaftar", icon: Users },
     { key: "waves", label: "Gelombang", desktopLabel: "Gelombang & Pengaturan", icon: CalendarBlank },
@@ -2232,18 +2269,24 @@ function PageHeader({ active, onSelect, onExport, onAdd, onImport }: { active: M
         </div>
         {active === "registrations" && (
           <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-            <button onClick={onAdd} className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] sm:flex-none">
-              <Plus className="h-4 w-4" />
-              Tambah Pendaftar
-            </button>
-            <button onClick={onImport} className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:flex-none">
-              <Upload className="h-4 w-4" />
-              Import
-            </button>
-            <button onClick={onExport} className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:flex-none">
-              <Download className="h-4 w-4" />
-              Export CSV
-            </button>
+            {canCreate && (
+              <button onClick={onAdd} className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] sm:flex-none">
+                <Plus className="h-4 w-4" />
+                Tambah Pendaftar
+              </button>
+            )}
+            {canImport && (
+              <button onClick={onImport} className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:flex-none">
+                <Upload className="h-4 w-4" />
+                Import
+              </button>
+            )}
+            {canExport && (
+              <button onClick={onExport} className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:flex-none">
+                <Download className="h-4 w-4" />
+                Export CSV
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -2386,6 +2429,8 @@ function RegistrationMobileRow({
   onEditData,
   onSetStatus,
   onDelete,
+  canVerify = true,
+  canDelete = true,
 }: {
   item: SpmbRegistration;
   selected: boolean;
@@ -2396,6 +2441,10 @@ function RegistrationMobileRow({
   onEditData: (r: SpmbRegistration) => void;
   onSetStatus: (r: SpmbRegistration, s: "pending" | "accepted" | "rejected") => void;
   onDelete: (r: SpmbRegistration) => void;
+  /** `spmb:verify` — ubah status pendaftar. */
+  canVerify?: boolean;
+  /** `spmb:delete` — hapus pendaftar. */
+  canDelete?: boolean;
 }) {
   const st = statusConfig[item.status] || statusConfig.pending;
   // Nama & asal sekolah judul dinormalisasi hanya untuk tampilan.
@@ -2406,7 +2455,7 @@ function RegistrationMobileRow({
   const actions: RowAction[] = [
     { key: "detail", label: "Detail", icon: <Eye className="h-4 w-4" />, run: () => onDetail(item) },
     { key: "edit", label: "Edit Data", icon: <PencilSimple className="h-4 w-4" />, run: () => onEditData(item) },
-    ...(item.status !== "pending"
+    ...(canVerify && item.status !== "pending"
       ? [{
           key: "pending",
           label: "Jadikan Menunggu",
@@ -2414,7 +2463,7 @@ function RegistrationMobileRow({
           run: () => onSetStatus(item, "pending"),
         }]
       : []),
-    ...(item.status !== "accepted"
+    ...(canVerify && item.status !== "accepted"
       ? [{
           key: "accept",
           label: "Terima",
@@ -2422,7 +2471,7 @@ function RegistrationMobileRow({
           run: () => onSetStatus(item, "accepted"),
         }]
       : []),
-    ...(item.status !== "rejected"
+    ...(canVerify && item.status !== "rejected"
       ? [{
           key: "reject",
           label: "Tolak",
@@ -2438,7 +2487,9 @@ function RegistrationMobileRow({
           run: () => { window.location.href = `tel:${item.phone?.replace(/[^0-9]/g, "")}`; },
         }]
       : []),
-    { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) },
+    ...(canDelete
+      ? [{ key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) } as RowAction]
+      : []),
   ];
 
   return (

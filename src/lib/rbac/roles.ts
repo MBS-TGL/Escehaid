@@ -17,6 +17,8 @@
  *    Izinnya tidak bisa dikurangi (guard di server action + UI terkunci).
  */
 
+import { ALL_PERMISSIONS } from "./permissions";
+
 /** Kunci peran bawaan. */
 export const ROLE_KEYS = [
   "SUPER_ADMIN",
@@ -64,6 +66,10 @@ const CONTENT_PERMISSIONS: readonly string[] = [
   "agenda:create",
   "agenda:update",
   "agenda:delete",
+  "faq:read",
+  "faq:create",
+  "faq:update",
+  "faq:delete",
   "galeri:read",
   "galeri:create",
   "galeri:update",
@@ -100,6 +106,10 @@ const CONTENT_PERMISSIONS: readonly string[] = [
   "portal:delete",
   "program:read",
   "program:update",
+  // Recycle bin: operator konten boleh melihat & memulihkan item yang ia
+  // hapus, tetapi TIDAK boleh purge permanen (`sampah:delete`).
+  "sampah:read",
+  "sampah:update",
 ];
 
 const SPMB_PERMISSIONS: readonly string[] = [
@@ -114,20 +124,17 @@ const SPMB_PERMISSIONS: readonly string[] = [
 ];
 
 /**
- * Daftar seluruh izin (untuk SUPER_ADMIN). Dihitung statis dari modul yang
- * diketahui — jangan diimpor lintas file agar tetap ringan.
+ * Daftar seluruh izin (untuk SUPER_ADMIN).
+ *
+ * DITURUNKAN dari `MODULE_REGISTRY`, bukan ditulis tangan. Versi lama
+ * memelihara daftar manual yang menyimpang dari registry: `backup:*`,
+ * `diagnostik:read`, `sampah:*`, dan `faq:*` tidak ikut, sehingga peran
+ * legacy (system_role NULL) yang di-resolve lewat `defaultPermissionsForRole`
+ * gagal `can("sampah:read")` dan tidak bisa membuka /admin/trash.
+ *
+ * `permissions.ts` tidak mengimpor apa pun, jadi tidak ada siklus modul.
  */
-const ALL_PERMISSIONS_STATIC: readonly string[] = [
-  ...CONTENT_PERMISSIONS,
-  ...SPMB_PERMISSIONS,
-  "kontak:read",
-  "kontak:update",
-  "kontak:delete",
-  "users:manage",
-  "settings:manage",
-  "flags:manage",
-  "logs:read",
-];
+const ALL_PERMISSIONS_STATIC: readonly string[] = ALL_PERMISSIONS;
 
 /**
  * Definisi peran bawaan.
@@ -149,7 +156,15 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
     label: "Admin Sekolah",
     description:
       "Semua modul konten dan SPMB (termasuk data sensitif), serta pesan masuk. Tanpa pengelolaan pengguna/peran.",
-    permissions: [...CONTENT_PERMISSIONS, ...SPMB_PERMISSIONS, "kontak:read", "kontak:update", "kontak:delete"],
+    permissions: [
+      ...CONTENT_PERMISSIONS,
+      ...SPMB_PERMISSIONS,
+      "kontak:read",
+      "kontak:update",
+      "kontak:delete",
+      // Purge permanen dari Sampah — hanya admin sekolah & super admin.
+      "sampah:delete",
+    ],
   },
   {
     key: "OPERATOR_KONTEN",
