@@ -144,7 +144,7 @@ function GroupSwitcher({
                 <Icon
                   className={`h-4 w-4 shrink-0 ${active ? "text-[var(--brand-primary)]" : "text-slate-400"}`}
                 />
-                <span className={`min-w-0 flex-1 truncate ${active ? "font-semibold text-[var(--brand-primary)]" : ""}`}>
+                <span className={`min-w-0 flex-1 break-words text-left leading-snug ${active ? "font-semibold text-[var(--brand-primary)]" : ""}`}>
                   {SETTING_GROUP_META[group].label}
                 </span>
                 <DirtyBadge count={dirtyCount(group)} />

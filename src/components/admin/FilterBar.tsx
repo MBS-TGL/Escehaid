@@ -86,7 +86,10 @@ function FilterDropdown({ group }: { group: FilterGroup }) {
                 group.onChange(opt.key);
               }}
             >
-              <span className="min-w-0 flex-1 truncate">
+              {/* Label dibungkus, bukan dipotong: panel dropdown lebih sempit
+                  dari teks label panjang ("Belum Dibaca Dahulu"). `hint` tetap
+                  satu baris karena ia keterangan sekunder. */}
+              <span className="min-w-0 flex-1 break-words leading-snug">
                 {opt.label}
                 {opt.hint && (
                   <span className="block truncate text-xs font-normal text-slate-400">{opt.hint}</span>

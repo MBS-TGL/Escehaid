@@ -371,7 +371,9 @@ function RowActionsMenu({
                   }`}
               >
                 <span className="shrink-0">{it.icon}</span>
-                <span className="min-w-0 flex-1 truncate">{it.label}</span>
+                {/* Bungkus, jangan potong: lebar panel terbatas (200px) sehingga
+                    label panjang terpotong dengan elipsis. Lihat RowActionsMenu. */}
+                <span className="min-w-0 flex-1 break-words leading-snug">{it.label}</span>
               </button>
             ))}
           </div>,

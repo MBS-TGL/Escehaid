@@ -84,7 +84,7 @@ function Dropdown({
                 onChoose(opt.key);
               }}
             >
-              <span className="min-w-0 flex-1 truncate">{opt.label}</span>
+              <span className="min-w-0 flex-1 break-words leading-snug">{opt.label}</span>
               {typeof opt.count === "number" && (
                 <span className="shrink-0 text-xs font-semibold text-slate-400 tabular-nums">
                   {opt.count}
