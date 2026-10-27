@@ -76,6 +76,45 @@ export interface ProbeStatus {
   ok: boolean;
 }
 
+/**
+ * Kolom media yang wajib berisi URL CDN R2. Dipakai probe "media belum di R2":
+ * nilai lokal (`/images/...`) atau sisa URL Supabase berarti objeknya tidak
+ * dilayani CDN dan akan 404 di produksi.
+ */
+const MEDIA_COLUMNS: Array<[table: string, column: string]> = [
+  ["teachers", "photo_url"],
+  ["facilities", "image_url"],
+  ["school_profile", "principal_photo_url"],
+  ["news", "image_url"],
+  ["news", "attachment_url"],
+  ["activities", "image_url"],
+  ["articles", "image_url"],
+  ["gallery", "url"],
+  ["gallery", "thumbnail_url"],
+  ["achievements", "image_url"],
+  ["ekskuls", "image_url"],
+  ["downloads", "file_url"],
+];
+
+/** Hitung baris media yang nilainya bukan URL CDN (kosong/NULL diabaikan). */
+export async function countMediaOffCdn(): Promise<number> {
+  const base = (process.env.R2_PUBLIC_BASE_URL || "").replace(/\/+$/, "");
+  if (!base) return 0;
+  const counts = await Promise.all(
+    MEDIA_COLUMNS.map(async ([table, column]) => {
+      const { count, error } = await supabase
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .not(column, "is", null)
+        .neq(column, "")
+        .not(column, "like", `${base}%`);
+      if (error) throw error;
+      return count ?? 0;
+    })
+  );
+  return counts.reduce((n, c) => n + c, 0);
+}
+
 /** Probe kolom/tambahan yang dipakai fitur tertentu — false berarti SQL
  *  migrasi belum dijalankan (fitur masih fallback, tidak crash). */
 export async function checkFeatureProbes(): Promise<ProbeStatus[]> {
@@ -89,6 +128,7 @@ export async function checkFeatureProbes(): Promise<ProbeStatus[]> {
     tableHasColumn("faqs", "scope").catch(() => false),
     tableHasColumn("achievements", "ekskul_id").catch(() => false),
   ]);
+  const mediaOffCdn = await countMediaOffCdn().catch(() => -1);
   return [
     { name: "news.scheduled_*", desc: "Jadwal tayang berita (publish_at/unpublish_at)", ok: newsSched },
     { name: "articles.scheduled_*", desc: "Jadwal tayang artikel", ok: artSched },
@@ -96,6 +136,16 @@ export async function checkFeatureProbes(): Promise<ProbeStatus[]> {
     { name: "news.video_url", desc: "Video embed pada berita", ok: newsVideo },
     { name: "faqs.scope", desc: "FAQ dinamis beranda & SPMB (supabase/faq.sql)", ok: faqScope },
     { name: "achievements.ekskul_id", desc: "Tautan prestasi ↔ ekstrakurikuler", ok: achEkskul },
+    {
+      name: "media.r2",
+      desc:
+        mediaOffCdn < 0
+          ? "Kolom media memakai URL CDN R2 (gagal diperiksa)"
+          : mediaOffCdn === 0
+            ? "Semua kolom media memakai URL CDN R2"
+            : `${mediaOffCdn} baris media belum memakai URL CDN R2`,
+      ok: mediaOffCdn === 0,
+    },
   ];
 }
 
