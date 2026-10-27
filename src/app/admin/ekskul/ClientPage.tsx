@@ -31,10 +31,6 @@ import {
   Checks,
   FloppyDisk,
   X,
-  CaretLeft,
-  CaretRight,
-  ArrowUp,
-  ArrowDown,
   CheckCircle,
   XCircle,
   ImageSquare,
@@ -43,20 +39,23 @@ import {
 } from "@/components/Icons";
 import {
   MobileFilterBar,
-  MobilePagination,
   MobilePickButton,
   MobileListRow,
   MobileSelectBar,
   RowActionsMenu,
+  RowGrip,
   StatusDot,
   QuietBadge,
   type RowAction,
 } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
+import { SortableList } from "@/components/admin/sortable/SortableList";
+import { SortableRow } from "@/components/admin/sortable/SortableRow";
+import { SortableGrip } from "@/components/admin/sortable/SortableGrip";
+import { useReorder } from "@/lib/admin/useReorder";
 
 type FilterTab = "all" | "active" | "inactive";
 
-const PAGE_SIZE = 10;
 
 /* Picker ikon ekskul ala portal (/admin/portal): trigger berisi tile preview
  * ikon + label, panel opsi di-portal ke body dengan position:fixed memakai
@@ -312,7 +311,6 @@ export default function AdminEkskulPage() {
   const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterTab>("all");
-  const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [pickMode, setPickMode] = useState(false);
   const [deleteItem, setDeleteItem] = useState<Ekskul | null>(null);
@@ -334,7 +332,6 @@ export default function AdminEkskulPage() {
   const [formCoach, setFormCoach] = useState("");
   const [formImageUrl, setFormImageUrl] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [formSort, setFormSort] = useState("");
   const [formActive, setFormActive] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Object URL preview (dari File lokal) — harus di-revoke supaya tidak bocor.
@@ -385,26 +382,26 @@ export default function AdminEkskulPage() {
     return result;
   }, [items, filter, search]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const allVisibleSelected = filtered.length > 0 && filtered.every((i) => selectedIds.has(i.id));
 
-  // Page guard hasil filter yang menyusut dihitung turunan (tanpa setState
-  // dalam effect), supaya state `page` yang basi tidak menyebabkan slice
-  // kosong — semua pemakaian memakai nilai yang sudah dijepit ini.
-  const safePage = Math.max(1, Math.min(page, totalPages));
-  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const allVisibleSelected = paginated.length > 0 && paginated.every((i) => selectedIds.has(i.id));
+  // Urutan hanya bermakna pada daftar penuh tanpa pencarian/filter/mode pilih.
+  const dragDisabled = search.trim() !== "" || filter !== "all" || pickMode || !permUpdate;
 
-  // Reorder diblokir saat daftar tersaring — posisi global tidak bermakna.
-  const reorderDisabled = search.trim() !== "" || filter !== "all";
+  // Drag & drop urutan — optimistik via hook bersama (rollback + toast + revalidate).
+  const onReorder = useReorder(items, setItems, {
+    persist: reorderEkskuls,
+    onSuccess: () => { revalidateEkskul().catch(() => {}); },
+    label: "ekskul",
+  });
 
   function toggleSelectAll() {
     if (allVisibleSelected) {
       const s = new Set(selectedIds);
-      paginated.forEach((i) => s.delete(i.id));
+      filtered.forEach((i) => s.delete(i.id));
       setSelectedIds(s);
     } else {
       const s = new Set(selectedIds);
-      paginated.forEach((i) => s.add(i.id));
+      filtered.forEach((i) => s.add(i.id));
       setSelectedIds(s);
     }
   }
@@ -449,7 +446,6 @@ export default function AdminEkskulPage() {
     setFormCoach("");
     setFormImageUrl(null);
     setImageFile(null);
-    setFormSort(String(nextSortOrder()));
     setFormActive(true);
     setFormOpen(true);
   }
@@ -470,7 +466,6 @@ export default function AdminEkskulPage() {
     setFormCoach(item.coach || "");
     setFormImageUrl(item.image_url || null);
     setImageFile(null);
-    setFormSort(String(item.sort_order ?? 0));
     setFormActive(item.is_active);
     setFormOpen(true);
   }
@@ -509,7 +504,7 @@ export default function AdminEkskulPage() {
       schedule_time: formTime ? `${formTime}:00` : null,
       schedule_note: formNote.trim(),
       coach: formCoach.trim(),
-      sort_order: Number(formSort) || 0,
+      sort_order: editItem ? editItem.sort_order ?? 0 : nextSortOrder(),
       is_active: formActive,
     };
 
@@ -629,50 +624,6 @@ export default function AdminEkskulPage() {
     fetchItems();
   }
 
-  async function handleReorder(id: string, direction: "up" | "down") {
-    // Reorder hanya berarti saat daftar tampil apa adanya — dengan filter/
-    // pencarian aktif posisi global tidak sesuai konteks user.
-    if (search.trim() !== "" || filter !== "all") {
-      toast("Reset filter untuk mengubah urutan", "error");
-      return;
-    }
-    const idx = items.findIndex((i) => i.id === id);
-    if (idx === -1) return;
-    const target = direction === "up" ? idx - 1 : idx + 1;
-    if (target < 0 || target >= items.length) return;
-
-    // Susun urutan baru: tukar posisi dua baris tetangga, lalu normalisasi
-    // penomoran 1..n (data lama bisa punya duplikat/gap hasil drag versi
-    // sebelumnya). Hanya baris yang sort_order-nya benar-benar berubah yang
-    // dikirim — bukan menulis ulang seluruh tabel.
-    const swapped = [...items];
-    [swapped[idx], swapped[target]] = [swapped[target], swapped[idx]];
-    const newItems = swapped.map((it, i) =>
-      (it.sort_order ?? 0) !== i + 1 ? { ...it, sort_order: i + 1 } : it
-    );
-    const changed = newItems
-      .map((it) => ({ id: it.id, sort_order: it.sort_order }))
-      .filter((row) => {
-        const orig = items.find((i) => i.id === row.id);
-        return (orig?.sort_order ?? 0) !== row.sort_order;
-      });
-
-    if (changed.length === 0) return;
-    // Optimistic: tampilkan urutan baru segera; bila salah satu update
-    // gagal, kembalikan snapshot lama (tanpa fetchItems penuh saat sukses).
-    const prevItems = items;
-    setItems(newItems);
-    const { error } = await reorderEkskuls(changed);
-    if (error) {
-      setItems(prevItems);
-      toast(`Gagal mengubah urutan: ${error}`, "error");
-      // Promise.all bisa meninggalkan DB setengah-jadi — resink wilayah.
-      fetchItems();
-      return;
-    }
-    toast("Urutan diperbarui", "success");
-    revalidateEkskul().catch(() => {});
-  }
 
   /** Simpan gambar yang dipilih di form (preview via object URL di input). */
   function onPickImage(file: File | null) {
@@ -791,7 +742,6 @@ export default function AdminEkskulPage() {
           query={search}
           onQueryChange={(v) => {
             setSearch(v);
-            setPage(1);
           }}
           filters={[
             {
@@ -799,7 +749,6 @@ export default function AdminEkskulPage() {
               options: statusOptions,
               onChange: (k) => {
                 setFilter(k as FilterTab);
-                setPage(1);
                 setSelectedIds(new Set());
               },
               menuLabel: "Filter status",
@@ -815,14 +764,12 @@ export default function AdminEkskulPage() {
         query={search}
         onQueryChange={(v) => {
           setSearch(v);
-          setPage(1);
         }}
         filter={{
           value: filter,
           options: statusOptions,
           onChange: (k) => {
             setFilter(k as FilterTab);
-            setPage(1);
             setSelectedIds(new Set());
           },
         }}
@@ -845,11 +792,10 @@ export default function AdminEkskulPage() {
                     type="checkbox"
                     checked={allVisibleSelected}
                     onChange={toggleSelectAll}
-                    aria-label="Pilih semua ekskul di halaman ini"
+                    aria-label="Pilih semua ekskul"
                     className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]"
                   />
                 </th>
-                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">No</th>
                 <th className="hidden w-20 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">Urutan</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Ekskul</th>
                 <th className="w-52 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Jadwal</th>
@@ -857,10 +803,11 @@ export default function AdminEkskulPage() {
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <SortableList ids={filtered.map((i) => i.id)} onReorder={onReorder}>
+              <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-16 text-center">
+                  <td colSpan={6} className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
                       <p className="text-sm text-slate-500">Memuat data ekskul...</p>
@@ -869,7 +816,7 @@ export default function AdminEkskulPage() {
                 </tr>
               ) : loadError ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-16 text-center">
+                  <td colSpan={6} className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
                         <XCircle className="h-6 w-6 text-red-400" />
@@ -882,9 +829,9 @@ export default function AdminEkskulPage() {
                     </div>
                   </td>
                 </tr>
-              ) : paginated.length === 0 ? (
+              ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-16 text-center">
+                  <td colSpan={6} className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
                         <Trophy className="h-8 w-8 text-slate-300" />
@@ -902,158 +849,32 @@ export default function AdminEkskulPage() {
                   </td>
                 </tr>
               ) : (
-                paginated.map((item, index) => {
-                  // Posisi global di `items` (urut sort_order) — bukan index
-                  // di halaman aktif: tombol naik/turun harus tahu rekan
-                  // sebenarnya, yang bisa ada di halaman terpisah.
-                  const globalIdx = items.findIndex((it) => it.id === item.id);
-                  const canGoUp = globalIdx > 0;
-                  const canGoDown = globalIdx !== -1 && globalIdx < items.length - 1;
-                  // Pembina bisa dipisah koma (multi-orang) — tampilkan nama
-                  // pertama + "+N", nama seluruhnya tetap ada di tooltip.
-                  const coachList = item.coach
-                    ? item.coach.split(",").map((c) => c.trim()).filter(Boolean)
-                    : [];
-                  return (
-                  <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[var(--brand-primary)]/[0.03]" : ""}`}>
-                    <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(item.id)}
-                        onChange={() => toggleSelect(item.id)}
-                        className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]"
-                      />
-                    </td>
-                    <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(safePage - 1) * PAGE_SIZE + index + 1}</td>
-                    <td className="hidden px-4 py-3.5 sm:table-cell">
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={() => handleReorder(item.id, "up")}
-                          disabled={!canGoUp || reorderDisabled}
-                          title={reorderDisabled ? "Reset filter untuk mengubah urutan" : undefined}
-                          className="rounded p-0.5 text-slate-400 hover:text-slate-600 disabled:opacity-30 disabled:hover:text-slate-400"
-                          aria-label={`Naikkan urutan ${item.name}`}
-                        >
-                          <ArrowUp className="h-3 w-3" />
-                        </button>
-                        <span className="w-6 text-center text-xs font-semibold text-slate-500 tabular-nums">{item.sort_order}</span>
-                        <button
-                          onClick={() => handleReorder(item.id, "down")}
-                          disabled={!canGoDown || reorderDisabled}
-                          title={reorderDisabled ? "Reset filter untuk mengubah urutan" : undefined}
-                          className="rounded p-0.5 text-slate-400 hover:text-slate-600 disabled:opacity-30 disabled:hover:text-slate-400"
-                          aria-label={`Turunkan urutan ${item.name}`}
-                        >
-                          <ArrowDown className="h-3 w-3" />
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-3">
-                        {item.image_url ? (
-                        <div className="relative h-12 w-9 shrink-0 overflow-hidden rounded-lg bg-slate-100">
-                            <Image src={item.image_url} alt={item.image_alt || item.name} fill sizes="36px" className="object-cover object-top" />
-                          </div>
-                        ) : (
-                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#e4ecf6] text-[var(--brand-primary)]">
-                            <EkskulGlyph slug={item.slug} iconKey={item.icon} />
-                          </span>
-                        )}
-                        <div className="min-w-0">
-                          <span className="block truncate text-sm font-medium text-slate-700">{item.name}</span>
-                          <span className="block truncate text-xs text-slate-400">/{item.slug}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 text-center text-sm text-slate-500">
-                      {/* Cap lebar konten supaya kolom tidak melebar oleh
-                          catatan jadwal/nama pembina panjang — sisanya elipsis
-                          dengan teks penuh di tooltip. */}
-                      {(() => {
-                        const schedule = formatEkskulSchedule(item.schedule_day, item.schedule_time, item.schedule_note);
-                        return schedule ? (
-                          <span className="inline-block max-w-[208px] truncate align-middle" title={schedule}>
-                            {schedule}
-                          </span>
-                        ) : (
-                          "—"
-                        );
-                      })()}
-                      {coachList.length > 0 && (
-                        <span
-                          className="mx-auto block max-w-[208px] truncate text-[11px] text-slate-400"
-                          title={coachList.join(", ")}
-                        >
-                          Pembina: {coachList[0]}
-                          {coachList.length > 1 ? ` +${coachList.length - 1}` : ""}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => handleToggle(item)}
-                        disabled={!permUpdate}
-                        title={permUpdate ? "Klik untuk ubah status" : "Tidak berizin mengubah status"}
-                        aria-label={`Ubah status ${item.name}: sekarang ${item.is_active ? "aktif" : "nonaktif"}`}
-                        className={`inline-flex cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:cursor-default disabled:opacity-70 ${
-                          item.is_active
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                            : "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200"
-                        }`}
-                      >
-                        {item.is_active ? "Aktif" : "Nonaktif"}
-                        <CaretDown className={`h-2.5 w-2.5 opacity-50 ${permUpdate ? "" : "hidden"}`} />
-                      </button>
-                    </td>
-                    <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-center gap-1">
-                        {permUpdate && (
-                          <button onClick={() => openEdit(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
-                            <PencilSimple className="h-4 w-4" />
-                          </button>
-                        )}
-                        {permDelete && (
-                          <button onClick={() => setDeleteItem(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
-                            <Trash className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                     </td>
-                   </tr>
-                   );
-                 })
-               )}
-             </tbody>
+                filtered.map((item, index) => (
+                  <SortableEkskulRow
+                    key={item.id}
+                    item={item}
+                    index={index}
+                    selected={selectedIds.has(item.id)}
+                    dragDisabled={dragDisabled}
+                    onToggleSelect={toggleSelect}
+                    onToggle={handleToggle}
+                    onEdit={openEdit}
+                    onDelete={setDeleteItem}
+                    canEdit={permUpdate}
+                    canDelete={permDelete}
+                    canToggle={permUpdate}
+                  />
+                ))
+              )}
+              </tbody>
+            </SortableList>
           </table>
         </div>
-        {!loading && filtered.length > 0 && (
-          <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-slate-400">
-              Menampilkan {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} dari {filtered.length} ekskul
-            </p>
-            <div className="flex items-center gap-1">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage === 1} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
-                <CaretLeft className="h-4 w-4" />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === safePage ? "bg-[var(--brand-primary)] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
-                >
-                  {p}
-                </button>
-              ))}
-              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safePage === totalPages} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
-                <CaretRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Daftar mobile */}
       <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden">
+        <SortableList ids={filtered.map((i) => i.id)} onReorder={onReorder}>
         <div role="list" aria-label="Daftar ekskul">
           {loading ? (
             <div className="space-y-3 px-3 py-4" aria-hidden="true">
@@ -1078,7 +899,7 @@ export default function AdminEkskulPage() {
                 Coba lagi
               </button>
             </div>
-          ) : paginated.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
                 <Trophy className="h-7 w-7 text-slate-300" />
@@ -1094,20 +915,19 @@ export default function AdminEkskulPage() {
               )}
             </div>
           ) : (
-            paginated.map((item, index) => (
+            filtered.map((item, index) => (
               <EkskulMobileRow
                 key={item.id}
                 item={item}
+                index={index}
                 selected={selectedIds.has(item.id)}
                 selectMode={pickMode}
+                dragDisabled={dragDisabled}
                 onEnterPickMode={enterPickMode}
                 onToggleSelect={toggleSelect}
                 onEdit={openEdit}
                 onDelete={setDeleteItem}
                 onToggle={handleToggle}
-                onReorder={handleReorder}
-                canGoUp={index > 0}
-                canGoDown={index < paginated.length - 1}
                 canEdit={permUpdate}
                 canDelete={permDelete}
                 canToggle={permUpdate}
@@ -1115,17 +935,7 @@ export default function AdminEkskulPage() {
             ))
           )}
         </div>
-        {!loading && filtered.length > 0 && (
-          <MobilePagination
-            page={safePage}
-            totalPages={totalPages}
-            total={filtered.length}
-            from={(safePage - 1) * PAGE_SIZE + 1}
-            to={Math.min(safePage * PAGE_SIZE, filtered.length)}
-            onPageChange={setPage}
-            itemLabel="ekskul"
-          />
-        )}
+        </SortableList>
         {pickMode && <div className="h-24" aria-hidden="true" />}
       </div>
 
@@ -1282,35 +1092,20 @@ export default function AdminEkskulPage() {
               className={inputCls}
             />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="ekskul-coach" className={labelCls}>
-                Pembina
-              </label>
-              <input
-                id="ekskul-coach"
-                type="text"
-                value={formCoach}
-                onChange={(e) => setFormCoach(e.target.value)}
-                placeholder="Nama pembina (pisahkan koma bila lebih dari satu)"
-                autoComplete="off"
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label htmlFor="ekskul-sort" className={labelCls}>
-                Urutan
-              </label>
-              <input
-                id="ekskul-sort"
-                type="number"
-                value={formSort}
-                onChange={(e) => setFormSort(e.target.value)}
-                className={inputCls}
-              />
-            </div>
+          <div>
+            <label htmlFor="ekskul-coach" className={labelCls}>
+              Pembina
+            </label>
+            <input
+              id="ekskul-coach"
+              type="text"
+              value={formCoach}
+              onChange={(e) => setFormCoach(e.target.value)}
+              placeholder="Nama pembina (pisahkan koma bila lebih dari satu)"
+              autoComplete="off"
+              className={inputCls}
+            />
           </div>
-          <p className="-mt-2 text-xs text-slate-400">Angka kecil tampil lebih dulu. Ekskul baru otomatis memakai urutan terbesar + 1.</p>
           <div>
             <label className={labelCls}>Ikon</label>
             <EkskulIconPicker value={formIcon} onChange={setFormIcon} />
@@ -1384,37 +1179,165 @@ export default function AdminEkskulPage() {
 }
 
 /**
- * Satu baris ekskul versi mobile (<md): [tile ikon + titik status]
- * [nama + slug + jadwal + badge Nonaktif] [menu ⋯: Edit, Nonaktifkan/Aktifkan,
- * Naik, Turun, Hapus]. Tap baris = Edit; long-press = mode pilih.
+ * Satu baris tabel ekskul: [checkbox] [grip urutan] [ekskul] [jadwal]
+ * [status] [aksi]. Urutan diubah lewat drag grip.
  */
-function EkskulMobileRow({
+function SortableEkskulRow({
   item,
+  index,
   selected,
-  selectMode,
-  onEnterPickMode,
+  dragDisabled,
   onToggleSelect,
+  onToggle,
   onEdit,
   onDelete,
-  onToggle,
-  onReorder,
-  canGoUp,
-  canGoDown,
   canEdit,
   canDelete,
   canToggle,
 }: {
   item: Ekskul;
+  index: number;
+  selected: boolean;
+  dragDisabled: boolean;
+  onToggleSelect: (id: string) => void;
+  onToggle: (e: Ekskul) => void;
+  onEdit: (e: Ekskul) => void;
+  onDelete: (e: Ekskul) => void;
+  canEdit: boolean;
+  canDelete: boolean;
+  canToggle: boolean;
+}) {
+  // Pembina bisa dipisah koma (multi-orang) — tampilkan nama pertama + "+N",
+  // nama seluruhnya tetap ada di tooltip.
+  const coachList = item.coach
+    ? item.coach.split(",").map((c) => c.trim()).filter(Boolean)
+    : [];
+
+  return (
+    <SortableRow id={item.id} disabled={dragDisabled}>
+      {({ setNodeRef, style, isDragging, attributes, listeners }) => (
+        <tr
+          ref={setNodeRef}
+          style={style}
+          className={`relative transition-colors ${isDragging ? "bg-slate-50 opacity-70" : selected ? "bg-[var(--brand-primary)]/[0.03]" : "hover:bg-slate-50/80"}`}
+        >
+          <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={() => onToggleSelect(item.id)}
+              aria-label={`Pilih ${item.name}`}
+              className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]"
+            />
+          </td>
+          <td className="hidden px-4 py-3.5 sm:table-cell">
+            <SortableGrip index={index} label={item.name} disabled={dragDisabled} attributes={attributes} listeners={listeners} />
+          </td>
+          <td className="px-4 py-3.5">
+            <div className="flex items-center gap-3">
+              {item.image_url ? (
+                <div className="relative h-12 w-9 shrink-0 overflow-hidden rounded-lg bg-slate-100">
+                  <Image src={item.image_url} alt={item.image_alt || item.name} fill sizes="36px" className="object-cover object-top" />
+                </div>
+              ) : (
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#e4ecf6] text-[var(--brand-primary)]">
+                  <EkskulGlyph slug={item.slug} iconKey={item.icon} />
+                </span>
+              )}
+              <div className="min-w-0">
+                <span className="block truncate text-sm font-medium text-slate-700">{item.name}</span>
+                <span className="block truncate text-xs text-slate-400">/{item.slug}</span>
+              </div>
+            </div>
+          </td>
+          <td className="px-4 py-3.5 text-center text-sm text-slate-500">
+            {(() => {
+              const schedule = formatEkskulSchedule(item.schedule_day, item.schedule_time, item.schedule_note);
+              return schedule ? (
+                <span className="inline-block max-w-[208px] truncate align-middle" title={schedule}>
+                  {schedule}
+                </span>
+              ) : (
+                "—"
+              );
+            })()}
+            {coachList.length > 0 && (
+              <span
+                className="mx-auto block max-w-[208px] truncate text-[11px] text-slate-400"
+                title={coachList.join(", ")}
+              >
+                Pembina: {coachList[0]}
+                {coachList.length > 1 ? ` +${coachList.length - 1}` : ""}
+              </span>
+            )}
+          </td>
+          <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => onToggle(item)}
+              disabled={!canToggle}
+              title={canToggle ? "Klik untuk ubah status" : "Tidak berizin mengubah status"}
+              aria-label={`Ubah status ${item.name}: sekarang ${item.is_active ? "aktif" : "nonaktif"}`}
+              className={`inline-flex cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:cursor-default disabled:opacity-70 ${
+                item.is_active
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                  : "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200"
+              }`}
+            >
+              {item.is_active ? "Aktif" : "Nonaktif"}
+              <CaretDown className={`h-2.5 w-2.5 opacity-50 ${canToggle ? "" : "hidden"}`} />
+            </button>
+          </td>
+          <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-center gap-1">
+              {canEdit && (
+                <button onClick={() => onEdit(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
+                  <PencilSimple className="h-4 w-4" />
+                </button>
+              )}
+              {canDelete && (
+                <button onClick={() => onDelete(item)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
+                  <Trash className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
+    </SortableRow>
+  );
+}
+
+/**
+ * Satu baris ekskul versi mobile (<md): [grip urutan] [tile ikon + titik
+ * status] [nama + slug + jadwal + badge Nonaktif] [menu ⋯: Edit,
+ * Nonaktifkan/Aktifkan, Hapus]. Tap baris = Edit; long-press = mode pilih.
+ * Geser urutan lewat grip (drag).
+ */
+function EkskulMobileRow({
+  item,
+  index,
+  selected,
+  selectMode,
+  dragDisabled,
+  onEnterPickMode,
+  onToggleSelect,
+  onEdit,
+  onDelete,
+  onToggle,
+  canEdit,
+  canDelete,
+  canToggle,
+}: {
+  item: Ekskul;
+  index: number;
   selected: boolean;
   selectMode: boolean;
+  dragDisabled: boolean;
   onEnterPickMode: (id: string) => void;
   onToggleSelect: (id: string) => void;
   onEdit: (e: Ekskul) => void;
   onDelete: (e: Ekskul) => void;
   onToggle: (e: Ekskul) => void;
-  onReorder: (id: string, direction: "up" | "down") => void;
-  canGoUp: boolean;
-  canGoDown: boolean;
   canEdit: boolean;
   canDelete: boolean;
   canToggle: boolean;
@@ -1433,47 +1356,63 @@ function EkskulMobileRow({
           },
         ]
       : []),
-    ...(canGoUp ? [{ key: "up", label: "Naik", icon: <ArrowUp className="h-4 w-4" />, run: () => onReorder(item.id, "up") }] : []),
-    ...(canGoDown ? [{ key: "down", label: "Turun", icon: <ArrowDown className="h-4 w-4" />, run: () => onReorder(item.id, "down") }] : []),
     ...(canDelete ? [{ key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) }] : []),
   ];
 
   return (
-    <div role="listitem">
-      <MobileListRow
-        lead={
-          selectMode ? (
-            <span data-no-longpress="" onClick={(e) => e.stopPropagation()} className="flex h-10 w-10 shrink-0 items-center justify-center">
-              <input
-                type="checkbox"
-                checked={selected}
-                onChange={() => onToggleSelect(item.id)}
-                aria-label={`Pilih ${item.name}`}
-                className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-              />
-            </span>
-          ) : (
-            <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#e4ecf6] text-[var(--brand-primary)]">
-              {item.image_url ? (
-                <Image src={item.image_url} alt={item.image_alt || item.name} width={48} height={48} sizes="48px" className="h-full w-full rounded-xl object-cover" />
+    <SortableRow id={item.id} disabled={dragDisabled}>
+      {({ setNodeRef, style, isDragging, attributes, listeners }) => (
+        <div
+          ref={setNodeRef}
+          style={style}
+          role="listitem"
+          className={`relative transition-colors ${isDragging ? "bg-slate-50 opacity-70" : ""}`}
+        >
+          <MobileListRow
+            lead={
+              selectMode ? (
+                <span data-no-longpress="" onClick={(e) => e.stopPropagation()} className="flex h-10 w-10 shrink-0 items-center justify-center">
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={() => onToggleSelect(item.id)}
+                    aria-label={`Pilih ${item.name}`}
+                    className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+                  />
+                </span>
               ) : (
-                <EkskulGlyph slug={item.slug} iconKey={item.icon} className="h-6 w-6" />
-              )}
-              <StatusDot tone={item.is_active ? "active" : "off"} label={item.is_active ? "Aktif" : "Nonaktif"} className="absolute bottom-0 right-0" />
-            </span>
-          )
-        }
-        title={item.name}
-        badge={!item.is_active ? <QuietBadge>Nonaktif</QuietBadge> : undefined}
-        subtitle={<span className="min-w-0 truncate">{schedule || `/${item.slug}`}</span>}
-        actions={<RowActionsMenu label={item.name} actions={actions} disabled={selectMode} />}
-        selected={selected}
-        onClick={() => {
-          if (selectMode) onToggleSelect(item.id);
-          else onEdit(item);
-        }}
-        onLongPress={() => onEnterPickMode(item.id)}
-      />
-    </div>
+                <RowGrip
+                  index={index}
+                  label={item.name}
+                  disabled={dragDisabled}
+                  attributes={attributes}
+                  listeners={dragDisabled ? {} : listeners}
+                />
+              )
+            }
+            thumb={
+              <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#e4ecf6] text-[var(--brand-primary)]">
+                {item.image_url ? (
+                  <Image src={item.image_url} alt={item.image_alt || item.name} width={48} height={48} sizes="48px" className="h-full w-full rounded-xl object-cover" />
+                ) : (
+                  <EkskulGlyph slug={item.slug} iconKey={item.icon} className="h-6 w-6" />
+                )}
+                <StatusDot tone={item.is_active ? "active" : "off"} label={item.is_active ? "Aktif" : "Nonaktif"} className="absolute bottom-0 right-0" />
+              </span>
+            }
+            title={item.name}
+            badge={!item.is_active ? <QuietBadge>Nonaktif</QuietBadge> : undefined}
+            subtitle={<span className="min-w-0 truncate">{schedule || `/${item.slug}`}</span>}
+            actions={<RowActionsMenu label={item.name} actions={actions} disabled={selectMode} />}
+            selected={selected}
+            onClick={() => {
+              if (selectMode) onToggleSelect(item.id);
+              else onEdit(item);
+            }}
+            onLongPress={() => onEnterPickMode(item.id)}
+          />
+        </div>
+      )}
+    </SortableRow>
   );
 }
