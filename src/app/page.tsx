@@ -120,15 +120,17 @@ type NewsItem = { id: string | number; slug: string; title: string; summary: str
 
 export default async function Home() {
   // Batasi jumlah baris sesuai yang benar-benar dipakai beranda (berita/kegiatan/
-  // artikel 4, fasilitas 5, prestasi 6, guru 12) supaya payload & waktu render
-  // ulang ISR lebih ringan — terutama saat dibuka dari HP.
+  // artikel 4, fasilitas 5, prestasi 6) supaya payload & waktu render ulang ISR
+  // lebih ringan — terutama saat dibuka dari HP. Guru sengaja TANPA limit: daftar
+  // "Tim Pengajar" harus memuat seluruh pendidik & tendik aktif (dulu `12` membuat
+  // baris ke-12+ hilang, apalagi setelah Kepala Sekolah difilter di render).
   const [beritaRaw, dbFacilities, activities, articles, teachers, profile, achievements, settings, agendaEvents, ekskulList, programBlocks, faqDbItems] =
     await Promise.all([
       getNewsList(4) as Promise<NewsItem[]>,
       getFacilityList(5),
       getActivityList(4),
       getArticleList(4),
-      getTeacherList(12),
+      getTeacherList(),
       getSchoolProfile(),
       getAchievementList(undefined, { featuredFirst: true, limit: 6 }),
       getSiteSettings(),
