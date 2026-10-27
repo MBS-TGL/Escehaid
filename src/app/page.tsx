@@ -17,6 +17,7 @@ import {
   achievementLevelLabel,
   newsCategory,
 } from "@/lib/site-config";
+import { activityTypeLabel, activityTypeBadge } from "@/lib/activity-types";
 import type { Achievement } from "@/lib/supabase";
 import { BLOCKS } from "@/lib/data/mbs-schedule";
 import { getAgendaBlocksList, blockRowToSummary, getActiveFaqs } from "@/lib/queries";
@@ -490,8 +491,8 @@ export default async function Home() {
                           )}
                           <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-primary)]/85 via-[var(--brand-primary)]/25 to-transparent" />
                           <div className="absolute bottom-0 left-0 right-0 p-3.5">
-                            <span className="inline-flex items-center rounded-md border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white/90 backdrop-blur-xs">
-                              {activities[0]?.activity_type || "Kegiatan"}
+                            <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur-xs ${activityTypeBadge(activities[0]?.activity_type)}`}>
+                              {activityTypeLabel(activities[0]?.activity_type)}
                             </span>
                             <h4 className="mt-1.5 line-clamp-2 text-sm font-semibold text-white drop-shadow-xs">
                               {activities[0]?.title || "Kegiatan sekolah terbaru"}
@@ -512,7 +513,7 @@ export default async function Home() {
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-[10px] text-slate-400">{item.activity_type}</p>
+                              <p className="text-[10px] text-slate-400">{activityTypeLabel(item.activity_type)}</p>
                               <h5 className="mt-0.5 line-clamp-2 text-xs font-medium text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)]">{item.title}</h5>
                             </div>
                           </Link>
