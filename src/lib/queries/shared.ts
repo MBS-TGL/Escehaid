@@ -249,3 +249,28 @@ export async function fetchTrgmIds(rpcName: string, tokens: string[], maxRows = 
     return null;
   }
 }
+
+// ============ URUTAN (sort_order) ============
+/**
+ * Simpan urutan baru untuk tabel mana pun yang punya kolom `sort_order`.
+ * PostgREST tak bisa UPDATE banyak baris dengan nilai berbeda sekaligus, jadi
+ * kirim per-baris secara paralel lalu kembalikan error pertama yang gagal.
+ * Pemanggil bertanggung jawab renumber 1..n. Ini satu-satunya jalur reorder
+ * (dipakai semua halaman admin berurutan lewat pembungkus tipis masing-masing).
+ */
+export async function reorderRows(
+  table: string,
+  rows: { id: string; sort_order: number }[],
+  opts: { touchUpdatedAt?: boolean } = {}
+): Promise<{ error?: string }> {
+  const results = await Promise.all(
+    rows.map((row) => {
+      const patch: Record<string, unknown> = { sort_order: row.sort_order };
+      if (opts.touchUpdatedAt) patch.updated_at = new Date().toISOString();
+      return supabase.from(table).update(patch).eq("id", row.id);
+    })
+  );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) return { error: failed.error.message };
+  return {};
+}

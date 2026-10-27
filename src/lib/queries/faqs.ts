@@ -1,4 +1,5 @@
 import { supabase } from "../supabase";
+import { reorderRows } from "./shared";
 
 export type FaqScope = "home" | "spmb";
 
@@ -86,17 +87,10 @@ export async function deleteFaqBulk(ids: string[]): Promise<{ error?: string }> 
   return {};
 }
 
-/** Simpan urutan baru hasil drag & drop — bulk update sort_order (pola
- *  reorderPortalApps). Pemanggil bertanggung jawab renumber 1..n. */
-export async function reorderFaqs(
+/** Simpan urutan baru hasil drag & drop. Pemanggil bertanggung jawab renumber
+ *  1..n. Delegasi ke helper generik bersama (`reorderRows`). */
+export function reorderFaqs(
   items: { id: string; sort_order: number }[]
 ): Promise<{ error?: string }> {
-  const results = await Promise.all(
-    items.map((item) =>
-      supabase.from("faqs").update({ sort_order: item.sort_order }).eq("id", item.id)
-    )
-  );
-  const failed = results.find((r) => r.error);
-  if (failed?.error) return { error: failed.error.message };
-  return {};
+  return reorderRows("faqs", items);
 }
