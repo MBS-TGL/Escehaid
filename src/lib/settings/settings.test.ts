@@ -8,6 +8,8 @@ import {
   type SettingField,
   type SettingGroup,
 } from "@/lib/settings/registry";
+import { resolveSettings } from "@/lib/settings";
+import type { SchoolProfile } from "@/lib/supabase";
 
 describe("Settings Registry: skema & validasi", () => {
   it("semua field punya key unik (snake_case)", () => {
@@ -80,6 +82,66 @@ describe("Settings Registry: skema & validasi", () => {
     it("field tanpa validasi custom → selalu null", () => {
       const textField = SETTING_FIELD_MAP.site_name as SettingField;
       expect(validateSettingValue(textField, "apapun")).toBeNull();
+    });
+  });
+
+  describe("profil kepala sekolah & visi-misi", () => {
+    const KEYS = [
+      "principal_name",
+      "principal_photo_url",
+      "principal_quote",
+      "vision",
+      "mission",
+    ];
+
+    it("kelima kunci ada di grup identitas", () => {
+      const keys = fieldsForGroup("identitas").map((f) => f.key);
+      for (const key of KEYS) expect(keys).toContain(key);
+    });
+
+    it("foto kepala sekolah divalidasi sebagai gambar", () => {
+      const field = SETTING_FIELD_MAP.principal_photo_url as SettingField;
+      expect(validateSettingValue(field, "bukan url")).not.toBeNull();
+      expect(validateSettingValue(field, "https://cdn.example.com/a.jpg")).toBeNull();
+      expect(validateSettingValue(field, "/images/lokal.jpg")).toBeNull();
+    });
+
+    it("misi JSON array → satu butir per baris", () => {
+      const profile = {
+        mission: '["Butir satu","Butir dua"]',
+        vision: "Visi profil",
+        principal_name: "Nama Profil",
+        principal_photo_url: "https://cdn.example.com/Kepala-Sekolah.jpg",
+        principal_quote: "Kutipan profil",
+      } as unknown as SchoolProfile;
+      const { values, sources } = resolveSettings({}, profile);
+      expect(values.mission).toBe("Butir satu\nButir dua");
+      expect(values.vision).toBe("Visi profil");
+      expect(sources.principal_photo_url).toBe("profile");
+    });
+
+    it("override admin menang atas school_profile", () => {
+      const profile = {
+        mission: "",
+        vision: "",
+        principal_name: "Nama Profil",
+        principal_photo_url: "https://cdn.example.com/a.jpg",
+        principal_quote: "",
+      } as unknown as SchoolProfile;
+      const { values, sources } = resolveSettings(
+        { principal_photo_url: "https://cdn.example.com/b.jpg", vision: "Visi override" },
+        profile
+      );
+      expect(values.principal_photo_url).toBe("https://cdn.example.com/b.jpg");
+      expect(sources.principal_photo_url).toBe("override");
+      expect(values.vision).toBe("Visi override");
+    });
+
+    it("jatuh ke default saat profil kosong", () => {
+      const { values } = resolveSettings({}, null);
+      expect(values.principal_photo_url).toContain("/images/Kepala-Sekolah.jpg");
+      expect(values.principal_name).toBe("Khoirul Anwar, S.Pd");
+      expect(values.mission).toBe("");
     });
   });
 });
