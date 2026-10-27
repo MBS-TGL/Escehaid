@@ -1,4 +1,5 @@
 import { supabase } from "../supabase";
+import { reorderRows } from "./shared";
 
 export interface AgendaEvent {
   id: string;
@@ -65,6 +66,13 @@ export async function deleteAgendaEventBulk(ids: string[]): Promise<{ error?: st
   const { error } = await supabase.from("agenda_events").delete().in("id", ids);
   if (error) return { error: error.message };
   return {};
+}
+
+/** Simpan urutan baru acara agenda (drag & drop). Pemanggil renumber 1..n. */
+export function reorderAgendaEvents(
+  items: { id: string; sort_order: number }[]
+): Promise<{ error?: string }> {
+  return reorderRows("agenda_events", items);
 }
 
 // ============================================================

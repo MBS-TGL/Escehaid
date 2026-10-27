@@ -1,7 +1,7 @@
 import { supabase } from "../supabase";
 import type { Teacher } from "../supabase";
 import { tryCompressImage, TEACHER_PHOTO } from "../compress-image";
-import { cleanupOldFiles, deleteStorageFileByUrl } from "./shared";
+import { cleanupOldFiles, deleteStorageFileByUrl, reorderRows } from "./shared";
 import { uploadFileViaRoute } from "../storage-remote";
 
 /**
@@ -111,3 +111,13 @@ export async function deleteTeacherBulk(ids: string[]): Promise<{ error?: string
 }
 
 // ============ NOTIFICATIONS ============
+
+/**
+ * Simpan urutan baru guru (drag & drop). Pemanggil bertanggung jawab
+ * renumber 1..n. Delegasi ke helper bersama `reorderRows`.
+ */
+export function reorderTeachers(
+  items: { id: string; sort_order: number }[]
+): Promise<{ error?: string }> {
+  return reorderRows("teachers", items);
+}

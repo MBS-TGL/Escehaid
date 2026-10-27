@@ -1,4 +1,5 @@
 import { supabase } from "../supabase";
+import { reorderRows } from "./shared";
 
 export interface Announcement {
   id: string;
@@ -122,6 +123,13 @@ export async function deleteAnnouncementBulk(ids: string[]): Promise<{ error?: s
   const { error } = await supabase.from("announcements").update({ deleted_at: new Date().toISOString() }).in("id", ids);
   if (error) return { error: error.message };
   return {};
+}
+
+/** Simpan urutan baru pengumuman (drag & drop). Pemanggil renumber 1..n. */
+export function reorderAnnouncements(
+  items: { id: string; sort_order: number }[]
+): Promise<{ error?: string }> {
+  return reorderRows("announcements", items);
 }
 
 // ============================================================

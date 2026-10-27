@@ -1,7 +1,7 @@
 import { supabase } from "../supabase";
 import type { Download } from "../supabase";
 import { removeViaRoute, uploadFileViaRoute } from "../storage-remote";
-import { storagePathFromUrl } from "./shared";
+import { reorderRows, storagePathFromUrl } from "./shared";
 
 // ============================================================================
 // UNDUHAN (Area Download publik)
@@ -238,4 +238,11 @@ export async function uploadDownloadFile(
   }
 
   return { url: uploaded.url, name: file.name, size: file.size };
+}
+
+/** Simpan urutan baru unduhan (drag & drop). Pemanggil renumber 1..n. */
+export function reorderDownloads(
+  items: { id: string; sort_order: number }[]
+): Promise<{ error?: string }> {
+  return reorderRows("downloads", items);
 }

@@ -9,6 +9,8 @@ import {
   deleteTeacher,
   deleteTeacherBulk,
   uploadTeacherPhoto,
+  reorderTeachers,
+  revalidatePaths,
 } from "@/lib/queries";
 import { compressImage, TEACHER_PHOTO } from "@/lib/compress-image";
 import type { Teacher } from "@/lib/supabase";
@@ -25,31 +27,29 @@ import {
   Checks,
   FloppyDisk,
   X,
-  CaretLeft,
-  CaretRight,
   User,
-  ArrowUp,
-  ArrowDown,
   CheckCircle,
   XCircle,
   Clock,
 } from "@/components/Icons";
 import {
   MobileFilterBar,
-  MobilePagination,
   MobilePickButton,
   MobileListRow,
   MobileSelectBar,
   RowActionsMenu,
+  RowGrip,
   MobileThumb,
   QuietBadge,
   type RowAction,
 } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
+import { SortableList } from "@/components/admin/sortable/SortableList";
+import { SortableRow } from "@/components/admin/sortable/SortableRow";
+import { SortableGrip } from "@/components/admin/sortable/SortableGrip";
+import { useReorder } from "@/lib/admin/useReorder";
 
 type FilterTab = "all" | "active" | "inactive";
-
-const PAGE_SIZE = 10;
 
 /** URL foto + cache-buster. URL yang sudah punya query (`?v=<ts>` hasil unggahan)
  *  diteruskan dengan `&`, bukan `?` lagi — jangan bikin URL rusak `...?v=1?v=0`. */
@@ -70,7 +70,6 @@ export default function AdminTeachersPage() {
   const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterTab>("all");
-  const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   // Mode pilih (mobile): checkbox menggantikan nomor, tap baris = toggle,
   // bar aksi massal sticky di bawah. Desktop tetap pakai checkbox tabel.
@@ -121,18 +120,26 @@ export default function AdminTeachersPage() {
     return result;
   }, [items, filter, search]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const allVisibleSelected = paginated.length > 0 && paginated.every((i) => selectedIds.has(i.id));
+  const allVisibleSelected = filtered.length > 0 && filtered.every((i) => selectedIds.has(i.id));
+
+  // Urutan hanya bermakna pada daftar penuh tanpa pencarian/filter/mode pilih.
+  const dragDisabled = search.trim() !== "" || filter !== "all" || pickMode || !permUpdate;
+
+  // Drag & drop urutan — optimistik via hook bersama (rollback + toast + revalidate).
+  const onReorder = useReorder(items, setItems, {
+    persist: reorderTeachers,
+    onSuccess: () => { revalidatePaths(["/", "/profile"]).catch(() => {}); },
+    label: "guru",
+  });
 
   function toggleSelectAll() {
     if (allVisibleSelected) {
       const s = new Set(selectedIds);
-      paginated.forEach((i) => s.delete(i.id));
+      filtered.forEach((i) => s.delete(i.id));
       setSelectedIds(s);
     } else {
       const s = new Set(selectedIds);
-      paginated.forEach((i) => s.add(i.id));
+      filtered.forEach((i) => s.add(i.id));
       setSelectedIds(s);
     }
   }
@@ -263,19 +270,6 @@ export default function AdminTeachersPage() {
     fetchItems();
   }
 
-  async function handleReorder(id: string, direction: "up" | "down") {
-    const idx = items.findIndex((i) => i.id === id);
-    if (idx === -1) return;
-    const target = direction === "up" ? idx - 1 : idx + 1;
-    if (target < 0 || target >= items.length) return;
-    const newOrder = [...items];
-    [newOrder[idx], newOrder[target]] = [newOrder[target], newOrder[idx]];
-    for (let i = 0; i < newOrder.length; i++) {
-      await updateTeacher(newOrder[i].id, { sort_order: i });
-    }
-    fetchItems();
-  }
-
   const activeCount = items.filter((i) => i.is_active).length;
   const inactiveCount = items.length - activeCount;
 
@@ -341,12 +335,12 @@ export default function AdminTeachersPage() {
           placeholder="Cari nama guru..."
           searchLabel="Cari guru"
           query={search}
-          onQueryChange={(v) => { setSearch(v); setPage(1); }}
+          onQueryChange={(v) => { setSearch(v); }}
           filters={[
             {
               value: filter,
               options: statusOptions,
-              onChange: (k) => { setFilter(k as FilterTab); setPage(1); setSelectedIds(new Set()); },
+              onChange: (k) => { setFilter(k as FilterTab); setSelectedIds(new Set()); },
               menuLabel: "Filter status",
             },
           ]}
@@ -358,11 +352,11 @@ export default function AdminTeachersPage() {
         placeholder="Cari guru…"
         searchLabel="Cari guru"
         query={search}
-        onQueryChange={(v) => { setSearch(v); setPage(1); }}
+        onQueryChange={(v) => { setSearch(v); }}
         filter={{
           value: filter,
           options: statusOptions,
-          onChange: (k) => { setFilter(k as FilterTab); setPage(1); setSelectedIds(new Set()); },
+          onChange: (k) => { setFilter(k as FilterTab); setSelectedIds(new Set()); },
         }}
         action={<MobilePickButton onClick={() => setPickMode(true)} />}
         selectMode={pickMode}
@@ -378,16 +372,13 @@ export default function AdminTeachersPage() {
           <table className="w-full">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
               <tr>
-                {/* hidden sm:table-cell — 8 kolom pada konten ±328px = kolom ±41px,
-                    semua terpotong. Checkbox, No, Urutan dan Foto disembunyikan di
-                    bawah 640px: seleksi massal & geser urutan aksi desktop, foto
-                    menghabiskan 72px (22% lebar layar) untuk informasi paling
-                    mahal. Sisa Nama · Jabatan · Status · Aksi tetap terbaca. */}
+                {/* hidden sm:table-cell — di bawah 640px sisa kolom cuma punya
+                    ±328px. Checkbox & Urutan (handle drag ada di dalamnya)
+                    adalah afordansi desktop. Sisa Nama · Jabatan · Status · Aksi. */}
                 <th className="hidden w-10 px-4 py-3 sm:table-cell">
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
                     className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                 </th>
-                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">No</th>
                 <th className="hidden w-20 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">Urutan</th>
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">Foto</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400">Nama</th>
@@ -396,16 +387,17 @@ export default function AdminTeachersPage() {
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <SortableList ids={filtered.map((i) => i.id)} onReorder={onReorder}>
+              <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={8} className="px-4 py-16 text-center">
+                <tr><td colSpan={7} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
                     <p className="text-sm text-slate-500">Memuat data guru...</p>
                   </div>
                 </td></tr>
               ) : loadError ? (
-                <tr><td colSpan={8} className="px-4 py-16 text-center">
+                <tr><td colSpan={7} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
                       <XCircle className="h-6 w-6 text-red-400" />
@@ -417,8 +409,8 @@ export default function AdminTeachersPage() {
                     </button>
                   </div>
                 </td></tr>
-              ) : paginated.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-16 text-center">
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={7} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
                       <Users className="h-8 w-8 text-slate-300" />
@@ -435,105 +427,35 @@ export default function AdminTeachersPage() {
                   </div>
                 </td></tr>
               ) : (
-                paginated.map((item, index) => (
-                  <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[var(--brand-primary)]/[0.03]" : ""}`}>
-                    {/* hidden sm:table-cell — pasangan dari <th> di atas */}
-                    <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
-                      <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
-                        className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
-                    </td>
-                    <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
-                    <td className="hidden px-4 py-3.5 sm:table-cell">
-                      <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => handleReorder(item.id, "up")} disabled={index === 0}
-                          aria-label={`Naikkan urutan ${item.name}`} title="Naik"
-                          className="rounded p-0.5 text-slate-400 hover:text-slate-600 disabled:opacity-30">
-                          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-8 8h5v8h6v-8h5z" /></svg>
-                        </button>
-                        <span className="w-6 text-center text-xs font-semibold text-slate-500">{item.sort_order}</span>
-                        <button onClick={() => handleReorder(item.id, "down")} disabled={index === paginated.length - 1}
-                          aria-label={`Turunkan urutan ${item.name}`} title="Turun"
-                          className="rounded p-0.5 text-slate-400 hover:text-slate-600 disabled:opacity-30">
-                          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20l8-8h-5V4H9v8H4z" /></svg>
-                        </button>
-                      </div>
-                    </td>
-                    <td className="hidden px-4 py-3.5 sm:table-cell">
-                      <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-slate-100">
-                        {item.photo_url ? (
-                          <Image src={photoSrc(item.photo_url, photoBust[item.id])} alt={item.name} width={40} height={40} loading="lazy"
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }}
-                            className="h-full w-full object-cover" />
-                        ) : null}
-                        <User className={`h-5 w-5 text-slate-300 ${item.photo_url ? "hidden" : ""}`} weight="light" />
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span className="text-sm font-medium text-slate-700">{normalizeName(item.name)}</span>
-                    </td>
-                    <td className="px-4 py-3.5 text-sm text-slate-500">{item.position}</td>
-                    <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => handleToggle(item)} disabled={!permPublish}
-                        title={permPublish ? "Klik untuk ubah status" : "Tidak berizin mengubah status"}
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:cursor-default disabled:opacity-70 ${
-                          item.is_active
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                            : "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200"
-                        }`}>
-                        {item.is_active ? "Aktif" : "Nonaktif"}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-center gap-1">
-                        {permUpdate && (
-                          <button onClick={() => openEdit(item)} aria-label={`Edit ${item.name}`}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
-                            <PencilSimple className="h-4 w-4" />
-                          </button>
-                        )}
-                        {permDelete && (
-                          <button onClick={() => setDeleteItem(item)} aria-label={`Hapus ${item.name}`}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
-                            <Trash className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                filtered.map((item, index) => (
+                  <SortableTeacherRow
+                    key={item.id}
+                    item={item}
+                    index={index}
+                    selected={selectedIds.has(item.id)}
+                    dragDisabled={dragDisabled}
+                    photoBust={photoBust}
+                    onToggleSelect={toggleSelect}
+                    onToggle={handleToggle}
+                    onEdit={openEdit}
+                    onDelete={setDeleteItem}
+                    canEdit={permUpdate}
+                    canDelete={permDelete}
+                    canToggle={permPublish}
+                  />
                 ))
               )}
-            </tbody>
+              </tbody>
+            </SortableList>
           </table>
         </div>
-        {!loading && filtered.length > 0 && (
-          <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-slate-400">
-              Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} dari {filtered.length} guru
-            </p>
-            <div className="flex items-center gap-1">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
-                <CaretLeft className="h-4 w-4" />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button key={p} onClick={() => setPage(p)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === page ? "bg-[var(--brand-primary)] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
-                  {p}
-                </button>
-              ))}
-              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
-                <CaretRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Daftar mobile (<md) — baris ringkas tanpa scroll horizontal; semua
           fitur tetap ada: pilih (mode pilih), geser urutan (Naik/Turun di
           menu ⋯), edit & hapus via menu ⋯. */}
       <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden">
+        <SortableList ids={filtered.map((i) => i.id)} onReorder={onReorder}>
         <div role="list" aria-label="Daftar guru">
           {loading ? (
             <div className="space-y-3 px-3 py-4" aria-hidden="true">
@@ -558,7 +480,7 @@ export default function AdminTeachersPage() {
                 Coba lagi
               </button>
             </div>
-          ) : paginated.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
                 <Users className="h-7 w-7 text-slate-300" />
@@ -574,22 +496,20 @@ export default function AdminTeachersPage() {
               )}
             </div>
           ) : (
-            paginated.map((item, index) => (
+            filtered.map((item, index) => (
               <TeacherMobileRow
                 key={item.id}
                 item={item}
-                index={(page - 1) * PAGE_SIZE + index}
+                index={index}
                 selected={selectedIds.has(item.id)}
                 selectMode={pickMode}
                 photoBust={photoBust}
+                dragDisabled={dragDisabled}
                 onEnterPickMode={enterPickMode}
                 onToggleSelect={toggleSelect}
                 onEdit={openEdit}
                 onDelete={setDeleteItem}
                 onToggle={handleToggle}
-                onReorder={handleReorder}
-                canGoUp={index > 0}
-                canGoDown={index < paginated.length - 1}
                 canEdit={permUpdate}
                 canDelete={permDelete}
                 canToggle={permPublish}
@@ -597,17 +517,7 @@ export default function AdminTeachersPage() {
             ))
           )}
         </div>
-        {!loading && filtered.length > 0 && (
-          <MobilePagination
-            page={page}
-            totalPages={totalPages}
-            total={filtered.length}
-            from={(page - 1) * PAGE_SIZE + 1}
-            to={Math.min(page * PAGE_SIZE, filtered.length)}
-            onPageChange={setPage}
-            itemLabel="guru"
-          />
-        )}
+        </SortableList>
         {/* Ruang ekstra agar baris terakhir tidak tertutup bar sticky mode pilih */}
         {pickMode && <div className="h-24" aria-hidden="true" />}
       </div>
@@ -705,14 +615,106 @@ export default function AdminTeachersPage() {
 }
 
 /**
- * Satu baris guru versi mobile (<md): [nomor urut] [avatar bulat 56px +
- * titik status] [nama + jabatan + badge "Nonaktif"] [menu ⋯: Edit,
- * Nonaktifkan/Aktifkan, Naik, Turun, Hapus]. Tap baris = Edit (halaman ini
- * tidak punya modal lihat); long-press = mode pilih; di mode pilih checkbox
- * menggantikan nomor dan tap baris = toggle centang. Status TIDAK diubah
- * lewat ketukan pada baris — hanya lewat menu ⋯. Geser urutan lewat
- * Naik/Turun di menu ⋯ — padanan tombol panah kolom "Urutan" di tabel
- * desktop.
+ * Satu baris tabel guru: [checkbox] [grip urutan] [foto] [nama] [jabatan]
+ * [status] [aksi]. Urutan diubah lewat drag grip — tidak ada lagi tombol
+ * panah terpisah maupun kolom nomor sendiri.
+ */
+function SortableTeacherRow({
+  item,
+  index,
+  selected,
+  dragDisabled,
+  photoBust,
+  onToggleSelect,
+  onToggle,
+  onEdit,
+  onDelete,
+  canEdit,
+  canDelete,
+  canToggle,
+}: {
+  item: Teacher;
+  index: number;
+  selected: boolean;
+  dragDisabled: boolean;
+  photoBust: Record<string, number>;
+  onToggleSelect: (id: string) => void;
+  onToggle: (t: Teacher) => void;
+  onEdit: (t: Teacher) => void;
+  onDelete: (t: Teacher) => void;
+  canEdit: boolean;
+  canDelete: boolean;
+  canToggle: boolean;
+}) {
+  return (
+    <SortableRow id={item.id} disabled={dragDisabled}>
+      {({ setNodeRef, style, isDragging, attributes, listeners }) => (
+        <tr
+          ref={setNodeRef}
+          style={style}
+          className={`relative transition-colors ${isDragging ? "bg-slate-50 opacity-70" : selected ? "bg-[var(--brand-primary)]/[0.03]" : "hover:bg-slate-50/80"}`}
+        >
+          <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
+            <input type="checkbox" checked={selected} onChange={() => onToggleSelect(item.id)}
+              aria-label={`Pilih ${item.name}`}
+              className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
+          </td>
+          <td className="hidden px-4 py-3.5 sm:table-cell">
+            <SortableGrip index={index} label={item.name} disabled={dragDisabled} attributes={attributes} listeners={listeners} />
+          </td>
+          <td className="hidden px-4 py-3.5 sm:table-cell">
+            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-slate-100">
+              {item.photo_url ? (
+                <Image src={photoSrc(item.photo_url, photoBust[item.id])} alt={item.name} width={40} height={40} loading="lazy"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden"); }}
+                  className="h-full w-full object-cover" />
+              ) : null}
+              <User className={`h-5 w-5 text-slate-300 ${item.photo_url ? "hidden" : ""}`} weight="light" />
+            </div>
+          </td>
+          <td className="px-4 py-3.5">
+            <span className="text-sm font-medium text-slate-700">{normalizeName(item.name)}</span>
+          </td>
+          <td className="px-4 py-3.5 text-sm text-slate-500">{item.position}</td>
+          <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => onToggle(item)} disabled={!canToggle}
+              title={canToggle ? "Klik untuk ubah status" : "Tidak berizin mengubah status"}
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:cursor-default disabled:opacity-70 ${
+                item.is_active
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                  : "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200"
+              }`}>
+              {item.is_active ? "Aktif" : "Nonaktif"}
+            </button>
+          </td>
+          <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-center gap-1">
+              {canEdit && (
+                <button onClick={() => onEdit(item)} aria-label={`Edit ${item.name}`}
+                  className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
+                  <PencilSimple className="h-4 w-4" />
+                </button>
+              )}
+              {canDelete && (
+                <button onClick={() => onDelete(item)} aria-label={`Hapus ${item.name}`}
+                  className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
+                  <Trash className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
+    </SortableRow>
+  );
+}
+
+/**
+ * Satu baris guru versi mobile (<md): [grip urutan] [avatar bulat + titik
+ * status] [nama + jabatan + badge "Nonaktif"] [menu ⋯: Edit,
+ * Nonaktifkan/Aktifkan, Hapus]. Tap baris = Edit; long-press = mode pilih;
+ * di mode pilih checkbox menggantikan grip dan tap baris = toggle centang.
+ * Geser urutan lewat grip (drag) — bukan lagi menu ⋯.
  */
 function TeacherMobileRow({
   item,
@@ -720,14 +722,12 @@ function TeacherMobileRow({
   selected,
   selectMode,
   photoBust,
+  dragDisabled,
   onEnterPickMode,
   onToggleSelect,
   onEdit,
   onDelete,
   onToggle,
-  onReorder,
-  canGoUp,
-  canGoDown,
   canEdit,
   canDelete,
   canToggle,
@@ -737,14 +737,12 @@ function TeacherMobileRow({
   selected: boolean;
   selectMode: boolean;
   photoBust: Record<string, number>;
+  dragDisabled: boolean;
   onEnterPickMode: (id: string) => void;
   onToggleSelect: (id: string) => void;
   onEdit: (t: Teacher) => void;
   onDelete: (t: Teacher) => void;
   onToggle: (t: Teacher) => void;
-  onReorder: (id: string, direction: "up" | "down") => void;
-  canGoUp: boolean;
-  canGoDown: boolean;
   canEdit: boolean;
   canDelete: boolean;
   canToggle: boolean;
@@ -761,69 +759,76 @@ function TeacherMobileRow({
           run: () => onToggle(item),
         } as RowAction]
       : []),
-    ...(canGoUp
-      ? [{ key: "up", label: "Naik", icon: <ArrowUp className="h-4 w-4" />, run: () => onReorder(item.id, "up") }]
-      : []),
-    ...(canGoDown
-      ? [{ key: "down", label: "Turun", icon: <ArrowDown className="h-4 w-4" />, run: () => onReorder(item.id, "down") }]
-      : []),
     ...(canDelete
       ? [{ key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) } as RowAction]
       : []),
   ];
 
   return (
-    <div role="listitem">
-      <MobileListRow
-        lead={
-          selectMode ? (
-            <span
-              data-no-longpress=""
-              onClick={(e) => e.stopPropagation()}
-              className="flex h-10 w-10 shrink-0 items-center justify-center"
-            >
-              <input
-                type="checkbox"
-                checked={selected}
-                onChange={() => onToggleSelect(item.id)}
-                aria-label={`Pilih ${item.name}`}
-                className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+    <SortableRow id={item.id} disabled={dragDisabled}>
+      {({ setNodeRef, style, isDragging, attributes, listeners }) => (
+        <div
+          ref={setNodeRef}
+          style={style}
+          role="listitem"
+          className={`relative transition-colors ${isDragging ? "bg-slate-50 opacity-70" : ""}`}
+        >
+          <MobileListRow
+            lead={
+              selectMode ? (
+                <span
+                  data-no-longpress=""
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={() => onToggleSelect(item.id)}
+                    aria-label={`Pilih ${item.name}`}
+                    className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+                  />
+                </span>
+              ) : (
+                <RowGrip
+                  index={index}
+                  label={item.name}
+                  disabled={dragDisabled}
+                  attributes={attributes}
+                  listeners={dragDisabled ? {} : listeners}
+                />
+              )
+            }
+            thumb={
+              <MobileThumb
+                src={item.photo_url ? photoSrc(item.photo_url, photoBust[item.id]) : null}
+                shape="circle"
+                icon={<User className="h-6 w-6" weight="light" />}
+                status={{
+                  tone: item.is_active ? "active" : "off",
+                  label: item.is_active ? "Aktif" : "Nonaktif",
+                }}
               />
-            </span>
-          ) : (
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center text-xs font-semibold tabular-nums text-slate-400">
-              {index + 1}
-            </span>
-          )
-        }
-        thumb={
-          <MobileThumb
-            src={item.photo_url ? photoSrc(item.photo_url, photoBust[item.id]) : null}
-            shape="circle"
-            icon={<User className="h-6 w-6" weight="light" />}
-            status={{
-              tone: item.is_active ? "active" : "off",
-              label: item.is_active ? "Aktif" : "Nonaktif",
+            }
+            title={normalizeName(item.name)}
+            badge={!item.is_active ? <QuietBadge>Nonaktif</QuietBadge> : undefined}
+            subtitle={
+              item.position ? (
+                <span className="min-w-0 truncate" title={item.position}>
+                  {item.position}
+                </span>
+              ) : undefined
+            }
+            actions={<RowActionsMenu label={item.name} actions={actions} disabled={selectMode} />}
+            selected={selected}
+            onClick={() => {
+              if (selectMode) onToggleSelect(item.id);
+              else onEdit(item);
             }}
+            onLongPress={() => onEnterPickMode(item.id)}
           />
-        }
-        title={normalizeName(item.name)}
-        badge={!item.is_active ? <QuietBadge>Nonaktif</QuietBadge> : undefined}
-        subtitle={
-          item.position ? (
-            <span className="min-w-0 truncate" title={item.position}>
-              {item.position}
-            </span>
-          ) : undefined
-        }
-        actions={<RowActionsMenu label={item.name} actions={actions} disabled={selectMode} />}
-        selected={selected}
-        onClick={() => {
-          if (selectMode) onToggleSelect(item.id);
-          else onEdit(item);
-        }}
-        onLongPress={() => onEnterPickMode(item.id)}
-      />
-    </div>
+        </div>
+      )}
+    </SortableRow>
   );
 }

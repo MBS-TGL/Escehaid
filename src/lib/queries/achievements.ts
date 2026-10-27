@@ -1,7 +1,7 @@
 import { supabase } from "../supabase";
 import type { Achievement } from "../supabase";
 import { tryCompressImage } from "../compress-image";
-import { buildSearchOr, deleteStorageFileByUrl, fetchTrgmIds, resolveSearchMode, storagePathFromUrl, tableHasColumn, tokenizeSearch } from "./shared";
+import { buildSearchOr, deleteStorageFileByUrl, fetchTrgmIds, reorderRows, resolveSearchMode, storagePathFromUrl, tableHasColumn, tokenizeSearch } from "./shared";
 import { uploadFileViaRoute } from "../storage-remote";
 
 /** Probe kolom `video_url` (migrasi supabase/content_video.sql) — memoized. */
@@ -299,4 +299,11 @@ export async function uploadAchievementImage(
     return { url: null, error: uploaded.error };
   }
   return { url: `${uploaded.url}?v=${Date.now()}` };
+}
+
+/** Simpan urutan baru prestasi (drag & drop). Pemanggil renumber 1..n. */
+export function reorderAchievements(
+  items: { id: string; sort_order: number }[]
+): Promise<{ error?: string }> {
+  return reorderRows("achievements", items);
 }

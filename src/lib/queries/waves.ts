@@ -1,5 +1,6 @@
 import { supabase } from "../supabase";
 import type { SpmbWave } from "../supabase";
+import { reorderRows } from "./shared";
 
 export async function getPublishedWaves(): Promise<SpmbWave[]> {
   const { data, error } = await supabase
@@ -146,4 +147,11 @@ export function getWaveStatus(
   if (nowMs < startMs) return "upcoming";
   if (nowMs > endMs)   return "closed";
   return "open";
+}
+
+/** Simpan urutan baru gelombang SPMB (drag & drop). Pemanggil renumber 1..n. */
+export function reorderWaves(
+  items: { id: string; sort_order: number }[]
+): Promise<{ error?: string }> {
+  return reorderRows("spmb_waves", items);
 }
