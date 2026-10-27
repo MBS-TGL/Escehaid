@@ -99,21 +99,29 @@ export const navGroups: NavGroup[] = [
     title: "Sistem",
     items: [
       { label: "Konfigurasi Situs", href: "/admin/settings", icon: Gear, perm: "settings:manage" },
-      { label: "Cadangan", href: "/admin/backup", icon: Database, perm: "backup:read" },
-      { label: "Diagnostik", href: "/admin/diagnostics", icon: Heartbeat, perm: "diagnostik:read" },
-      { label: "Fitur", href: "/admin/flags", icon: Flag, perm: "flags:manage" },
       { label: "Pengguna", href: "/admin/users", icon: UsersThree, perm: "users:manage" },
-      { label: "Log", href: "/admin/logs", icon: Scroll, perm: "logs:read" },
+      { label: "Log Aktivitas", href: "/admin/logs", icon: Scroll, perm: "logs:read" },
+      { label: "Feature Flags", href: "/admin/flags", icon: Flag, perm: "flags:manage" },
       // Catatan: "Pengaturan Akun" (urusan pribadi per-user) tidak ada di sini —
       // rumahnya di dropdown avatar Topbar (pola GitHub). Grup ini murni alat sistem.
     ],
   },
   {
+    // Operasional sekolah: dipakai Admin Sekolah sehari-hari (izin
+    // `backup:read` & `diagnostik:read` memang di-seed untuk peran itu),
+    // jadi tidak digabung dengan "Developer" yang hanya Super Admin.
+    title: "Operasional",
+    items: [
+      { label: "Cadangan", href: "/admin/backup", icon: Database, perm: "backup:read" },
+      { label: "Diagnostik", href: "/admin/diagnostics", icon: Heartbeat, perm: "diagnostik:read" },
+    ],
+  },
+  {
     title: "Developer",
     items: [
-      { label: "Migrasi SQL", href: "/admin/sql", icon: Code, perm: "users:manage" },
-      { label: "Sentry (error)", href: "https://esceha.sentry.io/projects/escehaid/", icon: Warning, perm: "users:manage", external: true },
-      { label: "Uptime Monitor", href: "https://uptimerobot.com/dashboard", icon: ChartLine, perm: "users:manage", external: true },
+      { label: "Migrasi SQL", href: "/admin/sql", icon: Code, perm: "sql:manage" },
+      { label: "Sentry (error)", href: "https://esceha.sentry.io/projects/escehaid/", icon: Warning, perm: "dev:read", external: true },
+      { label: "Uptime Monitor", href: "https://uptimerobot.com/dashboard", icon: ChartLine, perm: "dev:read", external: true },
     ],
   },
 ];

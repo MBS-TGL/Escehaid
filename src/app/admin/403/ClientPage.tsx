@@ -21,6 +21,8 @@ const PERMISSION_LABELS: Record<string, string> = {
   "backup:update": "menjalankan Cadangan",
   "diagnostik:read": "melihat Diagnostik sistem",
   "sampah:read": "membuka Sampah",
+  "sql:manage": "mengakses Migrasi SQL",
+  "dev:read": "melihat alat developer",
 };
 
 /**

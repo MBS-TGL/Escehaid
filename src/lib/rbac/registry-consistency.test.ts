@@ -50,7 +50,7 @@ describe("registry izin: konsistensi", () => {
   });
 
   it("setiap modul punya aksi `read` (kecuali modul manage-only)", () => {
-    const manageOnly = new Set(["users", "settings", "flags"]);
+    const manageOnly = new Set(["users", "settings", "flags", "sql"]);
     for (const mod of MODULE_REGISTRY) {
       if (manageOnly.has(mod.key)) continue;
       const actions = mod.actions.map((a) => a.key);
@@ -61,7 +61,7 @@ describe("registry izin: konsistensi", () => {
   it("setiap peran non-super hanya memakai izin yang ada di registry", () => {
     // Penjaga khusus: peran non-super TIDAK boleh mendapat izin modul sistem
     // yang bersifat "manage" — itu jalur eskalasi.
-    const systemManage = ["users:manage", "settings:manage", "flags:manage"];
+    const systemManage = ["users:manage", "settings:manage", "flags:manage", "sql:manage"];
     for (const role of DEFAULT_ROLES) {
       if (role.key === "SUPER_ADMIN") continue;
       const granted = systemManage.filter((p) => role.permissions.includes(p));

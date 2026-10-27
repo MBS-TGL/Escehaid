@@ -4,7 +4,7 @@ import { FlagsList } from "./FlagsList";
 import { Gear } from "@/components/Icons";
 
 export const metadata: Metadata = {
-  title: "Fitur",
+  title: "Feature Flags",
 };
 
 export default async function AdminFlagsPage() {

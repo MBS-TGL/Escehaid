@@ -37,7 +37,7 @@ export const ADMIN_ROUTE_PERMISSIONS: ReadonlyArray<readonly [prefix: string, pe
   ["/admin/portal", "portal:read"],
   ["/admin/program", "program:read"],
   ["/admin/settings", "settings:manage"],
-  ["/admin/sql", "users:manage"],
+  ["/admin/sql", "sql:manage"],
   ["/admin/teachers", "guru:read"],
   ["/admin/trash", "sampah:read"],
   ["/admin/users", "users:manage"],

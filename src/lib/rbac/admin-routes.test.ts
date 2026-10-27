@@ -127,6 +127,13 @@ describe("peta rute admin: resolusi izin", () => {
     });
   });
 
+  it("SQL editor butuh izin khusus, bukan menumpang users:manage", () => {
+    expect(requiredPermissionFor("/admin/sql")).toEqual({
+      kind: "required",
+      perm: "sql:manage",
+    });
+  });
+
   it("halaman pribadi (security) tetap dapat diakses tanpa izin modul", () => {
     expect(requiredPermissionFor("/admin/security")).toEqual({ kind: "exempt" });
   });

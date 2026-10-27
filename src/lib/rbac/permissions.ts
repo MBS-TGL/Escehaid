@@ -267,6 +267,18 @@ export const MODULE_REGISTRY: readonly PermissionModule[] = [
     label: "Log Aktivitas",
     actions: [{ key: "read", label: "Melihat" }],
   },
+  {
+    key: "sql",
+    label: "Migrasi SQL",
+    description: "Status & riwayat migrasi database (halaman /admin/sql)",
+    actions: [{ key: "manage", label: "Mengakses" }],
+  },
+  {
+    key: "dev",
+    label: "Alat Developer",
+    description: "Tautan pemantauan developer: Sentry & Uptime Monitor",
+    actions: [{ key: "read", label: "Melihat" }],
+  },
 ] as const;
 
 /** Kunci modul yang dikenal. */
