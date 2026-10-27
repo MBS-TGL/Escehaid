@@ -18,6 +18,7 @@ import {
   setSpmbDocuments,
   setSpmbFormSchema,
   normalizeSpmbFormSchema,
+  reorderWaves,
   spmbAnswerKey,
   spmbFieldNeedsOptions,
   SPMB_FIELD_TYPES,
@@ -27,6 +28,10 @@ import {
 import { usePermissions } from "@/app/admin/PermissionsProvider";
 import { SlideOver, SkeletonBlock } from "@/components/ui";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
+import { SortableList } from "@/components/admin/sortable/SortableList";
+import { SortableRow } from "@/components/admin/sortable/SortableRow";
+import { SortableGrip } from "@/components/admin/sortable/SortableGrip";
+import { useReorder } from "@/lib/admin/useReorder";
 import { normalizeName, normalizeSchool } from "@/lib/format-name";
 import { formatRelativeTime, daysSince, PENDING_SLA_DAYS } from "@/lib/admin-display";
 import type { SpmbRegistration, SpmbWave, SpmbFormField, SpmbFieldType } from "@/lib/supabase";
@@ -122,7 +127,6 @@ type WaveFormState = {
   end_date: string;
   note: string;
   is_published: boolean;
-  sort_order: number;
 };
 
 /** Draft form tambah/edit pertanyaan custom (builder alа Google Form). */
@@ -818,9 +822,8 @@ export default function AdminSPMBPage() {
           end_date: wave.end_date,
           note: wave.note ?? "",
           is_published: wave.is_published,
-          sort_order: wave.sort_order,
         }
-        : { name: "", start_date: "", end_date: "", note: "", is_published: true, sort_order: waves.length }
+        : { name: "", start_date: "", end_date: "", note: "", is_published: true }
     );
   }
 
@@ -845,7 +848,9 @@ export default function AdminSPMBPage() {
       end_date: waveForm.end_date,
       note: waveForm.note.trim() || null,
       is_published: waveForm.is_published,
-      sort_order: Number(waveForm.sort_order) || 0,
+      sort_order: waveEditing
+        ? waveEditing.sort_order
+        : (waves.length ? Math.max(...waves.map((w) => w.sort_order)) + 1 : 1),
     };
 
     setWaveSaving(true);
@@ -875,6 +880,16 @@ export default function AdminSPMBPage() {
     fetchWaves();
     revalidatePaths(["/admission"]).catch(() => { });
   }
+
+  // ── Drag & drop urutan gelombang ────────────────────────
+  const dragDisabled = !permUpdate || wavesLoading;
+  const onReorderWaves = useReorder(waves, setWaves, {
+    persist: reorderWaves,
+    label: "gelombang",
+    onSuccess: () => {
+      revalidatePaths(["/admission"]).catch(() => { });
+    },
+  });
 
   /**
    * Publikasikan / tarik hasil seleksi sebuah gelombang (dipicu dari modal
@@ -1014,66 +1029,80 @@ export default function AdminSPMBPage() {
               </div>
             </div>
           ) : (
+            <SortableList ids={waves.map((w) => w.id)} onReorder={onReorderWaves}>
             <ul className="divide-y divide-slate-100">
-              {waves.map((w) => {
+              {waves.map((w, index) => {
                 const st = waveStatusConfig[getWaveStatus(w)] || waveStatusConfig.upcoming;
                 return (
-                  <li key={w.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-semibold text-slate-800">{w.name}</span>
-                        <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${st.cls}`}>{st.label}</span>
-                        {!w.is_published && (
-                          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
-                            Disembunyikan
-                          </span>
-                        )}
-                        {w.result_published_at && (
-                          <span className="rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-[11px] font-semibold text-purple-700">
-                            Hasil Ditayangkan
-                          </span>
-                        )}
-                        <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
-                          Urutan {w.sort_order}
-                        </span>
-                      </div>
-                      <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
-                        <CalendarBlank className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                        {formatWaveDate(w.start_date)} &ndash; {formatWaveDate(w.end_date)}
-                      </p>
-                      {w.note && <p className="mt-1 text-xs text-slate-400">{w.note}</p>}
-                    </div>
+                  <SortableRow key={w.id} id={w.id} disabled={dragDisabled}>
+                    {({ setNodeRef, style, isDragging, attributes, listeners }) => (
+                      <li
+                        ref={setNodeRef}
+                        style={style}
+                        className={`flex flex-col gap-3 p-4 transition-colors sm:flex-row sm:items-center sm:justify-between ${isDragging ? "bg-slate-50 opacity-70" : ""}`}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <SortableGrip
+                              index={index}
+                              label={w.name}
+                              disabled={dragDisabled}
+                              attributes={attributes}
+                              listeners={listeners}
+                            />
+                            <span className="text-sm font-semibold text-slate-800">{w.name}</span>
+                            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${st.cls}`}>{st.label}</span>
+                            {!w.is_published && (
+                              <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                                Disembunyikan
+                              </span>
+                            )}
+                            {w.result_published_at && (
+                              <span className="rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-[11px] font-semibold text-purple-700">
+                                Hasil Ditayangkan
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                            <CalendarBlank className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                            {formatWaveDate(w.start_date)} &ndash; {formatWaveDate(w.end_date)}
+                          </p>
+                          {w.note && <p className="mt-1 text-xs text-slate-400">{w.note}</p>}
+                        </div>
 
-                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                      {/* Toggle tampil di website */}
-                      <button onClick={() => handleToggleWave(w)}
-                        title={w.is_published ? "Sembunyikan dari website" : "Tampilkan di website"}
-                        className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${w.is_published ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100"}`}>
-                        <span className={`relative inline-block h-4 w-7 rounded-full transition-colors ${w.is_published ? "bg-emerald-500" : "bg-slate-300"}`}>
-                          <span className={`absolute left-0.5 top-1 h-2 w-2 rounded-full bg-white transition-transform ${w.is_published ? "translate-x-3" : ""}`} />
-                        </span>
-                        {w.is_published ? "Tampil" : "Sembunyi"}
-                      </button>
-                      {/* Publikasi hasil seleksi — lewat modal konfirmasi */}
-                      <button onClick={() => setResultWave(w)}
-                        title={w.result_published_at ? "Tarik hasil seleksi dari publik" : "Publikasikan hasil seleksi gelombang ini"}
-                        className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${w.result_published_at ? "border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100" : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100"}`}>
-                        <CheckCircle className="h-3.5 w-3.5" />
-                        {w.result_published_at ? "Hasil: Tayang" : "Hasil: Belum"}
-                      </button>
-                      <button onClick={() => openWaveForm(w)} title="Edit Gelombang"
-                        className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600">
-                        <PencilSimple className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => setDeleteWaveItem(w)} title="Hapus"
-                        className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600">
-                        <Trash className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </li>
+                        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                          {/* Toggle tampil di website */}
+                          <button onClick={() => handleToggleWave(w)}
+                            title={w.is_published ? "Sembunyikan dari website" : "Tampilkan di website"}
+                            className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${w.is_published ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100"}`}>
+                            <span className={`relative inline-block h-4 w-7 rounded-full transition-colors ${w.is_published ? "bg-emerald-500" : "bg-slate-300"}`}>
+                              <span className={`absolute left-0.5 top-1 h-2 w-2 rounded-full bg-white transition-transform ${w.is_published ? "translate-x-3" : ""}`} />
+                            </span>
+                            {w.is_published ? "Tampil" : "Sembunyi"}
+                          </button>
+                          {/* Publikasi hasil seleksi — lewat modal konfirmasi */}
+                          <button onClick={() => setResultWave(w)}
+                            title={w.result_published_at ? "Tarik hasil seleksi dari publik" : "Publikasikan hasil seleksi gelombang ini"}
+                            className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${w.result_published_at ? "border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100" : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100"}`}>
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            {w.result_published_at ? "Hasil: Tayang" : "Hasil: Belum"}
+                          </button>
+                          <button onClick={() => openWaveForm(w)} title="Edit Gelombang"
+                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600">
+                            <PencilSimple className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => setDeleteWaveItem(w)} title="Hapus"
+                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600">
+                            <Trash className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </li>
+                    )}
+                  </SortableRow>
                 );
               })}
             </ul>
+            </SortableList>
           )}
         </div>
 
@@ -1360,23 +1389,15 @@ export default function AdminSPMBPage() {
                   className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm leading-relaxed focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Urutan Tampil</label>
-                  <input type="number" min={0} value={waveForm.sort_order}
-                    onChange={(e) => setWaveForm({ ...waveForm, sort_order: e.target.value === "" ? 0 : Number(e.target.value) })}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tampil di Website</label>
-                  <button type="button" onClick={() => setWaveForm({ ...waveForm, is_published: !waveForm.is_published })}
-                    className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${waveForm.is_published ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500"}`}>
-                    <span>{waveForm.is_published ? "Tampil" : "Sembunyi"}</span>
-                    <span className={`relative inline-block h-6 w-11 rounded-full transition-colors ${waveForm.is_published ? "bg-emerald-500" : "bg-slate-300"}`}>
-                      <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${waveForm.is_published ? "translate-x-5" : ""}`} />
-                    </span>
-                  </button>
-                </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tampil di Website</label>
+                <button type="button" onClick={() => setWaveForm({ ...waveForm, is_published: !waveForm.is_published })}
+                  className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${waveForm.is_published ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500"}`}>
+                  <span>{waveForm.is_published ? "Tampil" : "Sembunyi"}</span>
+                  <span className={`relative inline-block h-6 w-11 rounded-full transition-colors ${waveForm.is_published ? "bg-emerald-500" : "bg-slate-300"}`}>
+                    <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${waveForm.is_published ? "translate-x-5" : ""}`} />
+                  </span>
+                </button>
               </div>
 
               <p className="text-xs text-slate-400">
