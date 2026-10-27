@@ -1,3 +1,6 @@
 # Hook git harus LF — sh gagal dengan "command not found" bila berakhir CRLF.
 # core.autocrlf=true akan mengonversi ke CRLF saat checkout tanpa aturan ini.
 .githooks/** text eol=lf
+
+# Migrasi SQL: LF agar checksum runner stabil di checkout mana pun.
+supabase/migrations/** text eol=lf
