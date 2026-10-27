@@ -690,9 +690,94 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* ── PROGRAM UNGGULAN ──────────────────────────────── */}
+      <section className="bg-[#f4f7fb]" style={CV}>
+        <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
+          <CSSFadeIn>
+            <div className="mb-12 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Program MBS</p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Program unggulan</h2>
+              </div>
+              {/* Tombol kanan ala Fasilitas: ke halaman /program (desktop). */}
+              <Link
+                href="/program"
+                className="hidden shrink-0 items-center gap-1.5 text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)] md:inline-flex"
+              >
+                Lihat selengkapnya <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </CSSFadeIn>
+
+          <CSSStagger className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {([
+              ["Program Tahfidz", "Hafalan Al-Qur'an 30 Juz Dengan Bimbingan Intensif Dan Karantina Khusus Bagi Santri Berbakat Menghafal.", BookOpen],
+              ["Program Keberbakatan", "Pembelajaran fokus sesuai bakat: Tahfidz, Akademik, atau Ketrampilan (Seni/Olahraga) — 75% porsi belajar di bidang unggulan.", GraduationCap],
+              ["Program Bahasa", "Muhadhoroh 3 Bahasa (Arab, Inggris, Indonesia), Arabic Practice, Muhadasah, Dan Bimbingan Intensif Bahasa.", ChatCircle],
+              ["Program Kepesantrenan", "Baca Tulis Al-Qur'an Metode Wafa, Kajian Menjelang Berbuka, Dan Pembiasaan Golden Habit Sehari-hari.", House],
+              ["Program Akademik", "Bimbingan Belajar Semua Mapel Ujian Sekolah Dan Klinik Akademik Untuk Olimpiade IPA & Matematika.", ChartBar],
+              ["7 Golden Habits", "Pembiasaan Harian: Muraja'ah, Mufrodhat, Shalat Jama'ah Lima Waktu, Shalat Rawatib, Dhuha, Tahajjud, Dan Puasa Senin-Kamis.", Star],
+            ] as [string, string, typeof Star][]).map(([title, description, Icon]) => (
+              <div key={title} className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white p-5 transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-xl hover:shadow-[var(--brand-primary)]/5">
+                <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-[var(--brand-accent)] to-[var(--brand-accent)] opacity-0 transition-opacity group-hover:opacity-100" />
+                <div className="flex gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-light)] text-white shadow-lg shadow-[var(--brand-primary)]/20 transition-transform group-hover:scale-110">
+                    <Icon weight="fill" className="h-5 w-5" />
+                  </div>
+                  <div className="flex flex-col">
+                    <h3 className="text-base font-semibold text-[var(--brand-primary)]">{title}</h3>
+                    <p className="mt-1.5 line-clamp-3 text-[13px] leading-relaxed text-slate-500">{description}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CSSStagger>
+
+          {/* Preview agenda harian santri — data satu sumber dengan halaman /program. */}
+          <CSSStagger stagger={60} className="mt-12">
+            <div className="mb-5 flex flex-wrap items-center gap-2">
+              <Clock className="h-5 w-5 text-[var(--brand-accent)]" aria-hidden="true" />
+              <h3 className="text-lg font-bold text-[var(--brand-primary)]">Agenda harian santri</h3>
+              <span className="text-sm text-slate-500">dari dini hari hingga istirahat malam</span>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {agendaBlocks.map((block) => (
+                <Link
+                  key={block.key}
+                  href="/program#agenda"
+                  className="group flex min-h-[150px] flex-col rounded-2xl bg-white p-6 transition-all hover:-translate-y-0.5 hover:bg-[var(--brand-primary)] hover:shadow-lg hover:shadow-[var(--brand-primary)]/10 motion-safe:duration-300"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-[var(--brand-primary)] px-2.5 py-1 text-[11px] font-semibold text-white transition-colors group-hover:bg-white group-hover:text-[var(--brand-primary)]">
+                      {block.title}
+                    </span>
+                    <span className="min-w-0 overflow-hidden text-ellipsis rounded-full border border-[#dce3ed] bg-white px-2.5 py-1 text-[11px] font-semibold tabular-nums text-[var(--brand-primary)] transition-colors group-hover:border-white/30 group-hover:bg-white/10 group-hover:text-white">
+                      <span className="whitespace-nowrap">{block.timeLabel}</span>
+                    </span>
+                  </div>
+                  <p className="mt-4 text-[13px] leading-relaxed text-slate-600 line-clamp-3 transition-colors group-hover:text-white/80">
+                    {block.summary}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </CSSStagger>
+
+          {/* Tombol mobile full-width ala Fasilitas. */}
+          <div className="mt-6 md:hidden">
+            <Link
+              href="/program"
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)]"
+            >
+              Lihat selengkapnya <ArrowUpRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ── FASILITAS SEKOLAH ──────────────────────────────── */}
       {dbFacilities.length > 0 && (
-        <section className="bg-[#f4f7fb]" style={CV}>
+        <section className="bg-white" style={CV}>
           <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
             <CSSFadeIn>
               <div className="mb-8 flex items-end justify-between md:mb-12">
@@ -790,94 +875,25 @@ export default async function Home() {
         </section>
       )}
 
-      {/* ── PROGRAM UNGGULAN ──────────────────────────────── */}
-      <section className="bg-white" style={CV}>
+      {/* ── GURU & STAFF ────────────────────────────────── */}
+      <section className="bg-[#f4f7fb]" style={CV}>
         <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
           <CSSFadeIn>
-            <div className="mb-12 flex items-end justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Program MBS</p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Program unggulan</h2>
-              </div>
-              {/* Tombol kanan ala Fasilitas: ke halaman /program (desktop). */}
-              <Link
-                href="/program"
-                className="hidden shrink-0 items-center gap-1.5 text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)] md:inline-flex"
-              >
-                Lihat selengkapnya <ArrowUpRight className="h-4 w-4" />
-              </Link>
+            <div className="mb-12 text-center">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Tim Pengajar</p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Guru & Staff</h2>
             </div>
           </CSSFadeIn>
 
-          <CSSStagger className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {([
-              ["Program Tahfidz", "Hafalan Al-Qur'an 30 Juz Dengan Bimbingan Intensif Dan Karantina Khusus Bagi Santri Berbakat Menghafal.", BookOpen],
-              ["Program Keberbakatan", "Pembelajaran fokus sesuai bakat: Tahfidz, Akademik, atau Ketrampilan (Seni/Olahraga) — 75% porsi belajar di bidang unggulan.", GraduationCap],
-              ["Program Bahasa", "Muhadhoroh 3 Bahasa (Arab, Inggris, Indonesia), Arabic Practice, Muhadasah, Dan Bimbingan Intensif Bahasa.", ChatCircle],
-              ["Program Kepesantrenan", "Baca Tulis Al-Qur'an Metode Wafa, Kajian Menjelang Berbuka, Dan Pembiasaan Golden Habit Sehari-hari.", House],
-              ["Program Akademik", "Bimbingan Belajar Semua Mapel Ujian Sekolah Dan Klinik Akademik Untuk Olimpiade IPA & Matematika.", ChartBar],
-              ["7 Golden Habits", "Pembiasaan Harian: Muraja'ah, Mufrodhat, Shalat Jama'ah Lima Waktu, Shalat Rawatib, Dhuha, Tahajjud, Dan Puasa Senin-Kamis.", Star],
-            ] as [string, string, typeof Star][]).map(([title, description, Icon]) => (
-              <div key={title} className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white p-5 transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-xl hover:shadow-[var(--brand-primary)]/5">
-                <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-[var(--brand-accent)] to-[var(--brand-accent)] opacity-0 transition-opacity group-hover:opacity-100" />
-                <div className="flex gap-4">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-light)] text-white shadow-lg shadow-[var(--brand-primary)]/20 transition-transform group-hover:scale-110">
-                    <Icon weight="fill" className="h-5 w-5" />
-                  </div>
-                  <div className="flex flex-col">
-                    <h3 className="text-base font-semibold text-[var(--brand-primary)]">{title}</h3>
-                    <p className="mt-1.5 line-clamp-3 text-[13px] leading-relaxed text-slate-500">{description}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </CSSStagger>
-
-          {/* Preview agenda harian santri — data satu sumber dengan halaman /program. */}
-          <CSSStagger stagger={60} className="mt-12">
-            <div className="mb-5 flex flex-wrap items-center gap-2">
-              <Clock className="h-5 w-5 text-[var(--brand-accent)]" aria-hidden="true" />
-              <h3 className="text-lg font-bold text-[var(--brand-primary)]">Agenda harian santri</h3>
-              <span className="text-sm text-slate-500">dari dini hari hingga istirahat malam</span>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {agendaBlocks.map((block) => (
-                <Link
-                  key={block.key}
-                  href="/program#agenda"
-                  className="group flex min-h-[150px] flex-col rounded-2xl bg-[var(--surface-muted)] p-6 transition-all hover:-translate-y-0.5 hover:bg-[var(--brand-primary)] hover:shadow-lg hover:shadow-[var(--brand-primary)]/10 motion-safe:duration-300"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-[var(--brand-primary)] px-2.5 py-1 text-[11px] font-semibold text-white transition-colors group-hover:bg-white group-hover:text-[var(--brand-primary)]">
-                      {block.title}
-                    </span>
-                    <span className="min-w-0 overflow-hidden text-ellipsis rounded-full border border-[#dce3ed] bg-white px-2.5 py-1 text-[11px] font-semibold tabular-nums text-[var(--brand-primary)] transition-colors group-hover:border-white/30 group-hover:bg-white/10 group-hover:text-white">
-                      <span className="whitespace-nowrap">{block.timeLabel}</span>
-                    </span>
-                  </div>
-                  <p className="mt-4 text-[13px] leading-relaxed text-slate-600 line-clamp-3 transition-colors group-hover:text-white/80">
-                    {block.summary}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          </CSSStagger>
-
-          {/* Tombol mobile full-width ala Fasilitas. */}
-          <div className="mt-6 md:hidden">
-            <Link
-              href="/program"
-              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)]"
-            >
-              Lihat selengkapnya <ArrowUpRight className="h-4 w-4" />
-            </Link>
-          </div>
+          <CSSFadeIn>
+            <TeacherCarousel teachers={teachers.filter((t) => t.position !== "Kepala Sekolah")} />
+          </CSSFadeIn>
         </div>
       </section>
 
       {/* ── EKSTRAKURIKULER ─────────────────────────────── */}
       {ekskulList.length > 0 && (
-        <section className="bg-[#f4f7fb]" style={CV}>
+        <section className="bg-white" style={CV}>
           <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
             <CSSFadeIn>
               <div className="mb-12 text-center">
@@ -904,22 +920,6 @@ export default async function Home() {
           </div>
         </section>
       )}
-
-      {/* ── GURU & STAFF ────────────────────────────────── */}
-      <section className="bg-white" style={CV}>
-        <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
-          <CSSFadeIn>
-            <div className="mb-12 text-center">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Tim Pengajar</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Guru & Staff</h2>
-            </div>
-          </CSSFadeIn>
-
-          <CSSFadeIn>
-            <TeacherCarousel teachers={teachers.filter((t) => t.position !== "Kepala Sekolah")} />
-          </CSSFadeIn>
-        </div>
-      </section>
 
       {/* ── WHY MUH4TA — Visi & Misi (dari school_profile) ── */}
       {hasVisionMission && (
