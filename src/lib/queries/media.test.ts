@@ -151,21 +151,6 @@ describe("addRef & isMediaReferenced", () => {
     expect(isMediaReferenced(orphanFile, refs)).toBe(false);
   });
 
-  it("mengenali URL Supabase Storage publik & signed", () => {
-    const refs = new Set<string>();
-    addRef(
-      "https://xyz.supabase.co/storage/v1/object/public/images/teachers/guru-1.jpg?v=999",
-      refs
-    );
-    addRef(
-      "https://xyz.supabase.co/storage/v1/object/sign/documents/panduan.pdf?token=abc",
-      refs
-    );
-
-    expect(isMediaReferenced(makeFile("teachers/guru-1.jpg"), refs)).toBe(true);
-    expect(isMediaReferenced(makeFile("panduan.pdf", "documents"), refs)).toBe(true);
-  });
-
   it("mengenali file yang disematkan dalam HTML rich text", () => {
     const refs = new Set<string>();
     const htmlContent = `

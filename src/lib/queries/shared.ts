@@ -46,29 +46,21 @@ export async function cleanupOldFiles(folder: string, id: string) {
  */
 
 export function storagePathFromUrl(url: string, bucket = "images"): string | null {
-  // Dua format yang sah:
-  //   Supabase : https://<project>.supabase.co/storage/v1/object/public/<b>/<path>
-  //   R2 (CDN) : https://cdn.<domain>/<targetBucket>/<b>/<path>  → bucket R2 diabaikan
-  const supabase = url
-    .split("?")[0]
-    .match(new RegExp(`/storage/v1/object/public/${bucket}/(.+)$`));
-  if (supabase) return supabase[1];
-  // URL absolut CDN: host harus sama dengan R2_PUBLIC_BASE_URL (in-line build).
-  if (/^https:\/\//.test(url)) {
-    try {
-      const base = process.env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, "");
-      if (base) {
-        const u = new URL(url);
-        if (u.origin === new URL(base).origin) {
-          const m = u.pathname.match(new RegExp(`/${bucket}/(.+)$`));
-          if (m) return m[1];
-        }
-      }
-    } catch {
-      return null;
-    }
+  // Satu format yang sah: URL publik CDN R2
+  //   https://cdn.<domain>/<bucketR2>/<b>/<path>  → bucket R2 diabaikan
+  // Host wajib sama dengan R2_PUBLIC_BASE_URL (di-inline saat build) supaya
+  // URL pihak ketiga tidak pernah ikut dihapus dari storage.
+  if (!/^https:\/\//.test(url)) return null;
+  try {
+    const base = process.env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, "");
+    if (!base) return null;
+    const u = new URL(url);
+    if (u.origin !== new URL(base).origin) return null;
+    const m = u.pathname.match(new RegExp(`/${bucket}/(.+)$`));
+    return m ? m[1] : null;
+  } catch {
+    return null;
   }
-  return null;
 }
 
 /**

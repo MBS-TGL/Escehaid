@@ -67,3 +67,27 @@ supabase (default), jadi tidak ada downtime saat transisi.
 Dashboard Cloudflare → login ke akun **lama** (yang salah) → R2 → bucket
 `school-assets` → **Delete bucket** (kosong, aman). Token saat ini berada di
 akun yang benar dan sengaja tidak punya akses ke bucket itu.
+
+---
+
+## Lanjutan 27 Oktober 2026 — media repo dipindah ke R2
+
+Cutover 20 Oktober hanya memindahkan objek yang diunggah lewat panel. Media
+lama yang dulu "dibekukan" ke repo oleh `scripts/sync-static-images.mjs`
+(path lokal `/images/...`) masih dilayani dari `public/` dan tidak ada di R2
+(CDN 404 untuk 18 foto guru). Pembersihan tuntas:
+
+1. `scripts/upload-local-media-r2.mjs` — unggah 26 objek (20 foto guru,
+   4 fasilitas, foto kepala sekolah, 1 PDF pengumuman) dengan key
+   `<bucket>/<path>`; idempoten, `--dry-run`, `--verify`. Hasil: 26/26 ada di CDN.
+2. `supabase/migrations/0008_media_urls_to_r2.sql` — backfill 24 kolom DB
+   (18 guru + 4 fasilitas + 1 kepala sekolah + 1 lampiran berita) ke URL absolut
+   CDN. Idempoten; hanya menyentuh nilai berawalan `/`.
+3. File lokal (guru, fasilitas, `Kepala-Sekolah.jpg`, `documents/…`) dihapus;
+   2 foto guru yatim juga dihapus dari R2. `scripts/sync-static-images.mjs`
+   dihapus (usang; merujuk migration 004 yang tidak ada).
+4. Foto kepala sekolah, nama, sambutan, visi & misi kini dapat diedit dari
+   `/admin/settings` (grup Identitas) — nilai efektif: override → `school_profile`
+   → bawaan.
+5. `remotePatterns` `*.supabase.co` dihapus; parser URL Supabase di
+   `storagePathFromUrl`/`addRef` dihapus. Semua media sekarang wajib URL CDN.

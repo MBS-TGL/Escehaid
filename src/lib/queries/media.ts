@@ -250,32 +250,7 @@ export function addRef(value: string, refs: Set<string>): void {
     refs.add(clean);
   }
 
-  // 3. Tangani format Supabase Storage: /storage/v1/object/(public|sign)/<bucket>/<path>
-  const marker = "/storage/v1/object/";
-  const idx = value.indexOf(marker);
-  if (idx !== -1) {
-    const rest = value.slice(idx + marker.length);
-    const slashPublic = rest.indexOf("/");
-    if (slashPublic !== -1) {
-      const afterMode = rest.slice(slashPublic + 1);
-      const bucketPath = afterMode.split("?")[0].split("#")[0]; // "<bucket>/<path>"
-      if (bucketPath) {
-        refs.add(bucketPath);
-        const slashBucket = bucketPath.indexOf("/");
-        if (slashBucket !== -1) {
-          const pathOnly = bucketPath.slice(slashBucket + 1);
-          refs.add(pathOnly);
-          try {
-            refs.add(decodeURIComponent(pathOnly));
-          } catch {
-            // ignore
-          }
-        }
-      }
-    }
-  }
-
-  // 4. Tangani format Cloudflare R2 / Custom CDN / path absolut / relatif / teks HTML / Markdown.
+  // 3. Tangani format Cloudflare R2 / Custom CDN / path absolut / relatif / teks HTML / Markdown.
   //    Mencocokkan pola <bucket>/<path> untuk images, documents, atau spmb-documents.
   for (const bucket of STORAGE_BUCKETS) {
     const regex = new RegExp(`(?:^|[/"'\\s])(${bucket})\\/([^\\s"'<>?#]+)`, "g");
