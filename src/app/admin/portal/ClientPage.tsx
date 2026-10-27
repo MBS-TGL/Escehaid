@@ -646,12 +646,10 @@ export default function AdminPortalPage() {
   const [confirmClose, setConfirmClose] = useState(false);
   // Pengguna menimpa nilai is_external otomatis di bagian "Lanjutan".
   const [extManual, setExtManual] = useState(false);
-  // Bagian "Lanjutan" form (urutan tampil + buka di tab baru).
+  // Bagian "Lanjutan" form (perilaku link / buka di tab baru).
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  // Ref isi akordeon Lanjutan & field urutannya — untuk scrollIntoView saat
-  // akordeon dibuka, dan fokus otomatis saat validasi di area itu gagal.
+  // Ref isi akordeon Lanjutan — untuk scrollIntoView saat akordeon dibuka.
   const advancedContentRef = useRef<HTMLDivElement>(null);
-  const sortOrderRef = useRef<HTMLInputElement>(null);
 
   // Buka "Lanjutan" → pastikan isi akordeon terlihat di viewport modal (tidak
   // tertutup footer). Tunggu selesai animasi grid 0fr→1fr (~200ms) agar tinggi
@@ -786,14 +784,6 @@ export default function AdminPortalPage() {
       toast("URL tidak valid — harus diawali “/”, “#”, atau http(s)://", "error");
       return;
     }
-    // Validasi field bagian "Lanjutan" → buka akordeon + fokus ke fieldnya.
-    if (!Number.isFinite(Number(form.sort_order))) {
-      toast("Urutan tampil harus berupa angka", "error");
-      setAdvancedOpen(true);
-      requestAnimationFrame(() => sortOrderRef.current?.focus());
-      return;
-    }
-
     setFormSaving(true);
     const input: PortalAppInput = {
       ...form,
@@ -1460,9 +1450,9 @@ export default function AdminPortalPage() {
               >
                 <span className="flex min-w-0 items-center gap-2">
                   <span className="shrink-0">Lanjutan</span>
-                  <span className="truncate font-normal text-slate-400">— urutan tampil &amp; perilaku link</span>
+                  <span className="truncate font-normal text-slate-400">— perilaku link</span>
                   <span className="hidden shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-normal text-slate-500 sm:inline">
-                    Urutan {form.sort_order || 0} · Tab baru: {TAB_MODE_SUMMARY[tabMode]}
+                    Tab baru: {TAB_MODE_SUMMARY[tabMode]}
                   </span>
                 </span>
                 <ChevronDown open={advancedOpen} />
@@ -1476,17 +1466,8 @@ export default function AdminPortalPage() {
                     id="lanjutan-panel"
                     ref={advancedContentRef}
                     inert={!advancedOpen}
-                    className="grid gap-4 border-t border-slate-200 px-4 py-4 md:grid-cols-2"
+                    className="grid gap-4 border-t border-slate-200 px-4 py-4"
                   >
-                    <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-slate-700">Urutan Tampil</label>
-                      <input ref={sortOrderRef} type="number" value={form.sort_order}
-                        onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })}
-                        className={inputClass} />
-                      <p className="mt-1.5 text-xs text-slate-400" title="Bisa juga diubah dengan drag & drop di tabel.">
-                        Angka kecil tampil lebih dulu. Default: urutan terbesar + 1.
-                      </p>
-                    </div>
                     <div>
                       <label className="mb-1.5 block text-sm font-semibold text-slate-700">Buka di tab baru (link luar)</label>
                       <div role="group" aria-label="Buka di tab baru" className="grid grid-cols-3 gap-1 rounded-xl border border-slate-200 bg-white p-1">
