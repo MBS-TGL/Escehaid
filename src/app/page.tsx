@@ -586,9 +586,20 @@ export default async function Home() {
                       <div className="mt-2.5 space-y-2.5">
                         {articles.slice(1, 3).map((item) => (
                           <Link key={item.id} href={`/articles/${item.slug}`} className="group flex gap-2.5">
-                            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-[#dce3ed]/80 bg-[#f4f7fb] text-[var(--brand-accent)] transition-colors group-hover:border-[var(--brand-accent)]/30 group-hover:bg-blue-50/50">
-                              <BookOpen className="h-6 w-6 text-[var(--brand-primary)]/25 transition-colors group-hover:text-[var(--brand-accent)]" />
-                            </div>
+                            {item.image_url ? (
+                              <Image
+                                src={item.image_url}
+                                alt={item.image_alt || item.title}
+                                width={56}
+                                height={56}
+                                sizes="56px"
+                                className="h-14 w-14 shrink-0 rounded-lg object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-[#dce3ed]/80 bg-[#f4f7fb] text-[var(--brand-accent)] transition-colors group-hover:border-[var(--brand-accent)]/30 group-hover:bg-blue-50/50">
+                                <BookOpen className="h-6 w-6 text-[var(--brand-primary)]/25 transition-colors group-hover:text-[var(--brand-accent)]" />
+                              </div>
+                            )}
                             <div className="flex-1 min-w-0">
                               <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand-accent)]">
                                 {capitalizeCategory(item.category)}
