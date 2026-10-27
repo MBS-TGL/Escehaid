@@ -35,6 +35,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# Template env tanpa rahasia — sengaja ikut repo agar setup konsisten.
+!.env.local.example
 
 # opencode: konfigurasi izin lokal (jangan di-commit)
 opencode.json
