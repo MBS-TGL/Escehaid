@@ -946,7 +946,7 @@ export default async function Home() {
           {missionItems.length > 0 && (
           <CSSStagger stagger={100} className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {missionItems.map((item, idx) => (
-              <div key={idx} className="group flex items-start gap-3.5 rounded-2xl border border-white/10 bg-white/5 p-6 transition-all duration-300 md:backdrop-blur-sm hover:border-white/20 hover:bg-white/10">
+              <div key={idx} className="group flex h-full items-start gap-3.5 rounded-2xl border border-white/10 bg-white/5 p-6 transition-all duration-300 md:backdrop-blur-sm hover:border-white/20 hover:bg-white/10">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-highlight)] text-xs font-black tabular-nums text-[var(--brand-primary)]">
                   {String(idx + 1).padStart(2, "0")}
                 </span>
