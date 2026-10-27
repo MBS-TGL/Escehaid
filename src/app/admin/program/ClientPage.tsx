@@ -21,18 +21,19 @@ import {
   updateAgendaSlot,
   reorderProgramRows,
   revalidateProgram,
-  type ProgramTable,
 } from "@/lib/queries";
 import type { AgendaBlockRow, AgendaSlotRow, QuranPillarRow } from "@/lib/supabase";
 import { BLOCKS, parseSlotItemsText, slotItemsToText } from "@/lib/data/mbs-schedule";
 import { SlideOver, SkeletonBlock, Select } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
 import { usePermissions } from "@/app/admin/PermissionsProvider";
+import { SortableList } from "@/components/admin/sortable/SortableList";
+import { SortableRow } from "@/components/admin/sortable/SortableRow";
+import { SortableGrip } from "@/components/admin/sortable/SortableGrip";
+import { useReorder } from "@/lib/admin/useReorder";
 import {
   BookOpen,
   PencilSimple,
-  ArrowUp,
-  ArrowDown,
   CheckCircle,
   XCircle,
   Checks,
@@ -285,49 +286,24 @@ export default function AdminProgramPage() {
     }
   }
 
-  // ── Reorder (swap dua baris tetangga, normalisasi 1..n, optimistic) ─────────
-  async function reorderGeneric<T extends { id: string; sort_order: number }>(
-    list: T[],
-    setRows: (updater: (rows: T[]) => T[]) => void,
-    table: ProgramTable,
-    id: string,
-    direction: "up" | "down"
-  ) {
-    const idx = list.findIndex((r) => r.id === id);
-    if (idx === -1) return;
-    const target = direction === "up" ? idx - 1 : idx + 1;
-    if (target < 0 || target >= list.length) return;
-
-    const swapped = [...list];
-    const tmp = swapped[idx];
-    swapped[idx] = swapped[target];
-    swapped[target] = tmp;
-    const next = swapped.map((r, i) => ({ ...r, sort_order: i + 1 }));
-    const changed = next
-      .filter((r) => list.find((o) => o.id === r.id)?.sort_order !== r.sort_order)
-      .map((r) => ({ id: r.id, sort_order: r.sort_order }));
-    if (!changed.length) return;
-
-    setRows(() => next);
-    const { error } = await reorderProgramRows(table, changed);
-    if (error) {
-      setRows(() => list);
-      toast(`Gagal mengubah urutan: ${error}`, "error");
-      return;
-    }
-    toast("Urutan diperbarui", "success");
-    revalidateProgram().catch(() => {});
-  }
-
-  async function handleReorder(kind: SectionTab, id: string, direction: "up" | "down") {
-    if (kind === "pillars") {
-      await reorderGeneric(pillars, setPillars, "quran_pillars", id, direction);
-    } else if (kind === "blocks") {
-      await reorderGeneric(blocks, setBlocks, "agenda_blocks", id, direction);
-    } else {
-      await reorderGeneric(slotRows, setSlotRows, "agenda_slots", id, direction);
-    }
-  }
+  // ── Drag & drop urutan (optimistik, rollback + toast + revalidate) ─────────
+  const dragDisabled = !permUpdate;
+  const reorderOptions = { onSuccess: () => { revalidateProgram().catch(() => {}); } };
+  const onReorderPillars = useReorder(pillars, setPillars, {
+    persist: (rows) => reorderProgramRows("quran_pillars", rows),
+    label: "pilar",
+    ...reorderOptions,
+  });
+  const onReorderBlocks = useReorder(blocks, setBlocks, {
+    persist: (rows) => reorderProgramRows("agenda_blocks", rows),
+    label: "blok agenda",
+    ...reorderOptions,
+  });
+  const onReorderSlots = useReorder(slotRows, setSlotRows, {
+    persist: (rows) => reorderProgramRows("agenda_slots", rows),
+    label: "slot jam",
+    ...reorderOptions,
+  });
 
   if (!permRead) return <EmptyPerms />;
 
@@ -395,10 +371,14 @@ export default function AdminProgramPage() {
           </button>
         </div>
       ) : tab === "pillars" ? (
-        <ListShell empty="Belum ada pilar Al-Qur'an.">
+        <ListShell empty="Belum ada pilar Al-Qur'an." ids={pillars.map((r) => r.id)} onReorder={onReorderPillars}>
           {pillars.map((row, idx) => (
-            <CardShell
+            <ProgramCard
               key={row.id}
+              id={row.id}
+              index={idx}
+              label={row.title}
+              dragDisabled={dragDisabled}
               actions={
                 <>
                   <ToggleBadge
@@ -408,14 +388,6 @@ export default function AdminProgramPage() {
                     onToggle={() => handleToggle("pillars", row.id, !row.is_active)}
                   />
                   <EditBtn show={permUpdate} onClick={() => openEdit("pillars", row.id)} />
-                  {permUpdate && (
-                    <ReorderButtons
-                      idx={idx}
-                      total={pillars.length}
-                      onUp={() => handleReorder("pillars", row.id, "up")}
-                      onDown={() => handleReorder("pillars", row.id, "down")}
-                    />
-                  )}
                 </>
               }
             >
@@ -430,14 +402,18 @@ export default function AdminProgramPage() {
                 </p>
                 {row.target && <p className="text-[13px] text-slate-500">{row.target}</p>}
               </div>
-            </CardShell>
+            </ProgramCard>
           ))}
         </ListShell>
       ) : tab === "blocks" ? (
-        <ListShell empty="Belum ada blok agenda.">
+        <ListShell empty="Belum ada blok agenda." ids={blocks.map((r) => r.id)} onReorder={onReorderBlocks}>
           {blocks.map((row, idx) => (
-            <CardShell
+            <ProgramCard
               key={row.id}
+              id={row.id}
+              index={idx}
+              label={row.title}
+              dragDisabled={dragDisabled}
               actions={
                 <>
                   <ToggleBadge
@@ -447,14 +423,6 @@ export default function AdminProgramPage() {
                     onToggle={() => handleToggle("blocks", row.id, !row.is_active)}
                   />
                   <EditBtn show={permUpdate} onClick={() => openEdit("blocks", row.id)} />
-                  {permUpdate && (
-                    <ReorderButtons
-                      idx={idx}
-                      total={blocks.length}
-                      onUp={() => handleReorder("blocks", row.id, "up")}
-                      onDown={() => handleReorder("blocks", row.id, "down")}
-                    />
-                  )}
                 </>
               }
             >
@@ -473,14 +441,18 @@ export default function AdminProgramPage() {
                   <p className="mt-1 text-[13px] text-slate-500">Chip: {row.button_text}</p>
                 )}
               </div>
-            </CardShell>
+            </ProgramCard>
           ))}
         </ListShell>
       ) : (
-        <ListShell empty="Belum ada slot jam.">
+        <ListShell empty="Belum ada slot jam." ids={slotRows.map((r) => r.id)} onReorder={onReorderSlots}>
           {slotRows.map((row, idx) => (
-            <CardShell
+            <ProgramCard
               key={row.id}
+              id={row.id}
+              index={idx}
+              label={`Slot ${row.start_time}`}
+              dragDisabled={dragDisabled}
               actions={
                 <>
                   <ToggleBadge
@@ -490,14 +462,6 @@ export default function AdminProgramPage() {
                     onToggle={() => handleToggle("slots", row.id, !row.is_active)}
                   />
                   <EditBtn show={permUpdate} onClick={() => openEdit("slots", row.id)} />
-                  {permUpdate && (
-                    <ReorderButtons
-                      idx={idx}
-                      total={slotRows.length}
-                      onUp={() => handleReorder("slots", row.id, "up")}
-                      onDown={() => handleReorder("slots", row.id, "down")}
-                    />
-                  )}
                 </>
               }
             >
@@ -529,7 +493,7 @@ export default function AdminProgramPage() {
                   ))}
                 </ul>
               </div>
-            </CardShell>
+            </ProgramCard>
           ))}
         </ListShell>
       )}
@@ -803,7 +767,17 @@ export default function AdminProgramPage() {
 
 /* ── Sub-komponen daftar (desktop & mobile sama — data kecil, tanpa tabel) ── */
 
-function ListShell({ children, empty }: { children: React.ReactNode; empty: string }) {
+function ListShell({
+  children,
+  empty,
+  ids,
+  onReorder,
+}: {
+  children: React.ReactNode;
+  empty: string;
+  ids: string[];
+  onReorder: (from: number, to: number) => void;
+}) {
   const rows = Array.isArray(children) ? children : [children];
   if (rows.filter(Boolean).length === 0) {
     return (
@@ -812,7 +786,51 @@ function ListShell({ children, empty }: { children: React.ReactNode; empty: stri
       </div>
     );
   }
-  return <div className="grid gap-3">{children}</div>;
+  return (
+    <SortableList ids={ids} onReorder={onReorder}>
+      <div className="grid gap-3">{children}</div>
+    </SortableList>
+  );
+}
+
+/** Kartu section yang bisa diseret — grip urutan dirender di kolom aksi. */
+function ProgramCard({
+  id,
+  index,
+  label,
+  dragDisabled,
+  actions,
+  children,
+}: {
+  id: string;
+  index: number;
+  label: string;
+  dragDisabled: boolean;
+  actions: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <SortableRow id={id} disabled={dragDisabled}>
+      {({ setNodeRef, style, isDragging, attributes, listeners }) => (
+        <div
+          ref={setNodeRef}
+          style={style}
+          className={`relative rounded-2xl transition-colors ${isDragging ? "bg-slate-50 opacity-70" : ""}`}
+        >
+          <CardShell
+            actions={
+              <>
+                <SortableGrip index={index} label={label} disabled={dragDisabled} attributes={attributes} listeners={listeners} />
+                {actions}
+              </>
+            }
+          >
+            {children}
+          </CardShell>
+        </div>
+      )}
+    </SortableRow>
+  );
 }
 
 function CardShell({
@@ -884,45 +902,6 @@ function EditBtn({ show, onClick }: { show: boolean; onClick: () => void }) {
   );
 }
 
-function ReorderButtons({
-  idx,
-  total,
-  onUp,
-  onDown,
-}: {
-  idx: number;
-  total: number;
-  onUp: () => void;
-  onDown: () => void;
-}) {
-  const btn =
-    "rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30 disabled:hover:bg-transparent";
-  return (
-    <div className="flex items-center gap-1">
-      <button
-        type="button"
-        onClick={onUp}
-        disabled={idx <= 0}
-        aria-label="Naikkan urutan"
-        className={btn}
-      >
-        <ArrowUp className="h-4 w-4" />
-      </button>
-      <span className="w-6 text-center text-xs font-semibold tabular-nums text-slate-400">
-        {idx + 1}
-      </span>
-      <button
-        type="button"
-        onClick={onDown}
-        disabled={idx >= total - 1}
-        aria-label="Turunkan urutan"
-        className={btn}
-      >
-        <ArrowDown className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
 
 function EmptyPerms() {
   return (
