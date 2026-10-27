@@ -533,6 +533,7 @@ export default function AdminFacilitiesPage() {
       {/* Tabel desktop (md+) — tampilan & perilaku sama seperti sebelumnya */}
       <div className="hidden overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:block">
         <div className="overflow-x-auto">
+          <SortableList ids={filtered.map((i) => i.id)} onReorder={onReorder}>
           <table className="w-full">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
               <tr>
@@ -553,7 +554,6 @@ export default function AdminFacilitiesPage() {
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
               </tr>
             </thead>
-            <SortableList ids={filtered.map((i) => i.id)} onReorder={onReorder}>
               <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr><td colSpan={6} className="px-4 py-16 text-center">
@@ -614,8 +614,8 @@ export default function AdminFacilitiesPage() {
                 ))
               )}
             </tbody>
-            </SortableList>
           </table>
+          </SortableList>
         </div>
       </div>
 

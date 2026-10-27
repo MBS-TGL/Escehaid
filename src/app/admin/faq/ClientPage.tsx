@@ -317,6 +317,7 @@ export default function FaqClientPage() {
       {/* Tabel desktop (md+) — baris sortable (drag grip di kolom Urutan) */}
       <div className="hidden overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:block">
         <div className="overflow-x-auto">
+          <SortableList ids={filtered.map((f) => f.id)} onReorder={onReorder}>
           <table className="w-full">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
               <tr>
@@ -327,7 +328,6 @@ export default function FaqClientPage() {
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
               </tr>
             </thead>
-            <SortableList ids={filtered.map((f) => f.id)} onReorder={onReorder}>
               <tbody className="divide-y divide-slate-100">
                 {loading || loadError || filtered.length === 0 ? emptyBody(5) : filtered.map((item, index) => (
                   <SortableTr
@@ -343,8 +343,8 @@ export default function FaqClientPage() {
                   />
                 ))}
               </tbody>
-            </SortableList>
           </table>
+          </SortableList>
         </div>
       </div>
 

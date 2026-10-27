@@ -11,6 +11,15 @@ import { SORTABLE_DND, useSortableSensors } from "@/lib/admin/sortable";
  *
  * `ids` = id baris sesuai URUTAN TAMPIL saat ini. `onReorder(from, to)` diberi
  * indeks (bukan id) agar pemanggil tinggal `arrayMove` pada array yang sama.
+ *
+ * PENTING — jangan letakkan komponen ini DI DALAM `<table>`/`<tbody>`/`<tr>`.
+ * DndContext menyisipkan elemen aksesibilitas `<div>` (petunjuk pembaca layar),
+ * dan `<div>` tidak sah sebagai anak tabel → hydration error
+ * "In div cannot be a child of table". Untuk tabel, bungkus elemen `<table>`-nya:
+ *
+ *   <SortableList ids={…} onReorder={…}>
+ *     <table>…</table>
+ *   </SortableList>
  */
 export function SortableList({
   ids,

@@ -699,6 +699,7 @@ export default function AdminAchievementsPage() {
       {/* Table desktop (md+) */}
       <div className="hidden overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:block">
         <div className="overflow-x-auto">
+          <SortableList ids={filtered.map((i) => i.id)} onReorder={onReorder}>
           <table className="w-full">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
               <tr>
@@ -761,8 +762,7 @@ export default function AdminAchievementsPage() {
                   </div>
                 </td></tr>
               ) : (
-                <SortableList ids={filtered.map((i) => i.id)} onReorder={onReorder}>
-                {filtered.map((item, index) => (
+                filtered.map((item, index) => (
                   <SortableRow key={item.id} id={item.id} disabled={dragDisabled}>
                     {({ setNodeRef, style, isDragging, attributes, listeners }) => (
                   <tr
@@ -842,11 +842,11 @@ export default function AdminAchievementsPage() {
                   </tr>
                     )}
                   </SortableRow>
-                ))}
-                </SortableList>
+                ))
               )}
             </tbody>
           </table>
+          </SortableList>
         </div>
       </div>
 
