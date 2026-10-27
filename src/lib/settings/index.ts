@@ -58,8 +58,9 @@ export function resolveSettings(
     }
 
     const fromProfile = field.profileField ? profile?.[field.profileField] : null;
-    const profileValue =
+    const rawProfileValue =
       typeof fromProfile === "string" ? fromProfile.trim() : fromProfile == null ? "" : String(fromProfile);
+    const profileValue = field.profileTransform ? field.profileTransform(rawProfileValue) : rawProfileValue;
 
     if (profileValue !== "") {
       values[field.key] = profileValue;

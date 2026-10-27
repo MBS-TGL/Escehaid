@@ -21,7 +21,8 @@ import { activityTypeLabel, activityTypeBadge } from "@/lib/activity-types";
 import type { Achievement } from "@/lib/supabase";
 import { BLOCKS } from "@/lib/data/mbs-schedule";
 import { getAgendaBlocksList, blockRowToSummary, getActiveFaqs } from "@/lib/queries";
-import { resolveVision, parseMissionItems } from "@/lib/queries/profile";
+import { parseMissionItems } from "@/lib/queries/profile";
+import { VISION_FALLBACK } from "@/lib/site-content";
 
 const FAQ = dynamic(() => import("./FAQ"), { loading: () => <div className="h-96" /> });
 const WhatsAppButton = dynamic(() => import("./WhatsAppButton"));
@@ -98,8 +99,6 @@ function bentoSpanClass(index: number, total: number): string {
 
 const SALAM_BUKA = "Assalamu'alaikum Warahmatullahi Wabarakatuh.";
 const SALAM_TUTUP = "Wassalamu'alaikum Warahmatullahi Wabarakatuh.";
-const PRINCIPAL_QUOTE_FALLBACK =
-  "Setiap anak datang dengan bakat dan caranya sendiri. Tugas kami di SMP Muhammadiyah 4 Tanggul adalah menuntunnya tumbuh berilmu, berakhlak, dan berkemajuan - menjadi pribadi yang bermanfaat bagi keluarga, masyarakat, dan umat.";
 
 export async function generateMetadata(): Promise<Metadata> {
   // Judul beranda memakai `absolute` agar TIDAK ikut template `%s | <nama>`
@@ -147,12 +146,15 @@ export default async function Home() {
   const agendaBlocks =
     programBlocks.length > 0 ? programBlocks.map(blockRowToSummary) : BLOCKS;
 
-  // Visi & misi (section "Mengapa MUH4TA") — dari school_profile. Section
-  // disembunyikan bila keduanya kosong di DB; misi kosong → grid tak dirender
-  // (tanpa fallback), teks lengkap tetap tersedia di /profile#visi-misi.
-  const hasVisionMission = Boolean(profile?.vision?.trim() || profile?.mission?.trim());
-  const visionText = resolveVision(profile);
-  const missionItems = profile?.mission?.trim() ? parseMissionItems(profile.mission) : [];
+  // Visi & misi (section "Mengapa MUH4TA") — nilai efektif Pengaturan Situs
+  // (override admin → school_profile → bawaan). Section disembunyikan bila
+  // keduanya kosong; misi kosong → grid tak dirender (tanpa fallback), teks
+  // lengkap tetap tersedia di /profile#visi-misi.
+  const visionSource = settings.values.vision.trim();
+  const missionSource = settings.values.mission.trim();
+  const hasVisionMission = Boolean(visionSource || missionSource);
+  const visionText = visionSource || VISION_FALLBACK;
+  const missionItems = missionSource ? parseMissionItems(missionSource) : [];
 
   // FAQ aktif dari DB (tabel `faqs`); null (tabel kosong/error) → section
   // FAQ dan JSON-LD FAQPage tidak dirender.
@@ -164,8 +166,10 @@ export default async function Home() {
   // Tagline & identitas dari Pengaturan Situs (bukan lagi konstanta kode).
   const brand = toPublicBrand(settings);
   const schoolName = settings.values.site_name.trim() || profile?.school_name || "SMP Muhammadiyah 4 Tanggul";
+  const principalName = settings.values.principal_name.trim();
+  const principalPhotoUrl = settings.values.principal_photo_url.trim();
 
-  const principalQuote = (profile?.principal_quote || PRINCIPAL_QUOTE_FALLBACK).trim();
+  const principalQuote = settings.values.principal_quote.trim();
   const { startsWithGreeting, endsWithGreeting } = detectPrincipalGreeting(principalQuote);
   const quoteTypeClass =
     principalQuote.length <= 140
@@ -302,8 +306,8 @@ export default async function Home() {
                 {/* Frame foto utama: kurva rounded-2xl modern, aspect 4/5 profesional */}
                 <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-100 shadow-md ring-1 ring-black/5 sm:rounded-3xl">
                   <Image
-                    src={profile?.principal_photo_url || "/images/Kepala-Sekolah.jpg"}
-                    alt={`${profile?.principal_name || "Khoirul Anwar, S.Pd"} - Kepala Sekolah`}
+                    src={principalPhotoUrl}
+                    alt={`${principalName} - Kepala Sekolah`}
                     fill
                     sizes="(min-width: 1024px) 280px, (min-width: 640px) 280px, 260px"
                     className="object-cover object-[center_16%] transition-transform duration-500 hover:scale-105"
@@ -313,7 +317,7 @@ export default async function Home() {
                   <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 via-black/20 to-transparent sm:hidden" />
                   <div className="absolute inset-x-3 bottom-3 sm:hidden">
                     <p className="text-sm font-semibold text-white drop-shadow-sm">
-                      {profile?.principal_name || "Khoirul Anwar, S.Pd"}
+                      {principalName}
                     </p>
                     <p className="text-xs text-white/80 drop-shadow-sm">
                       Kepala {schoolName}
@@ -373,7 +377,7 @@ export default async function Home() {
                 {/* Signoff / Identitas Pimpinan */}
                 <figcaption className="mt-8 border-t border-slate-200/80 pt-5">
                   <p className="text-base font-bold tracking-tight text-[var(--brand-primary)] sm:text-lg">
-                    {profile?.principal_name || "Khoirul Anwar, S.Pd"}
+                    {principalName}
                   </p>
                   <p className="text-xs font-medium text-slate-500 sm:text-sm">
                     Kepala {schoolName}

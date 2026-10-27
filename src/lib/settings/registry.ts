@@ -12,6 +12,12 @@
  */
 import type { SchoolProfile } from "@/lib/supabase";
 import { normalizeHex } from "./contrast";
+import {
+  DEFAULT_PRINCIPAL_NAME,
+  PRINCIPAL_PHOTO_FALLBACK,
+  PRINCIPAL_QUOTE_FALLBACK,
+  missionToLines,
+} from "@/lib/site-content";
 
 /** Tipe nilai yang dikenal form admin. */
 export type SettingType = "text" | "textarea" | "url" | "email" | "image" | "color";
@@ -35,6 +41,12 @@ export interface SettingField {
    * school_profile, settings hanya menambah lapisan "dapat diedit admin".
    */
   profileField?: keyof SchoolProfile;
+  /**
+   * Transformasi nilai school_profile → teks tampilan form (mis. kolom
+   * `mission` tersimpan sebagai JSON array → diubah menjadi satu butir/baris).
+   * Tidak berlaku untuk nilai override (yang sudah berupa teks hasil edit).
+   */
+  profileTransform?: (value: string) => string;
   /** Validasi khusus; kembalikan pesan error (Bahasa Indonesia) atau null. */
   validate?: (value: string) => string | null;
 }
@@ -180,6 +192,59 @@ export const SETTING_FIELDS: SettingField[] = [
     profileField: "npsn",
     validate: validateNpsn,
     maxLength: 12,
+  },
+
+  // ── Profil & sambutan kepala sekolah ────────────────────────────────────
+  {
+    key: "principal_name",
+    group: "identitas",
+    type: "text",
+    label: "Nama kepala sekolah",
+    help: "Tampil di beranda dan halaman profil, termasuk keterangan pembaca layar foto.",
+    default: DEFAULT_PRINCIPAL_NAME,
+    profileField: "principal_name",
+    maxLength: 120,
+  },
+  {
+    key: "principal_photo_url",
+    group: "identitas",
+    type: "image",
+    label: "Foto kepala sekolah",
+    help: "Pilih dari Pustaka Media atau tempel URL gambar. Rasio disarankan 4:5 (potret).",
+    default: PRINCIPAL_PHOTO_FALLBACK,
+    profileField: "principal_photo_url",
+    validate: validateImage,
+  },
+  {
+    key: "principal_quote",
+    group: "identitas",
+    type: "textarea",
+    label: "Sambutan kepala sekolah",
+    help: "Kutipan sambutan di beranda dan /profile. Kosongkan untuk memakai teks pada profil sekolah.",
+    default: PRINCIPAL_QUOTE_FALLBACK,
+    profileField: "principal_quote",
+    maxLength: 1200,
+  },
+  {
+    key: "vision",
+    group: "identitas",
+    type: "textarea",
+    label: "Visi sekolah",
+    help: "Kosongkan untuk memakai visi pada profil sekolah. Bila visi & misi kosong, section disembunyikan dari beranda.",
+    default: "",
+    profileField: "vision",
+    maxLength: 2000,
+  },
+  {
+    key: "mission",
+    group: "identitas",
+    type: "textarea",
+    label: "Misi sekolah",
+    help: "Satu butir per baris. Kosongkan untuk memakai misi pada profil sekolah.",
+    default: "",
+    profileField: "mission",
+    profileTransform: missionToLines,
+    maxLength: 4000,
   },
 
   // ── Kontak ──────────────────────────────────────────────────────────────

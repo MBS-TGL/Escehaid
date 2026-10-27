@@ -2,7 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { Users, GraduationCap, Eye, Checks, ArrowUpRight, Trophy, MapPin, Quotes } from "@/components/Icons";
 import { getSchoolProfile, getTeacherList, getFacilityList, getAchievementList, getGalleryList, getEkskulList, registrationHref } from "@/lib/queries";
-import { resolveVision, parseMissionItems } from "@/lib/queries/profile";
+import { parseMissionItems } from "@/lib/queries/profile";
+import { VISION_FALLBACK } from "@/lib/site-content";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import PageHero from "@/components/public/PageHero";
@@ -32,8 +33,6 @@ export const revalidate = 3600;
 
 const SALAM_BUKA = "Assalamu'alaikum Warahmatullahi Wabarakatuh.";
 const SALAM_TUTUP = "Wassalamu'alaikum Warahmatullahi Wabarakatuh.";
-const PRINCIPAL_QUOTE_FALLBACK =
-  "Selamat datang di SMP Muhammadiyah 4 Tanggul. Kami berkomitmen mendampingi setiap peserta didik bertumbuh dengan memadukan keunggulan akademik, akhlak karimah, dan pembentukan karakter Islami menuju generasi yang berilmu dan berdaya saing.";
 
 const CV = { contentVisibility: "auto", containIntrinsicSize: "auto 720px" } as React.CSSProperties;
 
@@ -49,8 +48,10 @@ export default async function ProfilPage() {
   ]);
   const brand = toPublicBrand(settings);
   const schoolName = settings.values.site_name.trim() || profil?.school_name || "SMP Muhammadiyah 4 Tanggul";
+  const principalName = settings.values.principal_name.trim();
+  const principalPhotoUrl = settings.values.principal_photo_url.trim();
 
-  const principalQuote = (profil?.principal_quote || PRINCIPAL_QUOTE_FALLBACK).trim();
+  const principalQuote = settings.values.principal_quote.trim();
   const { startsWithGreeting, endsWithGreeting } = detectPrincipalGreeting(principalQuote);
   const quoteTypeClass =
     principalQuote.length <= 140
@@ -66,8 +67,8 @@ export default async function ProfilPage() {
     return { head: trimmed.slice(0, trimmed.length - tail.length), tail };
   })();
 
-  const visionText = resolveVision(profil);
-  const missionItems = parseMissionItems(profil?.mission);
+  const visionText = settings.values.vision.trim() || VISION_FALLBACK;
+  const missionItems = parseMissionItems(settings.values.mission);
 
   const daftarHref = registrationHref(profil).trim();
 
@@ -179,8 +180,8 @@ export default async function ProfilPage() {
                 {/* Frame foto utama: kurva rounded-3xl modern, aspect 4/5 profesional */}
                 <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-slate-200/90 bg-slate-100 shadow-xl ring-1 ring-black/5 sm:rounded-3xl">
                   <Image
-                    src={profil?.principal_photo_url || "/images/Kepala-Sekolah.jpg"}
-                    alt={`${profil?.principal_name || "Khoirul Anwar, S.Pd"} - Kepala Sekolah`}
+                    src={principalPhotoUrl}
+                    alt={`${principalName} - Kepala Sekolah`}
                     fill
                     sizes="(min-width: 1280px) 360px, (min-width: 1024px) 320px, (min-width: 640px) 320px, 280px"
                     className="object-cover object-[center_16%] transition-transform duration-700 hover:scale-105"
@@ -190,7 +191,7 @@ export default async function ProfilPage() {
                   <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-transparent sm:hidden" />
                   <div className="absolute inset-x-4 bottom-4 sm:hidden">
                     <p className="text-base font-bold text-white drop-shadow-sm">
-                      {profil?.principal_name || "Khoirul Anwar, S.Pd"}
+                      {principalName}
                     </p>
                     <p className="text-xs text-slate-200 drop-shadow-sm">
                       Kepala {schoolName}
@@ -252,7 +253,7 @@ export default async function ProfilPage() {
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="hidden sm:block">
                       <h3 className="text-lg font-bold text-[var(--brand-primary)] sm:text-xl">
-                        {profil?.principal_name || "Khoirul Anwar, S.Pd"}
+                        {principalName}
                       </h3>
                       <p className="text-xs font-medium text-slate-500 sm:text-sm">
                         Kepala {schoolName}
