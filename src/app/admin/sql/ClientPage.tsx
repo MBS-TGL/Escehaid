@@ -13,6 +13,8 @@ export default function SqlStatusClientPage({ statuses }: { statuses: SqlMigrati
   const router = useRouter();
   const applied = statuses.filter((s) => s.applied).length;
   const pending = statuses.length - applied;
+  const pendingRunner = statuses.filter((s) => !s.applied && s.source === "ledger").length;
+  const pendingManual = statuses.filter((s) => !s.applied && s.source === "probe").length;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -50,10 +52,28 @@ export default function SqlStatusClientPage({ statuses }: { statuses: SqlMigrati
             <CheckCircle className="h-4 w-4" /> Semua {statuses.length} migrasi sudah dijalankan.
           </p>
         ) : (
-          <p className="flex items-center gap-2 text-sm font-semibold text-amber-700">
-            <XCircle className="h-4 w-4" /> {pending} dari {statuses.length} migrasi belum dijalankan —
-            jalankan file terkait di Supabase → SQL Editor (idempoten, aman diulang).
-          </p>
+          <div className="flex items-start gap-2 text-sm font-semibold text-amber-700">
+            <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="space-y-1 font-normal">
+              <p className="font-semibold">
+                {pending} dari {statuses.length} entri SQL belum terdeteksi di database.
+              </p>
+              {pendingRunner > 0 && (
+                <p>
+                  {pendingRunner} migrasi berurutan: jalankan{" "}
+                  <code className="rounded bg-amber-100 px-1 font-mono">npm run db:migrate</code>{" "}
+                  (atau <code className="rounded bg-amber-100 px-1 font-mono">db:migrate:status</code>{" "}
+                  untuk memeriksa).
+                </p>
+              )}
+              {pendingManual > 0 && (
+                <p>
+                  {pendingManual} berkas manual: jalankan isinya di Supabase → SQL Editor
+                  (idempoten, aman diulang).
+                </p>
+              )}
+            </div>
+          </div>
         )}
       </div>
 

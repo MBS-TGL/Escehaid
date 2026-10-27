@@ -1,14 +1,23 @@
-import { supabase } from "../supabase";
-import { tableHasColumn, trgmSearchReady } from "./shared";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase-server";
+import { LEDGER_MIGRATIONS } from "@/lib/sql-migrations";
 
 /**
  * Status migrasi SQL — registry tiap file SQL di repo + probe "sudah belum
  * dijalankan" di database. Dipakai halaman /admin/sql (grup Developer).
  *
  * Prinsip: probe membuktikan EFEK file (kolom/tabel/permission/RPC ada),
- * bukan membaca DB metadata — jadi aman untuk anon/session client dan
- * tidak perlu service role.
+ * bukan membaca DB metadata.
+ *
+ * PENTING: semua query di sini memakai klien SERVER ber-cookie
+ * (`@/lib/supabase-server`), bukan `@/lib/supabase` (browser/anon). Halaman
+ * ini adalah server component yang mengambil data SEBELUM hidrasi; browser
+ * client tidak membawa sesi user saat itu, sehingga:
+ *   • `schema_migrations` → 401 (policy hanya untuk authenticated),
+ *   • `role_permissions` → [] (policy SELECT hanya untuk authenticated),
+ * dan halaman menampilkan "Belum" palsu untuk hampir semua migrasi runner.
  */
+type Db = SupabaseClient;
 
 export interface SqlMigrationStatus {
   file: string;
@@ -34,15 +43,19 @@ export interface SqlMigrationStatus {
  *   - error lain (permission denied 42501 / validasi P0001) → fungsi ADA ✅
  * Argumen tidak-valid dipilih yang gagal validasi SEBELUM menyentuh data.
  */
-async function rpcExists(name: string, invalidArgs: Record<string, unknown>): Promise<boolean> {
-  const { error } = await supabase.rpc(name, invalidArgs);
+async function rpcExists(
+  db: Db,
+  name: string,
+  invalidArgs: Record<string, unknown>
+): Promise<boolean> {
+  const { error } = await db.rpc(name, invalidArgs);
   if (!error) return true;
   return !(error.code === "PGRST202" || /Could not find the function|does not exist/i.test(error.message ?? ""));
 }
 
 /** Probe permission tertentu sudah di-seed ke role_permissions. */
-async function permissionSeeded(perm: string): Promise<boolean> {
-  const { data } = await supabase
+async function permissionSeeded(db: Db, perm: string): Promise<boolean> {
+  const { data } = await db
     .from("role_permissions")
     .select("permission")
     .eq("permission", perm)
@@ -50,114 +63,87 @@ async function permissionSeeded(perm: string): Promise<boolean> {
   return (data ?? []).length > 0;
 }
 
+/**
+ * Probe kolom lewat `select(...).limit(0)`: kolom hilang → 42703,
+ * kolom ada → 200 (walau RLS menyaring semua baris).
+ */
+async function tableHasColumn(db: Db, table: string, column: string): Promise<boolean> {
+  const { error } = await db.from(table).select(column).limit(0);
+  return !error || !/does not exist|42703/.test(error.message || "");
+}
+
+/** Probe RPC pg_trgm aktif (dibuat `sql/pg-trgm.sql`). */
+async function trgmSearchReady(db: Db): Promise<boolean> {
+  const { data, error } = await db.rpc("search_trgm_enabled");
+  return !error && data === true;
+}
+
 interface MigrationDef {
   file: string;
   description: string;
-  check: () => Promise<boolean>;
+  check: (db: Db) => Promise<boolean>;
 }
 
 /**
- * Migrasi berurutan di `supabase/migrations/` — diterapkan lewat
- * `npm run db:migrate`. Statusnya dibaca dari `schema_migrations`, bukan
- * diprobe, karena runner mencatatnya sendiri.
- *
- * Urutan penting: 0001 harus sebelum 0002 (backfill sebelum pengetatan
- * has_permission), dan 0003 menolak jalan bila 0001 belum beres.
+ * SQL yang TIDAK lewat runner (dijalankan manual di Supabase SQL Editor) —
+ * statusnya disimpulkan dari efeknya di DB. Urutan mengikuti riwayat rilis.
  */
-const LEDGER_MIGRATIONS: MigrationDef[] = [
-  {
-    file: "supabase/migrations/0001_backfill_system_role.sql",
-    description: "Backfill system_role untuk admin legacy (prasyarat pengetatan RBAC)",
-    check: async () => false, // status asli dari ledger
-  },
-  {
-    file: "supabase/migrations/0002_has_permission_hardening.sql",
-    description: "Tutup fallback has_permission + REVOKE fungsi internal & TRUNCATE anon",
-    check: async () => false,
-  },
-  {
-    file: "supabase/migrations/0003_rls_content_to_permissions.sql",
-    description: "RLS konten: role legacy → izin halus (punya preflight)",
-    check: async () => false,
-  },
-  {
-    file: "supabase/migrations/0004_audit_before_after.sql",
-    description: "log_audit() menyimpan nilai sebelum + entity_id untuk tabel ber-PK key",
-    check: async () => false,
-  },
-  {
-    file: "supabase/migrations/0005_audit_triggers_missing.sql",
-    description: "Audit trigger untuk faqs, downloads, ekskuls, program, settings, flags, categories",
-    check: async () => false,
-  },
-  {
-    file: "supabase/migrations/0006_migration_ledger_access.sql",
-    description: "Akses baca schema_migrations untuk halaman ini",
-    check: async () => false,
-  },
-  {
-    file: "supabase/migrations/0007_handle_new_user_email.sql",
-    description: "Trigger signup mengisi email profil + backfill akun lama",
-    check: async () => false,
-  },
-];
-
 const MIGRATIONS: MigrationDef[] = [
   {
     file: "supabase/ekskul.sql",
     description: "Tabel ekskuls dinamis + kolom history + tautan prestasi↔ekskul",
-    check: () => tableHasColumn("ekskuls", "history"),
+    check: (db) => tableHasColumn(db, "ekskuls", "history"),
   },
   {
     file: "supabase/program.sql",
     description: "3 tabel halaman /program (quran_pillars, agenda_blocks, agenda_slots)",
-    check: () => tableHasColumn("agenda_blocks", "id"),
+    check: (db) => tableHasColumn(db, "agenda_blocks", "id"),
   },
   {
     file: "sql/pg-trgm.sql",
     description: "Pencarian toleran typo (pg_trgm + 5 fungsi RPC search_*)",
-    check: () => trgmSearchReady(),
+    check: (db) => trgmSearchReady(db),
   },
   {
     file: "supabase/faq.sql",
     description: "Tabel faqs (FAQ dinamis beranda & SPMB) + izin faq:*",
-    check: () => tableHasColumn("faqs", "scope"),
+    check: (db) => tableHasColumn(db, "faqs", "scope"),
   },
   {
     file: "supabase/soft-delete.sql",
     description: "Kolom deleted_at di 8 tabel konten (Recycle Bin / Sampah)",
-    check: () => tableHasColumn("news", "deleted_at"),
+    check: (db) => tableHasColumn(db, "news", "deleted_at"),
   },
   {
     file: "supabase/sessions.sql",
     description: "Tabel sessions (daftar perangkat & sesi aktif admin)",
-    check: () => tableHasColumn("sessions", "session_id"),
+    check: (db) => tableHasColumn(db, "sessions", "session_id"),
   },
   {
     file: "supabase/profile-name.sql",
     description: "RPC update_own_full_name (edit nama di Pengaturan Akun)",
-    check: () => rpcExists("update_own_full_name", { p_full_name: "x" }),
+    check: (db) => rpcExists(db, "update_own_full_name", { p_full_name: "x" }),
   },
   {
     file: "supabase/backup-perm.sql",
     description: "Izin backup:* untuk role (halaman Cadangan)",
-    check: () => permissionSeeded("backup:read"),
+    check: (db) => permissionSeeded(db, "backup:read"),
   },
   {
     file: "supabase/diagnostics-perm.sql",
     description: "Izin diagnostik:read (halaman Diagnostik)",
-    check: () => permissionSeeded("diagnostik:read"),
+    check: (db) => permissionSeeded(db, "diagnostik:read"),
   },
   {
     file: "supabase/trash-perm.sql",
     description: "Izin sampah:* (halaman Sampah)",
-    check: () => permissionSeeded("sampah:read"),
+    check: (db) => permissionSeeded(db, "sampah:read"),
   },
 ];
 
 /** Baca ledger `schema_migrations`. Kosong bila tabel belum ada / tanpa akses. */
-async function readLedger(): Promise<Set<string>> {
-  const { data, error } = await supabase.from("schema_migrations").select("filename");
+async function readLedger(db: Db): Promise<Set<string>> {
+  const { data, error } = await db.from("schema_migrations").select("filename");
   if (error) {
     // Tabel belum dibuat (runner belum pernah jalan) atau RLS menolak —
     // keduanya bukan kondisi error bagi halaman ini.
@@ -168,13 +154,17 @@ async function readLedger(): Promise<Set<string>> {
 
 /** Cek semua migrasi — tiap probe gagal ditelan sebagai `false`. */
 export async function getSqlMigrationStatuses(): Promise<SqlMigrationStatus[]> {
-  const ledger = await readLedger();
+  // Klien server ber-cookie: RLS melihat user admin yang sedang membuka
+  // halaman, bukan anon.
+  const db = await createClient();
+
+  const ledger = await readLedger(db);
 
   const probed = await Promise.all(
     MIGRATIONS.map(async (m): Promise<SqlMigrationStatus> => ({
       file: m.file,
       description: m.description,
-      applied: await m.check().catch(() => false),
+      applied: await m.check(db).catch(() => false),
       source: "probe" as const,
     }))
   );
