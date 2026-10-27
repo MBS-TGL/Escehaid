@@ -10,6 +10,7 @@ import {
   deleteAchievementBulk,
   uploadAchievementImage,
   revalidateAchievements,
+  reorderAchievements,
   getEkskulListAll,
 } from "@/lib/queries";
 import { SlideOver, ConfirmModal, Select, Modal } from "@/components/ui";
@@ -32,8 +33,6 @@ import {
   X,
   XCircle,
   Medal,
-  CaretLeft,
-  CaretRight,
   Plus,
   PencilSimple,
   Trash,
@@ -51,24 +50,27 @@ import {
   BookOpen,
 } from "@/components/Icons";
 import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
+import { SortableList } from "@/components/admin/sortable/SortableList";
+import { SortableRow } from "@/components/admin/sortable/SortableRow";
+import { SortableGrip } from "@/components/admin/sortable/SortableGrip";
+import { useReorder } from "@/lib/admin/useReorder";
 import VideoUrlField from "@/components/admin/VideoUrlField";
 import {
   MobileFilterBar,
   MobileListRow,
-  MobilePagination,
   MobilePickButton,
   MobileSelectBar,
   MobileThumb,
   QuietBadge,
   RowActionsMenu,
+  RowGrip,
   type RowAction,
 } from "@/components/admin/mobile";
 
-const PAGE_SIZE = 10;
 /** Batas unggulan aktif (Tahap 3.6). */
 const MAX_FEATURED = 6;
 
-type SortField = "created_at" | "title" | "category" | "year";
+type SortField = "sort_order" | "created_at" | "title" | "category" | "year";
 type SortDir = "asc" | "desc";
 
 /** Warna/label kategori dari konstanta bersama; tak dikenal → abu-abu + capitalize. */
@@ -133,9 +135,8 @@ export default function AdminAchievementsPage() {
   const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
-  const [page, setPage] = useState(1);
-  const [sortField, setSortField] = useState<SortField>("created_at");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sortField, setSortField] = useState<SortField>("sort_order");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [yearFilter, setYearFilter] = useState("all");
 
   // Selection
@@ -222,7 +223,8 @@ export default function AdminAchievementsPage() {
 
     result.sort((a, b) => {
       let cmp = 0;
-      if (sortField === "title") cmp = a.title.localeCompare(b.title);
+      if (sortField === "sort_order") cmp = (a.sort_order || 0) - (b.sort_order || 0);
+      else if (sortField === "title") cmp = a.title.localeCompare(b.title);
       else if (sortField === "category") cmp = (a.category || "").localeCompare(b.category || "");
       else if (sortField === "year") cmp = (a.year || 0) - (b.year || 0);
       else cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -232,8 +234,23 @@ export default function AdminAchievementsPage() {
     return result;
   }, [achievements, search, filter, yearFilter, sortField, sortDir]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  // Drag hanya saat daftar tampil apa adanya (tanpa cari/filter) dan urutan
+  // sedang "Urutan" — kalau diurutkan per judul/tahun, indeks drag tak bermakna.
+  const dragDisabled =
+    !permUpdate ||
+    !!search.trim() ||
+    filter !== "all" ||
+    yearFilter !== "all" ||
+    pickMode ||
+    sortField !== "sort_order" ||
+    sortDir !== "asc";
+  const onReorder = useReorder(achievements, setAchievements, {
+    persist: reorderAchievements,
+    label: "prestasi",
+    onSuccess: () => {
+      revalidateAchievements().catch(() => {});
+    },
+  });
 
   const stats = {
     total: achievements.length,
@@ -242,7 +259,7 @@ export default function AdminAchievementsPage() {
     featured: achievements.filter((a) => a.is_featured).length,
   };
 
-  const allVisibleSelected = paginated.length > 0 && paginated.every((item) => selectedIds.has(item.id));
+  const allVisibleSelected = filtered.length > 0 && filtered.every((item) => selectedIds.has(item.id));
 
   // Grup dropdown filter — kategori (dari data) + tahun (yang benar-benar
   // ada). Dipakai toolbar responsif halaman ini (tak punya MobileFilterBar).
@@ -257,7 +274,7 @@ export default function AdminAchievementsPage() {
           count: achievements.filter((a) => a.category === cat).length,
         })),
       ],
-      onChange: (k) => { setFilter(k); setPage(1); setSelectedIds(new Set()); },
+      onChange: (k) => { setFilter(k); setSelectedIds(new Set()); },
       menuLabel: "Filter kategori",
     },
   ];
@@ -272,7 +289,7 @@ export default function AdminAchievementsPage() {
           count: achievements.filter((a) => a.year === y).length,
         })),
       ],
-      onChange: (k) => { setYearFilter(k); setPage(1); setSelectedIds(new Set()); },
+      onChange: (k) => { setYearFilter(k); setSelectedIds(new Set()); },
       menuLabel: "Filter tahun",
     });
   }
@@ -280,11 +297,11 @@ export default function AdminAchievementsPage() {
   function toggleSelectAll() {
     if (allVisibleSelected) {
       const s = new Set(selectedIds);
-      paginated.forEach((item) => s.delete(item.id));
+      filtered.forEach((item) => s.delete(item.id));
       setSelectedIds(s);
     } else {
       const s = new Set(selectedIds);
-      paginated.forEach((item) => s.add(item.id));
+      filtered.forEach((item) => s.add(item.id));
       setSelectedIds(s);
     }
   }
@@ -619,7 +636,7 @@ export default function AdminAchievementsPage() {
           placeholder="Cari judul, peraih, penyelenggara, peringkat..."
           searchLabel="Cari judul, peraih, penyelenggara, atau peringkat"
           query={search}
-          onQueryChange={(v) => { setSearch(v); setPage(1); }}
+          onQueryChange={(v) => { setSearch(v); }}
           filters={filterGroups}
         />
       </div>
@@ -629,7 +646,7 @@ export default function AdminAchievementsPage() {
         placeholder="Cari prestasi…"
         searchLabel="Cari judul, peraih, penyelenggara, atau peringkat"
         query={search}
-        onQueryChange={(v) => { setSearch(v); setPage(1); }}
+        onQueryChange={(v) => { setSearch(v); }}
         filter={{
           value: filter,
           options: [
@@ -640,7 +657,7 @@ export default function AdminAchievementsPage() {
               count: achievements.filter((a) => a.category === cat).length,
             })),
           ],
-          onChange: (k) => { setFilter(k); setPage(1); setSelectedIds(new Set()); },
+          onChange: (k) => { setFilter(k); setSelectedIds(new Set()); },
         }}
         filter2={{
           value: yearFilter,
@@ -652,11 +669,12 @@ export default function AdminAchievementsPage() {
               count: achievements.filter((a) => a.year === y).length,
             })),
           ],
-          onChange: (k) => { setYearFilter(k); setPage(1); setSelectedIds(new Set()); },
+          onChange: (k) => { setYearFilter(k); setSelectedIds(new Set()); },
         }}
         sort={{
           value: `${sortField}:${sortDir}`,
           options: [
+            { key: "sort_order:asc", label: "Urutan (drag)" },
             { key: "created_at:desc", label: "Terbaru" },
             { key: "created_at:asc", label: "Terlama" },
             { key: "title:asc", label: "Judul A–Z" },
@@ -691,7 +709,7 @@ export default function AdminAchievementsPage() {
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
                     className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                 </th>
-                <th className="hidden w-12 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell whitespace-nowrap">No</th>
+                <th className="hidden w-16 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell whitespace-nowrap">Urutan</th>
                 <th className="cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("title")}>
                   <span className="flex items-center gap-1">Judul {sortIcon("title")}</span>
                 </th>
@@ -725,7 +743,7 @@ export default function AdminAchievementsPage() {
                     </button>
                   </div>
                 </td></tr>
-              ) : paginated.length === 0 ? (
+              ) : filtered.length === 0 ? (
                 <tr><td colSpan={6} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
@@ -743,13 +761,22 @@ export default function AdminAchievementsPage() {
                   </div>
                 </td></tr>
               ) : (
-                paginated.map((item, index) => (
-                  <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[var(--brand-primary)]/[0.03]" : ""}`}>
+                <SortableList ids={filtered.map((i) => i.id)} onReorder={onReorder}>
+                {filtered.map((item, index) => (
+                  <SortableRow key={item.id} id={item.id} disabled={dragDisabled}>
+                    {({ setNodeRef, style, isDragging, attributes, listeners }) => (
+                  <tr
+                    ref={setNodeRef}
+                    style={style}
+                    className={`group transition-colors ${isDragging ? "bg-slate-50 opacity-70" : selectedIds.has(item.id) ? "bg-[var(--brand-primary)]/[0.03]" : "hover:bg-slate-50/80"}`}
+                  >
                     <td className="hidden w-10 px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
                         className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                     </td>
-                    <td className="hidden w-12 px-4 py-3.5 text-sm text-slate-400 sm:table-cell whitespace-nowrap">{(page - 1) * PAGE_SIZE + index + 1}</td>
+                    <td className="hidden w-16 px-4 py-3.5 sm:table-cell">
+                      <SortableGrip index={index} label={item.title} disabled={dragDisabled} attributes={attributes} listeners={listeners} />
+                    </td>
                     <td className="px-4 py-3.5 cursor-pointer" onClick={() => setViewItem(item)}>
                       <div className="flex items-center gap-3">
                         {item.image_url ? (
@@ -813,34 +840,14 @@ export default function AdminAchievementsPage() {
                       </div>
                     </td>
                   </tr>
-                ))
+                    )}
+                  </SortableRow>
+                ))}
+                </SortableList>
               )}
             </tbody>
           </table>
         </div>
-        {!loading && filtered.length > 0 && (
-          <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-slate-400">
-              Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} dari {filtered.length} prestasi
-            </p>
-            <div className="flex items-center gap-1">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
-                <CaretLeft className="h-4 w-4" />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button key={p} onClick={() => setPage(p)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === page ? "bg-[var(--brand-primary)] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
-                  {p}
-                </button>
-              ))}
-              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
-                <CaretRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Daftar mobile (<md) — baris berfoto/ikon piala, judul 2 baris,
@@ -873,7 +880,7 @@ export default function AdminAchievementsPage() {
               Coba lagi
             </button>
           </div>
-        ) : paginated.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
               <Trophy className="h-7 w-7 text-slate-300" />
@@ -889,7 +896,8 @@ export default function AdminAchievementsPage() {
             )}
           </div>
         ) : (
-          paginated.map((item) => {
+          <SortableList ids={filtered.map((i) => i.id)} onReorder={onReorder}>
+          {filtered.map((item, index) => {
             const actions: RowAction[] = [
               { key: "view", label: "Lihat", icon: <Eye className="h-4 w-4" />, run: () => setViewItem(item) },
               ...(permUpdate
@@ -905,7 +913,14 @@ export default function AdminAchievementsPage() {
             const meta = catMeta(item.category);
             const CategoryIcon = meta.icon;
             return (
-              <div key={item.id} role="listitem">
+              <SortableRow key={item.id} id={item.id} disabled={dragDisabled}>
+                {({ setNodeRef, style, isDragging, attributes, listeners }) => (
+              <div
+                ref={setNodeRef}
+                style={style}
+                role="listitem"
+                className={`transition-colors ${isDragging ? "bg-slate-50 opacity-70" : ""}`}
+              >
                 <MobileListRow
                   lead={
                     pickMode ? (
@@ -922,7 +937,15 @@ export default function AdminAchievementsPage() {
                           className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
                         />
                       </span>
-                    ) : null
+                    ) : (
+                      <RowGrip
+                        index={index}
+                        label={item.title}
+                        disabled={dragDisabled}
+                        attributes={attributes}
+                        listeners={dragDisabled ? {} : listeners}
+                      />
+                    )
                   }
                   thumb={
                     <MobileThumb
@@ -969,19 +992,11 @@ export default function AdminAchievementsPage() {
                   onLongPress={() => enterPickMode(item.id)}
                 />
               </div>
+                )}
+              </SortableRow>
             );
-          })
-        )}
-        {!loading && filtered.length > 0 && (
-          <MobilePagination
-            page={page}
-            totalPages={totalPages}
-            total={filtered.length}
-            from={(page - 1) * PAGE_SIZE + 1}
-            to={Math.min(page * PAGE_SIZE, filtered.length)}
-            onPageChange={setPage}
-            itemLabel="prestasi"
-          />
+          })}
+          </SortableList>
         )}
         {/* Ruang ekstra agar baris terakhir tidak tertutup bar sticky mode pilih */}
         {pickMode && <div className="h-24" aria-hidden="true" />}
