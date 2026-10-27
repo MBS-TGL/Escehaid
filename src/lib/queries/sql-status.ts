@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase-server";
-import { LEDGER_MIGRATIONS } from "@/lib/sql-migrations";
+import { LEDGER_MIGRATIONS, ledgerKey } from "@/lib/sql-migrations";
 
 /**
  * Status migrasi SQL — registry tiap file SQL di repo + probe "sudah belum
@@ -149,7 +149,9 @@ async function readLedger(db: Db): Promise<Set<string>> {
     // keduanya bukan kondisi error bagi halaman ini.
     return new Set();
   }
-  return new Set((data ?? []).map((r) => r.filename as string));
+  // `filename` = basename (lihat scripts/db-migrate.mjs). Normalkan supaya
+  // pencocokan dengan `LEDGER_MIGRATIONS` (path repo) tidak meleset.
+  return new Set((data ?? []).map((r) => ledgerKey(r.filename as string)));
 }
 
 /** Cek semua migrasi — tiap probe gagal ditelan sebagai `false`. */
@@ -172,7 +174,7 @@ export async function getSqlMigrationStatuses(): Promise<SqlMigrationStatus[]> {
   const fromLedger: SqlMigrationStatus[] = LEDGER_MIGRATIONS.map((m) => ({
     file: m.file,
     description: m.description,
-    applied: ledger.has(m.file),
+    applied: ledger.has(ledgerKey(m.file)),
     source: "ledger" as const,
   }));
 

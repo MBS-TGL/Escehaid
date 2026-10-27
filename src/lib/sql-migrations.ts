@@ -9,9 +9,26 @@
  * (ditulis `npm run db:migrate`), bukan dari daftar ini.
  */
 export interface LedgerMigration {
-  /** Path relatif terhadap root repo — sama dengan isi `schema_migrations.filename`. */
+  /**
+   * Path relatif terhadap root repo (untuk ditampilkan di halaman).
+   *
+   * PENTING: `schema_migrations.filename` menyimpan **basename** saja
+   * (`0001_....sql`), bukan path ini. Selalu cocokkan lewat
+   * `ledgerKey()` — jangan `ledger.has(m.file)` langsung.
+   */
   file: string;
   description: string;
+}
+
+/**
+ * Kunci pencocokan dengan `schema_migrations.filename`.
+ *
+ * Runner menulis nama berkas tanpa folder (`path.basename`), sedangkan
+ * registry di sini menyimpan path repo. Helper ini menyamakan keduanya dan
+ * aman untuk pemisah `/` maupun `\`.
+ */
+export function ledgerKey(file: string): string {
+  return file.split(/[\\/]/).pop() ?? file;
 }
 
 export const LEDGER_MIGRATIONS: readonly LedgerMigration[] = [

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { LEDGER_MIGRATIONS } from "@/lib/sql-migrations";
+import { LEDGER_MIGRATIONS, ledgerKey } from "@/lib/sql-migrations";
 
 /**
  * Sinkronisasi registry halaman /admin/sql ↔ isi folder migrasi.
@@ -40,6 +40,22 @@ describe("registry migrasi SQL", () => {
   it("setiap entri punya deskripsi yang bisa dibaca manusia", () => {
     for (const m of LEDGER_MIGRATIONS) {
       expect(m.description.trim().length).toBeGreaterThan(10);
+    }
+  });
+
+  it("ledgerKey mencocokkan path repo dengan basename di schema_migrations", () => {
+    expect(ledgerKey("supabase/migrations/0001_x.sql")).toBe("0001_x.sql");
+    expect(ledgerKey("supabase\\migrations\\0001_x.sql")).toBe("0001_x.sql");
+    expect(ledgerKey("0001_x.sql")).toBe("0001_x.sql");
+  });
+
+  it("setiap entri registry menghasilkan key yang sama dengan file di folder", () => {
+    // Regresi: runner menyimpan basename, registry menyimpan path. Dulu
+    // perbandingan langsung `ledger.has(m.file)` membuat semua status runner
+    // "Belum" selamanya.
+    const onDisk = new Set(migrationFilesOnDisk());
+    for (const m of LEDGER_MIGRATIONS) {
+      expect(onDisk.has(ledgerKey(m.file))).toBe(true);
     }
   });
 });
