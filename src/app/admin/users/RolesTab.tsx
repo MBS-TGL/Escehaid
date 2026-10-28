@@ -287,16 +287,16 @@ export function RolesTab() {
               type="button"
               onClick={handleReset}
               disabled={saving || isSuper}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50"
             >
               <ArrowUUpLeft className="h-3.5 w-3.5" />
               Default
             </button>
-            <button
+            <button data-solid data-busy={saving ? "" : undefined}
               type="button"
               onClick={handleSave}
               disabled={saving || !dirty}
-              className="flex items-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]"
             >
               {saving ? (
                 <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -341,7 +341,7 @@ export function RolesTab() {
                        e.stopPropagation();
                        toggleModule(modPerms, e.target.checked);
                      }}
-                     className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)] disabled:opacity-40"
+                     className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]"
                      aria-label={`Pilih semua aksi ${mod.label}`}
                    />
                    <div className="min-w-0 flex-1">
@@ -379,7 +379,7 @@ export function RolesTab() {
                           checked={checked}
                           disabled={isSuper}
                           onChange={() => toggle(perm)}
-                          className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)] disabled:opacity-40"
+                          className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]"
                         />
                         <span>{action.label}</span>
                       </label>

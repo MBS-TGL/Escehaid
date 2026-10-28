@@ -111,7 +111,7 @@ export default function AiFillPanel({
         maxLength={MAX_CHARS}
         aria-label="Catatan mentah untuk AI"
         placeholder="Contoh: hari ini siswa kelas 7 lomba pidato di aula, juara 1 bernama Anisa, dst."
-        className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 disabled:opacity-60"
+        className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
       />
       <div
         className={`mt-1 text-right text-[10px] md:text-[11px] ${
@@ -122,11 +122,11 @@ export default function AiFillPanel({
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <button
+        <button data-solid data-busy={loading ? "" : undefined}
           type="button"
           onClick={handleRefine}
           disabled={loading || disabled}
-          className="flex min-h-10 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-60"
+          className="flex min-h-10 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)]"
         >
           {loading ? (
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -140,7 +140,7 @@ export default function AiFillPanel({
             type="button"
             onClick={() => { setRawText(""); setError(""); }}
             disabled={disabled}
-            className="rounded-xl px-2 py-2 text-xs font-semibold text-slate-400 transition-colors hover:text-slate-600 disabled:opacity-50"
+            className="rounded-xl px-2 py-2 text-xs font-semibold text-slate-400 transition-colors hover:text-slate-600"
           >
             Kosongkan catatan
           </button>
@@ -161,7 +161,7 @@ export default function AiFillPanel({
             type="button"
             onClick={handleUndo}
             disabled={disabled}
-            className="flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
           >
             <ArrowsCounterClockwise className="h-3.5 w-3.5" /> Undo
           </button>

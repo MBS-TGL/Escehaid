@@ -550,11 +550,11 @@ export default function AdminDownloadsPage() {
         footer={
           <div className="flex w-full items-center justify-between">
             <button onClick={() => setFormOpen(false)} disabled={formSaving}
-              className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+              className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
               Batal
             </button>
-            <button onClick={handleSave} disabled={formSaving}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-70">
+            <button data-solid data-busy onClick={handleSave} disabled={formSaving}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)]">
               {formSaving ? (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
               ) : (
@@ -610,7 +610,7 @@ export default function AdminDownloadsPage() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={formSaving}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 px-4 py-6 text-sm font-semibold text-slate-500 transition-colors hover:border-[var(--brand-accent)]/40 hover:bg-slate-50 hover:text-[var(--brand-primary)] disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 px-4 py-6 text-sm font-semibold text-slate-500 transition-colors hover:border-[var(--brand-accent)]/40 hover:bg-slate-50 hover:text-[var(--brand-primary)]"
             >
               <Download className="h-5 w-5" />
               {file ? file.name : "Pilih berkas untuk diunggah"}

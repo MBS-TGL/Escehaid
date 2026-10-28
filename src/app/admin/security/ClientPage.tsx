@@ -349,10 +349,10 @@ export default function SecurityClientPage() {
               Hubungi developer untuk mengganti email login.
             </p>
           </div>
-          <button
+          <button data-solid
             type="submit"
             disabled={nameSaving || fullName.trim().length < 2}
-            className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-60"
+            className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)]"
           >
             {nameSaving ? "Menyimpan…" : "Simpan Nama"}
           </button>
@@ -407,10 +407,10 @@ export default function SecurityClientPage() {
             minLength={8}
             autoComplete="new-password"
           />
-          <button
+          <button data-solid
             type="submit"
             disabled={pwSaving || !pwCurrent || pwNew.length < 8 || pwNew !== pwConfirm}
-            className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-60"
+            className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)]"
           >
             {pwSaving ? "Menyimpan…" : "Ganti Password"}
           </button>
@@ -446,10 +446,10 @@ export default function SecurityClientPage() {
                 )}
               </div>
               {!qr && factors.length === 0 && (
-                <button
+                <button data-solid
                   onClick={startEnroll}
                   disabled={enrolling}
-                  className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-60"
+                  className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)]"
                 >
                   <Plus className="h-4 w-4" /> {enrolling ? "Menyiapkan…" : "Aktifkan 2FA"}
                 </button>
@@ -474,7 +474,7 @@ export default function SecurityClientPage() {
                     <button
                       onClick={() => removeFactor(f)}
                       disabled={removingId === f.id}
-                      className="shrink-0 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                      className="shrink-0 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
                     >
                       {removingId === f.id ? "Menonaktifkan…" : "Nonaktifkan"}
                     </button>
@@ -505,7 +505,7 @@ export default function SecurityClientPage() {
             <button
               onClick={() => setKickConfirm(true)}
               disabled={kicking}
-              className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+              className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
             >
               Keluarkan semua sesi lain
             </button>
@@ -578,10 +578,10 @@ export default function SecurityClientPage() {
               placeholder="000000"
               className="w-36 rounded-lg border border-slate-200 px-3.5 py-2.5 text-center font-mono text-lg tracking-[0.3em] text-slate-700 focus:border-[var(--brand-primary)] focus:outline-none"
             />
-            <button
+            <button data-solid
               onClick={verifyCode}
               disabled={verifying || code.length !== 6}
-              className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-60"
+              className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)]"
             >
               {verifying ? "Memverifikasi…" : "Verifikasi & Aktifkan"}
             </button>

@@ -523,15 +523,15 @@ export default function AdminProgramPage() {
                 type="button"
                 onClick={() => setForm(null)}
                 disabled={saving}
-                className="min-h-11 rounded-xl border border-[#dce3ed] bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                className="min-h-11 rounded-xl border border-[#dce3ed] bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 Batal
               </button>
-              <button
+              <button data-solid
                 type="button"
                 onClick={handleSave}
                 disabled={saving || !permUpdate}
-                className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-60"
+                className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--brand-accent)]"
               >
                 <FloppyDisk className="h-4 w-4" /> {saving ? "Menyimpan…" : "Simpan"}
               </button>

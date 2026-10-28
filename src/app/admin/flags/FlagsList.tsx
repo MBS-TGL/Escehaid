@@ -206,7 +206,7 @@ export function FlagsList({ initialFlags, initialOverrides }: { initialFlags: Re
                               active
                                 ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                                 : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                            } disabled:opacity-40`}
+                            }`}
                             aria-label={active ? "Nonaktifkan" : "Aktifkan"}
                           >
                             {active ? <XCircle className="h-4.5 w-4.5" /> : <Play className="h-4.5 w-4.5" />}
@@ -216,7 +216,7 @@ export function FlagsList({ initialFlags, initialOverrides }: { initialFlags: Re
                             type="button"
                             onClick={() => openScheduleEditor(def.key)}
                             disabled={saving === def.key}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 disabled:opacity-40"
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200"
                             title="Atur jadwal"
                           >
                             <Clock className="h-4.5 w-4.5" />
@@ -227,7 +227,7 @@ export function FlagsList({ initialFlags, initialOverrides }: { initialFlags: Re
                               type="button"
                               onClick={() => setResetOpen(def.key)}
                               disabled={saving === def.key}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 text-red-500 hover:bg-red-50 disabled:opacity-40"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 text-red-500 hover:bg-red-50"
                               title="Kembalikan ke bawaan"
                             >
                               <ArrowUUpLeft className="h-4.5 w-4.5" />
@@ -240,7 +240,7 @@ export function FlagsList({ initialFlags, initialOverrides }: { initialFlags: Re
                             type="button"
                             onClick={() => handleSaveSchedule(def.key)}
                             disabled={saving === def.key}
-                            className="inline-flex items-center gap-1.5 rounded-xl bg-[#082b59] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#0b3a75] disabled:opacity-40"
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-[#082b59] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#0b3a75]"
                           >
                             <FloppyDisk className="h-3.5 w-3.5" />
                             Simpan
@@ -249,7 +249,7 @@ export function FlagsList({ initialFlags, initialOverrides }: { initialFlags: Re
                             type="button"
                             onClick={() => setEditingKey(null)}
                             disabled={saving === def.key}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 disabled:opacity-40"
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200"
                             aria-label="Batal"
                           >
                             <ArrowUp className="h-4.5 w-4.5" />

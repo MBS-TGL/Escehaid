@@ -101,10 +101,10 @@ export default function ChangePasswordPage() {
             minLength={MIN_LEN}
           />
 
-          <button
+          <button data-solid data-busy={saving ? "" : undefined}
             type="submit"
             disabled={saving || password.length < MIN_LEN || password !== confirm}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]"
           >
             {saving ? (
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />

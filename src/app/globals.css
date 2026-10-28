@@ -24,6 +24,23 @@
      gradien tetap serasi walau admin mengganti warna merek. */
   --brand-primary-mid: #0a3570;
   --brand-primary-light: #0d4a8a;
+
+  /* ── Token keadaan nonaktif ───────────────────────────────────────────────
+     Dua tingkat, karena dua alasan berbeda:
+       · PERMANEN  (tidak berizin / kondisi terkunci) → 0.45, cukup pudar.
+       · SEMENTARA (sedang menyimpan, paginasi di ujung) → 0.60, harus tetap
+         terbaca karena pengguna tahu ini akan aktif lagi.
+     Rentang 0.4–0.5 mengikuti Ant Design (0.4) & GitHub Primer; Material
+     memakai 0.38 yang lebih pudar. Di bawah 0.35 sudah sulit dibaca.
+     WCAG mengecualikan kontrol nonaktif dari syarat kontras, tetapi teks
+     penjelas di sebelahnya tetap wajib terbaca. */
+  --disabled-opacity: 0.45;
+  --disabled-opacity-busy: 0.6;
+  /* Tombol solid berwarna TIDAK dipudarkan (biru tua menjadi biru pucat yang
+     masih terlihat "aktif"); permukaan + teksnya diganti abu netral. */
+  --disabled-surface: #eef1f5;
+  --disabled-text: #7b8794; /* 3.23:1 di atas --disabled-surface */
+  --disabled-border: #e2e7ee;
 }
 
 @theme inline {
@@ -550,30 +567,36 @@ mark {
     }
   }
 }
-/* ── Tombol nonaktif benar-benar diam ──────────────────────────────────────
-   `disabled` tidak mematikan `:hover`/`:active` di Tailwind: tombol yang
-   diberi `hover:bg-…` tetap berubah warna saat kursor di atasnya walau tidak
-   bisa diklik. Efeknya terasa "masih hidup" (mis. tombol Simpan di modal
-   Set Password saat konfirmasi belum cocok).
+/* ── Keadaan nonaktif (tombol & kontrol form) ─────────────────────────────
+   `disabled` tidak mematikan `:hover`/`:active` di Tailwind: tombol dengan
+   `hover:bg-…` tetap berubah warna saat kursor di atasnya walau tidak bisa
+   diklik. Efeknya terasa "masih hidup".
 
-   Aturan global ini mengembalikan warna latar elemen form yang disabled ke
-   nilai sebelumnya (`revert-layer` = membatalkan deklarasi utilitas di layer
-   yang lebih rendah) dan mematikan transform. Ditaruh tanpa layer agar menang
-   atas utilitas `hover:` Tailwind.
+   Aturan di bawah sengaja TANPA layer supaya menang atas `@layer utilities`
+   Tailwind (`revert-layer` membatalkan deklarasi hover di layer itu).
 
-   Kursor sengaja TIDAK diubah dan tombol disabled dibuat tidak menerima
-   pointer sama sekali (`pointer-events: none`) supaya tidak ada reaksi apa pun
-   saat kursor melewatinya. Konsekuensinya tooltip `title` pada tombol itu ikut
-   mati — karena itu penjelasan "kenapa nonaktif" harus ditaruh pada WRAPPER
-   (elemen induk), bukan pada tombolnya.
+   Kursor TIDAK diubah dan `button:disabled` tidak menerima pointer sama sekali
+   (`pointer-events: none`) — tidak ada reaksi apa pun saat kursor melewatinya.
+   Konsekuensinya tooltip `title` pada tombol itu ikut mati; penjelasan "kenapa
+   nonaktif" harus ditaruh pada WRAPPER (elemen induk).
 
    `pointer-events: none` hanya untuk `button`: input/select/textarea disabled
    masih perlu hover untuk tooltip validasi bawaan browser.
 
-   Sengaja TIDAK mengubah `opacity`: komponen memakai nilai berbeda
-   (40/50/60/70) untuk menyatakan "nonaktif". */
+   Opacity: aturan global di bawah MENGGANTIKAN seluruh nilai lama per komponen
+   (30/40/50/60/70) dengan dua token: 0.45 permanen, 0.60 untuk `data-busy`
+   (pekerjaan sedang berjalan). `data-solid` memakai permukaan abu dengan
+   opacity penuh agar teks tetap terbaca. */
 button:disabled {
   pointer-events: none;
+  /* Satu nilai untuk semua kecuali yang ditandai `data-busy`/`data-solid`.
+     Ini menggantikan 5 nilai berbeda (30/40/50/60/70) yang tersebar. */
+  opacity: var(--disabled-opacity);
+}
+
+/* Pekerjaan sedang berjalan (menyimpan/memuat) — tetap terbaca, bukan "mati". */
+button[data-busy]:disabled {
+  opacity: var(--disabled-opacity-busy);
 }
 
 button:disabled,
@@ -585,11 +608,40 @@ button:disabled:active {
   transition: none;
 }
 
-/* Utilitas hover Tailwind ada di layer `utilities`; aturan tanpa layer di atas
-   menang, sehingga deklarasi ini mengembalikan latar ke nilai komponen. */
+/* Kembalikan latar/bayangan ke nilai komponen saat hover & active. */
 button:disabled:hover,
 button:disabled:active {
   background-color: revert-layer;
   background-image: revert-layer;
   box-shadow: revert-layer;
+}
+
+/* Tombol SOLID berwarna → permukaan abu netral, bukan warna merek yang
+   dipudarkan (biru tua pudar tetap terlihat "aktif tapi aneh"). Ditandai
+   eksplisit dengan atribut `data-solid` pada tombol, sehingga tombol ikon
+   transparan dan tombol bergaris tidak ikut berubah. */
+button[data-solid]:disabled:not([data-busy]) {
+  opacity: 1;
+  background-color: var(--disabled-surface);
+  background-image: none;
+  color: var(--disabled-text);
+  box-shadow: none;
+}
+
+/* Aksi destruktif nonaktif tetap "berbahaya" — abu-merah, bukan abu netral,
+   supaya admin tidak salah mengira tombol Hapus berubah jadi aksi biasa. */
+button[data-solid="danger"]:disabled:not([data-busy]) {
+  background-color: #fdecec;
+  color: #b0605c;
+}
+
+/* Kontrol form nonaktif: permukaan & teks abu, opacity penuh agar teks tetap
+   terbaca (WCAG mengecualikan kontrol nonaktif, tapi keterbacaan tetap penting). */
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background-color: var(--disabled-surface);
+  color: var(--disabled-text);
+  border-color: var(--disabled-border);
+  opacity: 1;
 }

@@ -66,7 +66,7 @@ export function MediaPicker({ label, help, error, value, onChange, disabled }: M
           type="button"
           disabled={disabled}
           onClick={() => setOpen(true)}
-          className="shrink-0 rounded-xl border border-[#dce3ed] bg-white px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent)] disabled:opacity-50"
+          className="shrink-0 rounded-xl border border-[#dce3ed] bg-white px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent)]"
         >
           Pustaka
         </button>
@@ -77,7 +77,7 @@ export function MediaPicker({ label, help, error, value, onChange, disabled }: M
             disabled={disabled}
             onClick={() => onChange("")}
             aria-label={`Hapus gambar${label ? ` ${label}` : ""}`}
-            className="shrink-0 rounded-xl border border-[#dce3ed] bg-white p-2.5 text-slate-400 transition-colors hover:border-red-300 hover:text-red-500 disabled:opacity-50"
+            className="shrink-0 rounded-xl border border-[#dce3ed] bg-white p-2.5 text-slate-400 transition-colors hover:border-red-300 hover:text-red-500"
           >
             <X className="h-4 w-4" />
           </button>

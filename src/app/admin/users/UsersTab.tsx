@@ -553,27 +553,27 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
           <CheckCircle className="h-4 w-4 text-[var(--brand-primary)]" />
           <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            <button
+            <button data-busy
               type="button"
               disabled={bulkBusy}
               onClick={() => handleBulkActive(true)}
-              className="rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+              className="rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50"
             >
               Aktifkan
             </button>
-            <button
+            <button data-busy
               type="button"
               disabled={bulkBusy}
               onClick={() => setBulkConfirm("deactivate")}
-              className="rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-50 disabled:opacity-60"
+              className="rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-50"
             >
               Nonaktifkan
             </button>
-            <button
+            <button data-busy data-solid="danger"
               type="button"
               disabled={bulkBusy}
               onClick={() => setBulkConfirm("delete")}
-              className="rounded-lg bg-red-600 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+              className="rounded-lg bg-red-600 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-red-700"
             >
               Hapus
             </button>
@@ -667,7 +667,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                           disabled={isSelf}
                           aria-label={`Pilih ${item.full_name}${isSelf ? " (akun sendiri tidak bisa dipilih)" : ""}`}
                           title={isSelf ? "Akun sendiri tidak bisa dipilih untuk aksi massal" : undefined}
-                          className="h-4 w-4 rounded border-slate-300 accent-[var(--brand-primary)] disabled:opacity-30"
+                          className="h-4 w-4 rounded border-slate-300 accent-[var(--brand-primary)]"
                         />
                       </td>
                       <td className="px-4 py-3.5">
@@ -727,7 +727,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                           disabled={busyId === item.id || isSelf}
                           onClick={() => handleToggleActive(item)}
                           title={isSelf ? "Tidak bisa menonaktifkan diri sendiri" : undefined}
-                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:opacity-50 ${
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
                             item.is_active
                               ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                               : "border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
@@ -773,7 +773,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                             onClick={() => openSessions(item)}
                             title={isSelf ? "Sesi Anda ada di Pengaturan Akun" : "Sesi Perangkat"}
                             aria-label={`Sesi perangkat ${item.full_name}`}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-cyan-50 hover:text-cyan-600 disabled:opacity-40 disabled:hover:bg-transparent"
+                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-cyan-50 hover:text-cyan-600 disabled:hover:bg-transparent"
                           >
                             <DeviceMobile className="h-4 w-4" />
                           </button>
@@ -797,7 +797,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                             }}
                             title={isSelf ? "Tidak bisa mengubah peran diri sendiri" : "Ubah Peran"}
                             aria-label={isSelf ? "Tidak bisa mengubah peran diri sendiri" : "Ubah Peran"}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 disabled:opacity-40 disabled:hover:bg-transparent"
+                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 disabled:hover:bg-transparent"
                           >
                             <ShieldCheck className="h-4 w-4" />
                           </button>
@@ -807,7 +807,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                             onClick={() => handleResetPassword(item)}
                             title={item.email ? "Reset Password (tautan)" : "Pengguna belum punya email"}
                             aria-label={item.email ? "Reset Password (tautan)" : "Pengguna belum punya email"}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-600 disabled:opacity-40 disabled:hover:bg-transparent"
+                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-600 disabled:hover:bg-transparent"
                           >
                             <Key className="h-4 w-4" />
                           </button>
@@ -817,7 +817,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                             onClick={() => openSetPassword(item)}
                             title="Set Password Langsung"
                             aria-label={`Set password langsung untuk ${item.full_name}`}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-40 disabled:hover:bg-transparent"
+                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600 disabled:hover:bg-transparent"
                           >
                             <Lock className="h-4 w-4" />
                           </button>
@@ -827,7 +827,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                             onClick={() => setDeleteItem(item)}
                             title={isSelf ? "Tidak bisa menghapus diri sendiri" : "Hapus Pengguna"}
                             aria-label={isSelf ? "Tidak bisa menghapus diri sendiri" : "Hapus Pengguna"}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-40 disabled:hover:bg-transparent ml-1"
+                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:hover:bg-transparent ml-1"
                           >
                             <Trash className="h-4 w-4" />
                           </button>
@@ -850,7 +850,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50"
               >
                 <CaretLeft className="h-4 w-4" />
               </button>
@@ -870,7 +870,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50"
               >
                 <CaretRight className="h-4 w-4" />
               </button>
@@ -956,10 +956,10 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
               >
                 Batal
               </button>
-              <button
+              <button data-solid data-busy={inviteSaving ? "" : undefined}
                 onClick={handleInvite}
                 disabled={inviteSaving || !inviteName || !inviteEmail}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-60"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)]"
               >
                 {inviteSaving ? (
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -1026,10 +1026,10 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
               >
                 Batal
               </button>
-              <button
+              <button data-solid data-busy
                 onClick={handleSaveRole}
                 disabled={busyId === editRoleItem.id}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-60"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)]"
               >
                 {busyId === editRoleItem.id ? (
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -1221,7 +1221,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                 >
                   Batal
                 </button>
-                <button
+                <button data-solid data-busy={passwordSaving ? "" : undefined}
                   type="submit"
                   disabled={
                     passwordSaving ||
@@ -1229,7 +1229,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                     !confirmPassword ||
                     newPassword !== confirmPassword
                   }
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-60"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]"
                 >
                   {passwordSaving ? (
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -1306,11 +1306,11 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
               >
                 Batal
               </button>
-              <button
+              <button data-solid data-busy={renameSaving ? "" : undefined}
                 type="button"
                 onClick={handleRename}
                 disabled={renameSaving || renameName.trim().length < 2}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-60"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)]"
               >
                 {renameSaving ? (
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />

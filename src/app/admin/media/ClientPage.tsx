@@ -570,7 +570,7 @@ export default function AdminMediaPage() {
                           <button
                             onClick={() => void handleDelete(file)}
                             disabled={deleting}
-                            className="flex-1 rounded-lg bg-red-600 px-2 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                            className="flex-1 rounded-lg bg-red-600 px-2 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-red-700"
                           >
                             {deleting ? "Menghapus…" : "Ya, hapus"}
                           </button>
@@ -641,7 +641,7 @@ export default function AdminMediaPage() {
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={safePage === 1}
                 aria-label="Halaman sebelumnya"
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50"
               >
                 <CaretLeft className="h-4 w-4" />
               </button>
@@ -665,7 +665,7 @@ export default function AdminMediaPage() {
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={safePage === totalPages}
                 aria-label="Halaman berikutnya"
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50"
               >
                 <CaretRight className="h-4 w-4" />
               </button>
@@ -885,7 +885,7 @@ export default function AdminMediaPage() {
                   type="button"
                   onClick={() => void handleDownload(previewFile)}
                   disabled={downloading}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--brand-accent)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:brightness-110 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--brand-accent)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:brightness-110"
                 >
                   <Download className="h-4 w-4" />
                   {downloading ? "Mengunduh…" : "Unduh File"}

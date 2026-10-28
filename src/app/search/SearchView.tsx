@@ -333,11 +333,11 @@ export default function SearchView({
         </div>
         {/* Submit native saat tanpa JS; dengan JS langsung jalan. Di layar
             sempit tinggal ikon (aria-label menjaga nama aksesibelnya). */}
-        <button
+        <button data-solid
           type="submit"
           disabled={status === "loading"}
           aria-label="Cari"
-          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-3 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)] focus:ring-offset-2 disabled:opacity-50 sm:px-5"
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-3 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)] focus:ring-offset-2 sm:px-5"
         >
           <MagnifyingGlass className="h-4 w-4" />
           <span className="hidden sm:inline">

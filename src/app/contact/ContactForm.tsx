@@ -113,10 +113,10 @@ export default function ContactForm({ brand }: { brand: PublicBrand }) {
                       placeholder="Tulis pesan Anda..."
                     />
                   </div>
-                  <button
+                  <button data-solid
                     type="submit"
                     disabled={status === "loading"}
-                    className="w-full rounded-xl bg-[var(--brand-primary)] px-6 py-3 text-center text-sm font-bold text-white transition-all sm:w-auto hover:bg-[var(--brand-accent)] hover:shadow-lg hover:shadow-[var(--brand-primary)]/20 focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)] disabled:opacity-50"
+                    className="w-full rounded-xl bg-[var(--brand-primary)] px-6 py-3 text-center text-sm font-bold text-white transition-all sm:w-auto hover:bg-[var(--brand-accent)] hover:shadow-lg hover:shadow-[var(--brand-primary)]/20 focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]"
                   >
                     {status === "loading" ? "Mengirim..." : "Kirim Pesan"}
                   </button>

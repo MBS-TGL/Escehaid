@@ -192,7 +192,7 @@ export function ImportRegistrationsModal({
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={parsing}
-              className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-300 px-4 py-8 text-center transition-colors hover:border-[var(--brand-accent)] hover:bg-[var(--brand-primary)]/[0.03] disabled:opacity-60"
+              className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-300 px-4 py-8 text-center transition-colors hover:border-[var(--brand-accent)] hover:bg-[var(--brand-primary)]/[0.03]"
             >
               {parsing ? (
                 <span className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--brand-primary)] border-t-transparent" />
@@ -285,10 +285,10 @@ export function ImportRegistrationsModal({
           </button>
           <div className="flex items-center gap-3">
             <span className="text-xs text-slate-500">{selectedCount} dari {rows.length} baris dipilih</span>
-            <button
+            <button data-solid
               onClick={handleImport}
               disabled={selectedCount === 0}
-              className="rounded-xl bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-50"
+              className="rounded-xl bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]"
             >
               Import {selectedCount} Pendaftar
             </button>
@@ -365,7 +365,7 @@ export function ImportRegistrationsModal({
                     disabled={status === "error"}
                     onChange={() => toggleRow(row.index)}
                     aria-label={`Pilih baris ${row.index} (${displayName})`}
-                    className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 accent-[var(--brand-accent)] disabled:opacity-40"
+                    className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 accent-[var(--brand-accent)]"
                   />
                   <FileText className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
                   <div className="min-w-0 flex-1">

@@ -420,10 +420,10 @@ export default function FaqClientPage() {
             >
               Batal
             </button>
-            <button
+            <button data-solid
               onClick={handleSave}
               disabled={formSaving}
-              className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--brand-accent)] disabled:opacity-60"
+              className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--brand-accent)]"
             >
               {formSaving ? "Menyimpan…" : "Simpan"}
             </button>
@@ -519,7 +519,7 @@ function SortableTr({
               className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:cursor-default ${item.is_active
                   ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                   : "border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200"
-                } disabled:opacity-70`}>
+                }`}>
               {item.is_active ? "Aktif" : "Nonaktif"}
             </button>
           </td>

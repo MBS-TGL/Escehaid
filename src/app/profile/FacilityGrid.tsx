@@ -16,7 +16,7 @@ const SIZES_CARD = "(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 26rem";
 const SIZES_DIALOG = "(max-width: 1023px) 92vw, 64rem";
 
 const NAV_BUTTON =
-  "inline-flex items-center gap-1.5 rounded-xl border border-[#dce3ed] px-3 py-2 text-xs font-semibold text-[var(--brand-primary)] transition hover:border-[var(--brand-primary)] hover:bg-[#f4f7fb] disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-1 sm:px-4 sm:py-2.5 sm:text-sm";
+  "inline-flex items-center gap-1.5 rounded-xl border border-[#dce3ed] px-3 py-2 text-xs font-semibold text-[var(--brand-primary)] transition hover:border-[var(--brand-primary)] hover:bg-[#f4f7fb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-1 sm:px-4 sm:py-2.5 sm:text-sm";
 
 /**
  * Bentuk kartu pertama supaya grid selalu terisi penuh — berapa pun jumlah

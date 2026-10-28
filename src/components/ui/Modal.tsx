@@ -247,14 +247,15 @@ export function ConfirmModal({
           <button
             onClick={onClose}
             disabled={loading}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
           >
             {cancelLabel}
           </button>
           <button
+            data-busy={loading ? "" : undefined}
             onClick={onConfirm}
             disabled={loading}
-            className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 ${resolvedColor}`}
+            className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${resolvedColor}`}
           >
             {loading ? "Memproses..." : confirmLabel}
           </button>

@@ -971,15 +971,15 @@ export default function AdminSPMBPage() {
                 onChange={(e) => setGoogleUrlDraft(e.target.value)}
                 placeholder={GOOGLE_FORM_URL}
                 disabled={regModeSaving}
-                className="mt-4 w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 disabled:opacity-60"
+                className="mt-4 w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
               />
               <div className="mt-5 flex gap-3">
                 <button onClick={() => { setGoogleUrlDraft(regUrl); setGoogleModal(false); }} disabled={regModeSaving}
-                  className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                  className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                   Batal
                 </button>
-                <button onClick={handleSaveGoogleUrl} disabled={regModeSaving}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-70">
+                <button data-solid data-busy onClick={handleSaveGoogleUrl} disabled={regModeSaving}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)]">
                   {regModeSaving ? (
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   ) : (
@@ -1122,11 +1122,11 @@ export default function AdminSPMBPage() {
           </div>
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <button onClick={() => setGoogleModal(true)} disabled={regModeSaving}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${regMode === "google_form" ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"}`}>
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${regMode === "google_form" ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"}`}>
               Google Form
             </button>
             <button onClick={() => handleChangeRegMode("internal")} disabled={regModeSaving}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${regMode === "internal" ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"}`}>
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${regMode === "internal" ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"}`}>
               Form Internal
             </button>
           </div>
@@ -1148,7 +1148,7 @@ export default function AdminSPMBPage() {
                   onChange={(e) => { setDocBrochure(e.target.value); setDocBrochureErr(null); }}
                   aria-invalid={!!docBrochureErr} aria-describedby="doc-brochure-desc"
                   placeholder="https://drive.google.com/file/d/..." disabled={docSaving}
-                  className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 disabled:opacity-60" />
+                  className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
                 {docBrochure.trim().startsWith("https://") && (
                   <a href={docBrochure.trim()} target="_blank" rel="noopener noreferrer"
                     aria-label="Buka link di tab baru" title="Buka link di tab baru"
@@ -1172,7 +1172,7 @@ export default function AdminSPMBPage() {
                   onChange={(e) => { setDocOffline(e.target.value); setDocOfflineErr(null); }}
                   aria-invalid={!!docOfflineErr} aria-describedby="doc-offline-desc"
                   placeholder="https://drive.google.com/file/d/..." disabled={docSaving}
-                  className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 disabled:opacity-60" />
+                  className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
                 {docOffline.trim().startsWith("https://") && (
                   <a href={docOffline.trim()} target="_blank" rel="noopener noreferrer"
                     aria-label="Buka link di tab baru" title="Buka link di tab baru"
@@ -1195,7 +1195,7 @@ export default function AdminSPMBPage() {
                 onChange={(e) => { setDocPhone(e.target.value); setDocPhoneErr(null); }}
                 aria-invalid={!!docPhoneErr} aria-describedby="doc-phone-desc"
                 placeholder="0858-0673-8160" disabled={docSaving}
-                className="w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 disabled:opacity-60" />
+                className="w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
               {docPhoneErr ? (
                 <p id="doc-phone-desc" className="mt-1 text-xs font-medium text-red-600">{docPhoneErr}</p>
               ) : (
@@ -1210,15 +1210,15 @@ export default function AdminSPMBPage() {
                 onChange={(e) => setDocHighlight(e.target.value)}
                 aria-describedby="doc-highlight-desc" disabled={docSaving}
                 placeholder="Pada SPMB Indent 2027/2028, 35 calon murid telah dinyatakan diterima."
-                className="w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 disabled:opacity-60" />
+                className="w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
               <p id="doc-highlight-desc" className="mt-1 text-xs text-slate-400">
                 Tampil di halaman SPMB. Kosongkan untuk menyembunyikan.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2 self-start sm:self-auto">
-            <button onClick={handleSaveDocs} disabled={docSaving || !docDirty}
-              className="flex items-center justify-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-50">
+            <button data-solid data-busy={docSaving ? "" : undefined} onClick={handleSaveDocs} disabled={docSaving || !docDirty}
+              className="flex items-center justify-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
               {docSaving ? (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
               ) : (
@@ -1239,7 +1239,7 @@ export default function AdminSPMBPage() {
               </p>
             </div>
             <button onClick={() => openFieldForm()} disabled={formFields.length >= FIELD_MAX}
-              className="flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-50">
+              className="flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]">
               <Plus className="h-4 w-4" />
               Tambah Pertanyaan
             </button>
@@ -1296,11 +1296,11 @@ export default function AdminSPMBPage() {
                       {f.active ? "Tampil" : "Sembunyi"}
                     </button>
                     <button onClick={() => handleMoveField(i, -1)} disabled={i === 0} title="Naik"
-                      className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 disabled:opacity-30">
+                      className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600">
                       <ArrowUp className="h-4 w-4" />
                     </button>
                     <button onClick={() => handleMoveField(i, 1)} disabled={i === formFields.length - 1} title="Turun"
-                      className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 disabled:opacity-30">
+                      className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600">
                       <ArrowDown className="h-4 w-4" />
                     </button>
                     <button onClick={() => openFieldForm(f)} title="Edit"
@@ -1328,11 +1328,11 @@ export default function AdminSPMBPage() {
             footer={
               <div className="flex w-full items-center justify-between">
                 <button onClick={() => setWaveForm(null)} disabled={waveSaving}
-                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                   Batal
                 </button>
-                <button onClick={handleSaveWave} disabled={waveSaving}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-70">
+                <button data-solid data-busy onClick={handleSaveWave} disabled={waveSaving}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)]">
                   {waveSaving ? (
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   ) : (
@@ -1419,11 +1419,11 @@ export default function AdminSPMBPage() {
               <p className="mt-2 text-center text-sm text-slate-500">&ldquo;{deleteWaveItem.name}&rdquo; akan dihapus permanen.</p>
               <div className="mt-6 flex gap-3">
                 <button onClick={() => setDeleteWaveItem(null)} disabled={waveDeleting}
-                  className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                  className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                   Batal
                 </button>
-                <button onClick={handleDeleteWave} disabled={waveDeleting}
-                  className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-70">
+                <button data-solid="danger" onClick={handleDeleteWave} disabled={waveDeleting}
+                  className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700">
                   {waveDeleting ? "Menghapus..." : "Ya, Hapus"}
                 </button>
               </div>
@@ -1455,11 +1455,11 @@ export default function AdminSPMBPage() {
               )}
               <div className="mt-6 flex gap-3">
                 <button onClick={() => setResultWave(null)} disabled={resultSaving}
-                  className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                  className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                   Batal
                 </button>
-                <button onClick={handleToggleResultWave} disabled={resultSaving}
-                  className={`flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-70 ${resultWave.result_published_at ? "bg-amber-500 hover:bg-amber-600" : "bg-[var(--brand-primary)] hover:bg-[var(--brand-accent)]"}`}>
+                <button data-solid onClick={handleToggleResultWave} disabled={resultSaving}
+                  className={`flex-1 rounded-xl py-2.5 text-sm font-semibold text-white ${resultWave.result_published_at ? "bg-amber-500 hover:bg-amber-600" : "bg-[var(--brand-primary)] hover:bg-[var(--brand-accent)]"}`}>
                   {resultSaving ? "Menyimpan..." : resultWave.result_published_at ? "Ya, Tarik" : "Ya, Publikasikan"}
                 </button>
               </div>
@@ -1477,11 +1477,11 @@ export default function AdminSPMBPage() {
             footer={
               <div className="flex w-full items-center justify-between">
                 <button onClick={() => { setFieldForm(null); setFieldEditingId(null); }} disabled={fieldSaving}
-                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                   Batal
                 </button>
-                <button onClick={handleSaveField} disabled={fieldSaving}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-70">
+                <button data-solid data-busy onClick={handleSaveField} disabled={fieldSaving}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)]">
                   {fieldSaving ? (
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   ) : (
@@ -1832,7 +1832,7 @@ export default function AdminSPMBPage() {
             </p>
             <div className="flex items-center gap-1">
               <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40">
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50">
                 <CaretLeft className="h-4 w-4" />
               </button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
@@ -1842,7 +1842,7 @@ export default function AdminSPMBPage() {
                 </button>
               ))}
               <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40">
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50">
                 <CaretRight className="h-4 w-4" />
               </button>
             </div>
@@ -1931,7 +1931,7 @@ export default function AdminSPMBPage() {
                 onClick={() => setConfirmAction({ id: "bulk", status: "accepted" })}
                 disabled={selectedIds.size === 0}
                 aria-label="Terima pendaftar terpilih"
-                className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:opacity-50"
+                className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
               >
                 Terima
               </button>
@@ -1940,7 +1940,7 @@ export default function AdminSPMBPage() {
                 onClick={() => setConfirmAction({ id: "bulk", status: "rejected" })}
                 disabled={selectedIds.size === 0}
                 aria-label="Tolak pendaftar terpilih"
-                className="min-h-10 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:opacity-50"
+                className="min-h-10 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
               >
                 Tolak
               </button>

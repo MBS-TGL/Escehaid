@@ -200,10 +200,10 @@ function LoginForm() {
                       autoFocus
                     />
                   </div>
-                  <button
+                  <button data-solid
                     type="submit"
                     disabled={mfaLoading || mfaCode.length !== 6}
-                    className="w-full flex items-center justify-center gap-2 bg-[var(--brand-primary)] text-white py-3.5 rounded-xl font-semibold text-sm shadow-lg shadow-[var(--brand-primary)]/25 hover:bg-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/40 focus:ring-offset-2 transition-all disabled:opacity-60"
+                    className="w-full flex items-center justify-center gap-2 bg-[var(--brand-primary)] text-white py-3.5 rounded-xl font-semibold text-sm shadow-lg shadow-[var(--brand-primary)]/25 hover:bg-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/40 focus:ring-offset-2 transition-all"
                   >
                     {mfaLoading ? "Memverifikasi…" : "Verifikasi & Masuk"} {!mfaLoading && <ArrowRight className="h-4 w-4" />}
                   </button>
@@ -252,10 +252,10 @@ function LoginForm() {
                         autoFocus
                       />
                     </div>
-                    <button
+                    <button data-solid data-busy
                       type="submit"
                       disabled={resetLoading}
-                      className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl shadow-lg shadow-[var(--brand-accent)]/20 text-sm font-bold text-white bg-[var(--brand-accent)] hover:bg-[var(--brand-primary-light)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--brand-accent)] disabled:opacity-70 transition-all duration-200 transform hover:-translate-y-0.5"
+                      className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl shadow-lg shadow-[var(--brand-accent)]/20 text-sm font-bold text-white bg-[var(--brand-accent)] hover:bg-[var(--brand-primary-light)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--brand-accent)] transition-all duration-200 transform hover:-translate-y-0.5"
                     >
                       {resetLoading ? (
                         <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -350,10 +350,10 @@ function LoginForm() {
                     </div>
                   </div>
 
-                  <button
+                  <button data-solid data-busy
                     type="submit"
                     disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl shadow-lg shadow-[var(--brand-primary)]/20 text-sm font-bold text-white bg-[var(--brand-primary)] hover:bg-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--brand-accent)] disabled:opacity-70 transition-all duration-200 transform hover:-translate-y-0.5"
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl shadow-lg shadow-[var(--brand-primary)]/20 text-sm font-bold text-white bg-[var(--brand-primary)] hover:bg-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--brand-accent)] transition-all duration-200 transform hover:-translate-y-0.5"
                   >
                     {loading ? (
                       <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />

@@ -824,7 +824,7 @@ export default function SPMBForm({ fields = [] }: { fields?: SpmbFormField[] }) 
                 Selanjutnya <ArrowRight className="h-4 w-4" />
               </button>
             ) : (
-              <button onClick={handleSubmit} disabled={loading} className="flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-green-700 disabled:opacity-50">
+              <button onClick={handleSubmit} disabled={loading} className="flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-green-700">
                 {loading ? (
                   <>
                     <div className="spinner" />

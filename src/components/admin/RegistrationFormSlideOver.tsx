@@ -418,7 +418,7 @@ export function RegistrationFormSlideOver({
       footer={
         <div className="flex w-full items-center justify-between gap-2">
           <button onClick={onClose} disabled={saving}
-            className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+            className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
             Batal
           </button>
           <div className="flex items-center gap-2">
@@ -426,12 +426,12 @@ export function RegistrationFormSlideOver({
                 tab tetap bisa diklik langsung kapan pun. */}
             {nextTab && (
               <button type="button" onClick={() => setTab(nextTab.key)} disabled={saving}
-                className="rounded-xl border border-[var(--brand-primary)]/25 px-4 py-2.5 text-sm font-semibold text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5 disabled:opacity-40">
+                className="rounded-xl border border-[var(--brand-primary)]/25 px-4 py-2.5 text-sm font-semibold text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5">
                 Selanjutnya
               </button>
             )}
-            <button onClick={handleSave} disabled={saving}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-70">
+            <button data-solid data-busy onClick={handleSave} disabled={saving}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)]">
               {saving ? (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
               ) : (
