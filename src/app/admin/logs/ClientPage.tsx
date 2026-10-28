@@ -444,7 +444,7 @@ function AdminLogsInner() {
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
                 aria-label="Halaman sebelumnya"
-                className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-accent)] disabled:opacity-40"
               >
                 <CaretLeft className="h-3.5 w-3.5" /> Sebelumnya
               </button>
@@ -453,7 +453,7 @@ function AdminLogsInner() {
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
                 aria-label="Halaman berikutnya"
-                className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-accent)] disabled:opacity-40"
               >
                 Berikutnya <CaretRight className="h-3.5 w-3.5" />
               </button>

@@ -288,7 +288,7 @@ export function ImportRegistrationsModal({
             <button
               onClick={handleImport}
               disabled={selectedCount === 0}
-              className="rounded-xl bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-50"
             >
               Import {selectedCount} Pendaftar
             </button>

@@ -1229,7 +1229,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                     !confirmPassword ||
                     newPassword !== confirmPassword
                   }
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-60"
                 >
                   {passwordSaving ? (
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />

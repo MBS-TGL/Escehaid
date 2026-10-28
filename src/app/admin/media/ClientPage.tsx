@@ -641,7 +641,7 @@ export default function AdminMediaPage() {
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={safePage === 1}
                 aria-label="Halaman sebelumnya"
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40"
               >
                 <CaretLeft className="h-4 w-4" />
               </button>
@@ -665,7 +665,7 @@ export default function AdminMediaPage() {
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={safePage === totalPages}
                 aria-label="Halaman berikutnya"
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40"
               >
                 <CaretRight className="h-4 w-4" />
               </button>

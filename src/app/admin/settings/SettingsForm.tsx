@@ -372,7 +372,7 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
             onClick={() => void handleSave()}
             disabled={saving || tabDirtyCount(tab) === 0 || !permManage}
             title={permManage ? undefined : "Tidak berizin menyimpan pengaturan"}
-            className="inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-[var(--brand-primary)] px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-primary-mid)] disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none sm:gap-2 sm:px-5"
+            className="inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-[var(--brand-primary)] px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-primary-mid)] disabled:opacity-40 sm:flex-none sm:gap-2 sm:px-5"
           >
             <FloppyDisk className="h-4 w-4 shrink-0" />
             <span className="sm:hidden">Simpan</span>

@@ -36,7 +36,7 @@ export type RowAction = {
  */
 export function rowActionsTriggerClass(open: boolean, tone: RowActionsTone = "default") {
   const base =
-    "flex h-11 w-9 shrink-0 items-center justify-center rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-40";
+    "flex h-11 w-9 shrink-0 items-center justify-center rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:opacity-40";
   if (tone === "onDark") {
     return `${base} text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.65)] hover:text-white/80 active:text-white/70`;
   }

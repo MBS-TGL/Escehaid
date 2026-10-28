@@ -1218,7 +1218,7 @@ export default function AdminSPMBPage() {
           </div>
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <button onClick={handleSaveDocs} disabled={docSaving || !docDirty}
-              className="flex items-center justify-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-50 disabled:cursor-not-allowed">
+              className="flex items-center justify-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-50">
               {docSaving ? (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
               ) : (
@@ -1832,7 +1832,7 @@ export default function AdminSPMBPage() {
             </p>
             <div className="flex items-center gap-1">
               <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40">
                 <CaretLeft className="h-4 w-4" />
               </button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
@@ -1842,7 +1842,7 @@ export default function AdminSPMBPage() {
                 </button>
               ))}
               <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40">
                 <CaretRight className="h-4 w-4" />
               </button>
             </div>
@@ -1931,7 +1931,7 @@ export default function AdminSPMBPage() {
                 onClick={() => setConfirmAction({ id: "bulk", status: "accepted" })}
                 disabled={selectedIds.size === 0}
                 aria-label="Terima pendaftar terpilih"
-                className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:opacity-50"
               >
                 Terima
               </button>
@@ -1940,7 +1940,7 @@ export default function AdminSPMBPage() {
                 onClick={() => setConfirmAction({ id: "bulk", status: "rejected" })}
                 disabled={selectedIds.size === 0}
                 aria-label="Tolak pendaftar terpilih"
-                className="min-h-10 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-10 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:opacity-50"
               >
                 Tolak
               </button>

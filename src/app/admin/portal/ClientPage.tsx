@@ -1179,7 +1179,7 @@ export default function AdminPortalPage() {
                 onChange={(e) => toggleAllVisible(e.target.checked)}
                 disabled={visible.length === 0}
                 aria-label="Pilih semua aplikasi yang tampil"
-                className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed"
+                className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
               />
             </div>
             <div role="columnheader" className="text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">Urutan</div>
@@ -1321,7 +1321,7 @@ export default function AdminPortalPage() {
               type="button"
               onClick={() => bulkSetStatus(act.status)}
               disabled={selectedItems.length === 0}
-              className="min-h-11 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-11 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:opacity-50"
             >
               {act.label}
             </button>
