@@ -35,6 +35,7 @@ import { RbacSqlNotice } from "./RolesTab";
 import { validateNewPasswordPair, MIN_PASSWORD_LENGTH } from "@/lib/users-password";
 import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
+import { RowActionsMenu, type RowAction } from "@/components/admin/mobile";
 import { useToast } from "@/components/ui/Toast";
 import { ConfirmModal } from "@/components/ui";
 import { Input } from "@/components/ui/Input";
@@ -78,6 +79,49 @@ const ROLE_BADGE: Record<string, { label: string; color: string; bg: string; ico
 
 type SortField = "full_name" | "system_role" | "is_active" | "last_login_at" | "created_at";
 type SortDir = "asc" | "desc";
+
+/** Warna hover per jenis aksi — dipakai kolom Aksi di tabel desktop. */
+const ICON_ACTION_TONE = {
+  blue: "hover:bg-blue-50 hover:text-blue-600",
+  emerald: "hover:bg-emerald-50 hover:text-emerald-600",
+  slate: "hover:bg-slate-100 hover:text-slate-700",
+  danger: "hover:bg-red-50 hover:text-red-600",
+  cyan: "hover:bg-cyan-50 hover:text-cyan-600",
+  amber: "hover:bg-amber-50 hover:text-amber-600",
+} as const;
+
+type IconActionTone = keyof typeof ICON_ACTION_TONE;
+
+/**
+ * Tombol ikon 28×28 di kolom Aksi (desktop). Aksi sekunder ada di menu ⋯
+ * supaya kolom tidak perlu selebar 7 ikon.
+ */
+function IconAction({
+  action,
+  tone,
+}: {
+  action: {
+    key: string;
+    label: string;
+    icon: React.ReactNode;
+    disabled?: boolean;
+    run: () => void;
+  };
+  tone: IconActionTone;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={action.run}
+      disabled={action.disabled}
+      title={action.label}
+      aria-label={action.label}
+      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-accent)] ${ICON_ACTION_TONE[tone]}`}
+    >
+      {action.icon}
+    </button>
+  );
+}
 
 export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
   const { toast } = useToast();
@@ -359,6 +403,114 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
     );
   };
 
+  /**
+   * Render header kolom yang bisa diurutkan (fungsi, bukan komponen — lint
+   * react-hooks melarang komponen yang dibuat di dalam render).
+   *
+   * Tombol di dalam <th> (bukan onClick pada <th>): tombol di kolom Data/Status
+   * tidak lagi memicu sort tak sengaja, dan keyboard bisa menjangkau header.
+   * aria-sort memberi tahu pembaca layar arah urutan aktif.
+   */
+  function renderSortHeader({
+    field,
+    children,
+    className = "",
+    align = "left",
+  }: {
+    field: SortField;
+    children: React.ReactNode;
+    className?: string;
+    align?: "left" | "center";
+  }) {
+    const active = sortField === field;
+    return (
+      <th
+        aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+        className={`px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 ${className}`}
+      >
+        <button
+          type="button"
+          onClick={() => toggleSort(field)}
+          className={`flex w-full items-center gap-1 rounded transition-colors hover:text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${
+            align === "center" ? "justify-center" : "justify-start text-left"
+          } ${active ? "text-slate-600" : ""}`}
+        >
+          {children} {sortIcon(field)}
+        </button>
+      </th>
+    );
+  }
+
+  /**
+   * Daftar aksi satu baris — SATU sumber untuk tabel desktop dan kartu mobile.
+   * `primary` = tampil sebagai ikon di kolom Aksi; sisanya masuk menu ⋯.
+   */
+  function rowActions(item: AdminUserRow) {
+    const isSelf = item.id === currentUserId;
+    const busy = busyId === item.id;
+    return {
+      rename: {
+        key: "rename",
+        label: "Edit Nama",
+        icon: <PencilSimple className="h-4 w-4" />,
+        disabled: false,
+        run: () => {
+          setRenameItem(item);
+          setRenameName(item.full_name);
+        },
+      },
+      sessions: {
+        key: "sessions",
+        label: "Sesi Perangkat",
+        icon: <DeviceMobile className="h-4 w-4" />,
+        disabled: isSelf,
+        run: () => openSessions(item),
+      },
+      logs: {
+        key: "logs",
+        label: "Riwayat Aktivitas",
+        icon: <Scroll className="h-4 w-4" />,
+        disabled: false,
+        run: () =>
+          router.push(
+            `/admin/logs?user=${encodeURIComponent(item.id)}&nama=${encodeURIComponent(item.full_name)}`
+          ),
+      },
+      role: {
+        key: "role",
+        label: "Ubah Peran",
+        icon: <ShieldCheck className="h-4 w-4" />,
+        disabled: isSelf,
+        run: () => {
+          setEditRoleItem(item);
+          setEditRoleKey(item.system_role ?? "");
+        },
+      },
+      reset: {
+        key: "reset",
+        label: "Reset Password (tautan)",
+        icon: <Key className="h-4 w-4" />,
+        disabled: !item.email || busy,
+        run: () => handleResetPassword(item),
+      },
+      setPassword: {
+        key: "set-password",
+        label: "Set Password Langsung",
+        icon: <Lock className="h-4 w-4" />,
+        disabled: busy,
+        run: () => openSetPassword(item),
+      },
+      remove: {
+        key: "remove",
+        label: "Hapus Pengguna",
+        icon: <Trash className="h-4 w-4" />,
+        danger: true,
+        disabled: isSelf || busy,
+        run: () => setDeleteItem(item),
+      },
+    };
+  }
+
   async function handleInvite() {
     setInviteSaving(true);
     const res = await inviteUser({
@@ -590,10 +742,11 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
         </div>
       )}
 
-      {/* Tabel */}
-      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
+      {/* Tabel — desktop/tablet. Di bawah md dipakai daftar kartu (tanpa
+          scroll horizontal 7 kolom yang membuat ikon aksi bertumpuk). */}
+      <div className="hidden overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:block">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[820px]">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
               <tr>
                 <th className="w-10 px-4 py-3">
@@ -605,31 +758,11 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                     className="h-4 w-4 rounded border-slate-300 accent-[var(--brand-primary)]"
                   />
                 </th>
-                <th
-                  className="cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none"
-                  onClick={() => toggleSort("full_name")}
-                >
-                  <span className="flex items-center gap-1">Pengguna {sortIcon("full_name")}</span>
-                </th>
-                <th
-                  className="w-36 cursor-pointer whitespace-nowrap px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none"
-                  onClick={() => toggleSort("system_role")}
-                >
-                  <span className="flex items-center gap-1">Peran {sortIcon("system_role")}</span>
-                </th>
-                <th
-                  className="w-24 cursor-pointer px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none"
-                  onClick={() => toggleSort("is_active")}
-                >
-                  <span className="flex items-center justify-center gap-1">Status {sortIcon("is_active")}</span>
-                </th>
-                <th
-                  className="hidden w-44 cursor-pointer whitespace-nowrap px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none lg:table-cell"
-                  onClick={() => toggleSort("last_login_at")}
-                >
-                  <span className="flex items-center gap-1">Login Terakhir {sortIcon("last_login_at")}</span>
-                </th>
-                <th className="w-52 whitespace-nowrap px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                {renderSortHeader({ field: "full_name", children: "Pengguna" })}
+                {renderSortHeader({ field: "system_role", className: "w-44 whitespace-nowrap", children: "Peran" })}
+                {renderSortHeader({ field: "is_active", className: "w-28", align: "center", children: "Status" })}
+                {renderSortHeader({ field: "last_login_at", className: "hidden w-48 whitespace-nowrap lg:table-cell", children: "Login Terakhir" })}
+                <th className="w-36 whitespace-nowrap px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                   Aksi
                 </th>
               </tr>
@@ -653,10 +786,9 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                 </tr>
               ) : (
                 paginated.map((item) => {
-                  const badge = item.system_role
-                    ? ROLE_BADGE[item.system_role]
-                    : undefined;
+                  const badge = item.system_role ? ROLE_BADGE[item.system_role] : undefined;
                   const isSelf = currentUserId === item.id;
+                  const a = rowActions(item);
                   return (
                     <tr key={item.id} className="transition-colors hover:bg-slate-50/80">
                       <td className="px-4 py-3.5">
@@ -677,7 +809,9 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                           </div>
                           <div className="min-w-0">
                             <p className="flex items-center gap-1.5 text-sm font-medium text-slate-800">
-                              <span className="truncate">{item.full_name}</span>
+                              <span className="truncate" title={item.full_name}>
+                                {item.full_name}
+                              </span>
                               {isSelf && (
                                 <span className="shrink-0 rounded bg-[var(--brand-primary)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--brand-primary)]">
                                   Anda
@@ -685,7 +819,10 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                               )}
                             </p>
                             {item.email && (
-                              <p className="flex items-center gap-1 truncate text-xs text-slate-400">
+                              <p
+                                className="flex items-center gap-1 truncate text-xs text-slate-400"
+                                title={item.email}
+                              >
                                 <Envelope className="h-3 w-3 shrink-0" />
                                 {item.email}
                               </p>
@@ -696,15 +833,16 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                       <td className="px-4 py-3.5">
                         {badge ? (
                           <span
-                            className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${badge.bg} ${badge.color}`}
+                            className={`inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${badge.bg} ${badge.color}`}
+                            title={badge.label}
                           >
-                            <badge.icon className="h-3 w-3" />
-                            {badge.label}
+                            <badge.icon className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{badge.label}</span>
                           </span>
                         ) : (
                           <div className="flex items-center gap-2">
                             <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
-                              <Warning className="h-3 w-3" />
+                              <Warning className="h-3 w-3 shrink-0" />
                               Belum diatur
                             </span>
                             <button
@@ -713,7 +851,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                                 setEditRoleItem(item);
                                 setEditRoleKey("");
                               }}
-                              className="rounded-lg px-2 py-1 text-[11px] font-semibold text-amber-600 hover:bg-amber-50 transition-colors"
+                              className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-semibold text-amber-600 transition-colors hover:bg-amber-50"
                               aria-label={`Atur peran untuk ${item.full_name}`}
                             >
                               Atur peran
@@ -727,7 +865,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                           disabled={busyId === item.id || isSelf}
                           onClick={() => handleToggleActive(item)}
                           title={isSelf ? "Tidak bisa menonaktifkan diri sendiri" : undefined}
-                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                          className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
                             item.is_active
                               ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                               : "border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
@@ -739,8 +877,8 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                       </td>
                       <td className="hidden px-4 py-3.5 text-xs text-slate-500 lg:table-cell">
                         {item.last_login_at ? (
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3 text-slate-400" />
+                          <span className="flex items-center gap-1 whitespace-nowrap tabular-nums">
+                            <Clock className="h-3 w-3 shrink-0 text-slate-400" />
                             {new Date(item.last_login_at).toLocaleString("id-ID", {
                               day: "numeric",
                               month: "short",
@@ -754,83 +892,18 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                         )}
                       </td>
                       <td className="px-4 py-3.5">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setRenameItem(item);
-                              setRenameName(item.full_name);
-                            }}
-                            title="Edit Nama"
-                            aria-label={`Edit nama ${item.full_name}`}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
-                          >
-                            <PencilSimple className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isSelf}
-                            onClick={() => openSessions(item)}
-                            title={isSelf ? "Sesi Anda ada di Pengaturan Akun" : "Sesi Perangkat"}
-                            aria-label={`Sesi perangkat ${item.full_name}`}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-cyan-50 hover:text-cyan-600 disabled:hover:bg-transparent"
-                          >
-                            <DeviceMobile className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              router.push(`/admin/logs?user=${encodeURIComponent(item.id)}&nama=${encodeURIComponent(item.full_name)}`)
+                        <div className="flex items-center justify-end gap-0.5">
+                          <IconAction action={a.rename} tone="blue" />
+                          <IconAction action={a.role} tone="blue" />
+                          <IconAction action={a.setPassword} tone="emerald" />
+                          <RowActionsMenu
+                            label={item.full_name}
+                            actions={
+                              [a.reset, a.sessions, a.logs, a.remove].filter(
+                                (x) => !x.disabled
+                              ) as RowAction[]
                             }
-                            title="Riwayat Aktivitas"
-                            aria-label={`Riwayat aktivitas ${item.full_name}`}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
-                          >
-                            <Scroll className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isSelf}
-                            onClick={() => {
-                              setEditRoleItem(item);
-                              setEditRoleKey(item.system_role ?? "");
-                            }}
-                            title={isSelf ? "Tidak bisa mengubah peran diri sendiri" : "Ubah Peran"}
-                            aria-label={isSelf ? "Tidak bisa mengubah peran diri sendiri" : "Ubah Peran"}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 disabled:hover:bg-transparent"
-                          >
-                            <ShieldCheck className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={!item.email || busyId === item.id}
-                            onClick={() => handleResetPassword(item)}
-                            title={item.email ? "Reset Password (tautan)" : "Pengguna belum punya email"}
-                            aria-label={item.email ? "Reset Password (tautan)" : "Pengguna belum punya email"}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-600 disabled:hover:bg-transparent"
-                          >
-                            <Key className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={busyId === item.id}
-                            onClick={() => openSetPassword(item)}
-                            title="Set Password Langsung"
-                            aria-label={`Set password langsung untuk ${item.full_name}`}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600 disabled:hover:bg-transparent"
-                          >
-                            <Lock className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isSelf || busyId === item.id}
-                            onClick={() => setDeleteItem(item)}
-                            title={isSelf ? "Tidak bisa menghapus diri sendiri" : "Hapus Pengguna"}
-                            aria-label={isSelf ? "Tidak bisa menghapus diri sendiri" : "Hapus Pengguna"}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:hover:bg-transparent ml-1"
-                          >
-                            <Trash className="h-4 w-4" />
-                          </button>
+                          />
                         </div>
                       </td>
                     </tr>
@@ -850,6 +923,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
+                aria-label="Halaman sebelumnya"
                 className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50"
               >
                 <CaretLeft className="h-4 w-4" />
@@ -858,6 +932,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                 <button
                   key={p}
                   onClick={() => setPage(p)}
+                  aria-current={p === page ? "page" : undefined}
                   className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${
                     p === page
                       ? "bg-[var(--brand-primary)] text-white shadow-sm"
@@ -870,7 +945,157 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
+                aria-label="Halaman berikutnya"
                 className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50"
+              >
+                <CaretRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Daftar kartu — mobile (<md). Semua aksi tetap tersedia lewat menu ⋯. */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden">
+        {paginated.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+              <Users className="h-7 w-7 text-slate-300" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-600">Tidak ada pengguna ditemukan</p>
+              <p className="mt-1 text-xs text-slate-400">
+                {search ? "Coba kata kunci lain" : "Belum ada pengguna"}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Pilih semua — hanya untuk halaman aktif, sama seperti header tabel. */}
+            <div className="flex items-center gap-2 border-b border-slate-100 px-3.5 py-2">
+              <input
+                type="checkbox"
+                checked={allVisibleSelected}
+                onChange={toggleSelectAll}
+                aria-label="Pilih semua yang tampil"
+                className="h-4 w-4 rounded border-slate-300 accent-[var(--brand-primary)]"
+              />
+              <span className="text-xs font-medium text-slate-500">
+                Pilih semua di halaman ini
+              </span>
+            </div>
+            <ul role="list" className="divide-y divide-slate-100">
+            {paginated.map((item) => {
+              const badge = item.system_role ? ROLE_BADGE[item.system_role] : undefined;
+              const isSelf = currentUserId === item.id;
+              const a = rowActions(item);
+              return (
+                <li key={item.id} className="flex items-start gap-3 px-3.5 py-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(item.id)}
+                    onChange={() => toggleSelect(item.id)}
+                    disabled={isSelf}
+                    aria-label={`Pilih ${item.full_name}${isSelf ? " (akun sendiri tidak bisa dipilih)" : ""}`}
+                    className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 accent-[var(--brand-primary)]"
+                  />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/10">
+                    <User className="h-5 w-5 text-[var(--brand-primary)]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+                      <span className="truncate">{item.full_name}</span>
+                      {isSelf && (
+                        <span className="shrink-0 rounded bg-[var(--brand-primary)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--brand-primary)]">
+                          Anda
+                        </span>
+                      )}
+                    </p>
+                    {item.email && (
+                      <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-400">
+                        <Envelope className="h-3 w-3 shrink-0" />
+                        {item.email}
+                      </p>
+                    )}
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      {badge ? (
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${badge.bg} ${badge.color}`}
+                        >
+                          <badge.icon className="h-3 w-3 shrink-0" />
+                          {badge.label}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                          <Warning className="h-3 w-3 shrink-0" />
+                          Belum diatur
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        disabled={busyId === item.id || isSelf}
+                        onClick={() => handleToggleActive(item)}
+                        className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors ${
+                          item.is_active
+                            ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : "border border-red-200 bg-red-50 text-red-700"
+                        }`}
+                      >
+                        {item.is_active ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                        {item.is_active ? "Aktif" : "Tidak Aktif"}
+                      </button>
+                    </div>
+                    {item.last_login_at && (
+                      <p className="mt-1.5 flex items-center gap-1 text-[11px] text-slate-400">
+                        <Clock className="h-3 w-3 shrink-0" />
+                        Login terakhir:{" "}
+                        {new Date(item.last_login_at).toLocaleString("id-ID", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    )}
+                  </div>
+                  <RowActionsMenu
+                    label={item.full_name}
+                    actions={
+                      [a.rename, a.role, a.setPassword, a.reset, a.sessions, a.logs, a.remove].filter(
+                        (x) => !x.disabled
+                      ) as RowAction[]
+                    }
+                  />
+                </li>
+              );
+            })}
+            </ul>
+          </>
+        )}
+        {total > 0 && (
+          <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3">
+            <p className="text-xs text-slate-400">
+              Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} dari{" "}
+              {total} pengguna
+            </p>
+            <div className="flex items-center justify-between gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                aria-label="Halaman sebelumnya"
+                className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors"
+              >
+                <CaretLeft className="h-4 w-4" />
+              </button>
+              <span className="text-xs font-semibold text-slate-500 tabular-nums">
+                {page} / {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                aria-label="Halaman berikutnya"
+                className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors"
               >
                 <CaretRight className="h-4 w-4" />
               </button>
