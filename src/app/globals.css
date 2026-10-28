@@ -561,12 +561,21 @@ mark {
    yang lebih rendah) dan mematikan transform. Ditaruh tanpa layer agar menang
    atas utilitas `hover:` Tailwind.
 
-   Kursor sengaja TIDAK diubah: pemilik produk ingin tombol nonaktif benar-benar
-   diam (tanpa kursor khusus), dan alasan nonaktif sudah dijelaskan lewat teks
-   di dekat tombol.
+   Kursor sengaja TIDAK diubah dan tombol disabled dibuat tidak menerima
+   pointer sama sekali (`pointer-events: none`) supaya tidak ada reaksi apa pun
+   saat kursor melewatinya. Konsekuensinya tooltip `title` pada tombol itu ikut
+   mati — karena itu penjelasan "kenapa nonaktif" harus ditaruh pada WRAPPER
+   (elemen induk), bukan pada tombolnya.
+
+   `pointer-events: none` hanya untuk `button`: input/select/textarea disabled
+   masih perlu hover untuk tooltip validasi bawaan browser.
 
    Sengaja TIDAK mengubah `opacity`: komponen memakai nilai berbeda
    (40/50/60/70) untuk menyatakan "nonaktif". */
+button:disabled {
+  pointer-events: none;
+}
+
 button:disabled,
 button:disabled:hover,
 button:disabled:active {

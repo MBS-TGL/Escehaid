@@ -453,24 +453,29 @@ export function SortableRow({
 
   /** Handle desktop (28px) — nomor urutan tetap di kolom terpisah di sebelahnya. */
   const desktopHandle = (
+    // Tooltip di wrapper: tombol disabled tidak menerima pointer.
+    <span
+      className="inline-flex shrink-0"
+      title={
+        dragDisabled
+          ? "Urutan hanya bisa diubah saat menampilkan Semua tanpa pencarian"
+          : "Tarik untuk mengubah urutan (atau tekan Space, lalu panah)"
+      }
+    >
     <button
       type="button"
       {...attributes}
       {...(dragDisabled ? {} : listeners)}
       disabled={dragDisabled}
       aria-label={`Ubah urutan ${item.label}`}
-      title={
-        dragDisabled
-          ? "Urutan hanya bisa diubah saat menampilkan Semua tanpa pencarian"
-          : "Tarik untuk mengubah urutan (atau tekan Space, lalu panah)"
-      }
       className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${dragDisabled
-        ? "cursor-not-allowed text-slate-300"
+        ? "text-slate-300"
         : "cursor-grab text-slate-400 hover:bg-[var(--brand-accent)]/10 hover:text-[var(--brand-primary)] active:cursor-grabbing"
         }`}
     >
       <DotsSixVertical className="h-4 w-4" />
     </button>
+    </span>
   );
 
   /** Handle mobile — kolom tampilan 30px (titik 6-dot + nomor urut 11px),

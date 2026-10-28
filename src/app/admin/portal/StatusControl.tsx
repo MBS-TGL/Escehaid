@@ -98,15 +98,16 @@ export function StatusControl({
         const active = value === status;
         const meta = STATUS_META[status];
         return (
+          // Tooltip di wrapper: tombol disabled tidak menerima pointer, jadi
+          // `title` pada tombolnya tidak akan pernah tampil.
+          <span key={status} className={`inline-flex ${sm ? "min-w-0 flex-1" : "flex-auto"}`} title={meta.hint}>
           <button
-            key={status}
             type="button"
             role="radio"
             aria-checked={active}
             disabled={disabled}
-            title={meta.hint}
             onClick={() => onChange(status)}
-            className={`flex items-center justify-center gap-1 whitespace-nowrap rounded-md font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-accent)] disabled:opacity-50 ${
+            className={`flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-md font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-accent)] disabled:opacity-50 ${
               sm
                 ? "min-w-0 flex-1 px-0.5 py-1.5 text-[10px] leading-none tracking-tight"
                 : "flex-auto px-2 py-2 text-xs"
@@ -115,6 +116,7 @@ export function StatusControl({
             {!sm && <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${meta.dotClass}`} />}
             <span className={sm ? "truncate" : undefined}>{meta.label}</span>
           </button>
+          </span>
         );
       })}
     </div>
@@ -298,6 +300,11 @@ export function StatusPill({
 
   return (
     <>
+      {/* Tooltip di wrapper: tombol disabled tidak menerima pointer. */}
+      <span
+        className="inline-flex max-w-full"
+        title={compact ? `${meta.label} — ${meta.hint}` : undefined}
+      >
       <button
         ref={triggerRef}
         type="button"
@@ -307,7 +314,6 @@ export function StatusPill({
         aria-controls={open ? menuId : undefined}
         aria-label={`${label} — ${meta.label}`}
         aria-busy={saving}
-        title={compact ? `${meta.label} — ${meta.hint}` : undefined}
         onClick={toggle}
         className={`relative inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] disabled:opacity-60 ${
           compact
@@ -330,6 +336,7 @@ export function StatusPill({
           />
         )}
       </button>
+      </span>
 
       {open && pos && (
         <div

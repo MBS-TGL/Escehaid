@@ -758,9 +758,11 @@ export default function AdminActivitiesPage() {
                       </p>
                     </td>
                     <td className="px-4 py-3.5 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      {/* `title` di wrapper: tombol disabled ber-`pointer-events: none`
+                          sehingga tooltip pada tombolnya tidak akan muncul. */}
+                      <span title={permPublish ? undefined : "Tidak berizin menerbitkan"} className="inline-flex">
                       <button onClick={() => handleTogglePublish(item)} disabled={!permPublish}
-                        title={permPublish ? undefined : "Tidak berizin menerbitkan"}
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:cursor-default disabled:opacity-70 ${
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:opacity-70 ${
                           item.is_published
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
                             : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
@@ -768,6 +770,7 @@ export default function AdminActivitiesPage() {
                         {item.is_published ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
                         {item.is_published ? "Publish" : "Draft"}
                       </button>
+                      </span>
                     </td>
                     <td className="px-4 py-3.5 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-1">

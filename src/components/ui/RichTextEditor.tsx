@@ -57,17 +57,20 @@ function ToolbarBtn({
   title: string;
 }) {
   return (
+    // Tooltip di wrapper: tombol disabled tidak menerima pointer.
+    <span className="inline-flex" title={title}>
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      title={title}
+      aria-label={title}
       className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm transition-colors
         ${active ? "bg-[var(--brand-primary)] text-white" : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"}
-        ${disabled ? "opacity-30 cursor-not-allowed" : ""}`}
+        ${disabled ? "opacity-30" : ""}`}
     >
       {children}
     </button>
+    </span>
   );
 }
 

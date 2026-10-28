@@ -1408,11 +1408,16 @@ export default function AdminAchievementsPage() {
                 Tampil di bagian Unggulan paling atas halaman prestasi (maks {MAX_FEATURED} aktif).
               </p>
             </div>
-            <button type="button" onClick={toggleFeatured} aria-pressed={form.is_featured} disabled={!permPublish}
+            {/* Tooltip di wrapper: tombol disabled tidak menerima pointer. */}
+            <span
+              className="inline-flex shrink-0"
               title={permPublish ? undefined : "Tidak berizin mengubah status unggulan"}
-              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${form.is_featured ? "bg-[var(--brand-accent)]" : "bg-slate-300"}`}>
-              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_featured ? "left-[22px]" : "left-0.5"}`} />
-            </button>
+            >
+              <button type="button" onClick={toggleFeatured} aria-pressed={form.is_featured} disabled={!permPublish}
+                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${form.is_featured ? "bg-[var(--brand-accent)]" : "bg-slate-300"}`}>
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.is_featured ? "left-[22px]" : "left-0.5"}`} />
+              </button>
+            </span>
           </div>
         </div>
       </SlideOver>

@@ -172,6 +172,16 @@ export function RowGrip({
   listeners?: Record<string, unknown>;
 }) {
   return (
+    // Tooltip di wrapper: tombol disabled tidak menerima pointer. Wrapper
+    // memakai ukuran/margin yang sama agar area sentuh tidak berubah.
+    <span
+      className="-my-3 -ml-2.5 flex w-11 shrink-0 self-stretch"
+      title={
+        disabled
+          ? "Hapus filter untuk mengubah urutan"
+          : "Tarik untuk mengubah urutan (tekan Space, lalu panah)"
+      }
+    >
     <button
       ref={innerRef}
       type="button"
@@ -180,16 +190,11 @@ export function RowGrip({
       disabled={disabled}
       data-no-longpress=""
       aria-label={`Ubah urutan ${label} — posisi ${index + 1}`}
-      title={
-        disabled
-          ? "Hapus filter untuk mengubah urutan"
-          : "Tarik untuk mengubah urutan (tekan Space, lalu panah)"
-      }
       onClick={(e) => e.stopPropagation()}
       style={{ touchAction: "none" }}
-      className={`-my-3 -ml-2.5 flex w-11 shrink-0 touch-none select-none flex-col items-center justify-center self-stretch rounded-lg transition-colors [-webkit-touch-callout:none] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${
+      className={`flex w-11 shrink-0 touch-none select-none flex-col items-center justify-center self-stretch rounded-lg transition-colors [-webkit-touch-callout:none] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${
         disabled
-          ? "cursor-not-allowed text-slate-300"
+          ? "text-slate-300"
           : "cursor-grab text-[#94a3b8] hover:bg-[var(--brand-accent)]/10 hover:text-[var(--brand-primary)] active:cursor-grabbing"
       }`}
     >
@@ -204,5 +209,6 @@ export function RowGrip({
         </span>
       </span>
     </button>
+    </span>
   );
 }
