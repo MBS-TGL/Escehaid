@@ -116,29 +116,33 @@ export default function AdminUsersPage() {
               disabled={exporting}
               aria-label="Ekspor CSV"
               title="Ekspor CSV (mengikuti filter aktif)"
-              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:shadow-none sm:h-auto sm:flex-none sm:px-4 sm:py-2.5"
+              className="flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:shadow-none sm:h-auto sm:flex-none sm:px-4 sm:py-2.5"
             >
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">Ekspor CSV</span>
+              <Download className="h-4 w-4 shrink-0" />
+              {/* Label pendek di mobile: ikon saja tidak jelas (HP tidak
+                  menampilkan tooltip), label penuh tidak muat 3 tombol. */}
+              <span className="whitespace-nowrap sm:hidden">Ekspor</span>
+              <span className="hidden whitespace-nowrap sm:inline">Ekspor CSV</span>
             </button>
             <button
               type="button"
               onClick={() => usersRef.current?.openBulkInvite()}
               aria-label="Impor CSV (undang massal)"
               title="Impor CSV — undang banyak pengguna"
-              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:h-auto sm:flex-none sm:px-4 sm:py-2.5"
+              className="flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:h-auto sm:flex-none sm:px-4 sm:py-2.5"
             >
-              <Upload className="h-4 w-4" />
-              <span className="hidden sm:inline">Impor CSV</span>
+              <Upload className="h-4 w-4 shrink-0" />
+              <span className="whitespace-nowrap sm:hidden">Impor</span>
+              <span className="hidden whitespace-nowrap sm:inline">Impor CSV</span>
             </button>
             <button
               type="button"
               onClick={() => usersRef.current?.openInvite()}
               aria-label="Undang Pengguna"
               title="Undang Pengguna"
-              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] sm:h-auto sm:flex-none sm:px-4 sm:py-2.5"
+              className="flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] sm:h-auto sm:flex-none sm:px-4 sm:py-2.5"
             >
-              <UserPlus className="h-4 w-4" />
+              <UserPlus className="h-4 w-4 shrink-0" />
               <span className="whitespace-nowrap">Undang</span>
             </button>
           </div>
