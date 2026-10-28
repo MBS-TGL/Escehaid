@@ -320,7 +320,7 @@ export default function AdminAgendaPage() {
                     pasti terpotong). Checkbox dan Urutan disembunyikan:
                     seleksi massal & geser urutan adalah aksi desktop yang tidak
                     masuk akal di layar sentuh. Sisa 4 kolom muat tanpa scroll. */}
-                <th className="hidden w-10 px-4 py-3 sm:table-cell">
+                <th className="hidden w-12 px-2 py-3 text-center sm:table-cell">
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
                     className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                 </th>
@@ -569,7 +569,7 @@ function SortableAgendaRow({
           style={style}
           className={`relative transition-colors ${isDragging ? "bg-slate-50 opacity-70" : selected ? "bg-[var(--brand-primary)]/[0.03]" : "hover:bg-slate-50/80"}`}
         >
-          <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
+          <td className="hidden w-12 px-2 py-3.5 text-center sm:table-cell" onClick={(e) => e.stopPropagation()}>
             <input type="checkbox" checked={selected} onChange={() => onToggleSelect(item.id)}
               aria-label={`Pilih ${item.title}`}
               className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />

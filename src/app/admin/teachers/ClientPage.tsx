@@ -376,7 +376,7 @@ export default function AdminTeachersPage() {
                 {/* hidden sm:table-cell — di bawah 640px sisa kolom cuma punya
                     ±328px. Checkbox & Urutan (handle drag ada di dalamnya)
                     adalah afordansi desktop. Sisa Nama · Jabatan · Status · Aksi. */}
-                <th className="hidden w-10 px-4 py-3 sm:table-cell">
+                <th className="hidden w-12 px-2 py-3 text-center sm:table-cell">
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
                     className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                 </th>
@@ -654,7 +654,7 @@ function SortableTeacherRow({
           style={style}
           className={`relative transition-colors ${isDragging ? "bg-slate-50 opacity-70" : selected ? "bg-[var(--brand-primary)]/[0.03]" : "hover:bg-slate-50/80"}`}
         >
-          <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
+          <td className="hidden w-12 px-2 py-3.5 text-center sm:table-cell" onClick={(e) => e.stopPropagation()}>
             <input type="checkbox" checked={selected} onChange={() => onToggleSelect(item.id)}
               aria-label={`Pilih ${item.name}`}
               className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />

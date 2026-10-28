@@ -652,7 +652,7 @@ export default function AdminActivitiesPage() {
                 {/* hidden sm:table-cell — checkbox & No hanya untuk tablet/desktop; di
                 bawah 640px sisa kolom biar lega, sama seperti
                 agenda/teachers/users/announcements/facilities. */}
-                <th className="hidden w-10 px-4 py-3 sm:table-cell">
+                <th className="hidden w-12 px-2 py-3 text-center sm:table-cell">
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
                     className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                 </th>
@@ -714,7 +714,7 @@ export default function AdminActivitiesPage() {
               ) : (
                 paginated.map((item, index) => (
                   <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[var(--brand-primary)]/[0.03]" : ""}`}>
-                    <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
+                    <td className="hidden w-12 px-2 py-3.5 text-center sm:table-cell" onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
                         className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                     </td>

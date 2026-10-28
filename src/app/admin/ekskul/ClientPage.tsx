@@ -788,7 +788,7 @@ export default function AdminEkskulPage() {
           <table className="w-full">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
               <tr>
-                <th className="hidden w-10 px-4 py-3 sm:table-cell">
+                <th className="hidden w-12 px-2 py-3 text-center sm:table-cell">
                   <input
                     type="checkbox"
                     checked={allVisibleSelected}
@@ -1221,7 +1221,7 @@ function SortableEkskulRow({
           style={style}
           className={`relative transition-colors ${isDragging ? "bg-slate-50 opacity-70" : selected ? "bg-[var(--brand-primary)]/[0.03]" : "hover:bg-slate-50/80"}`}
         >
-          <td className="hidden px-4 py-3.5 sm:table-cell" onClick={(e) => e.stopPropagation()}>
+          <td className="hidden w-12 px-2 py-3.5 text-center sm:table-cell" onClick={(e) => e.stopPropagation()}>
             <input
               type="checkbox"
               checked={selected}

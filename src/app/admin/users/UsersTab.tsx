@@ -919,7 +919,7 @@ function UsersTab({ currentUserId }, ref) {
           <table className="w-full min-w-[820px]">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
               <tr>
-                <th className="w-10 px-4 py-3">
+                <th className="w-12 px-2 py-3 text-center">
                   <input
                     type="checkbox"
                     checked={allVisibleSelected}
@@ -962,7 +962,7 @@ function UsersTab({ currentUserId }, ref) {
                   const a = rowActions(item);
                   return (
                     <tr key={item.id} className="transition-colors hover:bg-slate-50/80">
-                      <td className="px-4 py-3.5">
+                      <td className="w-12 px-2 py-3.5 text-center">
                         <input
                           type="checkbox"
                           checked={selectedIds.has(item.id)}
@@ -1157,14 +1157,16 @@ function UsersTab({ currentUserId }, ref) {
         ) : (
           <>
             {/* Pilih semua — hanya untuk halaman aktif, sama seperti header tabel. */}
-            <div className="flex items-center gap-2 border-b border-slate-100 px-3.5 py-2">
-              <input
-                type="checkbox"
-                checked={allVisibleSelected}
-                onChange={toggleSelectAll}
-                aria-label="Pilih semua yang tampil"
-                className="h-4 w-4 rounded border-slate-300 accent-[var(--brand-primary)]"
-              />
+            <div className="flex items-center gap-3 border-b border-slate-100 px-3.5 py-2">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center">
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  onChange={toggleSelectAll}
+                  aria-label="Pilih semua yang tampil"
+                  className="h-4 w-4 rounded border-slate-300 accent-[var(--brand-primary)]"
+                />
+              </span>
               <span className="text-xs font-medium text-slate-500">
                 Pilih semua di halaman ini
               </span>
@@ -1175,15 +1177,17 @@ function UsersTab({ currentUserId }, ref) {
               const isSelf = currentUserId === item.id;
               const a = rowActions(item);
               return (
-                <li key={item.id} className="flex items-start gap-3 px-3.5 py-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(item.id)}
-                    onChange={() => toggleSelect(item.id)}
-                    disabled={isSelf}
-                    aria-label={`Pilih ${item.full_name}${isSelf ? " (akun sendiri tidak bisa dipilih)" : ""}`}
-                    className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 accent-[var(--brand-primary)]"
-                  />
+                <li key={item.id} className="flex items-center gap-3 px-3.5 py-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(item.id)}
+                      onChange={() => toggleSelect(item.id)}
+                      disabled={isSelf}
+                      aria-label={`Pilih ${item.full_name}${isSelf ? " (akun sendiri tidak bisa dipilih)" : ""}`}
+                      className="h-4 w-4 shrink-0 rounded border-slate-300 accent-[var(--brand-primary)]"
+                    />
+                  </span>
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/10">
                     <User className="h-5 w-5 text-[var(--brand-primary)]" />
                   </div>
