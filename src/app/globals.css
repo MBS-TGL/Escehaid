@@ -550,3 +550,47 @@ mark {
     }
   }
 }
+/* ── Tombol nonaktif benar-benar diam ──────────────────────────────────────
+   `disabled` tidak mematikan `:hover`/`:active` di Tailwind: tombol yang
+   diberi `hover:bg-…` tetap berubah warna saat kursor di atasnya walau tidak
+   bisa diklik. Efeknya terasa "masih hidup" (mis. tombol Simpan di modal
+   Set Password saat konfirmasi belum cocok).
+
+   Aturan global ini mengembalikan warna latar elemen form yang disabled ke
+   nilai sebelumnya (`revert-layer` = membatalkan deklarasi utilitas di layer
+   yang lebih rendah), mematikan transform, dan memakai kursor not-allowed.
+   Ditaruh tanpa layer agar menang atas utilitas `hover:` Tailwind.
+
+   Sengaja TIDAK mengubah `opacity`: komponen memakai nilai berbeda
+   (40/50/60/70) untuk menyatakan "nonaktif". */
+input:disabled,
+select:disabled,
+textarea:disabled,
+button:disabled {
+  cursor: not-allowed;
+}
+
+button:disabled,
+button:disabled:hover,
+button:disabled:active {
+  transform: none;
+  /* Tanpa ini, `transition-colors` masih menganimasikan perubahan warna dari
+     hover sebelum aturan di bawah menimpanya — terlihat seperti "berkedip". */
+  transition: none;
+}
+
+/* Utilitas hover Tailwind ada di layer `utilities`; aturan tanpa layer di atas
+   menang, sehingga deklarasi ini mengembalikan latar ke nilai komponen. */
+button:disabled:hover,
+button:disabled:active {
+  background-color: revert-layer;
+  background-image: revert-layer;
+  box-shadow: revert-layer;
+}
+
+/* Elemen non-button (mis. checkbox, link bergaya tombol). */
+input:disabled:hover,
+select:disabled:hover,
+textarea:disabled:hover {
+  cursor: not-allowed;
+}

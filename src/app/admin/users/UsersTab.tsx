@@ -1204,6 +1204,15 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                 placeholder="Ulangi password baru"
               />
 
+              {/* Jelaskan kenapa tombol Simpan mati — jangan biarkan admin
+                  menebak. Hanya tampil saat kedua field sudah terisi. */}
+              {confirmPassword && newPassword !== confirmPassword && (
+                <p className="flex items-center gap-1.5 text-xs font-medium text-red-600">
+                  <Warning className="h-3.5 w-3.5 shrink-0" />
+                  Konfirmasi password belum cocok.
+                </p>
+              )}
+
               <div className="flex gap-3 pt-1">
                 <button
                   type="button"
@@ -1220,7 +1229,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                     !confirmPassword ||
                     newPassword !== confirmPassword
                   }
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-60"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {passwordSaving ? (
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
