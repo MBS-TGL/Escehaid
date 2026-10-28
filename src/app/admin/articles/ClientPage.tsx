@@ -1,5 +1,7 @@
 "use client";
 
+import { useAdminBottomBar } from "@/app/admin/AdminChrome";
+
 import Image from "next/image";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import {
@@ -231,6 +233,7 @@ export default function AdminArticlesPage() {
   // Mode pilih (mobile): checkbox menggantikan thumbnail, tap baris = toggle,
   // bar aksi massal sticky di bawah. Desktop tetap pakai checkbox tabel.
   const [pickMode, setPickMode] = useState(false);
+  useAdminBottomBar(pickMode);
 
   // Modals
   const [viewItem, setViewItem] = useState<ArticleWithAuthor | null>(null);
@@ -910,17 +913,17 @@ export default function AdminArticlesPage() {
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex">
-          <Checks className="h-4 w-4 text-[var(--brand-primary)]" />
-          <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
+        <div className="mb-4 hidden items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex md:flex-nowrap md:overflow-x-auto">
+          <Checks className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
+          <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
           {permPublish && (
             <>
-              <button onClick={() => handleBulkPublish(true)} aria-label={`Terbitkan ${selectedIds.size} artikel terpilih`} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Publish</button>
-              <button onClick={() => handleBulkPublish(false)} aria-label={`Kembalikan ${selectedIds.size} artikel ke draft`} className="rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-600">Unpublish</button>
+              <button onClick={() => handleBulkPublish(true)} aria-label={`Terbitkan ${selectedIds.size} artikel terpilih`} title={`Terbitkan ${selectedIds.size} artikel terpilih`} className="whitespace-nowrap rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Publish</button>
+              <button onClick={() => handleBulkPublish(false)} aria-label={`Kembalikan ${selectedIds.size} artikel ke draft`} className="whitespace-nowrap rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-600">Unpublish</button>
             </>
           )}
           {permDelete && (
-            <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} artikel terpilih`} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
+            <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} artikel terpilih`} className="whitespace-nowrap rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>
           )}
           <button onClick={() => setSelectedIds(new Set())} aria-label="Hapus pilihan" title="Hapus pilihan" className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
         </div>
@@ -1245,11 +1248,8 @@ export default function AdminArticlesPage() {
             itemLabel="artikel"
           />
         )}
-        {/* Ruang ekstra agar baris terakhir tidak tertutup bar sticky mode pilih */}
-        {pickMode && <div className="h-24" aria-hidden="true" />}
       </div>
 
-      {/* Bar aksi massal sticky (mobile, mode pilih) — di atas bottom nav admin */}
       {pickMode && (
         <MobileSelectBar
           count={selectedIds.size}

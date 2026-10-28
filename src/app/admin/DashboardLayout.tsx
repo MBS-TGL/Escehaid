@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import AdminSidebar from "./Sidebar";
 import AdminTopbar from "./Topbar";
 import AdminMobileNav from "./MobileNav";
+import { AdminChromeProvider, useAdminChrome } from "./AdminChrome";
 import { PermissionsProvider } from "./PermissionsProvider";
 import { useToast } from "@/components/ui/Toast";
 import { readSidebarCollapsed, saveSidebarCollapsed } from "@/lib/admin-sidebar-state";
@@ -118,32 +119,61 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <PermissionsProvider subject={subject}>
-      <div className="min-h-screen bg-slate-50">
-        <AdminSidebar
-          collapsed={sidebarCollapsed}
-          onToggle={() => {
+      <AdminChromeProvider>
+        <AdminShell
+          sidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={() => {
             const next = !sidebarCollapsed;
             setSidebarCollapsed(next);
             saveSidebarCollapsed(next);
           }}
-        />
-
-        {/* Main content area — margin kiri mengikuti lebar sidebar (270px penuh /
-            72px rail) agar konten tidak pernah tertutup maupun menyisakan celah. */}
-        <div
-          className={`min-h-screen transition-all duration-300 motion-reduce:transition-none ${
-            sidebarCollapsed ? "lg:ml-[72px]" : "lg:ml-[270px]"
-          }`}
+          profile={profile}
         >
-          <AdminTopbar profile={profile} />
-          {/* pb-24 (96px) lg:pb-0 — bottom nav setinggi ±72px + safe-area
-              (ADMIN_BOTTOM_NAV_CONTENT_H 60 + 12 minimum); tanpa padding ini
-              baris terakhir tabel/pagination tertutup bar navigasi. */}
-          <main className="pb-24 lg:pb-0">{children}</main>
-        </div>
-
-        <AdminMobileNav />
-      </div>
+          {children}
+        </AdminShell>
+      </AdminChromeProvider>
     </PermissionsProvider>
+  );
+}
+
+/**
+ * Rangka visual admin (dipisah dari DashboardLayout karena butuh
+ * `useAdminChrome`). Selama bar bawah pengganti aktif (mode pilih massal),
+ * bottom nav DILEPAS dari DOM — bukan sekadar disembunyikan — supaya tidak
+ * bisa di-tap dan tidak ada dua bar di layar.
+ */
+function AdminShell({
+  children,
+  profile,
+  sidebarCollapsed,
+  onToggleSidebar,
+}: {
+  children: React.ReactNode;
+  profile: UserProfile;
+  sidebarCollapsed: boolean;
+  onToggleSidebar: () => void;
+}) {
+  const { bottomBarActive } = useAdminChrome();
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <AdminSidebar collapsed={sidebarCollapsed} onToggle={onToggleSidebar} />
+
+      {/* Main content area — margin kiri mengikuti lebar sidebar (270px penuh /
+          72px rail) agar konten tidak pernah tertutup maupun menyisakan celah. */}
+      <div
+        className={`min-h-screen transition-all duration-300 motion-reduce:transition-none ${
+          sidebarCollapsed ? "lg:ml-[72px]" : "lg:ml-[270px]"
+        }`}
+      >
+        <AdminTopbar profile={profile} />
+        {/* pb-24 (96px) lg:pb-0 — bottom nav / bar aksi massal setinggi ±72px
+            + safe-area (ADMIN_BOTTOM_NAV_CONTENT_H 60 + 12 minimum); tanpa
+            padding ini baris terakhir tabel/pagination tertutup bar bawah. */}
+        <main className="pb-24 lg:pb-0">{children}</main>
+      </div>
+
+      {!bottomBarActive && <AdminMobileNav />}
+    </div>
   );
 }

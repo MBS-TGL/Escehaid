@@ -1,5 +1,7 @@
 "use client";
 
+import { useAdminBottomBar } from "@/app/admin/AdminChrome";
+
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import Image from "next/image";
 import {
@@ -47,6 +49,7 @@ import {
   MobileListRow,
   LongPressHint,
   SelectionMark,
+  MobileSelectBar,
   RowActionsMenu,
   RowGrip,
   MobileThumb,
@@ -100,6 +103,7 @@ export default function AdminFacilitiesPage() {
   // Mode pilih (mobile): checkbox menggantikan handle, tap baris = toggle,
   // bar aksi massal sticky di bawah. Desktop tetap pakai checkbox tabel.
   const [pickMode, setPickMode] = useState(false);
+  useAdminBottomBar(pickMode);
 
   // Modals
   const [viewItem, setViewItem] = useState<Facility | null>(null);
@@ -464,10 +468,10 @@ export default function AdminFacilitiesPage() {
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex">
-          <Checks className="h-4 w-4 text-[var(--brand-primary)]" />
-          <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
-          {permDelete && <button onClick={() => setBulkDelete(true)} className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>}
+        <div className="mb-4 hidden items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex md:flex-nowrap md:overflow-x-auto">
+          <Checks className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
+          <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
+          {permDelete && <button onClick={() => setBulkDelete(true)} className="whitespace-nowrap rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Hapus</button>}
           <button onClick={() => setSelectedIds(new Set())} aria-label="Hapus pilihan" title="Hapus pilihan" className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
         </div>
       )}
@@ -692,9 +696,15 @@ export default function AdminFacilitiesPage() {
               )}
             </div>
         </SortableList>
-        {/* Ruang ekstra agar baris terakhir tidak tertutup bar sticky mode pilih */}
-        {pickMode && <div className="h-24" aria-hidden="true" />}
       </div>
+
+      {pickMode && (
+        <MobileSelectBar
+          count={selectedIds.size}
+          onDelete={permDelete ? () => setBulkDelete(true) : undefined}
+          onCancel={exitPickMode}
+        />
+      )}
 
       {/* ── VIEW MODAL ──────────────────────────────── */}
       <Modal

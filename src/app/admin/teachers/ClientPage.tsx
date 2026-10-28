@@ -1,5 +1,6 @@
 "use client";
 
+import { useAdminBottomBar } from "@/app/admin/AdminChrome";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import Image from "next/image";
 import {
@@ -76,6 +77,7 @@ export default function AdminTeachersPage() {
   // Mode pilih (mobile): checkbox menggantikan nomor, tap baris = toggle,
   // bar aksi massal sticky di bawah. Desktop tetap pakai checkbox tabel.
   const [pickMode, setPickMode] = useState(false);
+  useAdminBottomBar(pickMode);
   const [deleteItem, setDeleteItem] = useState<Teacher | null>(null);
   const [bulkDelete, setBulkDelete] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -312,12 +314,12 @@ export default function AdminTeachersPage() {
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex">
-          <Checks className="h-4 w-4 text-[var(--brand-primary)]" />
-          <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
+        <div className="mb-4 hidden items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex md:flex-nowrap md:overflow-x-auto">
+          <Checks className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
+          <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
           {permDelete && (
             <button onClick={() => setBulkDelete(true)}
-              className="rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">
+              className="whitespace-nowrap rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">
               Hapus
             </button>
           )}
@@ -520,11 +522,7 @@ export default function AdminTeachersPage() {
           )}
         </div>
         </SortableList>
-        {/* Ruang ekstra agar baris terakhir tidak tertutup bar sticky mode pilih */}
-        {pickMode && <div className="h-24" aria-hidden="true" />}
       </div>
-
-      {/* Bar aksi massal sticky (mobile, mode pilih) — di atas bottom nav admin */}
       {pickMode && (
         <MobileSelectBar
           count={selectedIds.size}

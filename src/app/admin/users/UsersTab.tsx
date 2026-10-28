@@ -1,5 +1,7 @@
 "use client";
 
+import { useAdminBottomBar } from "@/app/admin/AdminChrome";
+
 /**
  * Tab "Pengguna" — daftar akun + aksi (undang, ubah peran, aktif/nonaktif,
  * reset password, hapus).
@@ -204,6 +206,7 @@ function UsersTab({ currentUserId }, ref) {
 
   // Bulk (aksi massal) — hanya baris terlihat; akun sendiri tidak bisa dipilih.
   const [pickMode, setPickMode] = useState(false);
+  useAdminBottomBar(pickMode);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkConfirm, setBulkConfirm] = useState<"activate" | "deactivate" | "delete" | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -881,9 +884,9 @@ function UsersTab({ currentUserId }, ref) {
 
       {/* Bulk bar — muncul saat ada pilihan */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 hidden flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex">
+        <div className="mb-4 hidden items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex md:flex-nowrap md:overflow-x-auto">
           <CheckCircle className="h-4 w-4 text-[var(--brand-primary)]" />
-          <span className="text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
+          <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <button data-busy
               type="button"
@@ -1347,8 +1350,6 @@ function UsersTab({ currentUserId }, ref) {
           </div>
         )}
       </div>
-
-      {selectedIds.size > 0 && <div className="h-24 md:hidden" aria-hidden="true" />}
 
       {pickMode && (
         <MobileSelectBar

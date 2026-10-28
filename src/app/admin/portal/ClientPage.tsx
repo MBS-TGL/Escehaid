@@ -1,5 +1,7 @@
 "use client";
 
+import { useAdminBottomBar } from "@/app/admin/AdminChrome";
+
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -673,6 +675,7 @@ export default function AdminPortalPage() {
   // Mode pilih (mobile): checkbox menggantikan handle, tap baris = toggle,
   // bar aksi massal sticky di bawah. Desktop tetap pakai checkbox tabel.
   const [pickMode, setPickMode] = useState(false);
+  useAdminBottomBar(pickMode);
 
   // Filter & pencarian
   const [query, setQuery] = useState("");

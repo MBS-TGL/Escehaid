@@ -1,5 +1,7 @@
 "use client";
 
+import { useAdminBottomBar } from "@/app/admin/AdminChrome";
+
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
@@ -125,6 +127,7 @@ export default function AdminMediaPage() {
   // Mode pilih (mobile) untuk hapus massal + konfirmasi hapus baris mobile.
   const [pickMode, setPickMode] = useState(false);
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
+  useAdminBottomBar(pickMode);
   const [confirmDelete, setConfirmDelete] = useState<MediaFile | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [previewFile, setPreviewFile] = useState<MediaFile | null>(null);
@@ -797,13 +800,9 @@ export default function AdminMediaPage() {
             onPageChange={setPage}
             itemLabel="file"
           />
-
-          {/* Ruang ekstra agar baris terakhir tidak tertutup bar sticky mode pilih */}
-          {pickMode && <div className="h-24" aria-hidden="true" />}
         </>
       )}
 
-      {/* Bar aksi massal sticky (mobile, mode pilih) — di atas bottom nav admin */}
       {pickMode && permDelete && (
         <MobileSelectBar
           count={selectedPaths.size}
