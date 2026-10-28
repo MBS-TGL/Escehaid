@@ -37,6 +37,8 @@ import {
   MobilePickButton,
   MobileListRow,
   MobileSelectBar,
+  LongPressHint,
+  SelectionMark,
   RowActionsMenu,
   RowGrip,
   MobileThumb,
@@ -453,6 +455,7 @@ export default function AdminTeachersPage() {
       {/* Daftar mobile (<md) — baris ringkas tanpa scroll horizontal; semua
           fitur tetap ada: pilih (mode pilih), geser urutan (Naik/Turun di
           menu ⋯), edit & hapus via menu ⋯. */}
+      <LongPressHint />
       <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden">
         <SortableList ids={filtered.map((i) => i.id)} onReorder={onReorder}>
         <div role="list" aria-label="Daftar guru">
@@ -775,19 +778,7 @@ function TeacherMobileRow({
           <MobileListRow
             lead={
               selectMode ? (
-                <span
-                  data-no-longpress=""
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selected}
-                    onChange={() => onToggleSelect(item.id)}
-                    aria-label={`Pilih ${item.name}`}
-                    className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-                  />
-                </span>
+                <SelectionMark selected={selected} />
               ) : (
                 <RowGrip
                   index={index}
@@ -820,6 +811,7 @@ function TeacherMobileRow({
             }
             actions={<RowActionsMenu label={item.name} actions={actions} disabled={selectMode} />}
             selected={selected}
+            selectionMode={selectMode}
             onClick={() => {
               if (selectMode) onToggleSelect(item.id);
               else onEdit(item);

@@ -65,6 +65,8 @@ import {
   MobilePickButton,
   MobileListRow,
   MobileSelectBar,
+  LongPressHint,
+  SelectionMark,
   RowActionsMenu,
   MobileThumb,
   QuietBadge,
@@ -651,7 +653,7 @@ export default function AdminActivitiesPage() {
                 {/* hidden sm:table-cell — checkbox & No hanya untuk tablet/desktop; di
                 bawah 640px sisa kolom biar lega, sama seperti
                 agenda/teachers/users/announcements/facilities. */}
-                <th className="hidden w-12 px-2 py-3 text-center sm:table-cell">
+                <th className="hidden w-12 px-2 py-3 text-center md:table-cell">
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
                     className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                 </th>
@@ -713,7 +715,7 @@ export default function AdminActivitiesPage() {
               ) : (
                 paginated.map((item, index) => (
                   <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[var(--brand-primary)]/[0.03]" : ""}`}>
-                    <td className="hidden w-12 px-2 py-3.5 text-center sm:table-cell" onClick={(e) => e.stopPropagation()}>
+                    <td className="hidden w-12 px-2 py-3.5 text-center md:table-cell" onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
                         className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                     </td>
@@ -827,6 +829,7 @@ export default function AdminActivitiesPage() {
       {/* Daftar mobile (<md) — baris ringkas tanpa scroll horizontal; semua
           fitur tetap ada: pilih (mode pilih), lihat, edit, duplikat & hapus
           via menu ⋯, Publish/Draft lewat menu ⋯ (bukan pill sekali ketuk). */}
+      <LongPressHint />
       <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden">
         <div role="list" aria-label="Daftar kegiatan">
           {loading ? (
@@ -1380,19 +1383,7 @@ function ActivityMobileRow({
       <MobileListRow
         lead={
           selectMode ? (
-            <span
-              data-no-longpress=""
-              onClick={(e) => e.stopPropagation()}
-              className="flex h-10 w-10 shrink-0 items-center justify-center"
-            >
-              <input
-                type="checkbox"
-                checked={selected}
-                onChange={() => onToggleSelect(item.id)}
-                aria-label={`Pilih ${item.title}`}
-                className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-              />
-            </span>
+            <SelectionMark selected={selected} />
           ) : undefined
         }
         thumb={
@@ -1433,6 +1424,7 @@ function ActivityMobileRow({
         }
         actions={<RowActionsMenu label={item.title} actions={actions} disabled={selectMode} />}
         selected={selected}
+        selectionMode={selectMode}
         onClick={() => {
           if (selectMode) onToggleSelect(item.id);
           else onView(item);

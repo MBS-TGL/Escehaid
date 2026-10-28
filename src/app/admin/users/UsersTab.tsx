@@ -41,7 +41,14 @@ import type { UserFlagFilter } from "./actions";
 import { validateNewPasswordPair, MIN_PASSWORD_LENGTH } from "@/lib/users-password";
 import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
-import { MobileSelectBar, RowActionsMenu, type RowAction } from "@/components/admin/mobile";
+import {
+  MobilePickButton,
+  MobileSelectBar,
+  MobileSelectModeBar,
+  RowActionsMenu,
+  useLongPressList,
+  type RowAction,
+} from "@/components/admin/mobile";
 import { useToast } from "@/components/ui/Toast";
 import { ConfirmModal } from "@/components/ui";
 import { Input } from "@/components/ui/Input";
@@ -196,6 +203,7 @@ function UsersTab({ currentUserId }, ref) {
   const [passwordSaving, setPasswordSaving] = useState(false);
 
   // Bulk (aksi massal) — hanya baris terlihat; akun sendiri tidak bisa dipilih.
+  const [pickMode, setPickMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkConfirm, setBulkConfirm] = useState<"activate" | "deactivate" | "delete" | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -286,6 +294,19 @@ function UsersTab({ currentUserId }, ref) {
       return next;
     });
   }
+  function exitPickMode() {
+    setPickMode(false);
+    setSelectedIds(new Set());
+  }
+
+  // Hold di kartu pengguna → masuk mode pilih + toggle centang baris itu.
+  const longPress = useLongPressList({
+    onLongPress: (id) => {
+      if (id === currentUserId) return;
+      setPickMode(true);
+      toggleSelect(id);
+    },
+  });
 
   async function handleBulkActive(active: boolean) {
     setBulkBusy(true);
@@ -843,7 +864,20 @@ function UsersTab({ currentUserId }, ref) {
           setPage(1);
         }}
         filters={[roleFilterGroup, statusFilterGroup, flagFilterGroup]}
+        action={
+          <span className="md:hidden">
+            <MobilePickButton onClick={() => setPickMode(true)} />
+          </span>
+        }
       />
+
+      {pickMode && (
+        <MobileSelectModeBar
+          selectedCount={selectedIds.size}
+          allSelected={allVisibleSelected}
+          onSelectAllVisible={toggleSelectAll}
+        />
+      )}
 
       {/* Bulk bar — muncul saat ada pilihan */}
       {selectedIds.size > 0 && (
@@ -853,7 +887,7 @@ function UsersTab({ currentUserId }, ref) {
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <button data-busy
               type="button"
-              disabled={bulkBusy}
+              disabled={bulkBusy || selectedIds.size === 0}
               onClick={() => handleBulkActive(true)}
               className="rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50"
             >
@@ -861,7 +895,7 @@ function UsersTab({ currentUserId }, ref) {
             </button>
             <button data-busy
               type="button"
-              disabled={bulkBusy}
+              disabled={bulkBusy || selectedIds.size === 0}
               onClick={() => setBulkConfirm("deactivate")}
               className="rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-50"
             >
@@ -870,7 +904,7 @@ function UsersTab({ currentUserId }, ref) {
             <select
               value={bulkRoleKey}
               onChange={(e) => setBulkRoleKey(e.target.value)}
-              disabled={bulkBusy}
+              disabled={bulkBusy || selectedIds.size === 0}
               aria-label="Ubah peran pengguna terpilih"
               className="h-[30px] rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-700"
             >
@@ -884,7 +918,7 @@ function UsersTab({ currentUserId }, ref) {
             {bulkRoleKey && (
               <button data-busy data-solid
                 type="button"
-                disabled={bulkBusy}
+                disabled={bulkBusy || selectedIds.size === 0}
                 onClick={handleBulkRole}
                 className="rounded-lg bg-[var(--brand-primary)] px-2.5 py-1.5 text-[11px] font-semibold text-white"
               >
@@ -893,7 +927,7 @@ function UsersTab({ currentUserId }, ref) {
             )}
             <button data-busy data-solid="danger"
               type="button"
-              disabled={bulkBusy}
+              disabled={bulkBusy || selectedIds.size === 0}
               onClick={() => setBulkConfirm("delete")}
               className="rounded-lg bg-red-600 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-red-700"
             >
@@ -1156,40 +1190,57 @@ function UsersTab({ currentUserId }, ref) {
           </div>
         ) : (
           <>
-            {/* Pilih semua — hanya untuk halaman aktif, sama seperti header tabel. */}
-            <div className="flex items-center gap-3 border-b border-slate-100 px-3.5 py-2">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center">
-                <input
-                  type="checkbox"
-                  checked={allVisibleSelected}
-                  onChange={toggleSelectAll}
-                  aria-label="Pilih semua yang tampil"
-                  className="h-4 w-4 rounded border-slate-300 accent-[var(--brand-primary)]"
-                />
-              </span>
-              <span className="text-xs font-medium text-slate-500">
-                Pilih semua di halaman ini
-              </span>
-            </div>
-            <ul role="list" className="divide-y divide-slate-100">
+            <ul
+              role="list"
+              aria-label="Daftar pengguna"
+              className="divide-y divide-slate-100"
+              onPointerDown={longPress.onPointerDown}
+              onPointerMove={longPress.onPointerMove}
+              onPointerUp={longPress.onPointerUp}
+              onPointerCancel={longPress.onPointerCancel}
+              onPointerLeave={longPress.onPointerLeave}
+            >
             {paginated.map((item) => {
               const badge = item.system_role ? ROLE_BADGE[item.system_role] : undefined;
               const isSelf = currentUserId === item.id;
+              const isSelected = selectedIds.has(item.id);
               const a = rowActions(item);
               return (
-                <li key={item.id} className="flex items-center gap-3 px-3.5 py-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(item.id)}
-                      onChange={() => toggleSelect(item.id)}
-                      disabled={isSelf}
-                      aria-label={`Pilih ${item.full_name}${isSelf ? " (akun sendiri tidak bisa dipilih)" : ""}`}
-                      className="h-4 w-4 shrink-0 rounded border-slate-300 accent-[var(--brand-primary)]"
-                    />
-                  </span>
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/10">
+                <li
+                  key={item.id}
+                  data-longpress-id={item.id}
+                  role="listitem"
+                  aria-current={pickMode && isSelected ? "true" : undefined}
+                  tabIndex={pickMode && !isSelf ? 0 : undefined}
+                  onClick={() => {
+                    if (longPress.consumeClick()) return;
+                    if (!pickMode || isSelf) return;
+                    toggleSelect(item.id);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!pickMode || isSelf) return;
+                    if (e.key !== " " && e.key !== "Enter") return;
+                    e.preventDefault();
+                    toggleSelect(item.id);
+                  }}
+                  className={`flex items-center gap-3 px-3.5 py-3 ${
+                    pickMode ? "cursor-pointer select-none [-webkit-touch-callout:none] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brand-accent)]" : ""
+                  } ${isSelected ? "bg-[var(--brand-primary)]/[0.04]" : ""}`}
+                >
+                  <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/10">
                     <User className="h-5 w-5 text-[var(--brand-primary)]" />
+                    {pickMode && (
+                      <span
+                        aria-hidden="true"
+                        className={`absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white ${
+                          isSelected
+                            ? "bg-[var(--brand-primary)] text-white"
+                            : "bg-white text-transparent ring-1 ring-slate-200"
+                        }`}
+                      >
+                        <CheckCircle className="h-3.5 w-3.5" weight="fill" />
+                      </span>
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
@@ -1222,8 +1273,12 @@ function UsersTab({ currentUserId }, ref) {
                       )}
                       <button
                         type="button"
+                        data-no-longpress=""
                         disabled={busyId === item.id || isSelf}
-                        onClick={() => handleToggleActive(item)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleActive(item);
+                        }}
                         className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors ${
                           item.is_active
                             ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -1295,16 +1350,16 @@ function UsersTab({ currentUserId }, ref) {
 
       {selectedIds.size > 0 && <div className="h-24 md:hidden" aria-hidden="true" />}
 
-      {selectedIds.size > 0 && (
+      {pickMode && (
         <MobileSelectBar
           count={selectedIds.size}
           onDelete={() => setBulkConfirm("delete")}
-          onCancel={() => setSelectedIds(new Set())}
+          onCancel={exitPickMode}
         >
           <button
             type="button"
             data-busy
-            disabled={bulkBusy}
+            disabled={bulkBusy || selectedIds.size === 0}
             onClick={() => handleBulkActive(true)}
             className="min-h-11 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
           >
@@ -1313,7 +1368,7 @@ function UsersTab({ currentUserId }, ref) {
           <button
             type="button"
             data-busy
-            disabled={bulkBusy}
+            disabled={bulkBusy || selectedIds.size === 0}
             onClick={() => setBulkConfirm("deactivate")}
             className="min-h-11 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
           >
@@ -1322,7 +1377,7 @@ function UsersTab({ currentUserId }, ref) {
           <select
             value={bulkRoleKey}
             onChange={(e) => setBulkRoleKey(e.target.value)}
-            disabled={bulkBusy}
+            disabled={bulkBusy || selectedIds.size === 0}
             aria-label="Ubah peran pengguna terpilih"
             className="min-h-11 rounded-xl border border-slate-200 bg-white px-2 text-sm font-semibold text-slate-700"
           >
@@ -1338,7 +1393,7 @@ function UsersTab({ currentUserId }, ref) {
               type="button"
               data-busy
               data-solid
-              disabled={bulkBusy}
+              disabled={bulkBusy || selectedIds.size === 0}
               onClick={handleBulkRole}
               className="min-h-11 rounded-xl bg-[var(--brand-primary)] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] disabled:opacity-50"
             >

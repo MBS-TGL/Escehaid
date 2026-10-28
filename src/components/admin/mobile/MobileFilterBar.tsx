@@ -113,11 +113,49 @@ function Dropdown({
  *     [urut · aksi]. Tanpa ini, di layar 360px keempat pill terdesak sampai
  *     labelnya tinggal huruf pertama ("S… 3", "Terb…").
  *
- * Saat `selectMode`, kedua baris digantikan bar mode pilih (label mode +
+ * Saat `selectMode`, kedua baris digantikan `MobileSelectModeBar` (label mode +
  * Pilih semua). Jumlah terpilih dan tombol keluar ada di MobileSelectBar yang
  * menempel di atas bottom nav — desktop tetap memakai toolbar lamanya (tab +
  * pencarian), jadi komponen ini selalu dirender `md:hidden`.
+ *
+ * `MobileSelectModeBar` diekspor terpisah agar halaman tanpa MobileFilterBar
+ * (mis. Pengguna, yang memakai FilterBar) tetap punya bar yang sama.
  */
+
+/**
+ * Bar mode pilih versi ringkas: label mode + "Pilih semua". Jumlah terpilih
+ * dan tombol keluar tinggal di MobileSelectBar yang menempel di atas bottom
+ * nav, supaya tidak ada dua hitungan/tombol keluar di layar yang sama.
+ */
+export function MobileSelectModeBar({
+  selectedCount = 0,
+  allSelected = false,
+  onSelectAllVisible,
+}: {
+  selectedCount?: number;
+  allSelected?: boolean;
+  onSelectAllVisible?: () => void;
+}) {
+  return (
+    <div className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-[var(--brand-accent)]/30 bg-[var(--brand-accent)]/5 px-3 py-2 md:hidden">
+      <span className="flex items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary)]">
+        <Checks className="h-4 w-4 shrink-0" />
+        Mode pilih
+      </span>
+      {onSelectAllVisible && (
+        <button
+          type="button"
+          onClick={onSelectAllVisible}
+          aria-label={allSelected ? "Hapus centang semua" : `Pilih semua ${selectedCount} item`}
+          className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+        >
+          {allSelected ? "Hapus centang" : "Pilih semua"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function MobileFilterBar({
   query,
   onQueryChange,
@@ -207,22 +245,11 @@ export function MobileFilterBar({
 
   if (selectMode) {
     return (
-      <div className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-[var(--brand-accent)]/30 bg-[var(--brand-accent)]/5 px-3 py-2 md:hidden">
-        <span className="flex items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary)]">
-          <Checks className="h-4 w-4 shrink-0" />
-          Mode pilih
-        </span>
-        {onSelectAllVisible && (
-          <button
-            type="button"
-            onClick={onSelectAllVisible}
-            aria-label={allSelected ? "Hapus centang semua" : `Pilih semua ${selectedCount} item`}
-            className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-          >
-            {allSelected ? "Hapus centang" : "Pilih semua"}
-          </button>
-        )}
-      </div>
+      <MobileSelectModeBar
+        selectedCount={selectedCount}
+        allSelected={allSelected}
+        onSelectAllVisible={onSelectAllVisible}
+      />
     );
   }
 

@@ -32,6 +32,7 @@ import {
 } from "@/components/Icons";
 import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
 import {
+  LongPressHint,
   MobileFilterBar,
   MobileListRow,
   MobilePagination,
@@ -40,6 +41,7 @@ import {
   MobileThumb,
   QuietBadge,
   RowActionsMenu,
+  SelectionMark,
   type RowAction,
 } from "@/components/admin/mobile";
 
@@ -673,6 +675,7 @@ export default function AdminMediaPage() {
 
           {/* Daftar mobile (<md) — baris 56px tipe berkas + nama + ukuran/tanggal,
               aksi di menu ⋯ (Buka, Salin tautan, Hapus), mode Pilih + bar sticky. */}
+          <LongPressHint />
           <div
             role="list"
             aria-label="Daftar file media"
@@ -717,19 +720,7 @@ export default function AdminMediaPage() {
                   <MobileListRow
                     lead={
                       pickMode ? (
-                        <span
-                          data-no-longpress=""
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex h-10 w-10 shrink-0 items-center justify-center"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleSelectPath(file.path)}
-                            aria-label={`Pilih ${file.name}`}
-                            className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-                          />
-                        </span>
+                        <SelectionMark selected={isSelected} />
                       ) : null
                     }
                     thumb={
@@ -774,9 +765,21 @@ export default function AdminMediaPage() {
                       />
                     }
                     selected={isSelected}
+                    selectionMode={pickMode}
                     onClick={() => {
                       if (pickMode) toggleSelectPath(file.path);
                       else setPreviewFile(file);
+                    }}
+                    onLongPress={() => {
+                      if (pickMode) toggleSelectPath(file.path);
+                      else {
+                        setPickMode(true);
+                        setSelectedPaths((s) => {
+                          const n = new Set(s);
+                          n.add(file.path);
+                          return n;
+                        });
+                      }
                     }}
                   />
                 </div>

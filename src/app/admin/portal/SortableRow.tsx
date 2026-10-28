@@ -29,7 +29,12 @@ import {
 } from "@/lib/portal-theme";
 import { useFloatingPanel } from "@/components/ui/useFloatingPanel";
 import { StatusPill, statusOf, type PortalStatus } from "./StatusControl";
-import { RowGrip, RowActionsTriggerIcon, rowActionsTriggerClass } from "@/components/admin/mobile";
+import {
+  RowGrip,
+  RowActionsTriggerIcon,
+  rowActionsTriggerClass,
+  SelectionMark,
+} from "@/components/admin/mobile";
 
 /**
  * Kolom grid desktop (dipakai header di page.tsx supaya sejajar):
@@ -660,15 +665,32 @@ export function SortableRow({
       </div>
 
       {/* ── Mobile: satu baris ringkas ─────────────────────────
-          [handle/checkbox] [tile ikon 40px] [nama+subteks] [chip status] [⋯ 40px]
+          [handle/penanda pilih] [tile ikon 40px] [nama+subteks] [chip status] [⋯ 40px]
           — satu baris penuh, tanpa "Urutan N" (nomor di dalam handle), tanpa
           ikon aksi terpisah (pindah ke menu ⋯). Tap baris = edit; di mode
-          pilih, checkbox menggantikan handle di slot yang sama (lebar baris
-          tidak berubah) dan tap baris = toggle centang.
+          pilih, penanda centang menggantikan handle di slot yang sama (lebar
+          baris tidak berubah) dan tap/hold baris = toggle centang.
           `select-none` + `-webkit-touch-callout:none` mencegah seleksi teks /
           callout bawaan browser saat long-press (bentrok dengan mode pilih). */}
       <div
-        className="flex select-none items-center gap-3 py-3 pl-2.5 pr-1 [-webkit-touch-callout:none] md:hidden"
+        role={selectMode ? "checkbox" : undefined}
+        aria-checked={selectMode ? selected : undefined}
+        aria-label={selectMode ? `Pilih ${item.label}` : undefined}
+        tabIndex={selectMode ? 0 : undefined}
+        onKeyDown={
+          selectMode
+            ? (e) => {
+                if (e.key !== " " && e.key !== "Enter") return;
+                e.preventDefault();
+                onSelect(item.id, !selected);
+              }
+            : undefined
+        }
+        className={`flex select-none items-center gap-3 py-3 pl-2.5 pr-1 [-webkit-touch-callout:none] md:hidden ${
+          selectMode
+            ? "cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brand-accent)]"
+            : ""
+        } ${selected ? "bg-[var(--brand-primary)]/[0.04]" : ""}`}
         onClick={onRowClick}
         onPointerDown={onPointerDownRow}
         onPointerMove={onPointerMoveRow}
@@ -676,23 +698,7 @@ export function SortableRow({
         onPointerCancel={cancelPress}
         onPointerLeave={cancelPress}
       >
-        {selectMode ? (
-          <span
-            data-no-longpress=""
-            onClick={(e) => e.stopPropagation()}
-            className="flex h-11 w-11 shrink-0 items-center justify-center"
-          >
-            <input
-              type="checkbox"
-              checked={selected}
-              onChange={(e) => onSelect(item.id, e.target.checked)}
-              aria-label={`Pilih ${item.label}`}
-              className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-            />
-          </span>
-        ) : (
-          mobileHandle
-        )}
+        {selectMode ? <SelectionMark selected={selected} /> : mobileHandle}
 
         <ThemeChip icon={item.icon} color={item.color} size="lg" />
 

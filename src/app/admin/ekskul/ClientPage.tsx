@@ -41,6 +41,8 @@ import {
   MobileFilterBar,
   MobilePickButton,
   MobileListRow,
+  LongPressHint,
+  SelectionMark,
   MobileSelectBar,
   RowActionsMenu,
   RowGrip,
@@ -787,7 +789,7 @@ export default function AdminEkskulPage() {
           <table className="w-full">
             <thead className="border-b border-slate-200/80 bg-slate-50/80">
               <tr>
-                <th className="hidden w-12 px-2 py-3 text-center sm:table-cell">
+                <th className="hidden w-12 px-2 py-3 text-center md:table-cell">
                   <input
                     type="checkbox"
                     checked={allVisibleSelected}
@@ -872,6 +874,7 @@ export default function AdminEkskulPage() {
       </div>
 
       {/* Daftar mobile */}
+      <LongPressHint />
       <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden">
         <SortableList ids={filtered.map((i) => i.id)} onReorder={onReorder}>
         <div role="list" aria-label="Daftar ekskul">
@@ -1220,7 +1223,7 @@ function SortableEkskulRow({
           style={style}
           className={`relative transition-colors ${isDragging ? "bg-slate-50 opacity-70" : selected ? "bg-[var(--brand-primary)]/[0.03]" : "hover:bg-slate-50/80"}`}
         >
-          <td className="hidden w-12 px-2 py-3.5 text-center sm:table-cell" onClick={(e) => e.stopPropagation()}>
+          <td className="hidden w-12 px-2 py-3.5 text-center md:table-cell" onClick={(e) => e.stopPropagation()}>
             <input
               type="checkbox"
               checked={selected}
@@ -1370,15 +1373,7 @@ function EkskulMobileRow({
           <MobileListRow
             lead={
               selectMode ? (
-                <span data-no-longpress="" onClick={(e) => e.stopPropagation()} className="flex h-10 w-10 shrink-0 items-center justify-center">
-                  <input
-                    type="checkbox"
-                    checked={selected}
-                    onChange={() => onToggleSelect(item.id)}
-                    aria-label={`Pilih ${item.name}`}
-                    className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-                  />
-                </span>
+                <SelectionMark selected={selected} />
               ) : (
                 <RowGrip
                   index={index}
@@ -1404,6 +1399,7 @@ function EkskulMobileRow({
             subtitle={<span className="min-w-0 truncate">{schedule || `/${item.slug}`}</span>}
             actions={<RowActionsMenu label={item.name} actions={actions} disabled={selectMode} />}
             selected={selected}
+            selectionMode={selectMode}
             onClick={() => {
               if (selectMode) onToggleSelect(item.id);
               else onEdit(item);

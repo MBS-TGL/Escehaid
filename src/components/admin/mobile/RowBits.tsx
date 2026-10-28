@@ -2,7 +2,7 @@
 
 import { useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import Image from "next/image";
-import { DotsSixVertical, ImageSquare } from "@/components/Icons";
+import { CheckCircle, DotsSixVertical, ImageSquare, Info } from "@/components/Icons";
 
 /**
  * Potongan-potongan baris daftar mobile (bahasa desain putaran 2):
@@ -14,8 +14,46 @@ import { DotsSixVertical, ImageSquare } from "@/components/Icons";
  *                  tidak biasa (Nonaktif / Draft / Terjadwal);
  *  - RowGrip     — kolom grip urutan 30px (titik 6-dot + nomor urut 11px)
  *                  dengan area sentuh tetap lebar (>= 44px, margin negatif)
- *                  dan `touch-action: none` hanya di handle.
+ *                  dan `touch-action: none` hanya di handle;
+ *  - SelectionMark — slot 40px penanda terpilih (glyph centang) yang
+ *                  menggantikan checkbox/grip di mode pilih mobile.
  */
+
+/**
+ * Penanda terpilih mobile. Slot tetap 40px saat kosong supaya lebar baris
+ * tidak melompat antara mode normal dan mode pilih. Bukan input checkbox —
+ * status aksesibilitas diumumkan oleh row yang ber-role checkbox.
+ */
+export function SelectionMark({
+  selected,
+  className = "",
+}: {
+  selected: boolean;
+  className?: string;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`flex h-10 w-10 shrink-0 items-center justify-center ${className}`}
+    >
+      {selected ? (
+        <CheckCircle className="h-5 w-5 text-[var(--brand-primary)]" weight="fill" />
+      ) : (
+        <span className="h-5 w-5 rounded-full border-2 border-slate-200" />
+      )}
+    </span>
+  );
+}
+
+/** Petunjuk gesture sekali-tampil di atas daftar mobile. */
+export function LongPressHint({ className = "" }: { className?: string }) {
+  return (
+    <p className={`mb-2 flex items-center gap-1.5 text-[11px] text-slate-400 md:hidden ${className}`}>
+      <Info className="h-3.5 w-3.5 shrink-0" />
+      Tahan baris untuk memilih
+    </p>
+  );
+}
 
 /** Warna titik status. Hijau = aktif/terbit, abu = nonaktif/draft,
  *  amber = terjadwal/menunggu, biru = info (mis. belum dibaca),

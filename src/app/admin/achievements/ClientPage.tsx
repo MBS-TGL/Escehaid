@@ -59,7 +59,8 @@ import {
   MobileFilterBar,
   MobileListRow,
   MobilePickButton,
-  MobileSelectBar,
+  LongPressHint,
+  SelectionMark,
   MobileThumb,
   QuietBadge,
   RowActionsMenu,
@@ -315,11 +316,6 @@ export default function AdminAchievementsPage() {
   function enterPickMode(id?: string) {
     setPickMode(true);
     if (id) setSelectedIds((s) => { const n = new Set(s); n.add(id); return n; });
-  }
-
-  function exitPickMode() {
-    setPickMode(false);
-    setSelectedIds(new Set());
   }
 
   function toggleSort(field: SortField) {
@@ -705,7 +701,7 @@ export default function AdminAchievementsPage() {
                 {/* hidden sm:table-cell — checkbox & No hanya untuk tablet/desktop; di
                 bawah 640px sisa kolom biar lega, sama seperti
                 agenda/teachers/users/announcements/facilities. */}
-                <th className="hidden w-12 px-2 py-3 text-center sm:table-cell">
+                <th className="hidden w-12 px-2 py-3 text-center md:table-cell">
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
                     className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                 </th>
@@ -769,7 +765,7 @@ export default function AdminAchievementsPage() {
                     style={style}
                     className={`group transition-colors ${isDragging ? "bg-slate-50 opacity-70" : selectedIds.has(item.id) ? "bg-[var(--brand-primary)]/[0.03]" : "hover:bg-slate-50/80"}`}
                   >
-                    <td className="hidden w-12 px-2 py-3.5 text-center sm:table-cell" onClick={(e) => e.stopPropagation()}>
+                    <td className="hidden w-12 px-2 py-3.5 text-center md:table-cell" onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
                         className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                     </td>
@@ -851,6 +847,8 @@ export default function AdminAchievementsPage() {
 
       {/* Daftar mobile (<md) — baris berfoto/ikon piala, judul 2 baris,
           subteks tingkat · tahun, titik status unggulan, aksi via menu ⋯. */}
+
+      <LongPressHint />
       <div
         role="list"
         aria-label="Daftar prestasi"
@@ -923,19 +921,7 @@ export default function AdminAchievementsPage() {
                 <MobileListRow
                   lead={
                     pickMode ? (
-                      <span
-                        data-no-longpress=""
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex h-10 w-10 shrink-0 items-center justify-center"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(item.id)}
-                          onChange={() => toggleSelect(item.id)}
-                          aria-label={`Pilih ${item.title}`}
-                          className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-                        />
-                      </span>
+                      <SelectionMark selected={selectedIds.has(item.id)} />
                     ) : (
                       <RowGrip
                         index={index}
@@ -984,6 +970,7 @@ export default function AdminAchievementsPage() {
                     />
                   }
                   selected={selectedIds.has(item.id)}
+                  selectionMode={pickMode}
                   onClick={() => {
                     if (pickMode) toggleSelect(item.id);
                     else setViewItem(item);
@@ -1000,15 +987,6 @@ export default function AdminAchievementsPage() {
         {/* Ruang ekstra agar baris terakhir tidak tertutup bar sticky mode pilih */}
         {pickMode && <div className="h-24" aria-hidden="true" />}
       </div>
-
-      {/* Bar aksi massal sticky (mobile, mode pilih) — di atas bottom nav admin */}
-      {pickMode && (
-        <MobileSelectBar
-          count={selectedIds.size}
-          onDelete={permDelete ? () => setBulkDelete(true) : undefined}
-          onCancel={exitPickMode}
-        />
-      )}
 
       {/* ── VIEW MODAL ──────────────────────────────── */}
       <Modal

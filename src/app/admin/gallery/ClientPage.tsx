@@ -26,6 +26,7 @@ import {
   Warning,
   FloppyDisk,
   Checks,
+  CheckCircle,
   Eye,
   Users,
   CalendarBlank,
@@ -36,6 +37,7 @@ import {
   MobilePickButton,
   MobileSelectBar,
   RowActionsMenu,
+  useLongPressList,
   type RowAction,
 } from "@/components/admin/mobile";
 import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
@@ -213,6 +215,11 @@ export default function AdminGalleryPage() {
     setPickMode(false);
     setSelectedIds(new Set());
   }
+
+  // Hold di kartu → masuk mode pilih + centang kartu itu; hold lagi = toggle.
+  const longPress = useLongPressList({
+    onLongPress: (id) => (pickMode ? toggleSelect(id) : enterPickMode(id)),
+  });
 
   function openCreate() {
     setEditItem(null);
@@ -416,7 +423,15 @@ export default function AdminGalleryPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <div
+            className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+            onPointerDown={longPress.onPointerDown}
+            onPointerMove={longPress.onPointerMove}
+            onPointerUp={longPress.onPointerUp}
+            onPointerCancel={longPress.onPointerCancel}
+            onPointerLeave={longPress.onPointerLeave}
+            onContextMenu={(e) => e.preventDefault()}
+          >
             {paginated.map((item, index) => {
               const isSelected = selectedIds.has(item.id);
               const menuActions: RowAction[] = [
@@ -426,13 +441,19 @@ export default function AdminGalleryPage() {
               ];
               return (
                 <div key={item.id}
+                  data-longpress-id={item.id}
                   className={`group relative overflow-hidden rounded-xl border bg-white shadow-sm transition-all hover:shadow-md hover:border-[var(--brand-accent)]/30 ${isSelected ? "border-[var(--brand-primary)] ring-2 ring-[var(--brand-primary)]/20" : "border-slate-200/70"}`}>
-                  {/* Checkbox — desktop selalu tampil; mobile hanya di mode Pilih */}
-                  <div className={`absolute left-2 top-2 z-10 ${pickMode ? "" : "hidden md:block"}`} onClick={(e) => e.stopPropagation()}>
+                  {/* Checkbox hanya desktop; mobile memakai hold + badge centang. */}
+                  <div className="absolute left-2 top-2 z-10 hidden md:block" onClick={(e) => e.stopPropagation()}>
                     <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(item.id)}
                       aria-label={`Pilih ${item.title}`}
                       className="h-5 w-5 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                   </div>
+                  {pickMode && isSelected && (
+                    <span className="absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-md md:hidden">
+                      <CheckCircle className="h-4 w-4" weight="fill" aria-hidden="true" />
+                    </span>
+                  )}
                   {/* Aksi desktop — hover; mobile memakai menu ⋄ di pojok gambar */}
                   <div className="absolute right-2 top-2 z-10 hidden gap-1 opacity-0 transition-opacity group-hover:opacity-100 md:flex" onClick={(e) => e.stopPropagation()}>
                     <button onClick={() => openEdit(item)} aria-label={`Edit ${item.title}`} className="rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
@@ -454,7 +475,11 @@ export default function AdminGalleryPage() {
                     />
                   </div>
                   <div
-                    onClick={() => (pickMode ? toggleSelect(item.id) : setViewItem(item))}
+                    onClick={() => {
+                      if (longPress.consumeClick()) return;
+                      if (pickMode) toggleSelect(item.id);
+                      else setViewItem(item);
+                    }}
                     className="cursor-pointer"
                   >
                     <div className="aspect-[4/3] bg-slate-100 flex items-center justify-center md:aspect-square">

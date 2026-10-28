@@ -42,7 +42,9 @@ import {
   MobilePickButton,
   MobileListRow,
   MobileSelectBar,
+  LongPressHint,
   RowActionsMenu,
+  SelectionMark,
   StatusDot,
   type RowAction,
 } from "@/components/admin/mobile";
@@ -486,6 +488,7 @@ export default function AdminContactPage() {
           nama bold, sudah dibaca tanpa penanda; aksi (termasuk ganti status
           baca) via menu ⋯. Semua fitur tabel desktop tetap tersedia tanpa
           scroll horizontal. */}
+      <LongPressHint />
       <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden">
         <div role="list" aria-label="Daftar pesan masuk">
           {loading ? (
@@ -722,19 +725,7 @@ function ContactMobileRow({
       <MobileListRow
         lead={
           selectMode ? (
-            <span
-              data-no-longpress=""
-              onClick={(e) => e.stopPropagation()}
-              className="flex h-10 w-10 shrink-0 items-center justify-center"
-            >
-              <input
-                type="checkbox"
-                checked={selected}
-                onChange={() => onToggleSelect(item.id)}
-                aria-label={`Pilih pesan dari ${item.name}`}
-                className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-              />
-            </span>
+            <SelectionMark selected={selected} />
           ) : (
             <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${!item.is_read ? "bg-[var(--brand-primary)]/10" : "bg-slate-100"}`}>
               <User className={`h-5 w-5 ${!item.is_read ? "text-[var(--brand-primary)]" : "text-slate-400"}`} />
@@ -760,6 +751,7 @@ function ContactMobileRow({
         }
         actions={<RowActionsMenu label={`pesan dari ${item.name}`} actions={actions} disabled={selectMode} />}
         selected={selected}
+        selectionMode={selectMode}
         onClick={() => {
           if (selectMode) onToggleSelect(item.id);
           else onView(item);

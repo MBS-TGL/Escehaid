@@ -2,7 +2,9 @@
 
 import {
   useEffect,
+  useId,
   useRef,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
@@ -22,9 +24,9 @@ const LONG_PRESS_SLOP = 10;
  * line-clamp-2; subteks 12px `#64748b` dengan jarak 4px dari judul.
  * Slot `badge` hanya untuk keadaan tidak biasa (Nonaktif/Draft/Terjadwal).
  *
- * Slot `lead` diisi handle drag atau checkbox (pada mode pilih) sehingga
- * lebar baris tidak berubah antar mode. Semua slot interaktif (handle,
- * checkbox, pill status, menu ⋯) wajib memakai `data-no-longpress=""` dan
+ * Slot `lead` diisi handle drag atau penanda pilih (SelectionMark, 40px)
+ * sehingga lebar baris tidak berubah antar mode. Semua slot interaktif
+ * (handle, pill status, menu ⋯) wajib memakai `data-no-longpress=""` dan
  * `e.stopPropagation()` agar tidak membajak tap-baris / long-press.
  *
  * `onClick` baris = tap (buka detail/edit atau toggle centang di mode pilih).
@@ -32,6 +34,10 @@ const LONG_PRESS_SLOP = 10;
  * klik yang lahir dari long-press dibuang. Baris memakai `select-none` +
  * `-webkit-touch-callout:none` agar callout salin-tempel bawaan browser saat
  * tekan lama tidak bentrok dengan aksi long-press.
+ *
+ * `selectionMode` (mode pilih aktif, tanpa checkbox): baris menjadi checkbox
+ * aksesibel (`role="checkbox"` + `aria-checked`), bisa difokus & ditoggle
+ * dengan Space/Enter, dan long-press melepas centang (bukan sekadar menambah).
  */
 export function MobileListRow({
   lead,
@@ -44,6 +50,7 @@ export function MobileListRow({
   onClick,
   onLongPress,
   selected = false,
+  selectionMode = false,
   className = "",
 }: {
   lead?: ReactNode;
@@ -57,8 +64,11 @@ export function MobileListRow({
   onClick?: () => void;
   onLongPress?: () => void;
   selected?: boolean;
+  /** Mode pilih: baris jadi checkbox aksesibel (role/aria-checked/keyboard). */
+  selectionMode?: boolean;
   className?: string;
 }) {
+  const titleId = useId();
   const pressTimer = useRef<number | null>(null);
   const longPressFired = useRef(false);
   const pressXY = useRef<{ x: number; y: number } | null>(null);
@@ -78,7 +88,7 @@ export function MobileListRow({
   );
 
   function onPointerDownRow(e: ReactPointerEvent<HTMLDivElement>) {
-    if (!onLongPress) return;
+    if (!onLongPress && !selectionMode) return;
     // Mulai hanya dari area non-interaktif (bukan handle/chip/status/⋯).
     const target = e.target as HTMLElement;
     if (target.closest("[data-no-longpress]")) return;
@@ -88,7 +98,8 @@ export function MobileListRow({
     pressTimer.current = window.setTimeout(() => {
       pressTimer.current = null;
       longPressFired.current = true;
-      onLongPress();
+      if (selectionMode) onClick?.();
+      else onLongPress?.();
     }, LONG_PRESS_MS);
   }
 
@@ -110,8 +121,19 @@ export function MobileListRow({
     onClick();
   }
 
+  function onRowKeyDown(e: ReactKeyboardEvent<HTMLDivElement>) {
+    if (e.key !== " " && e.key !== "Enter") return;
+    e.preventDefault();
+    handleRowClick();
+  }
+
   return (
     <div
+      role={selectionMode ? "checkbox" : undefined}
+      aria-checked={selectionMode ? selected : undefined}
+      aria-labelledby={selectionMode ? titleId : undefined}
+      tabIndex={selectionMode ? 0 : undefined}
+      onKeyDown={selectionMode ? onRowKeyDown : undefined}
       onClick={handleRowClick}
       onPointerDown={onPointerDownRow}
       onPointerMove={onPointerMoveRow}
@@ -120,12 +142,12 @@ export function MobileListRow({
       onPointerLeave={cancelPress}
       className={`flex select-none items-center gap-3 border-t border-slate-100 py-3 pl-2.5 pr-1 [-webkit-touch-callout:none] ${
         onClick ? "cursor-pointer active:bg-slate-50" : ""
-      } ${selected ? "bg-[var(--brand-primary)]/[0.03]" : ""} ${className}`}
+      } ${selectionMode ? "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brand-accent)]" : ""} ${selected ? "bg-[var(--brand-primary)]/[0.04]" : ""} ${className}`}
     >
       {lead}
       {thumb}
       <div className="min-w-0 flex-1">
-        <div className="line-clamp-2 break-words text-[15px] font-semibold leading-[1.25] text-[#0f2a4d]">
+        <div id={titleId} className="line-clamp-2 break-words text-[15px] font-semibold leading-[1.25] text-[#0f2a4d]">
           {title}
         </div>
         {badge && (

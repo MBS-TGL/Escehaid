@@ -40,7 +40,8 @@ import {
   MobileFilterBar,
   MobilePickButton,
   MobileListRow,
-  MobileSelectBar,
+  LongPressHint,
+  SelectionMark,
   RowActionsMenu,
   RowGrip,
   StatusDot,
@@ -414,7 +415,7 @@ export default function AdminDownloadsPage() {
               <tr>
                 {/* Checkbox/Urutan disembunyikan di <sm (pasangan dari kolom
                     <td> — lihat catatan pola di modul Agenda). */}
-                <th className="hidden w-12 px-2 py-3 text-center sm:table-cell">
+                <th className="hidden w-12 px-2 py-3 text-center md:table-cell">
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
                     className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                 </th>
@@ -477,6 +478,7 @@ export default function AdminDownloadsPage() {
       {/* Daftar mobile (<md) — baris ringkas tanpa scroll horizontal; semua
           fitur tetap ada: pilih (mode pilih), geser urutan lewat grip drag,
           edit & hapus via menu ⋯, lihat berkas via menu ⋯. */}
+      <LongPressHint />
       <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden">
         <SortableList ids={filtered.map((i) => i.id)} onReorder={onReorder}>
         <div role="list" aria-label="Daftar unduhan">
@@ -532,15 +534,6 @@ export default function AdminDownloadsPage() {
         {/* Ruang ekstra agar baris terakhir tidak tertutup bar sticky mode pilih */}
         {pickMode && <div className="h-24" aria-hidden="true" />}
       </div>
-
-      {/* Bar aksi massal sticky (mobile, mode pilih) — di atas bottom nav admin */}
-      {pickMode && (
-        <MobileSelectBar
-          count={selectedIds.size}
-          onDelete={permDelete ? () => setBulkDelete(true) : undefined}
-          onCancel={exitPickMode}
-        />
-      )}
 
       {/* Create/Edit SlideOver */}
       <SlideOver open={formOpen} onClose={() => !formSaving && setFormOpen(false)}
@@ -683,7 +676,7 @@ function SortableDownloadRow({
           style={style}
           className={`relative transition-colors ${isDragging ? "bg-slate-50 opacity-70" : selected ? "bg-[var(--brand-primary)]/[0.03]" : "hover:bg-slate-50/80"}`}
         >
-          <td className="hidden w-12 px-2 py-3.5 text-center sm:table-cell" onClick={(e) => e.stopPropagation()}>
+          <td className="hidden w-12 px-2 py-3.5 text-center md:table-cell" onClick={(e) => e.stopPropagation()}>
             <input type="checkbox" checked={selected} onChange={() => onToggleSelect(item.id)}
               aria-label={`Pilih ${item.title}`}
               className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
@@ -819,19 +812,7 @@ function DownloadMobileRow({
           <MobileListRow
             lead={
               selectMode ? (
-                <span
-                  data-no-longpress=""
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selected}
-                    onChange={() => onToggleSelect(item.id)}
-                    aria-label={`Pilih ${item.title}`}
-                    className="h-5 w-5 shrink-0 cursor-pointer rounded border-slate-300 accent-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-                  />
-                </span>
+                <SelectionMark selected={selected} />
               ) : (
                 <RowGrip
                   index={index}
@@ -865,6 +846,7 @@ function DownloadMobileRow({
             }
             actions={<RowActionsMenu label={item.title} actions={actions} disabled={selectMode} />}
             selected={selected}
+            selectionMode={selectMode}
             onClick={() => {
               if (selectMode) onToggleSelect(item.id);
               else onEdit(item);
