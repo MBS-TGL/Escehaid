@@ -49,7 +49,13 @@ function FilterDropdown({ group }: { group: FilterGroup }) {
   return (
     // grow: hanya berpengaruh saat baris selebar layar (<sm); pada ≥sm baris
     // berlebar konten sehingga grow tidak punya ruang → tampilan lama persis.
-    <div className="relative grow">
+    //
+    // `min-w-0 basis-0` WAJIB: tanpa itu dua pill + tombol aksi di kanan
+    // melebihi lebar layar HP (label "Semua Peran"/"Semua Status" punya
+    // min-content ±180px) sehingga tombol aksi terdorong keluar. Dengan
+    // basis-0 keduanya berbagi ruang sama dan label memotong (truncate).
+    // `sm:basis-auto` mengembalikan lebar konten di layar lebar.
+    <div className="relative min-w-0 grow basis-0 sm:basis-auto">
       <button
         ref={triggerRef}
         type="button"
@@ -148,7 +154,10 @@ export function FilterBar({
         )}
       </div>
 
-      <div className="flex w-full items-center gap-2 sm:w-auto">
+      {/* flex-wrap: bila pill + aksi tetap tidak muat (layar sangat sempit),
+          aksi turun ke baris berikutnya dan tetap terlihat — bukan terpotong
+          di luar layar. */}
+      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
         {filters.map((group) => (
           <FilterDropdown key={group.menuLabel} group={group} />
         ))}
