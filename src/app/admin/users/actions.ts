@@ -66,6 +66,13 @@ type ResetPasswordResult = ActionResult & { recoveryLink?: string | null };
  */
 const passwordSetLimiter = createRateLimiter(20, 10 * 60 * 1000);
 
+/**
+ * Batas operasi undang-massal per aktor. Membuat 50 akun Auth sekaligus adalah
+ * operasi berat; tanpa batas, akun pengelola yang disusupi bisa membanjiri
+ * project. 3 proses / 10 menit cukup untuk kebutuhan sekolah.
+ */
+const bulkInviteLimiter = createRateLimiter(3, 10 * 60 * 1000);
+
 /** Kolom aman yang boleh dikembalikan ke UI (tanpa hash/token). */
 const SAFE_PROFILE_COLUMNS =
   "id, full_name, email, role, system_role, is_active, must_change_password, last_login_at, created_at, updated_at";
@@ -1231,6 +1238,18 @@ export async function bulkInviteUsers(rows: BulkInviteRow[]): Promise<BulkInvite
   const guard = requirePermission("users:manage");
   const check = await guard();
   if (!check.ok) return { success: false, error: check.error, created: [], failed: [] };
+
+  const limit = bulkInviteLimiter.check(check.ctx.userId);
+  if (!limit.allowed) {
+    return {
+      success: false,
+      error: `Terlalu banyak proses undang massal. Coba lagi dalam ${Math.ceil(
+        limit.retryAfterSec / 60
+      )} menit.`,
+      created: [],
+      failed: [],
+    };
+  }
 
   const admin = serviceRoleClient();
   if (!admin) {

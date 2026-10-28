@@ -8,7 +8,7 @@
  * bisnis (super admin terakhir, tidak ubah peran/hapus diri sendiri) juga
  * ditegakkan server-side; di sini hanya penyaringan kenyamanan.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   getRoleList,
@@ -72,7 +72,6 @@ import {
   Eye,
   EyeSlash,
   Lock,
-  Download,
   CalendarBlank,
 } from "@/components/Icons";
 
@@ -131,7 +130,15 @@ function IconAction({
   );
 }
 
-export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
+/** Aksi halaman yang dipanggil dari header (tombol hero). */
+export interface UsersTabHandle {
+  openInvite: () => void;
+  openBulkInvite: () => void;
+  exportCsv: () => Promise<{ success: boolean; error?: string; count?: number }>;
+}
+
+export const UsersTab = forwardRef<UsersTabHandle, { currentUserId: string | null }>(
+function UsersTab({ currentUserId }, ref) {
   const { toast } = useToast();
   const router = useRouter();
   const [users, setUsers] = useState<AdminUserRow[]>([]);
@@ -168,7 +175,6 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
     email: string;
     link: string;
   } | null>(null);
-  const [exporting, setExporting] = useState(false);
   const [bulkInviteOpen, setBulkInviteOpen] = useState(false);
   const [editRoleItem, setEditRoleItem] = useState<AdminUserRow | null>(null);
   const [editRoleKey, setEditRoleKey] = useState("");
@@ -633,20 +639,24 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
     setInviteLinkItem({ name: item.full_name, email: item.email ?? "", link: res.inviteLink });
   }
 
-  /** Ekspor daftar sesuai filter aktif (akses review). */
-  async function handleExportCsv() {
-    setExporting(true);
+  /**
+   * Ekspor daftar sesuai filter aktif (akses review).
+   *
+   * Dipanggil dari header halaman lewat ref; mengembalikan status agar parent
+   * bisa menampilkan spinner & toast tanpa perlu tahu detail CSV.
+   */
+  const handleExportCsv = useCallback(async (): Promise<{ success: boolean; error?: string; count?: number }> => {
     const res = await exportUsersCsv({
       search: debouncedSearch,
       role: roleFilter,
       status: statusFilter as "all" | "active" | "inactive",
+      flag: flagFilter,
       sortField,
       sortDir,
     });
-    setExporting(false);
     if (!res.success || !res.csv) {
       toast(res.error ?? "Gagal mengekspor pengguna.", "error");
-      return;
+      return { success: false, error: res.error };
     }
     const blob = new Blob([res.csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -658,7 +668,8 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
     a.remove();
     URL.revokeObjectURL(url);
     toast(`${res.count ?? 0} pengguna diekspor ke CSV`, "success");
-  }
+    return { success: true, count: res.count };
+  }, [debouncedSearch, roleFilter, statusFilter, flagFilter, sortField, sortDir, toast]);
 
   async function copyInviteLink() {
     if (!inviteLinkItem) return;
@@ -783,6 +794,13 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
     }
   }
 
+  // Tombol hero memanggil aksi di sini; ref menjaga state UI tetap satu sumber.
+  useImperativeHandle(ref, () => ({
+    openInvite: () => setInviteOpen(true),
+    openBulkInvite: () => setBulkInviteOpen(true),
+    exportCsv: handleExportCsv,
+  }), [handleExportCsv]);
+
   if (loading) {
     return (
       <div className="flex flex-col items-center gap-3 rounded-xl border border-slate-200/80 bg-white py-16">
@@ -814,7 +832,8 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
         </div>
       )}
 
-      {/* Filter + tombol undang */}
+      {/* Filter — hanya penyaring data. Aksi halaman (Undang/Massal/Ekspor)
+          ada di header halaman (hero), bukan di toolbar filter. */}
       <FilterBar
         placeholder="Cari nama atau email..."
         searchLabel="Cari pengguna"
@@ -824,41 +843,6 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
           setPage(1);
         }}
         filters={[roleFilterGroup, statusFilterGroup, flagFilterGroup]}
-        action={
-          <>
-            <button
-              type="button"
-              onClick={() => setBulkInviteOpen(true)}
-              aria-label="Undang Massal"
-              title="Undang massal dari CSV"
-              className="flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-            >
-              <UserPlus className="h-4 w-4" />
-              <span className="hidden sm:inline">Massal</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleExportCsv}
-              disabled={exporting}
-              aria-label="Ekspor CSV"
-              title="Ekspor CSV (mengikuti filter aktif)"
-              className="flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-            >
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">Ekspor</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setInviteOpen(true)}
-              aria-label="Undang Pengguna"
-              title="Undang Pengguna"
-              className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-3.5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] sm:px-4"
-            >
-              <UserPlus className="h-4 w-4" />
-              <span className="hidden sm:inline">Undang</span>
-            </button>
-          </>
-        }
       />
 
       {/* Bulk bar — muncul saat ada pilihan */}
@@ -1907,4 +1891,4 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
       />
     </div>
   );
-}
+});

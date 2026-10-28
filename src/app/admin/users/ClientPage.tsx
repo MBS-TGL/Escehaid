@@ -12,10 +12,10 @@
  * Tab disimpan di hash URL (`#peran`) supaya reload / berbagi tautan mendarat
  * di tab yang sama. `hashchange` ditangani agar tombol Back/Forward bekerja.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { UsersTab } from "./UsersTab";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { UsersTab, type UsersTabHandle } from "./UsersTab";
 import { RolesTab } from "./RolesTab";
-import { UsersThree, ShieldCheck } from "@/components/Icons";
+import { UsersThree, ShieldCheck, UserPlus, Upload, Download } from "@/components/Icons";
 
 const TABS = [
   { key: "users", label: "Pengguna", icon: UsersThree, hash: "#pengguna" },
@@ -31,7 +31,9 @@ function tabFromHash(hash: string): TabKey {
 export default function AdminUsersPage() {
   const [tab, setTab] = useState<TabKey>("users");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const usersRef = useRef<UsersTabHandle>(null);
 
   // Sinkronkan tab dengan hash saat mount & saat Back/Forward.
   useEffect(() => {
@@ -74,21 +76,73 @@ export default function AdminUsersPage() {
     tabRefs.current[next]?.focus();
   }
 
-  const panelId = useMemo(() => `tabpanel-${tab}`, [tab]);
+  // Satu panel untuk dua tab (konten diganti) — id harus cocok dengan
+  // aria-controls milik tab aktif agar pembaca layar tidak menunjuk elemen lain.
+  const panelId = `tabpanel-${tab}`;
+
+
+  /** Ekspor lewat ref; state loading dipegang header agar tidak dobel klik. */
+  async function handleExportCsv() {
+    if (!usersRef.current) return;
+    setExporting(true);
+    try {
+      await usersRef.current.exportCsv();
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      {/* Header */}
-      <div className="mb-5 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--brand-primary)]/10">
-          <UsersThree className="h-5 w-5 text-[var(--brand-primary)]" />
+      {/* Header (hero): judul + aksi halaman. Aksi hanya untuk tab Pengguna. */}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--brand-primary)]/10">
+            <UsersThree className="h-5 w-5 text-[var(--brand-primary)]" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Pengguna &amp; Peran</h1>
+            <p className="text-[13px] text-slate-500 sm:text-sm">
+              Kelola akun, peran, dan izin akses modul panel admin
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Pengguna &amp; Peran</h1>
-          <p className="text-sm text-slate-500">
-            Kelola akun, peran, dan izin akses modul panel admin
-          </p>
-        </div>
+
+        {tab === "users" && (
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
+            <button
+              type="button"
+              onClick={() => void handleExportCsv()}
+              disabled={exporting}
+              aria-label="Ekspor CSV"
+              title="Ekspor CSV (mengikuti filter aktif)"
+              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:shadow-none sm:h-auto sm:flex-none sm:px-4 sm:py-2.5"
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Ekspor CSV</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => usersRef.current?.openBulkInvite()}
+              aria-label="Impor CSV (undang massal)"
+              title="Impor CSV — undang banyak pengguna"
+              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:h-auto sm:flex-none sm:px-4 sm:py-2.5"
+            >
+              <Upload className="h-4 w-4" />
+              <span className="hidden sm:inline">Impor CSV</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => usersRef.current?.openInvite()}
+              aria-label="Undang Pengguna"
+              title="Undang Pengguna"
+              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] sm:h-auto sm:flex-none sm:px-4 sm:py-2.5"
+            >
+              <UserPlus className="h-4 w-4" />
+              <span className="whitespace-nowrap">Undang</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Tabs — sticky tepat di bawah topbar (h-16 = 64px).
@@ -131,7 +185,11 @@ export default function AdminUsersPage() {
       </div>
 
       <div role="tabpanel" id={panelId} aria-labelledby={`tab-${tab}`}>
-        {tab === "users" ? <UsersTab currentUserId={currentUserId} /> : <RolesTab />}
+        {tab === "users" ? (
+          <UsersTab ref={usersRef} currentUserId={currentUserId} />
+        ) : (
+          <RolesTab />
+        )}
       </div>
     </div>
   );
