@@ -113,8 +113,9 @@ function Dropdown({
  *     [urut · aksi]. Tanpa ini, di layar 360px keempat pill terdesak sampai
  *     labelnya tinggal huruf pertama ("S… 3", "Terb…").
  *
- * Saat `selectMode`, kedua baris digantikan bar mode pilih (jumlah dipilih +
- * Pilih semua + Selesai) — desktop tetap memakai toolbar lamanya (tab +
+ * Saat `selectMode`, kedua baris digantikan bar mode pilih (label mode +
+ * Pilih semua). Jumlah terpilih dan tombol keluar ada di MobileSelectBar yang
+ * menempel di atas bottom nav — desktop tetap memakai toolbar lamanya (tab +
  * pencarian), jadi komponen ini selalu dirender `md:hidden`.
  */
 export function MobileFilterBar({
@@ -130,7 +131,6 @@ export function MobileFilterBar({
   selectedCount = 0,
   allSelected = false,
   onSelectAllVisible,
-  onCancelSelect,
 }: {
   query: string;
   onQueryChange: (value: string) => void;
@@ -163,7 +163,6 @@ export function MobileFilterBar({
   selectedCount?: number;
   allSelected?: boolean;
   onSelectAllVisible?: () => void;
-  onCancelSelect?: () => void;
 }) {
   const currentFilter = filter?.options.find((o) => o.key === filter.value);
   const currentFilter2 = filter2?.options.find((o) => o.key === filter2.value);
@@ -208,31 +207,21 @@ export function MobileFilterBar({
 
   if (selectMode) {
     return (
-      <div className="mb-4 flex items-center gap-2 rounded-xl border border-[var(--brand-accent)]/30 bg-[var(--brand-accent)]/5 px-3 py-2 md:hidden">
-        <span aria-live="polite" className="flex items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary)]">
+      <div className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-[var(--brand-accent)]/30 bg-[var(--brand-accent)]/5 px-3 py-2 md:hidden">
+        <span className="flex items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary)]">
           <Checks className="h-4 w-4 shrink-0" />
-          {selectedCount} dipilih
+          Mode pilih
         </span>
-        <div className="ml-auto flex items-center gap-2">
-          {onSelectAllVisible && (
-            <button
-              type="button"
-              onClick={onSelectAllVisible}
-              className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-            >
-              {allSelected ? "Hapus centang" : "Pilih semua"}
-            </button>
-          )}
-          {onCancelSelect && (
-            <button
-              type="button"
-              onClick={onCancelSelect}
-              className="min-h-11 rounded-xl px-2 text-xs font-semibold text-slate-500 underline-offset-2 transition-colors hover:text-slate-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-            >
-              Selesai
-            </button>
-          )}
-        </div>
+        {onSelectAllVisible && (
+          <button
+            type="button"
+            onClick={onSelectAllVisible}
+            aria-label={allSelected ? "Hapus centang semua" : `Pilih semua ${selectedCount} item`}
+            className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+          >
+            {allSelected ? "Hapus centang" : "Pilih semua"}
+          </button>
+        )}
       </div>
     );
   }

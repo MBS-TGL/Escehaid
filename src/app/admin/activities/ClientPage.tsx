@@ -640,7 +640,6 @@ export default function AdminActivitiesPage() {
         selectedCount={selectedIds.size}
         allSelected={allVisibleSelected}
         onSelectAllVisible={toggleSelectAll}
-        onCancelSelect={exitPickMode}
       />
 
       {/* Tabel desktop (md+) — tampilan & perilaku sama seperti sebelumnya */}

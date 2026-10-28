@@ -693,7 +693,6 @@ export default function AdminAchievementsPage() {
         selectedCount={selectedIds.size}
         allSelected={allVisibleSelected}
         onSelectAllVisible={toggleSelectAll}
-        onCancelSelect={exitPickMode}
       />
 
       {/* Table desktop (md+) */}

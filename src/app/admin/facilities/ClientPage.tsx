@@ -520,7 +520,6 @@ export default function AdminFacilitiesPage() {
         selectedCount={selectedIds.size}
         allSelected={allVisibleSelected}
         onSelectAllVisible={toggleSelectAll}
-        onCancelSelect={exitPickMode}
       />
       {dragDisabled && (
         <p className="-mt-2 mb-3 flex items-start gap-1.5 text-[11px] text-slate-400 md:hidden">

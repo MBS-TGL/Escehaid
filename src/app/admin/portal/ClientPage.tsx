@@ -1104,7 +1104,6 @@ export default function AdminPortalPage() {
         selectedCount={selected.size}
         allSelected={allVisibleSelected}
         onSelectAllVisible={() => toggleAllVisible(!allVisibleSelected)}
-        onCancelSelect={exitPickMode}
       />
       {dragDisabled && (
         <p className="-mt-2 mb-3 flex items-start gap-1.5 text-[11px] text-slate-400">

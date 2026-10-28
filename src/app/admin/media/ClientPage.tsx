@@ -435,7 +435,6 @@ export default function AdminMediaPage() {
           selectedCount={selectedPaths.size}
           allSelected={allVisibleSelected}
           onSelectAllVisible={toggleSelectAllVisible}
-          onCancelSelect={exitPickMode}
         />
       </div>
 

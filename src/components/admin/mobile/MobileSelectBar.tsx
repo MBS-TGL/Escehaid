@@ -70,7 +70,7 @@ export function MobileSelectBar({
           <span className="tabular-nums">{count}</span>
           <span className="truncate">dipilih</span>
         </span>
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
           {children}
           {onDelete && (
             <button

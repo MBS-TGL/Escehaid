@@ -391,7 +391,6 @@ export default function AdminGalleryPage() {
         selectedCount={selectedIds.size}
         allSelected={allVisibleSelected}
         onSelectAllVisible={toggleSelectAll}
-        onCancelSelect={exitPickMode}
       />
 
       {/* Grid View */}
