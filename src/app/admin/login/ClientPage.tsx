@@ -92,11 +92,12 @@ function LoginForm() {
     const res = await fetch("/api/auth/reset", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: resetEmail, redirectTo: window.location.origin }),
+      body: JSON.stringify({ email: resetEmail }),
     });
 
     if (!res.ok) {
-      setError("Gagal mengirim email reset password.");
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      setError(data?.error || "Gagal mengirim email reset password.");
       setResetLoading(false);
       return;
     }
@@ -225,7 +226,7 @@ function LoginForm() {
                   <p className="text-slate-500 text-sm">
                     {resetSuccess
                       ? "Periksa inbox email Anda untuk link reset password."
-                      : "Masukkan email Anda untuk menerima link reset password."}
+                      : "Masukkan email Anda. Link reset dikirim ke email tersebut."}
                   </p>
                 </div>
 

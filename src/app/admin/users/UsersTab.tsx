@@ -41,6 +41,7 @@ import {
   User,
   UserPlus,
   CheckCircle,
+  Copy,
   XCircle,
   Users,
   UsersThree,
@@ -107,6 +108,13 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
   const [editRoleKey, setEditRoleKey] = useState("");
   const [deleteItem, setDeleteItem] = useState<AdminUserRow | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  // Tautan reset password (dibuat server, dibagikan admin secara manual).
+  const [recoveryLinkItem, setRecoveryLinkItem] = useState<{
+    name: string;
+    email: string;
+    link: string;
+  } | null>(null);
 
   // Bulk (aksi massal) — hanya baris terlihat; akun sendiri tidak bisa dipilih.
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -388,13 +396,33 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
     setBusyId(item.id);
     const res = await resetUserPassword(item.id);
     setBusyId(null);
-    if (res.success) {
-      // `res.error` dipakai untuk pesan peringatan lunak (email gagal tapi flag
-      // sudah disetel) — tampilkan sebagai info, bukan error.
-      if (res.error) toast(res.error, "info");
-      else toast("Tautan reset password dikirim & wajib ganti saat login", "success");
-    } else {
+    if (!res.success) {
       toast(res.error ?? "Gagal mereset password", "error");
+      return;
+    }
+
+    // Selalu ada tautan (dibuat di server); email TIDAK dikirim dari panel,
+    // jadi admin wajib membagikan tautan ini secara manual.
+    if (res.recoveryLink) {
+      setRecoveryLinkItem({
+        name: item.full_name,
+        email: item.email ?? "",
+        link: res.recoveryLink,
+      });
+      toast("Tautan reset dibuat. Salin & kirim ke pengguna.", "success");
+      return;
+    }
+
+    toast(res.error ?? "Gagal membuat tautan reset", "error");
+  }
+
+  async function copyRecoveryLink() {
+    if (!recoveryLinkItem) return;
+    try {
+      await navigator.clipboard.writeText(recoveryLinkItem.link);
+      toast("Tautan disalin ke clipboard.", "success");
+    } catch {
+      toast("Gagal menyalin otomatis. Pilih kolom tautan lalu salin manual.", "error");
     }
   }
 
@@ -948,6 +976,73 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                   <ShieldCheck className="h-4 w-4" />
                 )}
                 Simpan Peran
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Tautan reset password (cadangan) ─────────── */}
+      {recoveryLinkItem && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+          onClick={() => setRecoveryLinkItem(null)}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">Tautan Reset Password</h3>
+                <p className="text-sm text-slate-500">
+                  {recoveryLinkItem.name}
+                  {recoveryLinkItem.email ? ` · ${recoveryLinkItem.email}` : ""}
+                </p>
+              </div>
+              <button
+                onClick={() => setRecoveryLinkItem(null)}
+                aria-label="Tutup"
+                className="rounded-lg p-1 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-700">
+              <Warning className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>
+                Panel <strong>tidak mengirim email</strong>. Bagikan tautan di bawah
+                secara manual (WhatsApp/email sekolah). Tautan berlaku{" "}
+                <strong>sekali</strong> dan kedaluwarsa dalam ±1 jam.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="break-all font-mono text-[11px] leading-relaxed text-slate-600">
+                {recoveryLinkItem.link}
+              </p>
+            </div>
+
+            <p className="mt-2 text-[11px] text-slate-400">
+              Pengguna akan diminta mengganti password sebelum bisa memakai panel.
+            </p>
+
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setRecoveryLinkItem(null)}
+                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Tutup
+              </button>
+              <button
+                type="button"
+                onClick={copyRecoveryLink}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)]"
+              >
+                <Copy className="h-4 w-4" />
+                Salin Tautan
               </button>
             </div>
           </div>

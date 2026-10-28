@@ -21,6 +21,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { createClient as createSessionClient } from "@/lib/supabase-server";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { requirePermission } from "@/lib/rbac/server";
 import {
   ROLE_KEYS,
@@ -34,8 +35,22 @@ import {
   guardSelfRoleChange,
 } from "@/lib/rbac/index";
 import type { AdminUserRow } from "@/lib/queries/rbac";
+import { buildRecoveryLink } from "@/lib/auth-recovery";
+import { adminLoginUrl, authOrigin, originFromHeaders } from "@/lib/site-url";
+
+/** Origin kanonik untuk tautan recovery (SITE_URL → origin request → default). */
+async function recoveryBaseUrl(): Promise<string> {
+  const h = await headers();
+  return authOrigin(originFromHeaders((name) => h.get(name)));
+}
 
 type ActionResult = { success: boolean; error?: string };
+
+/**
+ * Hasil reset password. `recoveryLink` = tautan sekali pakai yang bisa
+ * dibagikan manual bila email tidak terkirim (SMTP belum siap).
+ */
+type ResetPasswordResult = ActionResult & { recoveryLink?: string | null };
 
 /** Kolom aman yang boleh dikembalikan ke UI (tanpa hash/token). */
 const SAFE_PROFILE_COLUMNS =
@@ -244,7 +259,7 @@ export async function inviteUser(input: {
 
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { full_name: fullName },
-    redirectTo: `${process.env.SITE_URL ?? ""}/admin/login`,
+    redirectTo: adminLoginUrl(),
   });
 
   if (error || !data?.user) {
@@ -424,10 +439,23 @@ export async function deleteUser(userId: string): Promise<ActionResult> {
 }
 
 /**
- * Reset password: kirim tautan reset + setel `must_change_password` agar user
- * dipaksa mengganti password pada login berikutnya.
+ * Reset password: buat tautan recovery sekali pakai + setel
+ * `must_change_password` agar user wajib mengganti password saat login.
+ *
+ * Panel admin TIDAK mengirim email — admin membagikan tautan secara manual
+ * (WhatsApp/email sekolah). Alasannya:
+ *  - SMTP default Supabase menolak alamat di luar anggota tim project, dan
+ *  - tautan email terikat alur Auth (PKCE/implicit) yang rapuh untuk kasus
+ *    "admin mereset akun orang lain".
+ *
+ * Tautan dibangun sendiri dari `properties.hashed_token` (`generateLink`)
+ * dengan origin kanonik kita, sehingga tidak bergantung pada Site URL /
+ * redirect allowlist Auth. `/auth/recovery` memverifikasinya lewat
+ * `verifyOtp`, lalu mengarahkan user ke halaman ganti password.
+ *
+ * Tautan hanya dikembalikan ke pemegang `users:manage`; tidak dicatat di audit.
  */
-export async function resetUserPassword(userId: string): Promise<ActionResult> {
+export async function resetUserPassword(userId: string): Promise<ResetPasswordResult> {
   const guard = requirePermission("users:manage");
   const check = await guard();
   if (!check.ok) return { success: false, error: check.error };
@@ -449,27 +477,44 @@ export async function resetUserPassword(userId: string): Promise<ActionResult> {
     .eq("id", userId);
   if (flagErr) return { success: false, error: flagErr.message };
 
-  // Kirim tautan reset (memakai klien sesi; Supabase mengirim email sendiri).
-  const { error: resetErr } = await supabase.auth.resetPasswordForEmail(target.email, {
-    redirectTo: `${process.env.SITE_URL ?? ""}/admin/login`,
-  });
+  // Tautan recovery membutuhkan service role; tanpa itu reset tetap berguna
+  // (flag wajib-ganti aktif) tetapi admin harus memberi tautan sendiri.
+  const admin = serviceRoleClient();
+  const baseUrl = await recoveryBaseUrl();
+  let recoveryLink: string | null = null;
 
-  // Walaupun email reset gagal (SMTP belum dikonfigurasi), flag sudah disetel
-  // sehingga user tetap dipaksa mengganti password saat login.
+  if (admin) {
+    const { data: linkData } = await admin.auth.admin.generateLink({
+      type: "recovery",
+      email: target.email,
+    });
+    const tokenHash = linkData?.properties?.hashed_token;
+    if (tokenHash) recoveryLink = buildRecoveryLink(baseUrl, tokenHash);
+  }
+
   await logSystem(supabase, "update", "user_profiles", userId, {
     before: null,
-    after: { reset_password: true, must_change_password: true },
+    after: {
+      reset_password: true,
+      must_change_password: true,
+      recovery_link_created: Boolean(recoveryLink),
+    },
   });
 
-  if (resetErr) {
+  revalidatePath("/admin/users");
+
+  if (!recoveryLink) {
     return {
       success: true,
-      error: `Tanda "wajib ganti password" disetel, tetapi pengiriman email reset gagal: ${resetErr.message}`,
+      recoveryLink: null,
+      error:
+        'Tanda "wajib ganti password" disetel, tetapi tautan reset tidak bisa dibuat ' +
+        "(periksa SUPABASE_SERVICE_ROLE_KEY). Pengguna tetap dipaksa mengganti " +
+        "password saat login dengan password lama.",
     };
   }
 
-  revalidatePath("/admin/users");
-  return { success: true };
+  return { success: true, recoveryLink };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
