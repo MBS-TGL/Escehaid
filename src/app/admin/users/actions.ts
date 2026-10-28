@@ -23,6 +23,7 @@ import { createClient as createSessionClient } from "@/lib/supabase-server";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { requirePermission } from "@/lib/rbac/server";
+import { createRateLimiter } from "@/lib/rate-limit";
 import {
   ROLE_KEYS,
   defaultPermissionsForRole,
@@ -37,7 +38,9 @@ import {
 import type { AdminUserRow } from "@/lib/queries/rbac";
 import { buildRecoveryLink } from "@/lib/auth-recovery";
 import { validateNewPassword } from "@/lib/users-password";
-import { adminLoginUrl, authOrigin, originFromHeaders } from "@/lib/site-url";
+import { buildCsv } from "@/lib/csv";
+import { isValidEmail, type BulkInviteRow } from "@/lib/users-bulk-invite";
+import { authOrigin, originFromHeaders } from "@/lib/site-url";
 
 /** Origin kanonik untuk tautan recovery (SITE_URL → origin request → default). */
 async function recoveryBaseUrl(): Promise<string> {
@@ -53,6 +56,16 @@ type ActionResult = { success: boolean; error?: string };
  */
 type ResetPasswordResult = ActionResult & { recoveryLink?: string | null };
 
+/**
+ * Pembatas SET PASSWORD LANGSUNG per aktor.
+ *
+ * Aksi ini sudah dijaga `users:manage` (praktis hanya SUPER_ADMIN), tetapi
+ * bila akun pengelola disusupi, tanpa batas ia bisa mengganti password banyak
+ * akun berturut-turut. 20 percobaan / 10 menit cukup longgar untuk operasional
+ * normal dan tetap menghentikan penyalahgunaan massal.
+ */
+const passwordSetLimiter = createRateLimiter(20, 10 * 60 * 1000);
+
 /** Kolom aman yang boleh dikembalikan ke UI (tanpa hash/token). */
 const SAFE_PROFILE_COLUMNS =
   "id, full_name, email, role, system_role, is_active, must_change_password, last_login_at, created_at, updated_at";
@@ -63,6 +76,8 @@ const USER_PAGE_SIZE = 10;
 const SORT_FIELDS = ["full_name", "system_role", "is_active", "last_login_at", "created_at"] as const;
 type UserSortField = (typeof SORT_FIELDS)[number];
 
+export type UserFlagFilter = "all" | "never_login" | "must_change" | "no_email";
+
 export interface FetchUsersPageInput {
   page: number;
   pageSize?: number;
@@ -70,6 +85,8 @@ export interface FetchUsersPageInput {
   /** "all" | kunci role | "—" (belum diatur). */
   role?: string;
   status?: "all" | "active" | "inactive";
+  /** Filter audit cepat (di luar peran/status). */
+  flag?: UserFlagFilter;
   sortField?: UserSortField;
   sortDir?: "asc" | "desc";
 }
@@ -88,6 +105,8 @@ export interface FetchUsersPageResult {
     superAdmins: number;
     noRole: number;
     byRole: Record<string, number>;
+    /** Hitungan untuk chip filter audit. */
+    flags: { neverLogin: number; mustChange: number; noEmail: number };
   };
 }
 
@@ -123,6 +142,7 @@ export async function fetchUsersPage(
 
   const role = input.role ?? "all";
   const status = input.status ?? "all";
+  const flag = input.flag ?? "all";
 
   // ── Util pembungkus filter 1× (dipakai 2 query) ──
   function base() {
@@ -134,9 +154,12 @@ export async function fetchUsersPage(
     else if (role !== "all") q = q.eq("system_role", role);
     if (status === "active") q = q.eq("is_active", true);
     else if (status === "inactive") q = q.eq("is_active", false);
+    if (flag === "never_login") q = q.is("last_login_at", null);
+    else if (flag === "must_change") q = q.eq("must_change_password", true);
+    else if (flag === "no_email") q = q.is("email", null);
     const term = sanitizeLike(input.search ?? "");
     if (term) {
-      const like = term.replace(/[\\]/g, "");
+    const like = term.replace(/[\\]/g, "");
       const esc = like.replace(/[\s]+/g, " ");
       q = q.or(`full_name.ilike.%${esc}%,email.ilike.%${esc}%`);
     }
@@ -146,7 +169,7 @@ export async function fetchUsersPage(
   const [pageResult, summaryRows] = await Promise.all([
     applyFilters(base()).order(sortField, { ascending }).range(start, end),
     // Statistik global + per-role: satu query kolom ringan (id tidak perlu).
-    supabase.from("user_profiles").select("system_role, is_active"),
+    supabase.from("user_profiles").select("system_role, is_active, last_login_at, must_change_password, email"),
   ]);
 
   if (pageResult.error) {
@@ -163,13 +186,25 @@ export async function fetchUsersPage(
   let active = 0;
   let inactive = 0;
   let noRole = 0;
+  let neverLogin = 0;
+  let mustChange = 0;
+  let noEmail = 0;
   for (const row of summaryRows.data || []) {
-    const r = row as { system_role: string | null; is_active: boolean | null };
+    const r = row as {
+      system_role: string | null;
+      is_active: boolean | null;
+      last_login_at: string | null;
+      must_change_password: boolean | null;
+      email: string | null;
+    };
     total += 1;
     if (r.is_active) active += 1;
     else inactive += 1;
     if (!r.system_role) noRole += 1;
     else byRole[r.system_role] = (byRole[r.system_role] || 0) + 1;
+    if (!r.last_login_at) neverLogin += 1;
+    if (r.must_change_password) mustChange += 1;
+    if (!r.email) noEmail += 1;
   }
 
   return {
@@ -183,6 +218,7 @@ export async function fetchUsersPage(
       superAdmins: byRole["SUPER_ADMIN"] ?? 0,
       noRole,
       byRole,
+      flags: { neverLogin, mustChange, noEmail },
     },
   };
 }
@@ -236,7 +272,7 @@ export async function inviteUser(input: {
   email: string;
   fullName: string;
   roleKey: string;
-}): Promise<ActionResult & { userId?: string }> {
+}): Promise<ActionResult & { userId?: string; inviteLink?: string | null }> {
   const guard = requirePermission("users:manage");
   const check = await guard();
   if (!check.ok) return { success: false, error: check.error };
@@ -258,27 +294,32 @@ export async function inviteUser(input: {
     };
   }
 
-  const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
-    data: { full_name: fullName },
-    redirectTo: adminLoginUrl(),
+  // createUser (bukan inviteUserByEmail): tidak mengirim email, jadi tidak
+  // bergantung SMTP/allowlist. Undangan diberikan sebagai tautan salin.
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    user_metadata: { full_name: fullName },
   });
 
   if (error || !data?.user) {
-    return { success: false, error: error?.message ?? "Gagal mengundang pengguna." };
+    return { success: false, error: error?.message ?? "Gagal membuat pengguna." };
   }
 
   const userId = data.user.id;
   const { error: profErr } = await admin
     .from("user_profiles")
-    .update({
-      full_name: fullName,
-      email,
-      system_role: roleKey,
-      role: legacyRoleShimFor(roleKey),
-      is_active: true,
-      must_change_password: true,
-    })
-    .eq("id", userId);
+    .upsert(
+      {
+        id: userId,
+        full_name: fullName,
+        email,
+        system_role: roleKey,
+        role: legacyRoleShimFor(roleKey),
+        is_active: true,
+        must_change_password: true,
+      },
+      { onConflict: "id" }
+    );
 
   if (profErr) {
     return { success: false, error: `Pengguna dibuat tetapi profil gagal disetel: ${profErr.message}` };
@@ -290,8 +331,21 @@ export async function inviteUser(input: {
     after: { email, full_name: fullName, system_role: roleKey, is_active: true },
   });
 
+  // Undangan TIDAK mengandalkan email: SMTP default Supabase menolak alamat
+  // non-tim, dan tautan email Auth terikat browser/allowlist. Kita bangun
+  // sendiri dari hashed_token sehingga admin bisa menyalinnya.
+  const baseUrl = await recoveryBaseUrl();
+  let inviteLink: string | null = null;
+  // Akun dibuat lebih dulu, jadi `invite` tidak berlaku → `magiclink`.
+  const { data: linkData } = await admin.auth.admin.generateLink({
+    type: "magiclink",
+    email,
+  });
+  const tokenHash = linkData?.properties?.hashed_token;
+  if (tokenHash) inviteLink = buildRecoveryLink(baseUrl, tokenHash, "magiclink");
+
   revalidatePath("/admin/users");
-  return { success: true, userId };
+  return { success: true, userId, inviteLink };
 }
 
 /** Ubah peran halus seorang pengguna. */
@@ -343,6 +397,80 @@ export async function changeUserRole(userId: string, roleKey: string): Promise<A
 
   revalidatePath("/admin/users");
   return { success: true };
+}
+
+/**
+ * Ubah peran banyak pengguna sekaligus.
+ *
+ * Guard per baris: akun sendiri dilewati, peran yang sama dilewati, dan
+ * SUPER_ADMIN terakhir tidak boleh diturunkan. Setiap perubahan dicatat ke
+ * audit. Maksimal 100 id per panggilan agar tidak ada operasi raksasa.
+ */
+export async function changeUsersRoleBulk(
+  userIds: string[],
+  roleKey: string
+): Promise<ActionResult & { updated?: number; skipped?: number }> {
+  const guard = requirePermission("users:manage");
+  const check = await guard();
+  if (!check.ok) return { success: false, error: check.error };
+  const actorId = check.ctx.userId;
+
+  if (!isValidRoleKey(roleKey)) return { success: false, error: "Peran tidak dikenal." };
+  const ids = [...new Set(userIds)].filter(Boolean).slice(0, 100);
+  if (ids.length === 0) return { success: false, error: "Tidak ada pengguna yang dipilih." };
+
+  const supabase = await createSessionClient();
+  let updated = 0;
+  let skipped = 0;
+
+  for (const id of ids) {
+    if (id === actorId) {
+      skipped += 1;
+      continue;
+    }
+
+    const { data: before } = await supabase
+      .from("user_profiles")
+      .select("id, system_role, is_active")
+      .eq("id", id)
+      .single();
+    if (!before || before.system_role === roleKey) {
+      skipped += 1;
+      continue;
+    }
+
+    // Jangan turunkan SUPER_ADMIN terakhir yang aktif.
+    if (before.system_role === "SUPER_ADMIN" && roleKey !== "SUPER_ADMIN") {
+      const { count } = await supabase
+        .from("user_profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("system_role", "SUPER_ADMIN")
+        .eq("is_active", true)
+        .neq("id", id);
+      if ((count ?? 0) === 0) {
+        skipped += 1;
+        continue;
+      }
+    }
+
+    const { error } = await supabase
+      .from("user_profiles")
+      .update({ system_role: roleKey, role: legacyRoleShimFor(roleKey) })
+      .eq("id", id);
+    if (error) {
+      skipped += 1;
+      continue;
+    }
+
+    updated += 1;
+    await logSystem(supabase, "update", "user_profiles", id, {
+      before: { system_role: before.system_role },
+      after: { system_role: roleKey },
+    });
+  }
+
+  revalidatePath("/admin/users");
+  return { success: true, updated, skipped };
 }
 
 /** Aktif/nonaktifkan pengguna. Guard: super admin terakhir tidak boleh nonaktif. */
@@ -536,6 +664,16 @@ export async function setUserPasswordDirect(
   const check = await guard();
   if (!check.ok) return { success: false, error: check.error };
 
+  const limit = passwordSetLimiter.check(check.ctx.userId);
+  if (!limit.allowed) {
+    return {
+      success: false,
+      error: `Terlalu banyak penggantian password dalam waktu singkat. Coba lagi dalam ${Math.ceil(
+        limit.retryAfterSec / 60
+      )} menit.`,
+    };
+  }
+
   const validation = validateNewPassword(password);
   if (!validation.ok) return { success: false, error: validation.error };
 
@@ -582,13 +720,34 @@ export async function setUserPasswordDirect(
     };
   }
 
+  // Putus sesi lama: password berubah, jadi sesi yang dipegang perangkat lain
+  // harus tidak berlaku lagi. Non-fatal — password sudah tersimpan.
+  let sessionsRevoked = true;
+  try {
+    const signOut = await admin.auth.admin.signOut(userId);
+    if (signOut.error) throw new Error(signOut.error.message);
+    await admin
+      .from("sessions")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .is("revoked_at", null);
+  } catch (e) {
+    sessionsRevoked = false;
+    console.warn("Gagal mengeluarkan sesi setelah set password:", e);
+  }
+
   await logSystem(supabase, "update", "user_profiles", userId, {
     before: null,
-    after: { password_set_directly: true, must_change_password: false },
+    after: { password_set_directly: true, must_change_password: false, sessions_revoked: sessionsRevoked },
   });
 
   revalidatePath("/admin/users");
-  return { success: true };
+  return {
+    success: true,
+    ...(sessionsRevoked
+      ? {}
+      : { error: "Password berhasil diubah, tetapi sesi lama gagal dikeluarkan. Minta pengguna logout manual." }),
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -893,4 +1052,275 @@ export async function forceLogoutUser(userId: string): Promise<ActionResult> {
   });
 
   return { success: true };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXPORT CSV — access review (mengikuti filter yang sedang aktif di UI)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ExportUsersResult extends ActionResult {
+  /** CSV siap unduh (dengan BOM + proteksi formula). */
+  csv?: string;
+  /** Jumlah baris yang diekspor. */
+  count?: number;
+}
+
+/**
+ * Ekspor daftar pengguna sesuai filter aktif (peran/status/kondisi/pencarian).
+ *
+ * Batas 5000 baris: cukup untuk sekolah dan menjaga payload server action
+ * tetap wajar. Urutan mengikuti pilihan di tabel.
+ */
+export async function exportUsersCsv(input: {
+  search?: string;
+  role?: string;
+  status?: "all" | "active" | "inactive";
+  flag?: UserFlagFilter;
+  sortField?: UserSortField;
+  sortDir?: "asc" | "desc";
+}): Promise<ExportUsersResult> {
+  const guard = requirePermission("users:manage");
+  const check = await guard();
+  if (!check.ok) return { success: false, error: check.error };
+
+  const supabase = await createSessionClient();
+  const sortField: UserSortField = SORT_FIELDS.includes(input.sortField as UserSortField)
+    ? (input.sortField as UserSortField)
+    : "full_name";
+  const ascending = input.sortDir !== "desc";
+  const role = input.role ?? "all";
+  const status = input.status ?? "all";
+  const flag = input.flag ?? "all";
+
+  let q = supabase
+    .from("user_profiles")
+    .select(SAFE_PROFILE_COLUMNS)
+    .order(sortField, { ascending })
+    .limit(5000);
+
+  if (role === "—") q = q.is("system_role", null);
+  else if (role !== "all") q = q.eq("system_role", role);
+  if (status === "active") q = q.eq("is_active", true);
+  else if (status === "inactive") q = q.eq("is_active", false);
+  if (flag === "never_login") q = q.is("last_login_at", null);
+  else if (flag === "must_change") q = q.eq("must_change_password", true);
+  else if (flag === "no_email") q = q.is("email", null);
+
+  const term = sanitizeLike(input.search ?? "");
+  if (term) {
+    const like = term.replace(/[\\]/g, "");
+    const esc = like.replace(/[\s]+/g, " ");
+    q = q.or(`full_name.ilike.%${esc}%,email.ilike.%${esc}%`);
+  }
+
+  const { data, error } = await q;
+  if (error) return { success: false, error: error.message };
+
+  const rows = (data ?? []) as AdminUserRow[];
+  const headers = [
+    "Nama",
+    "Email",
+    "Peran",
+    "Status",
+    "Wajib Ganti Password",
+    "Login Terakhir",
+    "Dibuat",
+    "ID",
+  ];
+
+  const body = buildCsv(
+    headers,
+    rows.map((r) => [
+      r.full_name,
+      r.email,
+      r.system_role ?? "Belum diatur",
+      r.is_active ? "Aktif" : "Tidak Aktif",
+      r.must_change_password ? "Ya" : "Tidak",
+      r.last_login_at
+        ? new Date(r.last_login_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })
+        : "Belum pernah",
+      r.created_at
+        ? new Date(r.created_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })
+        : "",
+      r.id,
+    ])
+  );
+
+  // BOM agar Excel membaca UTF-8; ";" mengikuti lokalitas Excel Indonesia.
+  return { success: true, csv: "﻿" + body, count: rows.length };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TAUTAN UNDANGAN — cadangan bila email undangan tidak bisa dipakai
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Buat tautan undangan sekali pakai untuk pengguna yang SUDAH ada.
+ *
+ * Kenapa perlu: `inviteUserByEmail` mengandalkan redirect Supabase + SMTP.
+ * SMTP default menolak alamat di luar anggota tim, dan alur implicit/PKCE
+ * membuat tautan bergantung pada browser peminta. Dengan `hashed_token` kita
+ * membangun tautan sendiri ke `/auth/recovery#token_hash=…&type=invite`,
+ * yang diverifikasi server-side (`verifyOtp`) di perangkat mana pun.
+ *
+ * Tautan hanya dikembalikan ke pemegang `users:manage`; tidak dicatat di audit.
+ */
+export async function createInviteLink(
+  userId: string
+): Promise<ActionResult & { inviteLink?: string | null }> {
+  const guard = requirePermission("users:manage");
+  const check = await guard();
+  if (!check.ok) return { success: false, error: check.error };
+
+  const admin = serviceRoleClient();
+  if (!admin) {
+    return {
+      success: false,
+      error: "Tautan undangan memerlukan SUPABASE_SERVICE_ROLE_KEY di server.",
+    };
+  }
+
+  const supabase = await createSessionClient();
+  const { data: target } = await supabase
+    .from("user_profiles")
+    .select("id, email, system_role")
+    .eq("id", userId)
+    .single();
+  if (!target) return { success: false, error: "Pengguna tidak ditemukan." };
+  if (!target.email) return { success: false, error: "Pengguna belum memiliki email." };
+
+  // Akun SUDAH ada → `invite` ditolak Supabase ("already registered").
+  // `magiclink` menghasilkan sesi sekali pakai untuk akun yang ada.
+  const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
+    type: "magiclink",
+    email: target.email,
+  });
+  const tokenHash = linkData?.properties?.hashed_token;
+  if (linkErr || !tokenHash) {
+    return {
+      success: false,
+      error: `Gagal membuat tautan undangan: ${linkErr?.message ?? "token tidak tersedia"}.`,
+    };
+  }
+
+  const baseUrl = await recoveryBaseUrl();
+  return { success: true, inviteLink: buildRecoveryLink(baseUrl, tokenHash, "magiclink") };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UNDANG MASSAL (CSV) — hanya baris yang sudah divalidasi klien
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface BulkInviteResult extends ActionResult {
+  created: Array<{ fullName: string; email: string; roleKey: string; inviteLink: string | null }>;
+  failed: Array<{ email: string; error: string }>;
+}
+
+/**
+ * Undang banyak pengguna sekaligus dari baris CSV yang sudah diparse.
+ *
+ * Server TIDAK mempercayai hasil validasi klien: validasi diulang
+ * (`validateNewPassword` tidak relevan di sini; yang dipakai adalah
+ * pengecekan email/peran/integer batas). Maksimal 50 baris per panggilan dan
+ * setiap akun dibuat dengan `createUser` (tanpa email) + tautan salin.
+ *
+ * Sebagian boleh gagal (mis. email sudah terdaftar) tanpa membatalkan
+ * sisanya — hasil per baris dikembalikan agar admin tahu mana yang berhasil.
+ */
+export async function bulkInviteUsers(rows: BulkInviteRow[]): Promise<BulkInviteResult> {
+  const guard = requirePermission("users:manage");
+  const check = await guard();
+  if (!check.ok) return { success: false, error: check.error, created: [], failed: [] };
+
+  const admin = serviceRoleClient();
+  if (!admin) {
+    return {
+      success: false,
+      error: "Undang massal memerlukan SUPABASE_SERVICE_ROLE_KEY di server.",
+      created: [],
+      failed: [],
+    };
+  }
+
+  const limited = rows.slice(0, 50);
+  const baseUrl = await recoveryBaseUrl();
+  const supabase = await createSessionClient();
+  const created: BulkInviteResult["created"] = [];
+  const failed: BulkInviteResult["failed"] = [];
+  const seen = new Set<string>();
+
+  for (const row of limited) {
+    const email = row.email.trim().toLowerCase();
+    const fullName = row.fullName.trim();
+    const roleKey = row.roleKey;
+
+    if (!isValidEmail(email)) {
+      failed.push({ email, error: "Email tidak valid." });
+      continue;
+    }
+    if (!fullName || fullName.length > 100) {
+      failed.push({ email, error: "Nama wajib diisi (maks. 100 karakter)." });
+      continue;
+    }
+    if (!isValidRoleKey(roleKey)) {
+      failed.push({ email, error: "Peran tidak dikenal." });
+      continue;
+    }
+    if (seen.has(email)) {
+      failed.push({ email, error: "Duplikat di berkas." });
+      continue;
+    }
+    seen.add(email);
+
+    const { data, error } = await admin.auth.admin.createUser({
+      email,
+      user_metadata: { full_name: fullName },
+    });
+    if (error || !data?.user) {
+      failed.push({ email, error: error?.message ?? "Gagal membuat akun." });
+      continue;
+    }
+
+    const userId = data.user.id;
+    const { error: profErr } = await admin.from("user_profiles").upsert(
+      {
+        id: userId,
+        full_name: fullName,
+        email,
+        system_role: roleKey,
+        role: legacyRoleShimFor(roleKey),
+        is_active: true,
+        must_change_password: true,
+      },
+      { onConflict: "id" }
+    );
+    if (profErr) {
+      // Jangan tinggalkan akun auth tanpa profil.
+      await admin.auth.admin.deleteUser(userId).catch(() => undefined);
+      failed.push({ email, error: `Profil gagal disetel: ${profErr.message}` });
+      continue;
+    }
+
+    let inviteLink: string | null = null;
+    const { data: linkData } = await admin.auth.admin.generateLink({ type: "magiclink", email });
+    const tokenHash = linkData?.properties?.hashed_token;
+    if (tokenHash) inviteLink = buildRecoveryLink(baseUrl, tokenHash, "magiclink");
+
+    await logSystem(supabase, "create", "user_profiles", userId, {
+      before: null,
+      after: { email, full_name: fullName, system_role: roleKey, is_active: true, bulk: true },
+    });
+
+    created.push({ fullName, email, roleKey, inviteLink });
+  }
+
+  revalidatePath("/admin/users");
+  return {
+    success: true,
+    created,
+    failed,
+    ...(rows.length > 50
+      ? { error: `Hanya 50 baris pertama diproses (dari ${rows.length}).` }
+      : {}),
+  };
 }

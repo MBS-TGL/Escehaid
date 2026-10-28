@@ -2,9 +2,28 @@ import { describe, it, expect } from "vitest";
 import { buildRecoveryLink, parseRecoveryHash } from "@/lib/auth-recovery";
 
 describe("parseRecoveryHash", () => {
-  it("mengambil token_hash (tautan buatan panel admin)", () => {
+  it("mengambil token_hash dengan tipe default recovery", () => {
     expect(parseRecoveryHash("#token_hash=abc123&type=recovery")).toEqual({
       token_hash: "abc123",
+      type: "recovery",
+    });
+  });
+
+  it("mengambil token_hash undangan (type=invite / magiclink)", () => {
+    expect(parseRecoveryHash("#token_hash=abc123&type=invite")).toEqual({
+      token_hash: "abc123",
+      type: "invite",
+    });
+    expect(parseRecoveryHash("#token_hash=abc123&type=magiclink")).toEqual({
+      token_hash: "abc123",
+      type: "magiclink",
+    });
+  });
+
+  it("tipe tak dikenal jatuh ke recovery (tidak menambah permukaan serangan)", () => {
+    expect(parseRecoveryHash("#token_hash=abc123&type=email_change")).toEqual({
+      token_hash: "abc123",
+      type: "recovery",
     });
   });
 
@@ -17,7 +36,7 @@ describe("parseRecoveryHash", () => {
   });
 
   it("menerima string tanpa awalan #", () => {
-    expect(parseRecoveryHash("token_hash=xyz")).toEqual({ token_hash: "xyz" });
+    expect(parseRecoveryHash("token_hash=xyz")).toEqual({ token_hash: "xyz", type: "recovery" });
     expect(parseRecoveryHash("access_token=a&refresh_token=b")).toEqual({
       access_token: "a",
       refresh_token: "b",
@@ -44,9 +63,21 @@ describe("buildRecoveryLink", () => {
     );
   });
 
+  it("mendukung tautan undangan", () => {
+    expect(buildRecoveryLink("https://sekolah.example", "tok", "invite")).toBe(
+      "https://sekolah.example/auth/recovery#token_hash=tok&type=invite"
+    );
+  });
+
   it("hasilnya bisa dibaca kembali oleh parseRecoveryHash", () => {
     const link = buildRecoveryLink("https://sekolah.example", "tok");
     const hash = link.slice(link.indexOf("#"));
-    expect(parseRecoveryHash(hash)).toEqual({ token_hash: "tok" });
+    expect(parseRecoveryHash(hash)).toEqual({ token_hash: "tok", type: "recovery" });
+  });
+
+  it("tautan undangan juga bulat balik", () => {
+    const link = buildRecoveryLink("https://sekolah.example", "tok", "invite");
+    const hash = link.slice(link.indexOf("#"));
+    expect(parseRecoveryHash(hash)).toEqual({ token_hash: "tok", type: "invite" });
   });
 });

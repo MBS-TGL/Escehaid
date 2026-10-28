@@ -23,6 +23,10 @@ import {
   toggleUserActive,
   resetUserPassword,
   setUserPasswordDirect,
+  exportUsersCsv,
+  createInviteLink,
+  changeUsersRoleBulk,
+  bulkInviteUsers,
   deleteUser,
   renameUser,
   toggleUsersActiveBulk,
@@ -32,6 +36,8 @@ import {
   type UserSessionInfo,
 } from "./actions";
 import { RbacSqlNotice } from "./RolesTab";
+import { BulkInviteModal } from "./BulkInviteModal";
+import type { UserFlagFilter } from "./actions";
 import { validateNewPasswordPair, MIN_PASSWORD_LENGTH } from "@/lib/users-password";
 import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
@@ -66,6 +72,8 @@ import {
   Eye,
   EyeSlash,
   Lock,
+  Download,
+  CalendarBlank,
 } from "@/components/Icons";
 
 const PAGE_SIZE = 10;
@@ -135,6 +143,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
     superAdmins: 0,
     noRole: 0,
     byRole: {} as Record<string, number>,
+    flags: { neverLogin: 0, mustChange: 0, noEmail: 0 },
   });
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -143,6 +152,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [flagFilter, setFlagFilter] = useState<UserFlagFilter>("all");
   const [page, setPage] = useState(1);
   const [sortField, setSortField] = useState<SortField>("full_name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -153,6 +163,13 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
   const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState("OPERATOR_KONTEN");
   const [inviteSaving, setInviteSaving] = useState(false);
+  const [inviteLinkItem, setInviteLinkItem] = useState<{
+    name: string;
+    email: string;
+    link: string;
+  } | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [bulkInviteOpen, setBulkInviteOpen] = useState(false);
   const [editRoleItem, setEditRoleItem] = useState<AdminUserRow | null>(null);
   const [editRoleKey, setEditRoleKey] = useState("");
   const [deleteItem, setDeleteItem] = useState<AdminUserRow | null>(null);
@@ -176,6 +193,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkConfirm, setBulkConfirm] = useState<"activate" | "deactivate" | "delete" | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkRoleKey, setBulkRoleKey] = useState("");
 
   // Edit nama
   const [renameItem, setRenameItem] = useState<AdminUserRow | null>(null);
@@ -212,6 +230,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
         role: roleFilter,
         status: statusFilter as "all" | "active" | "inactive",
         search: debouncedSearch,
+        flag: flagFilter,
         sortField,
         sortDir,
       }),
@@ -226,7 +245,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
       toast(u.error, "error");
     }
     setLoading(false);
-  }, [page, roleFilter, statusFilter, debouncedSearch, sortField, sortDir, toast]);
+  }, [page, roleFilter, statusFilter, flagFilter, debouncedSearch, sortField, sortDir, toast]);
 
   // Faktor-faktor "permintaan" — setiap perubahan memicu muat ulang dari server.
   useEffect(() => {
@@ -299,6 +318,24 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
     load().catch(() => {});
   }
 
+  async function handleBulkRole() {
+    if (!bulkRoleKey) return;
+    setBulkBusy(true);
+    const res = await changeUsersRoleBulk(Array.from(selectedIds), bulkRoleKey);
+    setBulkBusy(false);
+    if (!res.success) {
+      toast(res.error || "Gagal mengubah peran massal.", "error");
+      return;
+    }
+    toast(
+      `${res.updated ?? 0} pengguna diubah${res.skipped ? `, ${res.skipped} dilewati` : ""}.`,
+      "success"
+    );
+    setBulkRoleKey("");
+    setSelectedIds(new Set());
+    load().catch(() => {});
+  }
+
   // ── Rename ──────────────────────────────────────────────────────────────
   async function handleRename() {
     if (!renameItem) return;
@@ -363,6 +400,21 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
       setPage(1);
     },
     menuLabel: "Filter peran",
+  };
+
+  const flagFilterGroup: FilterGroup = {
+    value: flagFilter,
+    options: [
+      { key: "all", label: "Semua Kondisi" },
+      { key: "never_login", label: "Belum pernah login", count: stats.flags.neverLogin },
+      { key: "must_change", label: "Wajib ganti password", count: stats.flags.mustChange },
+      { key: "no_email", label: "Tanpa email", count: stats.flags.noEmail },
+    ],
+    onChange: (k) => {
+      setFlagFilter(k as UserFlagFilter);
+      setPage(1);
+    },
+    menuLabel: "Filter kondisi",
   };
 
   const statusFilterGroup: FilterGroup = {
@@ -500,6 +552,37 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
         disabled: busy,
         run: () => openSetPassword(item),
       },
+      invite: {
+        key: "invite",
+        label: "Buat Tautan Undangan",
+        icon: <UserPlus className="h-4 w-4" />,
+        disabled: !item.email || busy,
+        run: () => handleCreateInviteLink(item),
+      },
+      copyEmail: {
+        key: "copy-email",
+        label: "Salin Email",
+        icon: <Copy className="h-4 w-4" />,
+        disabled: !item.email,
+        run: () => {
+          navigator.clipboard
+            .writeText(item.email ?? "")
+            .then(() => toast("Email disalin.", "success"))
+            .catch(() => toast("Gagal menyalin email.", "error"));
+        },
+      },
+      copyId: {
+        key: "copy-id",
+        label: "Salin ID Pengguna",
+        icon: <Copy className="h-4 w-4" />,
+        disabled: false,
+        run: () => {
+          navigator.clipboard
+            .writeText(item.id)
+            .then(() => toast("ID pengguna disalin.", "success"))
+            .catch(() => toast("Gagal menyalin ID.", "error"));
+        },
+      },
       remove: {
         key: "remove",
         label: "Hapus Pengguna",
@@ -519,14 +602,71 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
       roleKey: inviteRole,
     });
     setInviteSaving(false);
-    if (res.success) {
-      toast("Undangan pengguna terkirim", "success");
-      setInviteOpen(false);
-      setInviteEmail("");
-      setInviteName("");
-      await load();
-    } else {
+    if (!res.success) {
       toast(res.error ?? "Gagal mengundang pengguna", "error");
+      return;
+    }
+    setInviteOpen(false);
+    setInviteEmail("");
+    setInviteName("");
+    await load();
+
+    // Email undangan tidak diandalkan (SMTP default Supabase menolak alamat
+    // non-tim). Tampilkan tautan siap salin seperti reset password.
+    if (res.inviteLink) {
+      setInviteLinkItem({ name: inviteName || inviteEmail, email: inviteEmail, link: res.inviteLink });
+      toast("Pengguna dibuat. Salin & kirim tautan undangannya.", "success");
+    } else {
+      toast("Pengguna dibuat, tetapi tautan undangan gagal dibuat.", "info");
+    }
+  }
+
+  /** Buat tautan undangan baru untuk akun yang sudah ada (mis. undangan lama kedaluwarsa). */
+  async function handleCreateInviteLink(item: AdminUserRow) {
+    setBusyId(item.id);
+    const res = await createInviteLink(item.id);
+    setBusyId(null);
+    if (!res.success || !res.inviteLink) {
+      toast(res.error ?? "Gagal membuat tautan undangan.", "error");
+      return;
+    }
+    setInviteLinkItem({ name: item.full_name, email: item.email ?? "", link: res.inviteLink });
+  }
+
+  /** Ekspor daftar sesuai filter aktif (akses review). */
+  async function handleExportCsv() {
+    setExporting(true);
+    const res = await exportUsersCsv({
+      search: debouncedSearch,
+      role: roleFilter,
+      status: statusFilter as "all" | "active" | "inactive",
+      sortField,
+      sortDir,
+    });
+    setExporting(false);
+    if (!res.success || !res.csv) {
+      toast(res.error ?? "Gagal mengekspor pengguna.", "error");
+      return;
+    }
+    const blob = new Blob([res.csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `pengguna-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast(`${res.count ?? 0} pengguna diekspor ke CSV`, "success");
+  }
+
+  async function copyInviteLink() {
+    if (!inviteLinkItem) return;
+    try {
+      await navigator.clipboard.writeText(inviteLinkItem.link);
+      toast("Tautan undangan disalin.", "success");
+    } catch {
+      toast("Gagal menyalin otomatis. Salin manual dari kolom tautan.", "error");
     }
   }
 
@@ -683,19 +823,41 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
           setSearch(v);
           setPage(1);
         }}
-        filters={[roleFilterGroup, statusFilterGroup]}
+        filters={[roleFilterGroup, statusFilterGroup, flagFilterGroup]}
         action={
-          <button
-            type="button"
-            onClick={() => setInviteOpen(true)}
-            aria-label="Undang Pengguna"
-            title="Undang Pengguna"
-            className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-3.5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] sm:px-4"
-          >
-            <UserPlus className="h-4 w-4" />
-            {/* Teks disembunyikan <sm — baris filter mobile sempit; ikon + title cukup. */}
-            <span className="hidden sm:inline">Undang Pengguna</span>
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => setBulkInviteOpen(true)}
+              aria-label="Undang Massal"
+              title="Undang massal dari CSV"
+              className="flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+            >
+              <UserPlus className="h-4 w-4" />
+              <span className="hidden sm:inline">Massal</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              disabled={exporting}
+              aria-label="Ekspor CSV"
+              title="Ekspor CSV (mengikuti filter aktif)"
+              className="flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Ekspor</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setInviteOpen(true)}
+              aria-label="Undang Pengguna"
+              title="Undang Pengguna"
+              className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-3.5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)] sm:px-4"
+            >
+              <UserPlus className="h-4 w-4" />
+              <span className="hidden sm:inline">Undang</span>
+            </button>
+          </>
         }
       />
 
@@ -721,6 +883,30 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
             >
               Nonaktifkan
             </button>
+            <select
+              value={bulkRoleKey}
+              onChange={(e) => setBulkRoleKey(e.target.value)}
+              disabled={bulkBusy}
+              aria-label="Ubah peran pengguna terpilih"
+              className="h-[30px] rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-700"
+            >
+              <option value="">Ubah peran…</option>
+              {roleKeys.map((k) => (
+                <option key={k} value={k}>
+                  {ROLE_BADGE[k]?.label ?? k}
+                </option>
+              ))}
+            </select>
+            {bulkRoleKey && (
+              <button data-busy data-solid
+                type="button"
+                disabled={bulkBusy}
+                onClick={handleBulkRole}
+                className="rounded-lg bg-[var(--brand-primary)] px-2.5 py-1.5 text-[11px] font-semibold text-white"
+              >
+                Terapkan
+              </button>
+            )}
             <button data-busy data-solid="danger"
               type="button"
               disabled={bulkBusy}
@@ -762,6 +948,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                 {renderSortHeader({ field: "system_role", className: "w-44 whitespace-nowrap", children: "Peran" })}
                 {renderSortHeader({ field: "is_active", className: "w-28", align: "center", children: "Status" })}
                 {renderSortHeader({ field: "last_login_at", className: "hidden w-48 whitespace-nowrap lg:table-cell", children: "Login Terakhir" })}
+                {renderSortHeader({ field: "created_at", className: "hidden w-40 whitespace-nowrap xl:table-cell", children: "Dibuat" })}
                 <th className="w-36 whitespace-nowrap px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                   Aksi
                 </th>
@@ -770,7 +957,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
             <tbody className="divide-y divide-slate-100">
               {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-16 text-center">
+                  <td colSpan={7} className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
                         <Users className="h-8 w-8 text-slate-300" />
@@ -891,6 +1078,20 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                           <span className="text-slate-400">Belum pernah</span>
                         )}
                       </td>
+                      <td className="hidden px-4 py-3.5 text-xs text-slate-500 xl:table-cell">
+                        {item.created_at ? (
+                          <span className="flex items-center gap-1 whitespace-nowrap tabular-nums">
+                            <CalendarBlank className="h-3 w-3 shrink-0 text-slate-400" />
+                            {new Date(item.created_at).toLocaleDateString("id-ID", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center justify-end gap-0.5">
                           <IconAction action={a.rename} tone="blue" />
@@ -899,7 +1100,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                           <RowActionsMenu
                             label={item.full_name}
                             actions={
-                              [a.reset, a.sessions, a.logs, a.remove].filter(
+                              [a.reset, a.invite, a.copyEmail, a.copyId, a.sessions, a.logs, a.remove].filter(
                                 (x) => !x.disabled
                               ) as RowAction[]
                             }
@@ -1062,7 +1263,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                   <RowActionsMenu
                     label={item.full_name}
                     actions={
-                      [a.rename, a.role, a.setPassword, a.reset, a.sessions, a.logs, a.remove].filter(
+                      [a.rename, a.role, a.setPassword, a.reset, a.invite, a.copyEmail, a.copyId, a.sessions, a.logs, a.remove].filter(
                         (x) => !x.disabled
                       ) as RowAction[]
                     }
@@ -1118,7 +1319,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
               <div>
                 <h3 className="text-lg font-bold text-slate-800">Undang Pengguna</h3>
                 <p className="text-sm text-slate-500">
-                  Undangan dikirim ke email; pengguna akan diminta mengganti password saat login.
+                  Akun dibuat tanpa mengirim email. Setelah disimpan, tautan undangan muncul untuk disalin.
                 </p>
               </div>
               <button
@@ -1191,7 +1392,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                 ) : (
                   <UserPlus className="h-4 w-4" />
                 )}
-                Kirim Undangan
+                Buat Undangan
               </button>
             </div>
           </div>
@@ -1467,6 +1668,83 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
             </form>
           </div>
         </div>
+      )}
+
+      {/* ── TAUTAN UNDANGAN ─────────────────────────── */}
+      {inviteLinkItem && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+          onClick={() => setInviteLinkItem(null)}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">Tautan Undangan</h3>
+                <p className="text-sm text-slate-500">
+                  {inviteLinkItem.name}
+                  {inviteLinkItem.email ? ` · ${inviteLinkItem.email}` : ""}
+                </p>
+              </div>
+              <button
+                onClick={() => setInviteLinkItem(null)}
+                aria-label="Tutup"
+                className="rounded-lg p-1 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-700">
+              <Warning className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>
+                Panel <strong>tidak mengirim email undangan</strong>. Bagikan tautan ini
+                secara manual. Berlaku <strong>sekali</strong> dan kedaluwarsa ±1 jam.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="break-all font-mono text-[11px] leading-relaxed text-slate-600">
+                {inviteLinkItem.link}
+              </p>
+            </div>
+
+            <p className="mt-2 text-[11px] text-slate-400">
+              Penerima akan diminta menetapkan password sebelum bisa memakai panel.
+            </p>
+
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setInviteLinkItem(null)}
+                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Tutup
+              </button>
+              <button
+                type="button"
+                onClick={copyInviteLink}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)]"
+              >
+                <Copy className="h-4 w-4" />
+                Salin Tautan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── UNDANG MASSAL (CSV) ─────────────────────── */}
+      {bulkInviteOpen && (
+        <BulkInviteModal
+          onClose={() => setBulkInviteOpen(false)}
+          onDone={() => {
+            load().catch(() => {});
+          }}
+          onSubmit={(rows) => bulkInviteUsers(rows)}
+        />
       )}
 
       {/* ── HAPUS PENGGUNA ──────────────────────────── */}
