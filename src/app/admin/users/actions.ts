@@ -36,6 +36,7 @@ import {
 } from "@/lib/rbac/index";
 import type { AdminUserRow } from "@/lib/queries/rbac";
 import { buildRecoveryLink } from "@/lib/auth-recovery";
+import { validateNewPassword } from "@/lib/users-password";
 import { adminLoginUrl, authOrigin, originFromHeaders } from "@/lib/site-url";
 
 /** Origin kanonik untuk tautan recovery (SITE_URL → origin request → default). */
@@ -515,6 +516,79 @@ export async function resetUserPassword(userId: string): Promise<ResetPasswordRe
   }
 
   return { success: true, recoveryLink };
+}
+
+/**
+ * Set password pengguna LANGSUNG (tanpa email/tautan), khusus `users:manage`.
+ *
+ * Memakai service role (`auth.admin.updateUserById`) sehingga berlaku seketika
+ * untuk login berikutnya. Password TIDAK pernah dikembalikan, dicatat, atau
+ * ditulis ke audit — audit hanya mencatat bahwa aksi terjadi.
+ *
+ * `must_change_password` dikosongkan: admin yang menentukan password, jadi
+ * user tidak dipaksa mengganti (berbeda dengan reset-via-tautan).
+ */
+export async function setUserPasswordDirect(
+  userId: string,
+  password: string
+): Promise<ActionResult> {
+  const guard = requirePermission("users:manage");
+  const check = await guard();
+  if (!check.ok) return { success: false, error: check.error };
+
+  const validation = validateNewPassword(password);
+  if (!validation.ok) return { success: false, error: validation.error };
+
+  const admin = serviceRoleClient();
+  if (!admin) {
+    return {
+      success: false,
+      error:
+        "Set password langsung memerlukan SUPABASE_SERVICE_ROLE_KEY di server. " +
+        "Gunakan Reset Password (tautan) sebagai gantinya.",
+    };
+  }
+
+  const supabase = await createSessionClient();
+  const { data: target } = await supabase
+    .from("user_profiles")
+    .select("id, full_name, email")
+    .eq("id", userId)
+    .single();
+  if (!target) return { success: false, error: "Pengguna tidak ditemukan." };
+
+  const { error: authErr } = await admin.auth.admin.updateUserById(userId, { password });
+  if (authErr) {
+    return { success: false, error: `Gagal mengubah password: ${authErr.message}` };
+  }
+
+  // RLS mengizinkan pemegang users:manage mengubah flag ini.
+  const { error: flagErr } = await supabase
+    .from("user_profiles")
+    .update({ must_change_password: false })
+    .eq("id", userId);
+  if (flagErr) {
+    // Password sudah berubah; flag gagal dibersihkan bukan alasan menyembunyikan
+    // keberhasilan, tetapi admin perlu tahu.
+    await logSystem(supabase, "update", "user_profiles", userId, {
+      before: null,
+      after: { password_set_directly: true, must_change_password_cleared: false },
+    });
+    return {
+      success: true,
+      error:
+        "Password berhasil diubah, tetapi status wajib-ganti gagal dibersihkan " +
+        `(${flagErr.message}). Pengguna akan diminta mengganti saat login.`,
+    };
+  }
+
+  await logSystem(supabase, "update", "user_profiles", userId, {
+    before: null,
+    after: { password_set_directly: true, must_change_password: false },
+  });
+
+  revalidatePath("/admin/users");
+  return { success: true };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -22,6 +22,7 @@ import {
   changeUserRole,
   toggleUserActive,
   resetUserPassword,
+  setUserPasswordDirect,
   deleteUser,
   renameUser,
   toggleUsersActiveBulk,
@@ -31,6 +32,7 @@ import {
   type UserSessionInfo,
 } from "./actions";
 import { RbacSqlNotice } from "./RolesTab";
+import { validateNewPasswordPair, MIN_PASSWORD_LENGTH } from "@/lib/users-password";
 import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { useToast } from "@/components/ui/Toast";
@@ -60,6 +62,9 @@ import {
   Scroll,
   ArrowUp,
   ArrowDown,
+  Eye,
+  EyeSlash,
+  Lock,
 } from "@/components/Icons";
 
 const PAGE_SIZE = 10;
@@ -115,6 +120,13 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
     email: string;
     link: string;
   } | null>(null);
+
+  // Set password langsung (tanpa email/tautan).
+  const [setPasswordItem, setSetPasswordItem] = useState<AdminUserRow | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
 
   // Bulk (aksi massal) — hanya baris terlihat; akun sendiri tidak bisa dipilih.
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -424,6 +436,45 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
     } catch {
       toast("Gagal menyalin otomatis. Pilih kolom tautan lalu salin manual.", "error");
     }
+  }
+
+  function openSetPassword(item: AdminUserRow) {
+    setSetPasswordItem(item);
+    setNewPassword("");
+    setConfirmPassword("");
+    setShowPassword(false);
+  }
+
+  function closeSetPassword() {
+    setSetPasswordItem(null);
+    setNewPassword("");
+    setConfirmPassword("");
+    setShowPassword(false);
+  }
+
+  async function handleSetPassword() {
+    if (!setPasswordItem) return;
+    const validation = validateNewPasswordPair(newPassword, confirmPassword);
+    if (!validation.ok) {
+      toast(validation.error, "error");
+      return;
+    }
+
+    setPasswordSaving(true);
+    const res = await setUserPasswordDirect(setPasswordItem.id, newPassword);
+    setPasswordSaving(false);
+
+    if (!res.success) {
+      toast(res.error ?? "Gagal mengubah password.", "error");
+      return;
+    }
+
+    closeSetPassword();
+    await load();
+    toast(
+      res.error ?? `Password ${setPasswordItem.full_name} berhasil diubah.`,
+      res.error ? "info" : "success"
+    );
   }
 
   async function handleDelete() {
@@ -754,11 +805,21 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                             type="button"
                             disabled={!item.email || busyId === item.id}
                             onClick={() => handleResetPassword(item)}
-                            title={item.email ? "Reset Password" : "Pengguna belum punya email"}
-                            aria-label={item.email ? "Reset Password" : "Pengguna belum punya email"}
+                            title={item.email ? "Reset Password (tautan)" : "Pengguna belum punya email"}
+                            aria-label={item.email ? "Reset Password (tautan)" : "Pengguna belum punya email"}
                             className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-600 disabled:opacity-40 disabled:hover:bg-transparent"
                           >
                             <Key className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busyId === item.id}
+                            onClick={() => openSetPassword(item)}
+                            title="Set Password Langsung"
+                            aria-label={`Set password langsung untuk ${item.full_name}`}
+                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-40 disabled:hover:bg-transparent"
+                          >
+                            <Lock className="h-4 w-4" />
                           </button>
                           <button
                             type="button"
@@ -1045,6 +1106,131 @@ export function UsersTab({ currentUserId }: { currentUserId: string | null }) {
                 Salin Tautan
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Set password langsung ───────────────────── */}
+      {setPasswordItem && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+          onClick={closeSetPassword}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">Set Password Langsung</h3>
+                <p className="text-sm text-slate-500">
+                  {setPasswordItem.full_name}
+                  {setPasswordItem.email ? ` · ${setPasswordItem.email}` : ""}
+                </p>
+              </div>
+              <button
+                onClick={closeSetPassword}
+                aria-label="Tutup"
+                className="rounded-lg p-1 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mb-4 flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs text-slate-600">
+              <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <p>
+                Password berlaku seketika — tidak mengirim email. Sampaikan password baru
+                ke pengguna lewat kanal aman. Status &ldquo;wajib ganti&rdquo; akan
+                dimatikan.
+              </p>
+            </div>
+
+            {setPasswordItem.id === currentUserId && (
+              <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs text-amber-700">
+                <Warning className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <p>
+                  Ini akun Anda sendiri. Untuk kenyamanan sehari-hari lebih aman lewat{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeSetPassword();
+                      router.push("/admin/security");
+                    }}
+                    className="font-semibold underline"
+                  >
+                    Pengaturan Akun
+                  </button>
+                  , tetapi jalur ini tetap berguna bila Anda terkunci.
+                </p>
+              </div>
+            )}
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void handleSetPassword();
+              }}
+              className="space-y-4"
+            >
+              <div className="relative">
+                <Input
+                  label="Password Baru"
+                  required
+                  minLength={MIN_PASSWORD_LENGTH}
+                  autoComplete="new-password"
+                  type={showPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder={`Minimal ${MIN_PASSWORD_LENGTH} karakter`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                  className="absolute right-2 top-[30px] rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                >
+                  {showPassword ? <EyeSlash className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+
+              <Input
+                label="Konfirmasi Password"
+                required
+                autoComplete="new-password"
+                type={showPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Ulangi password baru"
+              />
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={closeSetPassword}
+                  className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={
+                    passwordSaving ||
+                    !newPassword ||
+                    !confirmPassword ||
+                    newPassword !== confirmPassword
+                  }
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-60"
+                >
+                  {passwordSaving ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <Lock className="h-4 w-4" />
+                  )}
+                  Simpan Password
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
