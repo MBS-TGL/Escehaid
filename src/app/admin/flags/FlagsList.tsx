@@ -37,12 +37,21 @@ export function FlagsList({ initialFlags, initialOverrides }: { initialFlags: Re
   const [editingKey, setEditingKey] = useState<FeatureFlagKey | null>(null);
   const [scheduleDraft, setScheduleDraft] = useState<{ startAt: string; endAt: string }>({ startAt: "", endAt: "" });
   const [resetOpen, setResetOpen] = useState<FeatureFlagKey | null>(null);
+  const [enableConfirm, setEnableConfirm] = useState<FeatureFlagKey | null>(null);
 
   function getDef(key: FeatureFlagKey) {
     return FEATURE_FLAG_MAP[key];
   }
 
-  async function handleToggle(key: FeatureFlagKey, nextEnabled: boolean) {
+  /** ISO → nilai `datetime-local` di zona pengguna (bukan UTC mentah). */
+  function toLocalInput(iso: string): string {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  async function runToggle(key: FeatureFlagKey, nextEnabled: boolean) {
     const override = overrides[key] ?? { enabled: getDef(key).defaultEnabled, startAt: null, endAt: null };
     setSaving(key);
 
@@ -58,14 +67,24 @@ export function FlagsList({ initialFlags, initialOverrides }: { initialFlags: Re
     router.refresh();
   }
 
+  function handleToggle(key: FeatureFlagKey, nextEnabled: boolean) {
+    // Flag high-impact hanya dikonfirmasi saat DIaktifkan — mematikan aman.
+    if (nextEnabled && getDef(key).highImpact) {
+      setEnableConfirm(key);
+      return;
+    }
+    void runToggle(key, nextEnabled);
+  }
+
   async function handleSaveSchedule(key: FeatureFlagKey) {
     const override = overrides[key] ?? { enabled: getDef(key).defaultEnabled, startAt: null, endAt: null };
     setSaving(key);
 
     const result = await saveFlagSettings(key, {
       ...override,
-      startAt: scheduleDraft.startAt || null,
-      endAt: scheduleDraft.endAt || null,
+      // Input datetime-local = waktu lokal browser. Kirim ISO (UTC) ke DB.
+      startAt: scheduleDraft.startAt ? new Date(scheduleDraft.startAt).toISOString() : null,
+      endAt: scheduleDraft.endAt ? new Date(scheduleDraft.endAt).toISOString() : null,
     });
     setSaving(null);
     setEditingKey(null);
@@ -99,8 +118,8 @@ export function FlagsList({ initialFlags, initialOverrides }: { initialFlags: Re
     const ov = overrides[key];
     if (ov) {
       setScheduleDraft({
-        startAt: ov.startAt ? new Date(ov.startAt).toISOString().slice(0, 16) : "",
-        endAt: ov.endAt ? new Date(ov.endAt).toISOString().slice(0, 16) : "",
+        startAt: ov.startAt ? toLocalInput(ov.startAt) : "",
+        endAt: ov.endAt ? toLocalInput(ov.endAt) : "",
       });
     } else {
       setScheduleDraft({ startAt: "", endAt: "" });
@@ -141,7 +160,7 @@ export function FlagsList({ initialFlags, initialOverrides }: { initialFlags: Re
                       {isEditing && (
                         <div className="mt-3 grid gap-2 sm:grid-cols-2">
                           <div>
-                            <label className="block text-xs text-slate-500 mb-0.5">Mulai aktif (UTC)</label>
+                            <label className="block text-xs text-slate-500 mb-0.5">Mulai aktif (waktu lokal / WIB)</label>
                             <input
                               type="datetime-local"
                               value={scheduleDraft.startAt}
@@ -150,7 +169,7 @@ export function FlagsList({ initialFlags, initialOverrides }: { initialFlags: Re
                             />
                           </div>
                           <div>
-                            <label className="block text-xs text-slate-500 mb-0.5">Berakhir (UTC)</label>
+                            <label className="block text-xs text-slate-500 mb-0.5">Berakhir (waktu lokal / WIB)</label>
                             <input
                               type="datetime-local"
                               value={scheduleDraft.endAt}
@@ -273,6 +292,22 @@ export function FlagsList({ initialFlags, initialOverrides }: { initialFlags: Re
           <code>src/lib/flags/registry.ts</code> agar muncul di sini.
         </div>
       )}
+
+      <ConfirmModal
+        open={!!enableConfirm}
+        onClose={() => setEnableConfirm(null)}
+        onConfirm={() => {
+          const key = enableConfirm;
+          setEnableConfirm(null);
+          if (key) void runToggle(key, true);
+        }}
+        title="Aktifkan flag dampak tinggi?"
+        message={`Flag <strong>{enableConfirm ? getDef(enableConfirm).name : ""}</strong> berdampak luas. Pastikan perubahan sudah diuji sebelum diaktifkan untuk semua pengguna.`}
+        confirmLabel="Ya, aktifkan"
+        cancelLabel="Batal"
+        variant="warning"
+        loading={saving === enableConfirm}
+      />
 
       <ConfirmModal
         open={!!resetOpen}

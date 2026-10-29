@@ -27,6 +27,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [subject, setSubject] = useState<PermissionSubject | null>(null);
   const [loading, setLoading] = useState(true);
+  const [badges, setBadges] = useState<Record<string, number>>({});
   /**
    * Sidebar desktop dilipat (mode rail 72px) atau tidak.
    *
@@ -77,12 +78,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setLoading(false);
     };
 
-    fetchProfile();
+    fetchProfile().catch(() => {
+      // Jaringan putus / API gagal: jangan tinggalkan spinner selamanya.
+      setLoading(false);
+      toast("Gagal memuat sesi. Periksa koneksi lalu muat ulang.", "error");
+    });
     // Bergantung pada `isLogin`, BUKAN `pathname`: layout ini tetap terpasang saat
     // pindah antar halaman admin. Dengan [pathname], setiap klik menu mengulang
     // pemeriksaan sesi dari browser (panggilan jaringan yang sia-sia, karena
     // proxy.ts sudah memeriksa sesi di server).
-  }, [isLogin, router]);
+  }, [isLogin, router, toast]);
 
   useEffect(() => {
     if (searchParams.get("success") === "login") {
@@ -90,6 +95,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       window.history.replaceState({}, "", "/admin");
     }
   }, [searchParams, toast]);
+
+  // Badge unread/pending di sidebar & bottom nav. Poll ringan 60 detik dan
+  // refresh saat pindah halaman (setelah aksi biasanya revalidatePath).
+  useEffect(() => {
+    if (loading || isLogin || !profile) return;
+    let cancelled = false;
+    const load = () => {
+      fetch("/api/admin/badges", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((json: { badges?: Record<string, number> } | null) => {
+          if (!cancelled) setBadges(json?.badges ?? {});
+        })
+        .catch(() => {});
+    };
+    load();
+    const timer = window.setInterval(load, 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [loading, isLogin, profile, pathname]);
 
   if (pathname === "/admin/login") {
     return <>{children}</>;
@@ -128,6 +154,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             saveSidebarCollapsed(next);
           }}
           profile={profile}
+          badges={badges}
         >
           {children}
         </AdminShell>
@@ -145,11 +172,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 function AdminShell({
   children,
   profile,
+  badges,
   sidebarCollapsed,
   onToggleSidebar,
 }: {
   children: React.ReactNode;
   profile: UserProfile;
+  badges: Record<string, number>;
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
 }) {
@@ -157,7 +186,7 @@ function AdminShell({
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <AdminSidebar collapsed={sidebarCollapsed} onToggle={onToggleSidebar} />
+      <AdminSidebar collapsed={sidebarCollapsed} onToggle={onToggleSidebar} badges={badges} />
 
       {/* Main content area — margin kiri mengikuti lebar sidebar (270px penuh /
           72px rail) agar konten tidak pernah tertutup maupun menyisakan celah. */}
@@ -173,7 +202,7 @@ function AdminShell({
         <main className="pb-24 lg:pb-0">{children}</main>
       </div>
 
-      {!bottomBarActive && <AdminMobileNav />}
+      {!bottomBarActive && <AdminMobileNav badges={badges} />}
     </div>
   );
 }

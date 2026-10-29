@@ -132,7 +132,8 @@ export async function getRegistrationList(): Promise<SpmbRegistration[]> {
 
   if (error) {
     console.error("Error fetching registrations:", error);
-    return [];
+    // Dilempar agar panel bisa membedakan "gagal memuat" vs "belum ada data".
+    throw new Error(error.message);
   }
   return data || [];
 }

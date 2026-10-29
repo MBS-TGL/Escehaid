@@ -54,6 +54,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Tidak terautentikasi." }, { status: 401 });
   }
 
+  const userId = userData.user.id;
   const { error } = await supabase.rpc("update_own_full_name", { p_full_name: fullName });
   if (error) {
     // 42883 = function tidak ada → migrasi belum dijalankan.
@@ -65,6 +66,15 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+
+  await supabase
+    .rpc("log_activity", {
+      p_action: "update",
+      p_entity_type: "user_profiles",
+      p_entity_id: userId,
+      p_detail: { module: "security", full_name_changed: true },
+    })
+    .then(() => undefined, () => undefined);
 
   return NextResponse.json({ success: true });
 }

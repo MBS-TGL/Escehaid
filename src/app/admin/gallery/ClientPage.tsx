@@ -1,6 +1,7 @@
 "use client";
 
 import { useAdminBottomBar } from "@/app/admin/AdminChrome";
+import { usePermissions } from "@/app/admin/PermissionsProvider";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import Image from "next/image";
@@ -78,6 +79,10 @@ const emptyForm: FormData = {
 
 export default function AdminGalleryPage() {
   const { toast } = useToast();
+  const { can } = usePermissions();
+  const permCreate = can("galeri:create");
+  const permUpdate = can("galeri:update");
+  const permDelete = can("galeri:delete");
   const [gallery, setGallery] = useState<Gallery[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -221,6 +226,7 @@ export default function AdminGalleryPage() {
 
   // Hold di kartu → masuk mode pilih + centang kartu itu; hold lagi = toggle.
   const longPress = useLongPressList({
+    enabled: permDelete,
     onLongPress: (id) => (pickMode ? toggleSelect(id) : enterPickMode(id)),
   });
 
@@ -319,9 +325,11 @@ export default function AdminGalleryPage() {
             <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">Foto dan video kegiatan sekolah</p>
           </div>
         </div>
-        <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)]">
-          <Plus className="h-4 w-4" /> Tambah Media
-        </button>
+        {permCreate && (
+          <button onClick={openCreate} className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)]">
+            <Plus className="h-4 w-4" /> Tambah Media
+          </button>
+        )}
       </div>
 
       {/* Stats — StatPillGroup: pill kompak satu baris */}
@@ -333,7 +341,7 @@ export default function AdminGalleryPage() {
       </StatPillGroup>
 
       {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
-      {selectedIds.size > 0 && (
+      {permDelete && selectedIds.size > 0 && (
         <div className="mb-4 hidden items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex md:flex-nowrap md:overflow-x-auto">
           <Checks className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
           <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
@@ -396,7 +404,7 @@ export default function AdminGalleryPage() {
             setSortDir(d as SortDir);
           },
         }}
-        action={<MobilePickButton onClick={() => enterPickMode()} />}
+        action={permDelete ? <MobilePickButton onClick={() => enterPickMode()} /> : undefined}
         selectMode={pickMode}
         selectedCount={selectedIds.size}
         allSelected={allVisibleSelected}
@@ -418,7 +426,7 @@ export default function AdminGalleryPage() {
             <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
             <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada gallery"}</p>
           </div>
-          {!search && typeFilter === "all" && filter === "all" && (
+          {permCreate && !search && typeFilter === "all" && filter === "all" && (
             <button onClick={openCreate} className="mt-2 flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
               <Plus className="h-3.5 w-3.5" /> Tambah Media Pertama
             </button>
@@ -439,33 +447,45 @@ export default function AdminGalleryPage() {
               const isSelected = selectedIds.has(item.id);
               const menuActions: RowAction[] = [
                 { key: "view", label: "Lihat", icon: <Eye className="h-4 w-4" />, run: () => setViewItem(item) },
-                { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => openEdit(item) },
-                { key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => setDeleteItem(item) },
+                ...(permUpdate
+                  ? [{ key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => openEdit(item) } as RowAction]
+                  : []),
+                ...(permDelete
+                  ? [{ key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => setDeleteItem(item) } as RowAction]
+                  : []),
               ];
               return (
                 <div key={item.id}
                   data-longpress-id={item.id}
                   className={`group relative overflow-hidden rounded-xl border bg-white shadow-sm transition-all hover:shadow-md hover:border-[var(--brand-accent)]/30 ${isSelected ? "border-[var(--brand-primary)] ring-2 ring-[var(--brand-primary)]/20" : "border-slate-200/70"}`}>
                   {/* Checkbox hanya desktop; mobile memakai hold + badge centang. */}
-                  <div className="absolute left-2 top-2 z-10 hidden md:block" onClick={(e) => e.stopPropagation()}>
-                    <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(item.id)}
-                      aria-label={`Pilih ${item.title}`}
-                      className="h-5 w-5 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
-                  </div>
+                  {permDelete && (
+                    <div className="absolute left-2 top-2 z-10 hidden md:block" onClick={(e) => e.stopPropagation()}>
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(item.id)}
+                        aria-label={`Pilih ${item.title}`}
+                        className="h-5 w-5 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
+                    </div>
+                  )}
                   {pickMode && isSelected && (
                     <span className="absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-md md:hidden">
                       <CheckCircle className="h-4 w-4" weight="fill" aria-hidden="true" />
                     </span>
                   )}
                   {/* Aksi desktop — hover; mobile memakai menu ⋄ di pojok gambar */}
-                  <div className="absolute right-2 top-2 z-10 hidden gap-1 opacity-0 transition-opacity group-hover:opacity-100 md:flex" onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => openEdit(item)} aria-label={`Edit ${item.title}`} className="rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
-                      <PencilSimple className="h-3.5 w-3.5" />
-                    </button>
-                    <button onClick={() => setDeleteItem(item)} aria-label={`Hapus ${item.title}`} className="rounded-lg bg-red-500/80 p-1.5 text-white hover:bg-red-600">
-                      <Trash className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+                  {(permUpdate || permDelete) && (
+                    <div className="absolute right-2 top-2 z-10 hidden gap-1 opacity-0 transition-opacity group-hover:opacity-100 md:flex" onClick={(e) => e.stopPropagation()}>
+                      {permUpdate && (
+                        <button onClick={() => openEdit(item)} aria-label={`Edit ${item.title}`} className="rounded-lg bg-black/50 p-1.5 text-white hover:bg-black/70">
+                          <PencilSimple className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      {permDelete && (
+                        <button onClick={() => setDeleteItem(item)} aria-label={`Hapus ${item.title}`} className="rounded-lg bg-red-500/80 p-1.5 text-white hover:bg-red-600">
+                          <Trash className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                   {/* Menu ⋯ mobile — area sentuh 44px, di pojok kanan-atas gambar.
                       Trigger ikon-saja, jadi di atas foto memakai tone="onDark"
                       (ikon putih + halo) agar tidak hilang di foto terang/gelap. */}
@@ -546,7 +566,7 @@ export default function AdminGalleryPage() {
         </>
       )}
 
-      {pickMode && (
+      {pickMode && permDelete && (
         <MobileSelectBar
           count={selectedIds.size}
           onDelete={() => setBulkDelete(true)}
@@ -594,16 +614,22 @@ export default function AdminGalleryPage() {
                 <p className="text-sm text-slate-600">{viewItem.description}</p>
               </div>
             )}
-            <div className="flex gap-3 border-t border-slate-100 px-6 py-4">
-              <button onClick={() => { setViewItem(null); openEdit(viewItem); }}
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                <PencilSimple className="h-4 w-4" /> Edit
-              </button>
-              <button onClick={() => { setViewItem(null); setDeleteItem(viewItem); }}
-                className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100">
-                <Trash className="h-4 w-4" /> Hapus
-              </button>
-            </div>
+            {(permUpdate || permDelete) && (
+              <div className="flex gap-3 border-t border-slate-100 px-6 py-4">
+                {permUpdate && (
+                  <button onClick={() => { setViewItem(null); openEdit(viewItem); }}
+                    className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                    <PencilSimple className="h-4 w-4" /> Edit
+                  </button>
+                )}
+                {permDelete && (
+                  <button onClick={() => { setViewItem(null); setDeleteItem(viewItem); }}
+                    className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100">
+                    <Trash className="h-4 w-4" /> Hapus
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

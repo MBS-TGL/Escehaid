@@ -99,5 +99,14 @@ export async function POST(req: Request) {
       .is("revoked_at", null);
   }
 
+  await supabase
+    .rpc("log_activity", {
+      p_action: "delete",
+      p_entity_type: "sessions",
+      p_entity_id: sessionData.session.user.id,
+      p_detail: { module: "security", action: "sign_out_others", current_session: current },
+    })
+    .then(() => undefined, () => undefined);
+
   return NextResponse.json({ success: true });
 }

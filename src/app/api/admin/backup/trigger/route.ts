@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { forbiddenResponseIfLacks } from "@/lib/rbac/server";
+import { createClient } from "@/lib/supabase-server";
 import { clientIpFrom, createRateLimiter } from "@/lib/rate-limit";
 
 /**
@@ -52,6 +53,18 @@ export async function POST(req: Request) {
       const text = (await res.text()).slice(0, 300);
       return NextResponse.json({ error: `GitHub menolak: ${res.status} ${text}` }, { status: 502 });
     }
+
+    // Jejak audit trigger manual (sebelumnya tidak tercatat sama sekali).
+    const supabase = await createClient();
+    await supabase
+      .rpc("log_activity", {
+        p_action: "update",
+        p_entity_type: "backup",
+        p_entity_id: null,
+        p_detail: { module: "backup", action: "manual_trigger", repo },
+      })
+      .then(() => undefined, () => undefined);
+
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Gagal menghubungi GitHub." }, { status: 502 });

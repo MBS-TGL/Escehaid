@@ -59,6 +59,18 @@ export async function saveFlagSettings(
     return { success: false, error: "Feature flag tidak dikenal." };
   }
 
+  const { enabled, startAt, endAt } = payload;
+  if (startAt && endAt) {
+    const start = new Date(startAt).getTime();
+    const end = new Date(endAt).getTime();
+    if (!Number.isFinite(start) || !Number.isFinite(end)) {
+      return { success: false, error: "Format jadwal tidak valid." };
+    }
+    if (start >= end) {
+      return { success: false, error: "Jadwal mulai harus lebih awal dari jadwal berakhir." };
+    }
+  }
+
   try {
     const supabase = await createSessionClient();
 
@@ -77,7 +89,6 @@ export async function saveFlagSettings(
       ? { enabled: current.enabled, startAt: current.start_at, endAt: current.end_at }
       : { enabled: FEATURE_FLAG_MAP[key].defaultEnabled, startAt: null, endAt: null };
 
-    const { enabled, startAt, endAt } = payload;
     const changed =
       before.enabled !== enabled ||
       before.startAt !== startAt ||

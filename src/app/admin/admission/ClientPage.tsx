@@ -182,6 +182,7 @@ export default function AdminSPMBPage() {
   const [filter, setFilter] = useState<string>("all");
   const [data, setData] = useState<SpmbRegistration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [page, setPage] = useState(1);
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -257,9 +258,16 @@ export default function AdminSPMBPage() {
   const [deleteFieldItem, setDeleteFieldItem] = useState<SpmbFormField | null>(null);
 
   const fetchData = useCallback(async () => {
-    const registrations = await getRegistrationList();
-    setData(registrations);
-    setLoading(false);
+    setLoadError("");
+    try {
+      const registrations = await getRegistrationList();
+      setData(registrations);
+    } catch (e) {
+      setData([]);
+      setLoadError(e instanceof Error && e.message ? e.message : "Gagal memuat data pendaftar.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -791,17 +799,6 @@ export default function AdminSPMBPage() {
     fetchData();
   }
 
-  async function handleToggleStatus(item: SpmbRegistration) {
-    const nextStatus = item.status === "pending" ? "accepted" : item.status === "accepted" ? "rejected" : "pending";
-    try {
-      await updateRegistrationStatus(item.id, nextStatus as "accepted" | "rejected");
-      toast("Status berhasil diubah", "success");
-    } catch (e) {
-      toast(e instanceof Error && e.message ? e.message : "Gagal mengubah status", "error");
-    }
-    fetchData();
-  }
-
   /** Kembalikan pendaftar ke status Menunggu (tanpa modal — bukan aksi publik). */
   async function handleSetPending(item: SpmbRegistration) {
     if (item.status === "pending") return;
@@ -1001,11 +998,13 @@ export default function AdminSPMBPage() {
           <p className="text-sm text-slate-500">
             Atur gelombang pendaftaran yang tampil di halaman Penerimaan Santri Baru.
           </p>
-          <button onClick={() => openWaveForm()}
-            className="flex min-h-11 sm:min-h-0 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]">
-            <Plus className="h-4 w-4" />
-            Tambah Gelombang
-          </button>
+          {permUpdate && (
+            <button onClick={() => openWaveForm()}
+              className="flex min-h-11 sm:min-h-0 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]">
+              <Plus className="h-4 w-4" />
+              Tambah Gelombang
+            </button>
+          )}
         </div>
 
         {/* Error memuat data */}
@@ -1076,30 +1075,36 @@ export default function AdminSPMBPage() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                          {/* Toggle tampil di website */}
-                          <button onClick={() => handleToggleWave(w)}
-                            title={w.is_published ? "Sembunyikan dari website" : "Tampilkan di website"}
-                            className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${w.is_published ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100"}`}>
-                            <span className={`relative inline-block h-4 w-7 rounded-full transition-colors ${w.is_published ? "bg-emerald-500" : "bg-slate-300"}`}>
-                              <span className={`absolute left-0.5 top-1 h-2 w-2 rounded-full bg-white transition-transform ${w.is_published ? "translate-x-3" : ""}`} />
-                            </span>
-                            {w.is_published ? "Tampil" : "Sembunyi"}
-                          </button>
-                          {/* Publikasi hasil seleksi — lewat modal konfirmasi */}
-                          <button onClick={() => setResultWave(w)}
-                            title={w.result_published_at ? "Tarik hasil seleksi dari publik" : "Publikasikan hasil seleksi gelombang ini"}
-                            className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${w.result_published_at ? "border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100" : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100"}`}>
-                            <CheckCircle className="h-3.5 w-3.5" />
-                            {w.result_published_at ? "Hasil: Tayang" : "Hasil: Belum"}
-                          </button>
-                          <button onClick={() => openWaveForm(w)} title="Edit Gelombang"
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600">
-                            <PencilSimple className="h-4 w-4" />
-                          </button>
-                          <button onClick={() => setDeleteWaveItem(w)} title="Hapus"
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600">
-                            <Trash className="h-4 w-4" />
-                          </button>
+                          {permUpdate && (
+                            <button onClick={() => handleToggleWave(w)}
+                              title={w.is_published ? "Sembunyikan dari website" : "Tampilkan di website"}
+                              className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${w.is_published ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100"}`}>
+                              <span className={`relative inline-block h-4 w-7 rounded-full transition-colors ${w.is_published ? "bg-emerald-500" : "bg-slate-300"}`}>
+                                <span className={`absolute left-0.5 top-1 h-2 w-2 rounded-full bg-white transition-transform ${w.is_published ? "translate-x-3" : ""}`} />
+                              </span>
+                              {w.is_published ? "Tampil" : "Sembunyi"}
+                            </button>
+                          )}
+                          {permVerify && (
+                            <button onClick={() => setResultWave(w)}
+                              title={w.result_published_at ? "Tarik hasil seleksi dari publik" : "Publikasikan hasil seleksi gelombang ini"}
+                              className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${w.result_published_at ? "border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100" : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100"}`}>
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              {w.result_published_at ? "Hasil: Tayang" : "Hasil: Belum"}
+                            </button>
+                          )}
+                          {permUpdate && (
+                            <>
+                              <button onClick={() => openWaveForm(w)} title="Edit Gelombang"
+                                className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600">
+                                <PencilSimple className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => setDeleteWaveItem(w)} title="Hapus"
+                                className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600">
+                                <Trash className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </li>
                     )}
@@ -1742,6 +1747,19 @@ export default function AdminSPMBPage() {
                     <p className="text-sm text-slate-500">Memuat data pendaftar...</p>
                   </div>
                 </td></tr>
+              ) : loadError ? (
+                <tr><td colSpan={8} className="px-4 py-16 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                      <Warning className="h-6 w-6 text-red-400" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
+                    <p className="mt-0.5 max-w-md text-xs text-slate-500">{loadError}</p>
+                    <button onClick={() => void fetchData()} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                      Coba lagi
+                    </button>
+                  </div>
+                </td></tr>
               ) : paginated.length === 0 ? (
                 <tr><td colSpan={8} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
@@ -1792,11 +1810,26 @@ export default function AdminSPMBPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => handleToggleStatus(item)}
-                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${st.bg} ${st.color} hover:opacity-80`}>
-                          <StatusIcon className="h-3 w-3" />
-                          {st.label}
-                        </button>
+                        {permVerify ? (
+                          <button
+                            onClick={() => {
+                              if (item.status === "rejected") handleSetPending(item);
+                              else setConfirmAction({
+                                id: item.id,
+                                status: item.status === "pending" ? "accepted" : "rejected",
+                              });
+                            }}
+                            title={item.status === "rejected" ? "Kembalikan ke Menunggu" : "Ubah status (dengan konfirmasi)"}
+                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${st.bg} ${st.color} hover:opacity-80`}>
+                            <StatusIcon className="h-3 w-3" />
+                            {st.label}
+                          </button>
+                        ) : (
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${st.bg} ${st.color}`}>
+                            <StatusIcon className="h-3 w-3" />
+                            {st.label}
+                          </span>
+                        )}
                       </td>
                       <td
                         className="hidden whitespace-nowrap px-4 py-3.5 text-sm text-slate-500 lg:table-cell"
@@ -1814,12 +1847,16 @@ export default function AdminSPMBPage() {
                           <button onClick={() => openDetail(item)} aria-label={`Lihat detail ${name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Detail">
                             <Eye className="h-4 w-4" />
                           </button>
-                          <button onClick={() => setEditItem(item)} aria-label={`Edit data ${name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit Data">
-                            <PencilSimple className="h-4 w-4" />
-                          </button>
-                          <button onClick={() => setDeleteItem(item)} aria-label={`Hapus pendaftaran ${name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
-                            <Trash className="h-4 w-4" />
-                          </button>
+                          {permUpdate && (
+                            <button onClick={() => setEditItem(item)} aria-label={`Edit data ${name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit Data">
+                              <PencilSimple className="h-4 w-4" />
+                            </button>
+                          )}
+                          {permDelete && (
+                            <button onClick={() => setDeleteItem(item)} aria-label={`Hapus pendaftaran ${name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
+                              <Trash className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1873,6 +1910,17 @@ export default function AdminSPMBPage() {
                 </div>
               ))}
             </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                <Warning className="h-6 w-6 text-red-400" />
+              </div>
+              <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
+              <p className="mt-0.5 max-w-md text-xs text-slate-500">{loadError}</p>
+              <button onClick={() => void fetchData()} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
+                Coba lagi
+              </button>
+            </div>
           ) : paginated.length === 0 ? (
             <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
@@ -1901,6 +1949,7 @@ export default function AdminSPMBPage() {
                   else setConfirmAction({ id: r.id, status: s });
                 }}
                 onDelete={setDeleteItem}
+                canEdit={permUpdate}
                 canVerify={permVerify}
                 canDelete={permDelete}
               />
@@ -2452,6 +2501,7 @@ function RegistrationMobileRow({
   onEditData,
   onSetStatus,
   onDelete,
+  canEdit = true,
   canVerify = true,
   canDelete = true,
 }: {
@@ -2464,6 +2514,8 @@ function RegistrationMobileRow({
   onEditData: (r: SpmbRegistration) => void;
   onSetStatus: (r: SpmbRegistration, s: "pending" | "accepted" | "rejected") => void;
   onDelete: (r: SpmbRegistration) => void;
+  /** `spmb:update` — edit data pendaftar. */
+  canEdit?: boolean;
   /** `spmb:verify` — ubah status pendaftar. */
   canVerify?: boolean;
   /** `spmb:delete` — hapus pendaftar. */
@@ -2477,7 +2529,9 @@ function RegistrationMobileRow({
   const late = pendingDays >= PENDING_SLA_DAYS;
   const actions: RowAction[] = [
     { key: "detail", label: "Detail", icon: <Eye className="h-4 w-4" />, run: () => onDetail(item) },
-    { key: "edit", label: "Edit Data", icon: <PencilSimple className="h-4 w-4" />, run: () => onEditData(item) },
+    ...(canEdit
+      ? [{ key: "edit", label: "Edit Data", icon: <PencilSimple className="h-4 w-4" />, run: () => onEditData(item) } as RowAction]
+      : []),
     ...(canVerify && item.status !== "pending"
       ? [{
           key: "pending",

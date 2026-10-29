@@ -93,5 +93,15 @@ export async function POST(req: Request) {
       .eq("id", user.id);
   }
 
+  // Jejak keamanan — password berubah (nilai password tidak pernah dicatat).
+  await supabase
+    .rpc("log_activity", {
+      p_action: "update",
+      p_entity_type: "user_profiles",
+      p_entity_id: user.id,
+      p_detail: { module: "security", password_changed: true, forced },
+    })
+    .then(() => undefined, () => undefined);
+
   return NextResponse.json({ success: true });
 }
