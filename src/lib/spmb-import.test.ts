@@ -14,7 +14,7 @@
 import { describe, expect, it } from "vitest";
 import { strToU8, zipSync } from "fflate";
 import { readSpreadsheetFile, parseCsv } from "./spmb-import-file";
-import { buildImportResult, buildImportPayload } from "./spmb-import";
+import { buildImportResult, buildImportPayload, updateRowField } from "./spmb-import";
 
 /** Rangkai .xlsx minimal (regex-parser cukup dengan bagian ini saja). */
 function makeXlsx(rowsXml: string, shared: string[]): Uint8Array {
@@ -185,5 +185,53 @@ describe("pemetaan header tidak mencuri kolom lain", () => {
   it("email responden ikut tersimpan lewat payload (bukan selalu kosong)", () => {
     const { rows } = buildRow();
     expect(buildImportPayload(rows[0]).email).toBe("ortu@gmail.com");
+  });
+});
+
+describe("kolom JALUR → registration_path", () => {
+  function hasil(jalur: string | null, header = "JALUR") {
+    const headers = ["Nama Lengkap", "Jenis Kelamin", ...(jalur === null ? [] : [header]), "PILIHAN PROGRAM"];
+    const row = ["Budi Santoso", "Laki - Laki", ...(jalur === null ? [] : [jalur]), "SMP BOARDING"];
+    return buildImportResult({ sheetName: "Form Responses 1", headers, rows: [row] }, []);
+  }
+
+  it("header JALUR dikenali dan nilainya dipakai payload", () => {
+    const { rows, mapping } = hasil("PRESTASI");
+    expect(mapping.some((m) => m.key === "registration_path")).toBe(true);
+    expect(rows[0].data.registration_path).toBe("prestasi");
+    expect(buildImportPayload(rows[0]).registration_path).toBe("prestasi");
+  });
+
+  it("header 'PILIHAN JALUR' juga dikenali", () => {
+    expect(hasil("Beasiswa", "PILIHAN JALUR").rows[0].data.registration_path).toBe("beasiswa");
+  });
+
+  it("Reguler/regular case-insensitive; program tetap terpisah dari jalur", () => {
+    const { rows } = hasil("Regular");
+    expect(rows[0].data.registration_path).toBe("reguler");
+    expect(rows[0].data.program).toBe("SMP Boarding");
+    expect(buildImportPayload(rows[0]).registration_path).toBe("reguler");
+  });
+
+  it("nilai jalur asing → warning + fallback Reguler", () => {
+    const { rows } = hasil("Jalur Khusus");
+    expect(rows[0].data.registration_path).toBe("reguler");
+    expect(
+      rows[0].issues.some((i) => i.level === "warning" && i.field === "registration_path")
+    ).toBe(true);
+    expect(buildImportPayload(rows[0]).registration_path).toBe("reguler");
+  });
+
+  it("tanpa kolom JALUR → Reguler tanpa warning", () => {
+    const { rows } = hasil(null);
+    expect(rows[0].data.registration_path).toBe("reguler");
+    expect(rows[0].issues.some((i) => i.field === "registration_path")).toBe(false);
+  });
+
+  it("edit nilai JALUR di pratinjau membangun ulang baris", () => {
+    const { rows } = hasil("reguler");
+    const next = updateRowField(rows[0], "registration_path", "BEASISWA");
+    expect(next.data.registration_path).toBe("beasiswa");
+    expect(buildImportPayload(next).registration_path).toBe("beasiswa");
   });
 });

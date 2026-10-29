@@ -560,3 +560,19 @@ export async function setRegistrationPendingBulk(ids: string[]): Promise<{ error
   if (error) return { error: error.message };
   return {};
 }
+
+export type RegistrationPath = "reguler" | "prestasi" | "beasiswa";
+
+/** Ubah jalur (Reguler/Prestasi/Beasiswa) banyak pendaftar sekaligus. */
+export async function updateRegistrationPathBulk(
+  ids: string[],
+  path: RegistrationPath
+): Promise<{ error?: string }> {
+  if (ids.length === 0) return {};
+  const { error } = await supabase
+    .from("spmb_registrations")
+    .update({ registration_path: path, updated_at: new Date().toISOString() })
+    .in("id", ids);
+  if (error) return { error: error.message };
+  return {};
+}

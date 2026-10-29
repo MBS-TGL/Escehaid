@@ -50,6 +50,7 @@ function ensureUploadToken(): string {
 
 const DEBUG_DATA: FormData = {
   program: "SMP Boarding",
+  registration_path: "reguler",
   full_name: "Ahmad Fauzi",
   nickname: "Fauzi",
   gender: "L",

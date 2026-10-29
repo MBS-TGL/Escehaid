@@ -21,6 +21,7 @@ import {
   saveDocumentVerification,
   updateRegistrationWaveBulk,
   setRegistrationPendingBulk,
+  updateRegistrationPathBulk,
   getSpmbMessageTemplates,
   updateSpmbMessageTemplate,
   setRegistrationMode,
@@ -45,6 +46,7 @@ import { normalizeName, normalizeSchool } from "@/lib/format-name";
 import { formatRelativeTime, daysSince, PENDING_SLA_DAYS } from "@/lib/admin-display";
 import type { SpmbDocumentKey, SpmbDocumentVerification, SpmbRegistration, SpmbWave, SpmbFormField, SpmbFieldType } from "@/lib/supabase";
 import type { SpmbMessageTemplate } from "@/lib/queries";
+import type { RegistrationPath } from "@/lib/queries";
 import { SPMB_DOCUMENT_KEYS, SPMB_DOCUMENT_LABELS } from "@/lib/spmb-registration";
 import { fillSpmbTemplate, spmbWhatsappHref } from "@/lib/spmb-message";
 import { useToast } from "@/components/ui/Toast";
@@ -225,6 +227,10 @@ export default function AdminSPMBPage() {
   const [bulkWaveId, setBulkWaveId] = useState<string>("");
   const [bulkWaveSaving, setBulkWaveSaving] = useState(false);
   const [bulkPendingSaving, setBulkPendingSaving] = useState(false);
+  /** Aksi massal ubah jalur — modal pilih jalur tujuan. */
+  const [bulkPathOpen, setBulkPathOpen] = useState(false);
+  const [bulkPath, setBulkPath] = useState<RegistrationPath | "">("");
+  const [bulkPathSaving, setBulkPathSaving] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ id: string; status: "accepted" | "rejected" } | null>(null);
   /** Panel "Tambah Pendaftar" (input manual admin) — mount ulang tiap dibuka. */
   const [addOpen, setAddOpen] = useState(false);
@@ -957,6 +963,24 @@ export default function AdminSPMBPage() {
       return;
     }
     toast(`${ids.length} pendaftar dikembalikan ke Menunggu`, "success");
+    exitPickMode();
+    fetchData();
+  }
+
+  /** Ubah jalur pendaftar terpilih sekaligus (mis. koreksi hasil impor). */
+  async function handleBulkMovePath() {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0 || !bulkPath || bulkPathSaving) return;
+    setBulkPathSaving(true);
+    const res = await updateRegistrationPathBulk(ids, bulkPath);
+    setBulkPathSaving(false);
+    if (res.error) {
+      toast(res.error, "error");
+      return;
+    }
+    toast(`${ids.length} pendaftar dipindahkan ke jalur ${pathLabels[bulkPath] || bulkPath}`, "success");
+    setBulkPathOpen(false);
+    setBulkPath("");
     exitPickMode();
     fetchData();
   }
@@ -1937,6 +1961,7 @@ export default function AdminSPMBPage() {
               <button onClick={() => setConfirmAction({ id: "bulk", status: "accepted" })} aria-label={`Terima ${selectedIds.size} pendaftar terpilih`} className="whitespace-nowrap rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Terima</button>
               <button onClick={() => setConfirmAction({ id: "bulk", status: "rejected" })} aria-label={`Tolak ${selectedIds.size} pendaftar terpilih`} className="whitespace-nowrap rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Tolak</button>
               <button onClick={() => { setBulkWaveId(""); setBulkWaveOpen(true); }} aria-label={`Pindahkan ${selectedIds.size} pendaftar terpilih ke gelombang lain`} className="whitespace-nowrap rounded-lg border border-[var(--brand-primary)]/30 bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5">Pindah gelombang</button>
+              <button onClick={() => { setBulkPath(""); setBulkPathOpen(true); }} aria-label={`Ubah jalur ${selectedIds.size} pendaftar terpilih`} className="whitespace-nowrap rounded-lg border border-[var(--brand-primary)]/30 bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5">Jalur</button>
               <button onClick={handleBulkSetPending} disabled={bulkPendingSaving} aria-label={`Kembalikan ${selectedIds.size} pendaftar terpilih ke Menunggu`} className="whitespace-nowrap rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Menunggu</button>
             </>
           )}
@@ -2308,6 +2333,15 @@ export default function AdminSPMBPage() {
               </button>
               <button
                 type="button"
+                onClick={() => { setBulkPath(""); setBulkPathOpen(true); }}
+                disabled={selectedIds.size === 0}
+                aria-label="Ubah jalur pendaftar terpilih"
+                className="min-h-10 rounded-xl border border-[var(--brand-primary)]/30 bg-white px-3 py-2 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+              >
+                Jalur
+              </button>
+              <button
+                type="button"
                 onClick={handleBulkSetPending}
                 disabled={selectedIds.size === 0 || bulkPendingSaving}
                 aria-label="Kembalikan pendaftar terpilih ke Menunggu"
@@ -2630,6 +2664,36 @@ export default function AdminSPMBPage() {
             <div className="mt-6 flex gap-3">
               <button onClick={() => setDeleteItem(null)} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Batal</button>
               <button onClick={handleDelete} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700">Ya, Hapus</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── BULK MOVE PATH MODAL ────────────────────── */}
+      {bulkPathOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => !bulkPathSaving && setBulkPathOpen(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--brand-primary)]/10 mx-auto">
+              <GraduationCap className="h-6 w-6 text-[var(--brand-primary)]" />
+            </div>
+            <h3 className="text-center text-lg font-bold text-slate-800">Ubah Jalur {selectedIds.size} Pendaftar?</h3>
+            <p className="mt-2 text-center text-sm text-slate-500">Pilih jalur pendaftaran untuk pendaftar terpilih.</p>
+            <select
+              value={bulkPath}
+              onChange={(e) => setBulkPath(e.target.value as RegistrationPath | "")}
+              disabled={bulkPathSaving}
+              className="mt-4 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
+            >
+              <option value="">Pilih jalur…</option>
+              <option value="reguler">Reguler</option>
+              <option value="prestasi">Prestasi</option>
+              <option value="beasiswa">Beasiswa</option>
+            </select>
+            <div className="mt-6 flex gap-3">
+              <button onClick={() => setBulkPathOpen(false)} disabled={bulkPathSaving} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Batal</button>
+              <button onClick={handleBulkMovePath} disabled={bulkPathSaving || !bulkPath} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-50">
+                {bulkPathSaving ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : "Ubah Jalur"}
+              </button>
             </div>
           </div>
         </div>

@@ -76,6 +76,7 @@ export const FIELD_LABELS: Record<RawKey, string> = {
   birth_place: "Tempat Lahir",
   birth_date: "Tanggal Lahir",
   program: "Program",
+  registration_path: "Jalur",
   nisn: "NISN",
   nik: "NIK",
   height: "Tinggi Badan",
@@ -163,6 +164,8 @@ function mapHeader(raw: string): RawKey | null {
 
   if (h.includes("jenis kelamin")) return "gender";
   if (h.includes("program")) return "program";
+  // "JALUR" / "PILIHAN JALUR" (reguler/prestasi/beasiswa).
+  if (h.includes("jalur")) return "registration_path";
   // NISN/NIK pakai word-boundary — "Status Nikah" bukan NIK.
   if (/\bnisn\b/.test(h)) return "nisn";
   if (/\bnik\b/.test(h)) return "nik";
@@ -357,6 +360,22 @@ export function normalizeNameForDup(n: string): string {
 }
 
 /**
+ * Normalisasi kolom JALUR → kunci `registration_path`.
+ * "REGULER"/"Regular" → reguler; "PRESTASI" → prestasi; "BEASISWA" → beasiswa.
+ * Nilai tak dikenal (atau kosong) → null (pemanggil memakai fallback Reguler).
+ */
+export function normalizeRegistrationPath(
+  v: string
+): "reguler" | "prestasi" | "beasiswa" | null {
+  const t = cleanText(v).toLowerCase().replace(/[^a-z]/g, "");
+  if (!t) return null;
+  if (t.includes("beasiswa")) return "beasiswa";
+  if (t.includes("prestasi")) return "prestasi";
+  if (t.includes("reguler") || t.includes("regular")) return "reguler";
+  return null;
+}
+
+/**
  * Cocokkan nilai "PILIHAN PROGRAM" ke nama resmi SPMB_PROGRAMS. Form Google
  * memakai istilah lain — mis. "SMP REGULER" = program non-boarding — jadi
  * dipetakan dengan pola jenjang + kata kunci; nilai asing dipertahankan
@@ -409,6 +428,12 @@ function buildRow(index: number, raw: Record<string, string>): ImportRow {
   const program = matchProgram(programRaw);
   data.program = program ?? programRaw;
   if (programRaw && !program) warn("program", `Program "${programRaw}" tidak dikenali — disimpan apa adanya`);
+
+  // Jalur: kolom JALUR opsional. Tanpa kolom/nilai kosong → Reguler.
+  const pathRaw = cleanText(raw.registration_path ?? "");
+  const path = normalizeRegistrationPath(pathRaw);
+  data.registration_path = path ?? "reguler";
+  if (pathRaw && !path) warn("registration_path", `Jalur "${pathRaw}" tidak dikenali — dipakai Reguler`);
 
   // Jenis kelamin: kosong → ERROR juga (kolom wajib di database).
   const gender = normalizeGender(raw.gender ?? "");
@@ -591,7 +616,10 @@ export function buildImportPayload(row: ImportRow): AdminCreateRegistrationInput
     parent_name: spmbParentName(row.data),
     parent_occupation: row.data.father_job,
     previous_school: row.data.previous_school,
-    registration_path: "reguler",
+    registration_path:
+      row.data.registration_path === "prestasi" || row.data.registration_path === "beasiswa"
+        ? row.data.registration_path
+        : "reguler",
     status: "pending",
     wave_id: null,
     admin_notes: "Impor massal dari ekspor Google Form",

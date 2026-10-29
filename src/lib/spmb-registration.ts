@@ -45,6 +45,8 @@ export const SPMB_CHECK_SEP = " | ";
  */
 export type SpmbRegistrationData = {
   program: string;
+  /** Jalur pendaftaran: "reguler" | "prestasi" | "beasiswa". */
+  registration_path: string;
   full_name: string;
   nickname: string;
   /** "L" | "P" */
@@ -87,6 +89,7 @@ export type SpmbRegistrationData = {
 export function createEmptySpmbRegistrationData(): SpmbRegistrationData {
   return {
     program: "",
+    registration_path: "",
     full_name: "",
     nickname: "",
     gender: "L",
