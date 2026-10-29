@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Splide } from "@splidejs/splide";
 import { nameInitials } from "@/lib/site-config";
 import type { Teacher } from "@/lib/supabase";
+import { usePrefersReducedMotion } from "@/components/CSSAnimations";
 
 import "@splidejs/splide/css";
 
@@ -16,6 +17,9 @@ const splideOverrides = `
 export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
   const splideRef = useRef<HTMLDivElement>(null);
   const splideInstance = useRef<Splide | null>(null);
+  // Autoplay carousel = animasi terus-menerus walau pengguna sedang scroll
+  // section lain. Saat OS meminta gerak dikurangi, matikan & tampilkan statis.
+  const reducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     if (!splideRef.current || teachers.length === 0) return;
@@ -25,8 +29,8 @@ export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
       perPage: 6,
       perMove: 1,
       gap: "10px",
-      speed: 1500,
-      autoplay: true,
+      speed: reducedMotion ? 0 : 1500,
+      autoplay: !reducedMotion,
       interval: 3000,
       pauseOnHover: true,
       pauseOnFocus: false,
@@ -53,7 +57,7 @@ export default function TeacherCarousel({ teachers }: { teachers: Teacher[] }) {
       splideInstance.current?.destroy(true);
       splideInstance.current = null;
     };
-  }, [teachers.length]);
+  }, [teachers.length, reducedMotion]);
 
   if (teachers.length === 0) return null;
 

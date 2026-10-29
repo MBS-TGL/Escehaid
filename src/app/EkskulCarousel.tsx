@@ -8,6 +8,7 @@ import EkskulGlyph from "@/components/EkskulIcon";
 import { formatEkskulSchedule } from "@/app/ekskul-data";
 import type { Ekskul } from "@/lib/supabase";
 import { Clock } from "@/components/Icons";
+import { usePrefersReducedMotion } from "@/components/CSSAnimations";
 
 import "@splidejs/splide/css";
 
@@ -19,6 +20,9 @@ const splideOverrides = `
 export default function EkskulCarousel({ ekskuls }: { ekskuls: Ekskul[] }) {
   const splideRef = useRef<HTMLDivElement>(null);
   const splideInstance = useRef<Splide | null>(null);
+  // Autoplay carousel = animasi terus-menerus walau pengguna sedang scroll
+  // section lain. Saat OS meminta gerak dikurangi, matikan & tampilkan statis.
+  const reducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     if (!splideRef.current || ekskuls.length === 0) return;
@@ -28,8 +32,8 @@ export default function EkskulCarousel({ ekskuls }: { ekskuls: Ekskul[] }) {
       perPage: 5,
       perMove: 1,
       gap: "12px",
-      speed: 1500,
-      autoplay: true,
+      speed: reducedMotion ? 0 : 1500,
+      autoplay: !reducedMotion,
       interval: 3500,
       pauseOnHover: true,
       pauseOnFocus: false,
@@ -56,7 +60,7 @@ export default function EkskulCarousel({ ekskuls }: { ekskuls: Ekskul[] }) {
       splideInstance.current?.destroy(true);
       splideInstance.current = null;
     };
-  }, [ekskuls.length]);
+  }, [ekskuls.length, reducedMotion]);
 
   if (ekskuls.length === 0) return null;
 

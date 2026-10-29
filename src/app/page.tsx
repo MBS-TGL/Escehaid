@@ -59,8 +59,29 @@ const NEWS_BADGE = (key?: string | null) => {
   return `${c.border} ${c.bg} ${c.color}`;
 };
 
-/** content-visibility: lewati render section di luar layar; containIntrinsicSize mencegah scroll loncat. */
-const CV = { contentVisibility: "auto", containIntrinsicSize: "auto 720px" } as React.CSSProperties;
+/**
+ * content-visibility: lewati render section di luar layar; containIntrinsicSize
+ * mencegah scroll loncat.
+ *
+ * Tinggi cadangan WAJIB mendekati tinggi nyata section — kalau terlalu besar
+ * (dulu semua section dipatok 720px), tinggi halaman melompat saat section
+ * masuk viewport dan scroll terasa tersendat di HP. Karena itu dipisah per
+ * bentuk section. Section yang isinya gambar berat (Fasilitas) sengaja TIDAK
+ * memakai CV: render-nya murah, men-skip-nya justru memicu relayout besar.
+ */
+const cv = (h: number) =>
+  ({ contentVisibility: "auto", containIntrinsicSize: `auto ${h}px` }) as React.CSSProperties;
+
+/** Kutipan kepala sekolah + quick nav (4 kartu) — ±600px mobile, ±700px desktop. */
+const CV_TALL = cv(680);
+/** Program unggulan + agenda harian (6 kartu + 4agenda) — section terpanjang. */
+const CV_PROGRAM = cv(1500);
+/** Guru & staf (carousel 3:4). */
+const CV_TEACHERS = cv(520);
+/** Ekstrakurikuler (carousel 9:16). */
+const CV_EKSKUL = cv(560);
+/** Visi & misi (gradien + daftar misi). */
+const CV_VISION = cv(760);
 
 const FACILITY_FALLBACKS: Record<string, string> = {
   "Ruang Kelas": "/images/Ruang-Kelas.jpg",
@@ -283,7 +304,7 @@ export default async function Home() {
       <CountdownEvent events={upcomingEvents} />
 
       {/* ── SAMBUTAN KEPALA SEKOLAH ───────────────────────── */}
-      <section className="relative overflow-hidden bg-[var(--surface-muted)] py-16 md:py-24" style={CV}>
+      <section className="relative overflow-hidden bg-[var(--surface-muted)] py-16 md:py-24" style={CV_TALL}>
         {/* Watermark kutipan halus di pojok kanan atas latar belakang section */}
         <div
           aria-hidden="true"
@@ -390,7 +411,7 @@ export default async function Home() {
       </section>
 
       {/* ── QUICK NAV (4 kolom) ────────────────────────────── */}
-      <section className="bg-white" style={CV}>
+      <section className="bg-white" style={CV_TALL}>
         <div className="mx-auto max-w-[1296px] px-6 py-12 md:px-10 md:py-16">
           <div className="grid gap-x-8 gap-y-10 md:grid-cols-2 lg:grid-cols-4">
             {/* Berita */}
@@ -697,7 +718,7 @@ export default async function Home() {
       </section>
 
       {/* ── PROGRAM UNGGULAN ──────────────────────────────── */}
-      <section className="bg-[#f4f7fb]" style={CV}>
+      <section className="bg-[#f4f7fb]" style={CV_PROGRAM}>
         <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
           <CSSFadeIn>
             <div className="mb-12 flex items-end justify-between gap-4">
@@ -783,7 +804,7 @@ export default async function Home() {
 
       {/* ── FASILITAS SEKOLAH ──────────────────────────────── */}
       {dbFacilities.length > 0 && (
-        <section className="bg-white" style={CV}>
+        <section className="bg-white">
           <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
             <CSSFadeIn>
               <div className="mb-8 flex items-end justify-between md:mb-12">
@@ -809,19 +830,21 @@ export default async function Home() {
                     <Link
                       key={f.id}
                       href="/profile#fasilitas"
-                      className={`group relative flex flex-col justify-end overflow-hidden rounded-3xl border border-white/80 bg-slate-900 shadow-md shadow-slate-900/5 ring-1 ring-slate-900/[0.06] transition-all duration-500 ease-out hover:border-white hover:shadow-2xl hover:shadow-[var(--brand-primary)]/20 motion-safe:hover:-translate-y-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${bentoSpanClass(index, dbFacilities.length)}`}
+                      className={`group relative flex flex-col justify-end overflow-hidden rounded-3xl border border-white/80 bg-slate-900 shadow-md shadow-slate-900/5 ring-1 ring-slate-900/[0.06] sm:transition-all sm:duration-500 sm:ease-out sm:hover:border-white sm:hover:shadow-2xl sm:hover:shadow-[var(--brand-primary)]/20 sm:motion-safe:hover:-translate-y-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${bentoSpanClass(index, dbFacilities.length)}`}
                     >
                       {/* Badge Kategori Glassmorphism (Pojok Kiri Atas) */}
+                      {/* backdrop-blur hanya di sm+: di HP tiap kartu akan jadi
+                          layer compositing sendiri di atas foto yang di-decode. */}
                       <div className="absolute left-3.5 top-3.5 z-20 sm:left-4 sm:top-4">
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-black/40 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-xs backdrop-blur-md">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-black/50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-xs sm:bg-black/40 sm:backdrop-blur-md">
                           <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-highlight)]" />
                           Fasilitas
                         </span>
                       </div>
 
                       {/* Tombol Aksi Panah Mini (Pojok Kanan Atas) */}
-                      <div className="absolute right-3.5 top-3.5 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/30 text-white backdrop-blur-md opacity-85 transition-all duration-300 group-hover:scale-110 group-hover:border-white group-hover:bg-white group-hover:text-[var(--brand-primary)] group-hover:opacity-100 sm:right-4 sm:top-4">
-                        <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                      <div className="absolute right-3.5 top-3.5 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white opacity-90 sm:right-4 sm:top-4 sm:bg-black/30 sm:opacity-85 sm:backdrop-blur-md sm:transition-all sm:duration-300 sm:group-hover:scale-110 sm:group-hover:border-white sm:group-hover:bg-white sm:group-hover:text-[var(--brand-primary)] sm:group-hover:opacity-100">
+                        <ArrowUpRight className="h-3.5 w-3.5 sm:transition-transform sm:duration-300 sm:group-hover:translate-x-0.5 sm:group-hover:-translate-y-0.5" />
                       </div>
 
                       {/* Foto Fasilitas atau Placeholder Estetik */}
@@ -835,26 +858,30 @@ export default async function Home() {
                               ? "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 640px"
                               : "(max-width: 768px) 50vw, (max-width: 1024px) 25vw, 320px"
                           }
-                          priority={false}
-                          className="object-cover transition-transform duration-700 ease-out motion-safe:group-hover:scale-105"
+                          quality={70}
+                          loading="lazy"
+                          decoding="async"
+                          className="object-cover sm:transition-transform sm:duration-700 sm:ease-out sm:motion-safe:group-hover:scale-105"
                         />
                       ) : (
                         <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[#0a3570] to-[#0c4482] p-4 text-white">
-                          <div className="pointer-events-none absolute -right-8 -top-8 h-36 w-36 rounded-full bg-[var(--brand-highlight)]/15 blur-2xl" />
-                          <div className="pointer-events-none absolute -bottom-8 -left-8 h-36 w-36 rounded-full bg-[var(--brand-accent)]/25 blur-2xl" />
-                          <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-white shadow-xs backdrop-blur-md transition-transform duration-500 group-hover:scale-110">
+                          {/* blur-2xl 144px × 2 mahal di GPU HP — hanya desktop. */}
+                          <div className="pointer-events-none absolute -right-8 -top-8 hidden h-36 w-36 rounded-full bg-[var(--brand-highlight)]/15 blur-2xl sm:block" />
+                          <div className="pointer-events-none absolute -bottom-8 -left-8 hidden h-36 w-36 rounded-full bg-[var(--brand-accent)]/25 blur-2xl sm:block" />
+                          <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-white shadow-xs sm:backdrop-blur-md sm:transition-transform sm:duration-500 sm:group-hover:scale-110">
                             <ImageSquare className="h-6 w-6 text-[var(--brand-highlight)]" />
                           </div>
                           <span className="relative z-10 mt-2 text-[10px] font-semibold tracking-wider text-white/50 uppercase">SMP Muhammadiyah 4</span>
                         </div>
                       )}
 
-                      {/* Cinematic Scrim Gradient Overlay */}
-                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/35 via-35% to-black/10 transition-opacity duration-300 group-hover:from-slate-950/95" />
+                      {/* Cinematic Scrim Gradient Overlay — 2 stop (bukan 3) agar
+                          gradien lebih murah dipaint saat scroll. */}
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/90 to-black/10 sm:transition-opacity sm:duration-300 sm:group-hover:from-slate-950/95" />
 
                       {/* Info & Nama Fasilitas */}
                       <div className="relative z-10 p-4 sm:p-5 lg:p-6">
-                        <h3 className={`font-bold text-white drop-shadow-sm leading-snug transition-colors group-hover:text-[var(--brand-highlight)] ${isLarge ? "text-lg sm:text-2xl lg:text-[26px]" : "text-sm sm:text-base line-clamp-1"}`}>
+                        <h3 className={`font-bold text-white drop-shadow-sm leading-snug sm:transition-colors sm:group-hover:text-[var(--brand-highlight)] ${isLarge ? "text-lg sm:text-2xl lg:text-[26px]" : "text-sm sm:text-base line-clamp-1"}`}>
                           {f.name}
                         </h3>
                         {f.description && (
@@ -882,7 +909,7 @@ export default async function Home() {
       )}
 
       {/* ── GURU & STAFF ────────────────────────────────── */}
-      <section className="bg-[#f4f7fb]" style={CV}>
+      <section className="bg-[#f4f7fb]" style={CV_TEACHERS}>
         <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
           <CSSFadeIn>
             <div className="mb-12 text-center">
@@ -899,7 +926,7 @@ export default async function Home() {
 
       {/* ── EKSTRAKURIKULER ─────────────────────────────── */}
       {ekskulList.length > 0 && (
-        <section className="bg-white" style={CV}>
+        <section className="bg-white" style={CV_EKSKUL}>
           <div className="mx-auto max-w-[1296px] px-6 py-14 md:px-10 md:py-20">
             <CSSFadeIn>
               <div className="mb-12 text-center">
@@ -929,7 +956,7 @@ export default async function Home() {
 
       {/* ── WHY MUH4TA — Visi & Misi (dari school_profile) ── */}
       {hasVisionMission && (
-      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] text-white" style={CV}>
+      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] text-white" style={CV_VISION}>
         <div aria-hidden="true" className="pointer-events-none absolute -right-8 -top-8 select-none text-white/[0.04] md:-right-12 md:-top-12">
           <Quotes weight="fill" className="h-64 w-64 md:h-80 md:w-80" />
         </div>
