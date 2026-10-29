@@ -29,7 +29,9 @@ const WhatsAppButton = dynamic(() => import("./WhatsAppButton"));
 // HeroBackground & HeroVideoModal diimpor statis untuk LCP optimal di layar pertama.
 // Video dimuat lazy saat mendekati viewport dengan fallback poster image statis di mobile.
 const TeacherCarousel = dynamic(() => import("./TeacherCarousel"), { loading: () => <div className="h-64 rounded-2xl bg-slate-100" /> });
-const EkskulCarousel = dynamic(() => import("./EkskulCarousel"), { loading: () => <div className="h-[420px] rounded-2xl bg-slate-100" /> });
+// Tinggi skeleton mengikuti kartu 2-up (≤639px, ±300–530px) & baris desktop
+// agar tidak ada CLS saat carousel selesai dimuat.
+const EkskulCarousel = dynamic(() => import("./EkskulCarousel"), { loading: () => <div className="h-[480px] rounded-2xl bg-slate-100 sm:h-[560px] lg:h-[620px]" /> });
 const CountdownEvent = dynamic(() => import("@/components/CountdownEvent"));
 
 /**
@@ -78,8 +80,12 @@ const CV_TALL = cv(680);
 const CV_PROGRAM = cv(1500);
 /** Guru & staf (carousel 3:4). */
 const CV_TEACHERS = cv(520);
-/** Ekstrakurikuler (carousel 9:16). */
-const CV_EKSKUL = cv(560);
+/**
+ * Ekstrakurikuler (carousel 9:16). Sejak ponsel memakai 2 kartu (±150×267 di
+ * 360px), tinggi section naik — cadangan 560px dulu terlalu pendek sehingga
+ * halaman melompat saat section ini di-render.
+ */
+const CV_EKSKUL = cv(680);
 /** Visi & misi (gradien + daftar misi). */
 const CV_VISION = cv(760);
 

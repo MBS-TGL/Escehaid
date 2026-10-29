@@ -47,7 +47,10 @@ export default function EkskulCarousel({ ekskuls }: { ekskuls: Ekskul[] }) {
       updateOnMove: true,
       live: false,
       breakpoints: {
-        0: { perPage: 2, gap: "10px" },
+        // 2 kartu sepanjang ponsel (maks 639px) — dulu breakpoint `0` membuat
+        // 390–639px tampil 3 kartu sehingga tiap kartu portrait hanya ±107px
+        // lebar & ±190px tinggi (terlalu kecil untuk judul + jadwal + pembina).
+        0: { perPage: 2, gap: "12px" },
         640: { perPage: 3, gap: "10px" },
         1024: { perPage: 4, gap: "12px" },
         1280: { perPage: 5, gap: "12px" },
@@ -110,7 +113,7 @@ export default function EkskulCarousel({ ekskuls }: { ekskuls: Ekskul[] }) {
                           src={item.image_url}
                           alt={item.image_alt || item.name}
                           fill
-                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
+                          sizes="(max-width: 767px) 46vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
                           className="object-cover object-top transition-transform duration-700 ease-out group-hover/card:scale-105"
                         />
                       ) : (
@@ -143,7 +146,7 @@ export default function EkskulCarousel({ ekskuls }: { ekskuls: Ekskul[] }) {
                       {/* Teks nama + jadwal + pembina di bawah */}
                       <div className="absolute inset-x-0 bottom-0 z-10 p-3">
                         <h3
-                          className="text-sm font-semibold leading-tight text-white drop-shadow-sm"
+                          className="line-clamp-2 text-sm font-semibold leading-tight text-white drop-shadow-sm"
                           title={item.name}
                         >
                           {item.name}
