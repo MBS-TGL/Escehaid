@@ -81,11 +81,12 @@ const CV_PROGRAM = cv(1500);
 /** Guru & staf (carousel 3:4). */
 const CV_TEACHERS = cv(520);
 /**
- * Ekstrakurikuler (carousel 9:16). Sejak ponsel memakai 2 kartu (±150×267 di
- * 360px), tinggi section naik — cadangan 560px dulu terlalu pendek sehingga
- * halaman melompat saat section ini di-render.
+ * Ekstrakurikuler (carousel 9:16). Dua bentuk: 2 kartu di ≤640px (±150×267 di
+ * 360px) dan 4–5 kartu di atasnya. Cadangan 680px terlalu tinggi untuk bentuk
+ * 4 kartu (section menyusut saat di-render), 560px terlalu pendek untuk 2 kartu
+ * — 600px jadi kompromi kedua bentuk.
  */
-const CV_EKSKUL = cv(680);
+const CV_EKSKUL = cv(600);
 /** Visi & misi (gradien + daftar misi). */
 const CV_VISION = cv(760);
 

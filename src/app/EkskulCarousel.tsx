@@ -46,12 +46,12 @@ export default function EkskulCarousel({ ekskuls }: { ekskuls: Ekskul[] }) {
       autoHeight: false,
       updateOnMove: true,
       live: false,
+      // PENTING: Splide membaca key breakpoints sebagai MAX-width
+      // (`(max-width: 640px)`), bukan min-width. Entri `0` karena itu tidak
+      // pernah aktif, dan `640: perPage 3` yang menang di semua ponsel —
+      // itulah sebabnya 390px sempat tampil 3 kartu kecil.
       breakpoints: {
-        // 2 kartu sepanjang ponsel (maks 639px) — dulu breakpoint `0` membuat
-        // 390–639px tampil 3 kartu sehingga tiap kartu portrait hanya ±107px
-        // lebar & ±190px tinggi (terlalu kecil untuk judul + jadwal + pembina).
-        0: { perPage: 2, gap: "12px" },
-        640: { perPage: 3, gap: "10px" },
+        640: { perPage: 2, gap: "12px" },
         1024: { perPage: 4, gap: "12px" },
         1280: { perPage: 5, gap: "12px" },
       },
@@ -113,7 +113,7 @@ export default function EkskulCarousel({ ekskuls }: { ekskuls: Ekskul[] }) {
                           src={item.image_url}
                           alt={item.image_alt || item.name}
                           fill
-                          sizes="(max-width: 767px) 46vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
+                          sizes="(max-width: 640px) 44vw, (max-width: 1024px) 23vw, (max-width: 1336px) 19vw, 234px"
                           className="object-cover object-top transition-transform duration-700 ease-out group-hover/card:scale-105"
                         />
                       ) : (
