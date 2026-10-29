@@ -480,6 +480,39 @@ export async function getDocumentVerifications(
   return (data ?? []) as SpmbDocumentVerification[];
 }
 
+export interface DocumentVerificationSummary {
+  total: number;
+  verified: number;
+  rejected: number;
+  pending: number;
+}
+
+/**
+ * Agregat verifikasi berkas untuk SEMUA pendaftar — satu query untuk badge di
+ * daftar admin. Gagal/tabel belum dimigrasi → objek kosong (UI tidak mengklaim
+ * apa pun).
+ */
+export async function getDocumentVerificationSummary(): Promise<
+  Record<string, DocumentVerificationSummary>
+> {
+  const { data, error } = await supabase
+    .from("spmb_document_verifications")
+    .select("registration_id, status");
+  if (error) {
+    if (error.code === "42P01" || /does not exist/i.test(error.message)) return {};
+    throw new Error(error.message);
+  }
+  const map: Record<string, DocumentVerificationSummary> = {};
+  for (const row of (data ?? []) as { registration_id: string; status: string }[]) {
+    const entry = (map[row.registration_id] ??= { total: 0, verified: 0, rejected: 0, pending: 0 });
+    entry.total += 1;
+    if (row.status === "verified") entry.verified += 1;
+    else if (row.status === "rejected") entry.rejected += 1;
+    else entry.pending += 1;
+  }
+  return map;
+}
+
 export async function saveDocumentVerification(input: {
   registrationId: string;
   documentKey: SpmbDocumentKey;

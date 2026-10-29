@@ -17,6 +17,7 @@ import {
   getWaveStatus,
   getSchoolProfile,
   getDocumentVerifications,
+  getDocumentVerificationSummary,
   saveDocumentVerification,
   updateRegistrationWaveBulk,
   setRegistrationPendingBulk,
@@ -45,6 +46,7 @@ import { formatRelativeTime, daysSince, PENDING_SLA_DAYS } from "@/lib/admin-dis
 import type { SpmbDocumentKey, SpmbDocumentVerification, SpmbRegistration, SpmbWave, SpmbFormField, SpmbFieldType } from "@/lib/supabase";
 import type { SpmbMessageTemplate } from "@/lib/queries";
 import { SPMB_DOCUMENT_KEYS, SPMB_DOCUMENT_LABELS } from "@/lib/spmb-registration";
+import { fillSpmbTemplate, spmbWhatsappHref } from "@/lib/spmb-message";
 import { useToast } from "@/components/ui/Toast";
 import {
   MagnifyingGlass,
@@ -74,6 +76,7 @@ import {
   Checks,
   CalendarBlank,
   Upload,
+  WhatsappLogo,
 } from "@/components/Icons";
 import {
   MobileFilterBar,
@@ -213,6 +216,8 @@ export default function AdminSPMBPage() {
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [docVerifs, setDocVerifs] = useState<Record<string, SpmbDocumentVerification>>({});
   const [docVerifSaving, setDocVerifSaving] = useState<string | null>(null);
+  /** Agregat verifikasi semua pendaftar — badge di daftar. */
+  const [docSummary, setDocSummary] = useState<Record<string, { total: number; verified: number; rejected: number; pending: number }>>({});
   const [deleteItem, setDeleteItem] = useState<SpmbRegistration | null>(null);
   const [bulkDelete, setBulkDelete] = useState(false);
   /** Aksi massal pindah gelombang — modal pilih gelombang tujuan. */
@@ -294,11 +299,21 @@ export default function AdminSPMBPage() {
     }
   }, []);
 
+  /** Muat agregat verifikasi berkas (badge daftar); gagal → biarkan lama. */
+  const fetchDocSummary = useCallback(async () => {
+    try {
+      setDocSummary(await getDocumentVerificationSummary());
+    } catch {
+      // tabel belum dimigrasi / tanpa izin → tidak menampilkan badge
+    }
+  }, []);
+
   useEffect(() => {
     (async () => {
       await fetchData();
+      await fetchDocSummary();
     })().catch(() => {});
-  }, [fetchData]);
+  }, [fetchData, fetchDocSummary]);
 
   const fetchWaves = useCallback(async () => {
     setWavesLoading(true);
@@ -614,6 +629,26 @@ export default function AdminSPMBPage() {
       },
     }));
     toast(status === "verified" ? "Berkas ditandai valid." : status === "rejected" ? "Berkas ditolak." : "Verifikasi direset.", "success");
+    void fetchDocSummary();
+  }
+
+  /** Buka WhatsApp dengan template terisi; tanpa nomor → salin pesan. */
+  function handleSendWaTemplate(template: SpmbMessageTemplate) {
+    if (!viewItem) return;
+    const message = fillSpmbTemplate(template.body, {
+      nama: viewItem.full_name,
+      gelombang: waveLabel(viewItem.wave_id) || "-",
+      nisn: viewItem.documents?.nisn ?? "-",
+    });
+    const href = spmbWhatsappHref(viewItem.phone, message);
+    if (!href) {
+      navigator.clipboard?.writeText(message).then(
+        () => toast("Nomor WA kosong — pesan disalin ke clipboard", "success"),
+        () => toast("Nomor WA kosong dan pesan gagal disalin", "error")
+      );
+      return;
+    }
+    window.open(href, "_blank", "noopener,noreferrer");
   }
 
   /** Jawaban pertanyaan tambahan pendaftar — label dari skema, fallback utk field yg dihapus. */
@@ -777,7 +812,7 @@ export default function AdminSPMBPage() {
     const headers = [
       "No", "Nama Lengkap", "NISN", "NIK", "Email", "Telepon", "Orang Tua/Wali", "Asal Sekolah",
       "Jalur", "Gelombang", "Status", "Tanggal Daftar",
-      "Berkas Lengkap", "Catatan Admin",
+      "Berkas Lengkap", "Berkas Terverifikasi", "Catatan Admin",
       ...customCols.map((c) => c.label),
     ];
     /**
@@ -798,6 +833,10 @@ export default function AdminSPMBPage() {
         const v = r.documents?.[k];
         return typeof v === "string" && v.length > 0;
       }).length;
+      const ds = docSummary[r.id];
+      const verifiedCell = ds && ds.total > 0
+        ? `${ds.verified}/${SPMB_DOCUMENT_KEYS.length}${ds.rejected ? ` (${ds.rejected} ditolak)` : ""}`
+        : "-";
       lines.push(
         [
           i + 1,
@@ -813,6 +852,7 @@ export default function AdminSPMBPage() {
           statusConfig[r.status]?.label || r.status,
           new Date(r.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
           `${docCount}/${SPMB_DOCUMENT_KEYS.length}`,
+          verifiedCell,
           r.admin_notes ?? "",
           ...customCols.map((c) => (r.documents?.[c.key] ?? "").toString()),
         ]
@@ -2033,6 +2073,7 @@ export default function AdminSPMBPage() {
                     const name = normalizeName(item.full_name);
                     const pendingDays = item.status === "pending" ? daysSince(item.created_at) : 0;
                     const late = pendingDays >= PENDING_SLA_DAYS;
+                    const ds = docSummary[item.id];
                   return (
                     <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[var(--brand-primary)]/[0.03]" : ""}`}>
                       <td className="hidden w-12 px-2 py-3.5 text-center md:table-cell" onClick={(e) => e.stopPropagation()}>
@@ -2055,6 +2096,13 @@ export default function AdminSPMBPage() {
                           )}
                         </p>
                         {item.email && <p className="mt-0.5 text-xs text-slate-400">{item.email}</p>}
+                        {ds && ds.total > 0 && (
+                          <p className={`mt-0.5 text-[11px] font-medium ${ds.rejected > 0 ? "text-red-600" : ds.verified === SPMB_DOCUMENT_KEYS.length ? "text-emerald-600" : "text-slate-400"}`}>
+                            Berkas {ds.verified}/{SPMB_DOCUMENT_KEYS.length}
+                            {ds.rejected > 0 && ` · ${ds.rejected} ditolak`}
+                            {ds.pending > 0 && ` · ${ds.pending} menunggu`}
+                          </p>
+                        )}
                       </td>
                       <td className="hidden px-4 py-3.5 text-sm text-slate-600 md:table-cell">{normalizeSchool(item.previous_school) || "-"}</td>
                       <td className="hidden px-4 py-3.5 sm:table-cell">
@@ -2189,6 +2237,7 @@ export default function AdminSPMBPage() {
               <RegistrationMobileRow
                 key={item.id}
                 item={item}
+                docSummary={docSummary[item.id]}
                 selected={selectedIds.has(item.id)}
                 selectMode={pickMode}
                 onEnterPickMode={enterPickMode}
@@ -2476,6 +2525,27 @@ export default function AdminSPMBPage() {
                 <div className="mt-4 border-t border-slate-100 pt-4">
                   <p className="mb-1 text-xs font-semibold text-slate-400">Catatan Admin</p>
                   <p className="text-sm text-slate-600">{viewItem.admin_notes}</p>
+                </div>
+              )}
+
+              {/* Kirim pesan WhatsApp memakai template (migrasi 0015) */}
+              {permVerify && waTemplates.length > 0 && (
+                <div className="mt-4 border-t border-slate-100 pt-4">
+                  <p className="mb-2 text-xs font-semibold text-slate-400">Kirim Pesan WhatsApp</p>
+                  <div className="flex flex-wrap gap-2">
+                    {waTemplates.map((t) => (
+                      <button
+                        key={t.key}
+                        type="button"
+                        onClick={() => handleSendWaTemplate(t)}
+                        title={viewItem.phone ? `Kirim ke ${viewItem.phone}` : "Nomor kosong — pesan disalin"}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100"
+                      >
+                        <WhatsappLogo className="h-3.5 w-3.5" />
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -2837,6 +2907,7 @@ function BerkasItem({ label, url, isImage, isPdf }: { label: string; url: string
  */
 function RegistrationMobileRow({
   item,
+  docSummary,
   selected,
   selectMode,
   onEnterPickMode,
@@ -2850,6 +2921,8 @@ function RegistrationMobileRow({
   canDelete = true,
 }: {
   item: SpmbRegistration;
+  /** Agregat verifikasi berkas registrasi ini (badge kecil). */
+  docSummary?: { total: number; verified: number; rejected: number; pending: number };
   selected: boolean;
   selectMode: boolean;
   onEnterPickMode: (id: string) => void;
@@ -2934,10 +3007,11 @@ function RegistrationMobileRow({
         }
         title={name}
         badge={
-          item.status === "rejected" || late || item.documents?.input_source === "admin" || item.documents?.input_source === "import" ? (
+          item.status === "rejected" || late || item.documents?.input_source === "admin" || item.documents?.input_source === "import" || (docSummary && docSummary.total > 0) ? (
             <>
               {item.documents?.input_source === "admin" && <QuietBadge>Manual</QuietBadge>}
               {item.documents?.input_source === "import" && <QuietBadge>Impor</QuietBadge>}
+              {docSummary && docSummary.total > 0 && <QuietBadge>Berkas {docSummary.verified}/{SPMB_DOCUMENT_KEYS.length}</QuietBadge>}
               {late && <QuietBadge>Lewat {PENDING_SLA_DAYS} hari</QuietBadge>}
               {item.status === "rejected" && <QuietBadge>Ditolak</QuietBadge>}
             </>

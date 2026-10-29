@@ -170,6 +170,15 @@ export default async function SPMBPage() {
                     const status = getWaveStatus(wave);
                     const badge = waveStatusBadges[status] || waveStatusBadges.closed;
                     const isCurrent = wave.id === openWave?.id;
+                    // Info tambahan gelombang (migrasi 0015). Biaya dilewati bila
+                    // catatan gelombang sudah menyebut biaya (data lama).
+                    const waveMeta: string[] = [];
+                    if (wave.quota && wave.quota > 0) waveMeta.push(`Kuota ${wave.quota} murid`);
+                    if (wave.registration_fee != null && !/biaya|rp\s*\d/i.test(wave.note ?? "")) {
+                      waveMeta.push(`Biaya Rp ${Number(wave.registration_fee).toLocaleString("id-ID")}`);
+                    }
+                    if (wave.announcement_at) waveMeta.push(`Pengumuman ${formatWaveDate(wave.announcement_at.slice(0, 10))}`);
+                    if (wave.result_at) waveMeta.push(`Hasil seleksi ${formatWaveDate(wave.result_at.slice(0, 10))}`);
                     return (
                       <li
                         key={wave.id}
@@ -182,6 +191,9 @@ export default async function SPMBPage() {
                             <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${badge.cls}`}>{badge.label}</span>
                           </div>
                           {wave.note && <p className={`mt-0.5 text-sm ${status === "closed" ? "text-slate-600" : "text-slate-500"}`}>{wave.note}</p>}
+                          {waveMeta.length > 0 && (
+                            <p className="mt-1 text-xs text-slate-400">{waveMeta.join(" · ")}</p>
+                          )}
                         </div>
                         <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-5">
                           <p className="text-sm text-slate-600 sm:text-right">
