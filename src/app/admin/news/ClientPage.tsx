@@ -74,12 +74,12 @@ import {
   QuietBadge,
   type RowAction,
 } from "@/components/admin/mobile";
+import { DesktopPagination } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
 import AiFillPanel from "@/components/admin/AiFillPanel";
 import VideoUrlField from "@/components/admin/VideoUrlField";
 import type { RefineData } from "@/lib/queries/ai";
 
-const PAGE_SIZE = 10;
 
 const categoryConfig: Record<string, { label: string; color: string }> = {
   berita: { label: "Berita", color: "bg-blue-50 text-blue-700 border-blue-200" },
@@ -216,6 +216,7 @@ export default function AdminBeritaPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -375,8 +376,8 @@ export default function AdminBeritaPage() {
     return result;
   }, [news, search, filter, sortField, sortDir]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const stats = {
     total: news.length,
@@ -994,7 +995,7 @@ export default function AdminBeritaPage() {
                       <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
                         className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                     </td>
-                    <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
+                    <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * pageSize + index + 1}</td>
                     <td className="px-4 py-3.5 cursor-pointer" onClick={() => setViewItem(item)}>
                       <div className="flex items-center gap-3">
                         {item.image_url ? (
@@ -1083,27 +1084,17 @@ export default function AdminBeritaPage() {
           </table>
         </div>
         {!loading && filtered.length > 0 && (
-          <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-slate-400">
-              Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} dari {filtered.length} berita
-            </p>
-            <div className="flex items-center gap-1">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50">
-                <CaretLeft className="h-4 w-4" />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button key={p} onClick={() => setPage(p)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === page ? "bg-[var(--brand-primary)] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
-                  {p}
-                </button>
-              ))}
-              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50">
-                <CaretRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+          <DesktopPagination
+            page={page}
+            totalPages={totalPages}
+            total={filtered.length}
+            from={(page - 1) * pageSize + 1}
+            to={Math.min(page * pageSize, filtered.length)}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            itemLabel="berita"
+          />
         )}
       </div>
 
@@ -1178,9 +1169,11 @@ export default function AdminBeritaPage() {
             page={page}
             totalPages={totalPages}
             total={filtered.length}
-            from={(page - 1) * PAGE_SIZE + 1}
-            to={Math.min(page * PAGE_SIZE, filtered.length)}
+            from={(page - 1) * pageSize + 1}
+            to={Math.min(page * pageSize, filtered.length)}
             onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
             itemLabel="berita"
           />
         )}

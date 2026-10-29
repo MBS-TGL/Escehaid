@@ -49,9 +49,10 @@ import {
   StatusDot,
   type RowAction,
 } from "@/components/admin/mobile";
+import { DesktopPagination } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
 
-const PAGE_SIZE = 10;
+// PAGE_SIZE moved to state
 
 type SortField = "created_at" | "name" | "is_read";
 type SortDir = "asc" | "desc";
@@ -68,6 +69,7 @@ export default function AdminContactPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -129,8 +131,8 @@ export default function AdminContactPage() {
     return result;
   }, [messages, search, filter, sortField, sortDir]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const stats = {
     total: messages.length,
@@ -415,7 +417,7 @@ export default function AdminContactPage() {
                       <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
                         className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                     </td>
-                    <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
+                    <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * pageSize + index + 1}</td>
                     <td className="px-4 py-3.5 cursor-pointer" onClick={() => handleViewMessage(item)}>
                       <div className="flex items-center gap-2">
                         <div className={`flex h-8 w-8 items-center justify-center rounded-full ${!item.is_read ? "bg-[var(--brand-primary)]/10" : "bg-slate-100"}`}>
@@ -462,7 +464,23 @@ export default function AdminContactPage() {
           </table>
         </div>
         {!loading && filtered.length > 0 && (
-          <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <DesktopPagination
+            page={page}
+            totalPages={totalPages}
+            total={filtered.length}
+            from={(page - 1) * pageSize + 1}
+            to={Math.min(page * pageSize, filtered.length)}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            itemLabel="pesan"
+          />
+        )}
+        {false && (
+          <div>
             <p className="text-xs text-slate-400">
               Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} dari {filtered.length} pesan
             </p>
@@ -546,9 +564,14 @@ export default function AdminContactPage() {
             page={page}
             totalPages={totalPages}
             total={filtered.length}
-            from={(page - 1) * PAGE_SIZE + 1}
-            to={Math.min(page * PAGE_SIZE, filtered.length)}
+            from={(page - 1) * pageSize + 1}
+            to={Math.min(page * pageSize, filtered.length)}
             onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
             itemLabel="pesan"
           />
         )}

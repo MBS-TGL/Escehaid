@@ -22,9 +22,9 @@ import {
   X,
 } from "@/components/Icons";
 import { FilterBar } from "@/components/admin/FilterBar";
-import { MobileFilterBar, MobileListRow, MobilePagination } from "@/components/admin/mobile";
+import { MobileFilterBar, MobileListRow, MobilePagination, DesktopPagination } from "@/components/admin/mobile";
 
-const PAGE_SIZE = 20;
+// PAGE_SIZE moved to state
 
 const ENTITY_OPTIONS = Object.entries(AUDIT_ENTITY_LABELS).map(([value, label]) => ({
   value,
@@ -121,6 +121,7 @@ function AdminLogsInner() {
   const [toDate, setToDate] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   // Baris timeline mobile yang sedang dibuka detailnya (JSON payload).
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [stats, setStats] = useState<{ total: number; today: number } | null>(null);
@@ -133,16 +134,17 @@ function AdminLogsInner() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const filterKey = JSON.stringify({ action, entity, search, fromDate, toDate, page, actorId, refreshKey });
+  const filterKey = JSON.stringify({ action, entity, search, fromDate, toDate, page, pageSize, actorId, refreshKey });
 
   useEffect(() => {
     let cancelled = false;
-    const key = JSON.stringify({ action, entity, search, fromDate, toDate, page, actorId, refreshKey });
+    const key = JSON.stringify({ action, entity, search, fromDate, toDate, page, pageSize, actorId, refreshKey });
     getAuditLogs({
       action,
       entity,
       search,
       page,
+      pageSize,
       actorId: actorId || undefined,
       fromDate: fromDate || undefined,
       toDate: toDate || undefined,
@@ -183,7 +185,7 @@ function AdminLogsInner() {
   const available = current?.available ?? true;
   const rows = current?.rows ?? [];
   const count = current?.count ?? 0;
-  const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(count / pageSize));
   const hasFilters = Boolean(action || entity || searchInput || fromDate || toDate);
 
   function applyFilter(mutate: () => void) {
@@ -549,15 +551,35 @@ function AdminLogsInner() {
               page={page}
               totalPages={totalPages}
               total={count}
-              from={count === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}
-              to={(page - 1) * PAGE_SIZE + rows.length}
+              from={count === 0 ? 0 : (page - 1) * pageSize + 1}
+              to={(page - 1) * pageSize + rows.length}
               onPageChange={setPage}
+              pageSize={pageSize}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setPage(1);
+              }}
               itemLabel="entri"
             />
           </div>
 
           {/* Paginasi desktop */}
-          <div className="mt-4 hidden items-center justify-between md:flex">
+          <DesktopPagination
+            page={page}
+            totalPages={totalPages}
+            total={count}
+            from={count === 0 ? 0 : (page - 1) * pageSize + 1}
+            to={(page - 1) * pageSize + rows.length}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            itemLabel="entri"
+            className="mt-4 rounded-xl border border-slate-200/80"
+          />
+          {/*
             <span className="text-xs text-slate-400">
               Halaman {page} dari {totalPages}
             </span>
@@ -581,7 +603,7 @@ function AdminLogsInner() {
                 Berikutnya <CaretRight className="h-3.5 w-3.5" />
               </button>
             </div>
-          </div>
+          </div>*/}
         </>
       )}
     </div>

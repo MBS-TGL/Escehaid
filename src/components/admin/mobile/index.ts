@@ -14,6 +14,7 @@ export {
 } from "./MobileFilterBar";
 export { MobileSelectBar, ADMIN_BOTTOM_NAV_CONTENT_H, adminBarBottom } from "./MobileSelectBar";
 export { MobilePagination } from "./MobilePagination";
+export { DesktopPagination, PAGE_SIZE_OPTIONS, type PageSizeOption } from "./DesktopPagination";
 export { MobileListRow } from "./MobileListRow";
 export {
   StatusDot,

@@ -44,6 +44,7 @@ import {
   QuietBadge,
   RowActionsMenu,
   SelectionMark,
+  DesktopPagination,
   type RowAction,
 } from "@/components/admin/mobile";
 
@@ -76,7 +77,7 @@ function fileExt(name: string): string {
 const EMPTY_LIST: MediaFile[] = [];
 
 /** File per halaman — grid desktop & daftar mobile memakai halaman yang sama. */
-const PAGE_SIZE = 24;
+// PAGE_SIZE moved to state
 
 /**
  * Window nomor halaman untuk bar paginasi: ≤9 halaman tampil penuh; lebih
@@ -121,6 +122,7 @@ export default function AdminMediaPage() {
   const [scan, setScan] = useState<MediaScanResult | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [confirmPath, setConfirmPath] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -195,9 +197,9 @@ export default function AdminMediaPage() {
 
   // Paginasi client-side (fase 1 item #11): safePage di-clamp derived, aman
   // saat filter memperkecil hasil tanpa reset state page secara sinkron.
-  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(visible.length / pageSize));
   const safePage = Math.max(1, Math.min(page, totalPages));
-  const paged = visible.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const paged = visible.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   const totalSize = files.reduce((sum, f) => sum + (f.size ?? 0), 0);
   const orphanCount = refs ? files.filter((f) => !isMediaReferenced(f, refs)).length : null;
@@ -636,7 +638,22 @@ export default function AdminMediaPage() {
           </ul>
 
           {/* Paginasi desktop (gaya ekskul) */}
-          <div className="hidden md:flex md:flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+          <DesktopPagination
+            page={safePage}
+            totalPages={totalPages}
+            total={visible.length}
+            from={(safePage - 1) * pageSize + 1}
+            to={Math.min(safePage * pageSize, visible.length)}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            itemLabel="file"
+            className="mt-4 rounded-xl border border-[#dce3ed]"
+          />
+          {/*
             <p className="text-xs text-slate-400">
               Menampilkan {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, visible.length)} dari {visible.length} file{search ? ` (dari ${files.length} total)` : ""}
             </p>
@@ -674,7 +691,7 @@ export default function AdminMediaPage() {
                 <CaretRight className="h-4 w-4" />
               </button>
             </div>
-          </div>
+          </div>*/}
 
           {/* Daftar mobile (<md) — baris 56px tipe berkas + nama + ukuran/tanggal,
               aksi di menu ⋯ (Buka, Salin tautan, Hapus), mode Pilih + bar sticky. */}
@@ -795,9 +812,14 @@ export default function AdminMediaPage() {
             page={safePage}
             totalPages={totalPages}
             total={visible.length}
-            from={(safePage - 1) * PAGE_SIZE + 1}
-            to={Math.min(safePage * PAGE_SIZE, visible.length)}
+            from={(safePage - 1) * pageSize + 1}
+            to={Math.min(safePage * pageSize, visible.length)}
             onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
             itemLabel="file"
           />
         </>

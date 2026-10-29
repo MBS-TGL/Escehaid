@@ -41,13 +41,14 @@ import {
   MobileSelectBar,
   RowActionsMenu,
   useLongPressList,
+  DesktopPagination,
   type RowAction,
 } from "@/components/admin/mobile";
 import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
 import { useToast } from "@/components/ui/Toast";
 import { getYoutubeId, youtubeThumb, youtubeEmbedUrl } from "@/lib/youtube";
 
-const PAGE_SIZE = 12;
+// PAGE_SIZE moved to state
 
 type SortField = "created_at" | "title" | "category";
 type SortDir = "asc" | "desc";
@@ -89,6 +90,7 @@ export default function AdminGalleryPage() {
   const [filter, setFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -145,8 +147,8 @@ export default function AdminGalleryPage() {
     return result;
   }, [gallery, search, filter, typeFilter, sortField, sortDir]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const stats = {
     total: gallery.length,
@@ -531,7 +533,22 @@ export default function AdminGalleryPage() {
             })}
           </div>
           {/* Pagination desktop (md+) */}
-          <div className="mt-4 hidden flex-col gap-3 sm:flex-row sm:items-center sm:justify-between md:flex">
+          <DesktopPagination
+            page={page}
+            totalPages={totalPages}
+            total={filtered.length}
+            from={(page - 1) * pageSize + 1}
+            to={Math.min(page * pageSize, filtered.length)}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            itemLabel="media"
+            className="mt-4 rounded-2xl border border-slate-200/70"
+          />
+          {/*
             <p className="text-xs text-slate-400">
               Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} dari {filtered.length} media
             </p>
@@ -551,15 +568,20 @@ export default function AdminGalleryPage() {
                 <CaretRight className="h-4 w-4" />
               </button>
             </div>
-          </div>
+          </div>*/}
           {/* Pagination mobile (<md) — tombol hanya bila totalPages > 1 */}
           <MobilePagination
             page={page}
             totalPages={totalPages}
             total={filtered.length}
-            from={(page - 1) * PAGE_SIZE + 1}
-            to={Math.min(page * PAGE_SIZE, filtered.length)}
+            from={(page - 1) * pageSize + 1}
+            to={Math.min(page * pageSize, filtered.length)}
             onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
             itemLabel="media"
             className="mt-4 rounded-2xl border border-slate-200/70"
           />

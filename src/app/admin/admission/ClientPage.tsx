@@ -94,11 +94,11 @@ import {
   type RowAction,
   type StatusTone,
 } from "@/components/admin/mobile";
+import { DesktopPagination } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
 import { RegistrationFormSlideOver } from "@/components/admin/RegistrationFormSlideOver";
 import { ImportRegistrationsModal } from "@/components/admin/ImportRegistrationsModal";
 
-const PAGE_SIZE = 10;
 
 /* Ikon "buka di tab baru" — SVG inline gaya file ini (sama dengan tombol Buka pada preview lampiran). */
 const ExternalIcon = ({ className }: { className?: string }) => (
@@ -202,6 +202,7 @@ export default function AdminSPMBPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -749,8 +750,8 @@ export default function AdminSPMBPage() {
     return result;
   }, [data, search, filter, sortField, sortDir]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const stats = {
     total: data.length,
@@ -817,7 +818,7 @@ export default function AdminSPMBPage() {
       : filtered;
     const headers = [
       "No", "Nama Lengkap", "NISN", "NIK", "Email", "Telepon", "Orang Tua/Wali", "Asal Sekolah",
-      "Jalur", "Program", "Gelombang", "Status", "Tanggal Daftar",
+      "Program", "Jalur", "Gelombang", "Status", "Tanggal Daftar",
       "Berkas Lengkap", "Berkas Terverifikasi", "Catatan Admin",
       ...customCols.map((c) => c.label),
     ];
@@ -853,8 +854,8 @@ export default function AdminSPMBPage() {
           cell(r.phone, true),
           normalizeName(r.parent_name),
           normalizeSchool(r.previous_school),
-          pathLabels[r.registration_path] || r.registration_path,
           r.documents?.program ?? "",
+          pathLabels[r.registration_path] || r.registration_path,
           waveLabel(r.wave_id) || "-",
           statusConfig[r.status]?.label || r.status,
           new Date(r.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
@@ -2106,27 +2107,31 @@ export default function AdminSPMBPage() {
                         <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
                           className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
                       </td>
-                      <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
+                      <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * pageSize + index + 1}</td>
                       <td className="px-4 py-3.5 cursor-pointer" onClick={() => openDetail(item)}>
-                        <p className="text-sm font-medium text-slate-800">
-                          {name}
-                          {item.documents?.input_source === "admin" && (
-                            <span className="ml-1.5 inline-block rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-500" title="Ditambahkan manual oleh admin">
-                              Manual
-                            </span>
-                          )}
-                          {item.documents?.input_source === "import" && (
-                            <span className="ml-1.5 inline-block rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-500" title="Diimpor massal dari ekspor Google Form">
-                              Impor
-                            </span>
-                          )}
-                          {item.documents?.program && (
-                            <span className="ml-1.5 inline-block rounded-md border border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/10 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-[var(--brand-primary)]" title="Pilihan program">
-                              {item.documents.program}
-                            </span>
-                          )}
-                        </p>
-                        {item.email && <p className="mt-0.5 text-xs text-slate-400">{item.email}</p>}
+                        <p className="text-sm font-medium text-slate-800">{name}</p>
+                        {(item.documents?.input_source === "admin" || item.documents?.input_source === "import" || item.documents?.program) && (
+                          <p className="mt-0.5 flex flex-wrap gap-1">
+                            {item.documents?.input_source === "admin" && (
+                              <span className="inline-block rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500" title="Ditambahkan manual oleh admin">
+                                Manual
+                              </span>
+                            )}
+                            {item.documents?.input_source === "import" && (
+                              <span className="inline-block rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500" title="Diimpor massal dari ekspor Google Form">
+                                Impor
+                              </span>
+                            )}
+                            {item.documents?.program && (
+                              <span
+                                title="Pilihan program"
+                                className="inline-block whitespace-nowrap rounded-md border border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--brand-primary)]"
+                              >
+                                {item.documents.program}
+                              </span>
+                            )}
+                          </p>
+                        )}
                         {ds && ds.total > 0 && (
                           <p className={`mt-0.5 text-[11px] font-medium ${ds.rejected > 0 ? "text-red-600" : ds.verified === SPMB_DOCUMENT_KEYS.length ? "text-emerald-600" : "text-slate-400"}`}>
                             Berkas {ds.verified}/{SPMB_DOCUMENT_KEYS.length}
@@ -2199,27 +2204,17 @@ export default function AdminSPMBPage() {
           </table>
         </div>
         {!loading && filtered.length > 0 && (
-          <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-slate-400">
-              Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} dari {filtered.length} pendaftar
-            </p>
-            <div className="flex items-center gap-1">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50">
-                <CaretLeft className="h-4 w-4" />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button key={p} onClick={() => setPage(p)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === page ? "bg-[var(--brand-primary)] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
-                  {p}
-                </button>
-              ))}
-              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50">
-                <CaretRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+          <DesktopPagination
+            page={page}
+            totalPages={totalPages}
+            total={filtered.length}
+            from={(page - 1) * pageSize + 1}
+            to={Math.min(page * pageSize, filtered.length)}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            itemLabel="pendaftar"
+          />
         )}
       </div>
 
@@ -2294,9 +2289,11 @@ export default function AdminSPMBPage() {
             page={page}
             totalPages={totalPages}
             total={filtered.length}
-            from={(page - 1) * PAGE_SIZE + 1}
-            to={Math.min(page * PAGE_SIZE, filtered.length)}
+            from={(page - 1) * pageSize + 1}
+            to={Math.min(page * pageSize, filtered.length)}
             onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
             itemLabel="pendaftar"
           />
         )}
@@ -2385,15 +2382,15 @@ export default function AdminSPMBPage() {
                     <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white">
                       {pathLabels[viewItem.registration_path] || viewItem.registration_path}
                     </span>
-                    {viewItem.documents?.program && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white" title="Pilihan program">
-                        {viewItem.documents.program}
-                      </span>
-                    )}
                     {waveLabel(viewItem.wave_id) && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white">
                         <CalendarBlank className="h-2.5 w-2.5" />
                         {waveLabel(viewItem.wave_id)}
+                      </span>
+                    )}
+                    {viewItem.documents?.program && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white" title="Pilihan program">
+                        {viewItem.documents.program}
                       </span>
                     )}
                   </div>
@@ -3082,7 +3079,7 @@ function RegistrationMobileRow({
         }
         title={name}
         badge={
-          item.status === "rejected" || late || item.documents?.input_source === "admin" || item.documents?.input_source === "import" || (docSummary && docSummary.total > 0) ? (
+          item.status === "rejected" || late || item.documents?.input_source === "admin" || item.documents?.input_source === "import" || item.documents?.program || (docSummary && docSummary.total > 0) ? (
             <>
               {item.documents?.input_source === "admin" && <QuietBadge>Manual</QuietBadge>}
               {item.documents?.input_source === "import" && <QuietBadge>Impor</QuietBadge>}

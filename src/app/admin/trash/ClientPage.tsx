@@ -14,8 +14,9 @@ import {
   CaretLeft,
   CaretRight,
 } from "@/components/Icons";
+import { DesktopPagination, MobilePagination } from "@/components/admin/mobile";
 
-const PAGE_SIZE = 20;
+// PAGE_SIZE moved to state
 const RETENTION_DAYS = 30;
 
 /** Warna badge per modul — pembeda visual cepat asal item. */
@@ -54,6 +55,7 @@ export default function TrashClientPage() {
   const [search, setSearch] = useState("");
   const [moduleFilter, setModuleFilter] = useState("all");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -94,9 +96,9 @@ export default function TrashClientPage() {
     });
   }, [items, search, moduleFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
   const allVisibleSelected = paged.length > 0 && paged.every((i) => selected.has(keyOf(i)));
 
   function toggleSelect(key: string) {
@@ -364,7 +366,41 @@ export default function TrashClientPage() {
         )}
       </div>
 
-      {totalPages > 1 && (
+      {filtered.length > 0 && (
+        <>
+          <DesktopPagination
+            page={safePage}
+            totalPages={totalPages}
+            total={filtered.length}
+            from={(safePage - 1) * pageSize + 1}
+            to={Math.min(safePage * pageSize, filtered.length)}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            itemLabel="item"
+            className="mt-4 rounded-xl border border-slate-200"
+          />
+          <MobilePagination
+            page={safePage}
+            totalPages={totalPages}
+            total={filtered.length}
+            from={(safePage - 1) * pageSize + 1}
+            to={Math.min(safePage * pageSize, filtered.length)}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            itemLabel="item"
+            className="mt-4 rounded-xl border border-slate-200"
+          />
+        </>
+      )}
+      {/*
         <div className="mt-4 flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5">
           <p className="text-xs text-slate-400">
             {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} dari {filtered.length}
@@ -379,7 +415,7 @@ export default function TrashClientPage() {
             </button>
           </div>
         </div>
-      )}
+      */}
 
       <ConfirmModal
         open={purgeTarget !== null}

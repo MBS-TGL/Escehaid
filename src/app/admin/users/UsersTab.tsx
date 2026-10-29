@@ -49,6 +49,8 @@ import {
   MobileSelectModeBar,
   RowActionsMenu,
   useLongPressList,
+  DesktopPagination,
+  MobilePagination,
   type RowAction,
 } from "@/components/admin/mobile";
 import { useToast } from "@/components/ui/Toast";
@@ -84,7 +86,7 @@ import {
   CalendarBlank,
 } from "@/components/Icons";
 
-const PAGE_SIZE = 10;
+// PAGE_SIZE moved to state
 
 const ROLE_BADGE: Record<string, { label: string; color: string; bg: string; icon: React.ComponentType<{ className?: string }> }> = {
   SUPER_ADMIN: { label: "Super Admin", color: "text-purple-700", bg: "bg-purple-50 border-purple-200", icon: Crown },
@@ -170,6 +172,7 @@ function UsersTab({ currentUserId }, ref) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [flagFilter, setFlagFilter] = useState<UserFlagFilter>("all");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [sortField, setSortField] = useState<SortField>("full_name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -244,6 +247,7 @@ function UsersTab({ currentUserId }, ref) {
     const [u, r] = await Promise.all([
       fetchUsersPage({
         page,
+        pageSize,
         role: roleFilter,
         status: statusFilter as "all" | "active" | "inactive",
         search: debouncedSearch,
@@ -262,7 +266,7 @@ function UsersTab({ currentUserId }, ref) {
       toast(u.error, "error");
     }
     setLoading(false);
-  }, [page, roleFilter, statusFilter, flagFilter, debouncedSearch, sortField, sortDir, toast]);
+  }, [page, pageSize, roleFilter, statusFilter, flagFilter, debouncedSearch, sortField, sortDir, toast]);
 
   // Faktor-faktor "permintaan" — setiap perubahan memicu muat ulang dari server.
   useEffect(() => {
@@ -465,7 +469,7 @@ function UsersTab({ currentUserId }, ref) {
   // rows di sini adalah isi halaman aktif.
   const paginated = users;
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   function toggleSort(field: SortField) {
     if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -1136,44 +1140,20 @@ function UsersTab({ currentUserId }, ref) {
           </table>
         </div>
         {total > 0 && (
-          <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-slate-400">
-              Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} dari{" "}
-              {total} pengguna
-            </p>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                aria-label="Halaman sebelumnya"
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50"
-              >
-                <CaretLeft className="h-4 w-4" />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  aria-current={p === page ? "page" : undefined}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${
-                    p === page
-                      ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                      : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {p}
-                </button>
-              ))}
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                aria-label="Halaman berikutnya"
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50"
-              >
-                <CaretRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+          <DesktopPagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            from={(page - 1) * pageSize + 1}
+            to={Math.min(page * pageSize, total)}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            itemLabel="pengguna"
+          />
         )}
       </div>
 
@@ -1321,33 +1301,20 @@ function UsersTab({ currentUserId }, ref) {
           </>
         )}
         {total > 0 && (
-          <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3">
-            <p className="text-xs text-slate-400">
-              Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} dari{" "}
-              {total} pengguna
-            </p>
-            <div className="flex items-center justify-between gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                aria-label="Halaman sebelumnya"
-                className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors"
-              >
-                <CaretLeft className="h-4 w-4" />
-              </button>
-              <span className="text-xs font-semibold text-slate-500 tabular-nums">
-                {page} / {totalPages}
-              </span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                aria-label="Halaman berikutnya"
-                className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors"
-              >
-                <CaretRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+          <MobilePagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            from={(page - 1) * pageSize + 1}
+            to={Math.min(page * pageSize, total)}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            itemLabel="pengguna"
+          />
         )}
       </div>
 
