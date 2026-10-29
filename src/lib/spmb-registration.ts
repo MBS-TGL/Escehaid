@@ -131,6 +131,22 @@ export type SpmbDocumentFiles = {
   bukti_transfer: File | null;
 };
 
+export const SPMB_DOCUMENT_KEYS = [
+  "kk",
+  "akta",
+  "surat_sekolah",
+  "ktp_ortu",
+  "bukti_transfer",
+] as const;
+
+export const SPMB_DOCUMENT_LABELS: Record<(typeof SPMB_DOCUMENT_KEYS)[number], string> = {
+  kk: "Kartu Keluarga",
+  akta: "Akta Kelahiran",
+  surat_sekolah: "Surat Keterangan Sekolah",
+  ktp_ortu: "KTP Orang Tua",
+  bukti_transfer: "Bukti Transfer",
+};
+
 export const SPMB_EMPTY_DOCUMENT_FILES: SpmbDocumentFiles = {
   kk: null,
   akta: null,

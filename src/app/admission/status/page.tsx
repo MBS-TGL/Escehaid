@@ -230,10 +230,16 @@ export default async function CekStatusPage({
                       <dd className="mt-1 text-slate-700">{formatDateId(found.registered_at)}</dd>
                     </div>
                   </dl>
-                  {!found.result_published && found.status !== "pending" && (
+                  {!found.result_published && (
                     <p className="mx-5 mb-5 rounded-xl bg-[#f4f7fb] px-4 py-3 text-xs text-slate-500">
-                      Berkas Anda sudah diverifikasi. Hasil seleksi akan tampil di halaman ini setelah pengumuman
-                      resmi sesuai jadwal panitia.
+                      {found.doc_total !== null && found.doc_total > 0 ? (
+                        <>
+                          Berkas terverifikasi: <strong>{found.doc_verified ?? 0}/{found.doc_total}</strong>
+                          {found.doc_rejected ? ` · ${found.doc_rejected} ditolak` : ""}
+                          {found.doc_pending ? ` · ${found.doc_pending} menunggu` : ""}.{" "}
+                        </>
+                      ) : null}
+                      Hasil seleksi akan tampil di halaman ini setelah pengumuman resmi sesuai jadwal panitia.
                     </p>
                   )}
                 </div>

@@ -23,6 +23,11 @@ export interface SpmbStatusData {
   wave_id: string | null;
   registered_at: string | null;
   result_published: boolean;
+  /** Agregat verifikasi berkas (migrasi 0014); null bila belum tersedia. */
+  doc_verified: number | null;
+  doc_total: number | null;
+  doc_pending: number | null;
+  doc_rejected: number | null;
 }
 
 export type SpmbStatusLookup =
@@ -54,6 +59,29 @@ export async function checkSpmbStatus(
     if (!row || typeof row.full_name !== "string") {
       return { kind: "not_found" };
     }
+
+    // Agregat verifikasi berkas — RPC terpisah agar fungsi status lama tidak
+    // perlu diubah. Gagal/tabel belum ada → null (UI tidak mengklaim apa pun).
+    let docVerified: number | null = null;
+    let docTotal: number | null = null;
+    let docPending: number | null = null;
+    let docRejected: number | null = null;
+    try {
+      const { data: summary, error: sumErr } = await supabase.rpc(
+        "spmb_public_document_summary",
+        { p_nisn: nisn, p_birth_date: birthDate }
+      );
+      const s = Array.isArray(summary) ? summary[0] : summary;
+      if (!sumErr && s) {
+        docVerified = Number(s.verified) || 0;
+        docTotal = Number(s.total) || 0;
+        docPending = Number(s.pending) || 0;
+        docRejected = Number(s.rejected) || 0;
+      }
+    } catch {
+      // biarkan null
+    }
+
     return {
       kind: "found",
       data: {
@@ -63,6 +91,10 @@ export async function checkSpmbStatus(
         wave_id: typeof row.wave_id === "string" && row.wave_id ? row.wave_id : null,
         registered_at: typeof row.registered_at === "string" ? row.registered_at : null,
         result_published: row.result_published === true,
+        doc_verified: docVerified,
+        doc_total: docTotal,
+        doc_pending: docPending,
+        doc_rejected: docRejected,
       },
     };
   } catch (e) {

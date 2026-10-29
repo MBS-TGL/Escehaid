@@ -21,6 +21,7 @@ export * from "./queries/program";
 export * from "./queries/profile";
 export * from "./queries/rbac";
 export * from "./queries/registrations";
+export * from "./queries/spmb-templates";
 export * from "./queries/revalidate";
 export * from "./queries/search";
 export * from "./queries/shared";

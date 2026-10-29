@@ -5,7 +5,7 @@ import { reorderRows } from "./shared";
 export async function getPublishedWaves(): Promise<SpmbWave[]> {
   const { data, error } = await supabase
     .from("spmb_waves")
-    .select("id, name, start_date, end_date, note")
+    .select("*")
     .eq("is_published", true)
     .order("sort_order", { ascending: true })
     .order("start_date", { ascending: true });
@@ -14,7 +14,9 @@ export async function getPublishedWaves(): Promise<SpmbWave[]> {
     console.error("Error fetching published waves:", error);
     return [];
   }
-  return (data || []) as SpmbWave[];
+  // Kolom is_archived baru ada setelah migrasi 0015 — saring di klien agar
+  // kode tetap jalan sebelum migrasi dijalankan.
+  return ((data || []) as SpmbWave[]).filter((w) => !w.is_archived);
 }
 
 /**
@@ -41,6 +43,11 @@ export async function createWave(wave: {
   note?: string | null;
   is_published?: boolean;
   sort_order?: number;
+  quota?: number | null;
+  registration_fee?: number | null;
+  announcement_at?: string | null;
+  result_at?: string | null;
+  is_archived?: boolean;
 }): Promise<{ data: SpmbWave | null; error?: string }> {
   const { data, error } = await supabase
     .from("spmb_waves")
@@ -51,6 +58,11 @@ export async function createWave(wave: {
       note: wave.note ?? null,
       is_published: wave.is_published ?? true,
       sort_order: wave.sort_order ?? 0,
+      quota: wave.quota ?? null,
+      registration_fee: wave.registration_fee ?? null,
+      announcement_at: wave.announcement_at ?? null,
+      result_at: wave.result_at ?? null,
+      is_archived: wave.is_archived ?? false,
     })
     .select()
     .single();
@@ -73,6 +85,11 @@ export async function updateWave(
     sort_order: number;
     /** Timestamp publikasi hasil seleksi; null = tarik (disembunyikan lagi). */
     result_published_at: string | null;
+    quota: number | null;
+    registration_fee: number | null;
+    announcement_at: string | null;
+    result_at: string | null;
+    is_archived: boolean;
   }>
 ): Promise<{ data: SpmbWave | null; error?: string }> {
   const { data, error } = await supabase

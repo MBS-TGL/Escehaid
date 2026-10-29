@@ -108,7 +108,25 @@ export interface SpmbWave {
    * → hasil seleksi pendaftar tampil sebagai "Dalam Proses".
    */
   result_published_at?: string | null;
+  /** Migrasi 0015 — opsional bila SQL belum dijalankan. */
+  quota?: number | null;
+  registration_fee?: number | null;
+  announcement_at?: string | null;
+  result_at?: string | null;
+  is_archived?: boolean | null;
   created_at: string;
+}
+
+/** Migrasi 0014 — status verifikasi satu berkas SPMB. */
+export type SpmbDocumentKey = "kk" | "akta" | "surat_sekolah" | "ktp_ortu" | "bukti_transfer";
+
+export interface SpmbDocumentVerification {
+  registration_id: string;
+  document_key: SpmbDocumentKey;
+  status: "pending" | "verified" | "rejected";
+  note: string;
+  verified_by: string | null;
+  verified_at: string | null;
 }
 
 /** Jenis pertanyaan custom SPMB yang didukung builder (ala Google Form). */

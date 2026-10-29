@@ -1,5 +1,5 @@
 import { supabase } from "../supabase";
-import type { SpmbRegistration } from "../supabase";
+import type { SpmbDocumentKey, SpmbDocumentVerification, SpmbRegistration } from "../supabase";
 import { removeViaRoute } from "../storage-remote";
 import { notifyAllAdmins } from "./users";
 import { getPublishedWaves, getWaveStatus } from "./waves";
@@ -460,3 +460,70 @@ export async function adminUpdateRegistration(
 }
 
 // ============ TEACHERS ============
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VERIFIKASI BERKAS SPMB (migrasi 0014)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function getDocumentVerifications(
+  registrationId: string
+): Promise<SpmbDocumentVerification[]> {
+  const { data, error } = await supabase
+    .from("spmb_document_verifications")
+    .select("registration_id, document_key, status, note, verified_by, verified_at")
+    .eq("registration_id", registrationId);
+  if (error) {
+    // Tabel belum dimigrasi → anggap belum ada verifikasi.
+    if (error.code === "42P01" || /does not exist/i.test(error.message)) return [];
+    throw new Error(error.message);
+  }
+  return (data ?? []) as SpmbDocumentVerification[];
+}
+
+export async function saveDocumentVerification(input: {
+  registrationId: string;
+  documentKey: SpmbDocumentKey;
+  status: "pending" | "verified" | "rejected";
+  note?: string;
+}): Promise<{ error?: string }> {
+  const { data: userData } = await supabase.auth.getUser();
+  const { error } = await supabase.from("spmb_document_verifications").upsert(
+    {
+      registration_id: input.registrationId,
+      document_key: input.documentKey,
+      status: input.status,
+      note: input.note ?? "",
+      verified_by: input.status === "pending" ? null : userData.user?.id ?? null,
+      verified_at: input.status === "pending" ? null : new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "registration_id,document_key" }
+  );
+  if (error) return { error: error.message };
+  return {};
+}
+
+/** Pindahkan pendaftar terpilih ke gelombang lain. */
+export async function updateRegistrationWaveBulk(
+  ids: string[],
+  waveId: string | null
+): Promise<{ error?: string }> {
+  if (ids.length === 0) return {};
+  const { error } = await supabase
+    .from("spmb_registrations")
+    .update({ wave_id: waveId, updated_at: new Date().toISOString() })
+    .in("id", ids);
+  if (error) return { error: error.message };
+  return {};
+}
+
+/** Kembalikan banyak pendaftar ke status Menunggu. */
+export async function setRegistrationPendingBulk(ids: string[]): Promise<{ error?: string }> {
+  if (ids.length === 0) return {};
+  const { error } = await supabase
+    .from("spmb_registrations")
+    .update({ status: "pending", updated_at: new Date().toISOString() })
+    .in("id", ids);
+  if (error) return { error: error.message };
+  return {};
+}

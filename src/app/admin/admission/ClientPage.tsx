@@ -16,6 +16,12 @@ import {
   deleteWave,
   getWaveStatus,
   getSchoolProfile,
+  getDocumentVerifications,
+  saveDocumentVerification,
+  updateRegistrationWaveBulk,
+  setRegistrationPendingBulk,
+  getSpmbMessageTemplates,
+  updateSpmbMessageTemplate,
   setRegistrationMode,
   setSpmbDocuments,
   setSpmbFormSchema,
@@ -36,7 +42,9 @@ import { SortableGrip } from "@/components/admin/sortable/SortableGrip";
 import { useReorder } from "@/lib/admin/useReorder";
 import { normalizeName, normalizeSchool } from "@/lib/format-name";
 import { formatRelativeTime, daysSince, PENDING_SLA_DAYS } from "@/lib/admin-display";
-import type { SpmbRegistration, SpmbWave, SpmbFormField, SpmbFieldType } from "@/lib/supabase";
+import type { SpmbDocumentKey, SpmbDocumentVerification, SpmbRegistration, SpmbWave, SpmbFormField, SpmbFieldType } from "@/lib/supabase";
+import type { SpmbMessageTemplate } from "@/lib/queries";
+import { SPMB_DOCUMENT_KEYS, SPMB_DOCUMENT_LABELS } from "@/lib/spmb-registration";
 import { useToast } from "@/components/ui/Toast";
 import {
   MagnifyingGlass,
@@ -131,6 +139,11 @@ type WaveFormState = {
   end_date: string;
   note: string;
   is_published: boolean;
+  quota: string;
+  registration_fee: string;
+  announcement_at: string;
+  result_at: string;
+  is_archived: boolean;
 };
 
 /** Draft form tambah/edit pertanyaan custom (builder alа Google Form). */
@@ -198,8 +211,15 @@ export default function AdminSPMBPage() {
   const [viewItem, setViewItem] = useState<SpmbRegistration | null>(null);
   const [viewTab, setViewTab] = useState<"siswa" | "kontak" | "ayah" | "ibu" | "berkas" | "tambahan">("siswa");
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [docVerifs, setDocVerifs] = useState<Record<string, SpmbDocumentVerification>>({});
+  const [docVerifSaving, setDocVerifSaving] = useState<string | null>(null);
   const [deleteItem, setDeleteItem] = useState<SpmbRegistration | null>(null);
   const [bulkDelete, setBulkDelete] = useState(false);
+  /** Aksi massal pindah gelombang — modal pilih gelombang tujuan. */
+  const [bulkWaveOpen, setBulkWaveOpen] = useState(false);
+  const [bulkWaveId, setBulkWaveId] = useState<string>("");
+  const [bulkWaveSaving, setBulkWaveSaving] = useState(false);
+  const [bulkPendingSaving, setBulkPendingSaving] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ id: string; status: "accepted" | "rejected" } | null>(null);
   /** Panel "Tambah Pendaftar" (input manual admin) — mount ulang tiap dibuka. */
   const [addOpen, setAddOpen] = useState(false);
@@ -232,6 +252,10 @@ export default function AdminSPMBPage() {
   const [docOfflineSaved, setDocOfflineSaved] = useState("");
   const [docPhoneSaved, setDocPhoneSaved] = useState("");
   const [docHighlightSaved, setDocHighlightSaved] = useState("");
+  /** Template pesan WhatsApp (migrasi 0015) — draft per key. */
+  const [waTemplates, setWaTemplates] = useState<SpmbMessageTemplate[]>([]);
+  const [waDrafts, setWaDrafts] = useState<Record<string, string>>({});
+  const [waSavingKey, setWaSavingKey] = useState<string | null>(null);
   const [waves, setWaves] = useState<SpmbWave[]>([]);
   const [wavesLoading, setWavesLoading] = useState(true);
   const [wavesError, setWavesError] = useState<string | null>(null);
@@ -318,6 +342,19 @@ export default function AdminSPMBPage() {
       setDocHighlightSaved(highlightVal);
       setFormFields(normalizeSpmbFormSchema(p?.spmb_form_schema));
     });
+    return () => { alive = false; };
+  }, []);
+
+  // Muat template pesan WA (kosong bila migrasi 0015 belum dijalankan).
+  useEffect(() => {
+    let alive = true;
+    getSpmbMessageTemplates()
+      .then((rows) => {
+        if (!alive) return;
+        setWaTemplates(rows);
+        setWaDrafts(Object.fromEntries(rows.map((r) => [r.key, r.body])));
+      })
+      .catch(() => {});
     return () => { alive = false; };
   }, []);
 
@@ -544,6 +581,39 @@ export default function AdminSPMBPage() {
   function openDetail(item: SpmbRegistration) {
     setViewItem(item);
     setViewTab("siswa");
+    setDocVerifs({});
+    void getDocumentVerifications(item.id)
+      .then((rows) => {
+        setDocVerifs(Object.fromEntries(rows.map((r) => [r.document_key, r])));
+      })
+      .catch(() => {});
+  }
+
+  async function handleVerifyDoc(key: SpmbDocumentKey, status: "pending" | "verified" | "rejected") {
+    if (!viewItem) return;
+    setDocVerifSaving(key);
+    const res = await saveDocumentVerification({
+      registrationId: viewItem.id,
+      documentKey: key,
+      status,
+    });
+    setDocVerifSaving(null);
+    if (res.error) {
+      toast(res.error, "error");
+      return;
+    }
+    setDocVerifs((prev) => ({
+      ...prev,
+      [key]: {
+        registration_id: viewItem.id,
+        document_key: key,
+        status,
+        note: prev[key]?.note ?? "",
+        verified_by: null,
+        verified_at: status === "pending" ? null : new Date().toISOString(),
+      },
+    }));
+    toast(status === "verified" ? "Berkas ditandai valid." : status === "rejected" ? "Berkas ditolak." : "Verifikasi direset.", "success");
   }
 
   /** Jawaban pertanyaan tambahan pendaftar — label dari skema, fallback utk field yg dihapus. */
@@ -612,10 +682,15 @@ export default function AdminSPMBPage() {
             .join(" ")
             .toLowerCase()
         : "";
+      const nisn = (item.documents?.nisn || "").toLowerCase();
+      const nik = (item.documents?.nik || "").toLowerCase();
       const matchSearch =
         item.full_name.toLowerCase().includes(q) ||
         (item.previous_school && item.previous_school.toLowerCase().includes(q)) ||
         (item.email && item.email.toLowerCase().includes(q)) ||
+        (item.phone && item.phone.toLowerCase().includes(q)) ||
+        nisn.includes(q) ||
+        nik.includes(q) ||
         customText.includes(q);
       const matchFilter = filter === "all" || item.status === filter;
       return matchSearch && matchFilter;
@@ -696,9 +771,13 @@ export default function AdminSPMBPage() {
   /** Export daftar (mengikuti filter + pencarian aktif) ke CSV — bisa dibuka langsung di Excel. */
   function handleExportCsv() {
     const customCols = formFields.map((f) => ({ key: spmbAnswerKey(f.id), label: f.label }));
+    const exportRows = selectedIds.size > 0
+      ? filtered.filter((r) => selectedIds.has(r.id))
+      : filtered;
     const headers = [
-      "No", "Nama Lengkap", "Email", "Telepon", "Asal Sekolah",
+      "No", "Nama Lengkap", "NISN", "NIK", "Email", "Telepon", "Orang Tua/Wali", "Asal Sekolah",
       "Jalur", "Gelombang", "Status", "Tanggal Daftar",
+      "Berkas Lengkap", "Catatan Admin",
       ...customCols.map((c) => c.label),
     ];
     /**
@@ -714,18 +793,27 @@ export default function AdminSPMBPage() {
       return `"${s.replace(/"/g, '""')}"`;
     };
     const lines = [headers.map((h) => cell(h)).join(";")];
-    filtered.forEach((r, i) => {
+    exportRows.forEach((r, i) => {
+      const docCount = SPMB_DOCUMENT_KEYS.filter((k) => {
+        const v = r.documents?.[k];
+        return typeof v === "string" && v.length > 0;
+      }).length;
       lines.push(
         [
           i + 1,
           normalizeName(r.full_name),
+          cell(r.documents?.nisn ?? "", true),
+          cell(r.documents?.nik ?? "", true),
           r.email,
           cell(r.phone, true),
+          normalizeName(r.parent_name),
           normalizeSchool(r.previous_school),
           pathLabels[r.registration_path] || r.registration_path,
           waveLabel(r.wave_id) || "-",
           statusConfig[r.status]?.label || r.status,
           new Date(r.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+          `${docCount}/${SPMB_DOCUMENT_KEYS.length}`,
+          r.admin_notes ?? "",
           ...customCols.map((c) => (r.documents?.[c.key] ?? "").toString()),
         ]
           .map((v) => cell(v))
@@ -742,7 +830,7 @@ export default function AdminSPMBPage() {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    toast(`${filtered.length} pendaftar diekspor ke CSV`, "success");
+    toast(`${exportRows.length} pendaftar diekspor ke CSV${selectedIds.size > 0 ? " (terpilih)" : ""}`, "success");
   }
 
   async function handleUpdateStatus(id: string, status: "accepted" | "rejected") {
@@ -799,6 +887,58 @@ export default function AdminSPMBPage() {
     fetchData();
   }
 
+  /** Pindahkan pendaftar terpilih ke gelombang lain (null = tanpa gelombang). */
+  async function handleBulkMoveWave() {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0 || bulkWaveSaving) return;
+    setBulkWaveSaving(true);
+    const res = await updateRegistrationWaveBulk(ids, bulkWaveId || null);
+    setBulkWaveSaving(false);
+    if (res.error) {
+      toast(res.error, "error");
+      return;
+    }
+    toast(`${ids.length} pendaftar dipindahkan ke ${bulkWaveId ? waveLabel(bulkWaveId) || "gelombang" : "tanpa gelombang"}`, "success");
+    setBulkWaveOpen(false);
+    setBulkWaveId("");
+    exitPickMode();
+    fetchData();
+  }
+
+  /** Kembalikan pendaftar terpilih ke status Menunggu (tanpa modal — bukan aksi publik). */
+  async function handleBulkSetPending() {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0 || bulkPendingSaving) return;
+    setBulkPendingSaving(true);
+    const res = await setRegistrationPendingBulk(ids);
+    setBulkPendingSaving(false);
+    if (res.error) {
+      toast(res.error, "error");
+      return;
+    }
+    toast(`${ids.length} pendaftar dikembalikan ke Menunggu`, "success");
+    exitPickMode();
+    fetchData();
+  }
+
+  /** Simpan satu template pesan WA. */
+  async function handleSaveTemplate(key: string) {
+    const body = (waDrafts[key] ?? "").trim();
+    if (!body) {
+      toast("Isi template tidak boleh kosong", "error");
+      return;
+    }
+    setWaSavingKey(key);
+    const res = await updateSpmbMessageTemplate(key, body);
+    setWaSavingKey(null);
+    if (res.error) {
+      toast(res.error, "error");
+      return;
+    }
+    setWaTemplates((prev) => prev.map((t) => (t.key === key ? { ...t, body } : t)));
+    toast("Template pesan disimpan", "success");
+  }
+
   /** Kembalikan pendaftar ke status Menunggu (tanpa modal — bukan aksi publik). */
   async function handleSetPending(item: SpmbRegistration) {
     if (item.status === "pending") return;
@@ -824,8 +964,24 @@ export default function AdminSPMBPage() {
           end_date: wave.end_date,
           note: wave.note ?? "",
           is_published: wave.is_published,
+          quota: wave.quota != null ? String(wave.quota) : "",
+          registration_fee: wave.registration_fee != null ? String(wave.registration_fee) : "",
+          announcement_at: wave.announcement_at ? wave.announcement_at.slice(0, 10) : "",
+          result_at: wave.result_at ? wave.result_at.slice(0, 10) : "",
+          is_archived: wave.is_archived ?? false,
         }
-        : { name: "", start_date: "", end_date: "", note: "", is_published: true }
+        : {
+          name: "",
+          start_date: "",
+          end_date: "",
+          note: "",
+          is_published: true,
+          quota: "",
+          registration_fee: "",
+          announcement_at: "",
+          result_at: "",
+          is_archived: false,
+        }
     );
   }
 
@@ -850,6 +1006,12 @@ export default function AdminSPMBPage() {
       end_date: waveForm.end_date,
       note: waveForm.note.trim() || null,
       is_published: waveForm.is_published,
+      quota: waveForm.quota.trim() === "" ? null : Number(waveForm.quota),
+      registration_fee:
+        waveForm.registration_fee.trim() === "" ? null : Number(waveForm.registration_fee),
+      announcement_at: waveForm.announcement_at || null,
+      result_at: waveForm.result_at || null,
+      is_archived: waveForm.is_archived,
       sort_order: waveEditing
         ? waveEditing.sort_order
         : (waves.length ? Math.max(...waves.map((w) => w.sort_order)) + 1 : 1),
@@ -1238,6 +1400,54 @@ export default function AdminSPMBPage() {
           </div>
         </div>
 
+        {/* ── TEMPLATE PESAN WHATSAPP ─────────────────── */}
+        {permUpdate && (
+          <div className="mb-4 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm">
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-[var(--brand-primary)]">Template Pesan WhatsApp</p>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Pesan siap pakai untuk menghubungi pendaftar. Placeholder: <code className="rounded bg-slate-100 px-1">{"{nama}"}</code>{" "}
+                <code className="rounded bg-slate-100 px-1">{"{gelombang}"}</code>{" "}
+                <code className="rounded bg-slate-100 px-1">{"{nisn}"}</code>.
+              </p>
+            </div>
+            {waTemplates.length === 0 ? (
+              <p className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-6 text-center text-xs text-slate-400">
+                Template belum tersedia — jalankan migrasi SQL 0015.
+              </p>
+            ) : (
+              <div className="mt-3 space-y-3">
+                {waTemplates.map((t) => {
+                  const draft = waDrafts[t.key] ?? "";
+                  const dirty = draft !== t.body;
+                  return (
+                    <div key={t.key} className="rounded-xl border border-slate-100 p-3">
+                      <div className="mb-1.5 flex items-center justify-between gap-2">
+                        <label htmlFor={`wa-${t.key}`} className="text-xs font-semibold text-slate-700">{t.label}</label>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveTemplate(t.key)}
+                          disabled={!dirty || waSavingKey === t.key}
+                          className="rounded-lg bg-[var(--brand-primary)] px-3 py-1 text-[11px] font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-40"
+                        >
+                          {waSavingKey === t.key ? "Menyimpan…" : "Simpan"}
+                        </button>
+                      </div>
+                      <textarea
+                        id={`wa-${t.key}`}
+                        rows={3}
+                        value={draft}
+                        onChange={(e) => setWaDrafts((prev) => ({ ...prev, [t.key]: e.target.value }))}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-base leading-relaxed md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── BUILDER PERTANYAAN TAMBAHAN (ALA GOOGLE FORM) ── */}
         <div className="mb-4 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1399,6 +1609,35 @@ export default function AdminSPMBPage() {
                   className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm leading-relaxed focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
               </div>
 
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Kuota (opsional)</label>
+                  <input type="number" min={0} value={waveForm.quota}
+                    onChange={(e) => setWaveForm({ ...waveForm, quota: e.target.value })}
+                    placeholder="cth: 64"
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Biaya pendaftaran (Rp)</label>
+                  <input type="number" min={0} value={waveForm.registration_fee}
+                    onChange={(e) => setWaveForm({ ...waveForm, registration_fee: e.target.value })}
+                    placeholder="cth: 150000"
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tanggal pengumuman</label>
+                  <input type="date" value={waveForm.announcement_at}
+                    onChange={(e) => setWaveForm({ ...waveForm, announcement_at: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tanggal hasil seleksi</label>
+                  <input type="date" value={waveForm.result_at}
+                    onChange={(e) => setWaveForm({ ...waveForm, result_at: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
+                </div>
+              </div>
+
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tampil di Website</label>
                 <button type="button" onClick={() => setWaveForm({ ...waveForm, is_published: !waveForm.is_published })}
@@ -1413,6 +1652,18 @@ export default function AdminSPMBPage() {
               <p className="text-xs text-slate-400">
                 Gelombang dengan status &ldquo;Tampil&rdquo; akan ditampilkan di halaman Penerimaan Santri Baru.
               </p>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Arsipkan gelombang</label>
+                <button type="button" onClick={() => setWaveForm({ ...waveForm, is_archived: !waveForm.is_archived })}
+                  className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${waveForm.is_archived ? "border-amber-200 bg-amber-50 text-amber-700" : "border-slate-200 bg-slate-50 text-slate-500"}`}>
+                  <span>{waveForm.is_archived ? "Diarsipkan" : "Aktif"}</span>
+                  <span className={`relative inline-block h-6 w-11 rounded-full transition-colors ${waveForm.is_archived ? "bg-amber-500" : "bg-slate-300"}`}>
+                    <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${waveForm.is_archived ? "translate-x-5" : ""}`} />
+                  </span>
+                </button>
+                <p className="mt-1 text-xs text-slate-400">Gelombang arsip disimpan untuk riwayat, tidak dipakai pendaftaran baru.</p>
+              </div>
             </div>
           </SlideOver>
         )}
@@ -1645,6 +1896,8 @@ export default function AdminSPMBPage() {
             <>
               <button onClick={() => setConfirmAction({ id: "bulk", status: "accepted" })} aria-label={`Terima ${selectedIds.size} pendaftar terpilih`} className="whitespace-nowrap rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Terima</button>
               <button onClick={() => setConfirmAction({ id: "bulk", status: "rejected" })} aria-label={`Tolak ${selectedIds.size} pendaftar terpilih`} className="whitespace-nowrap rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Tolak</button>
+              <button onClick={() => { setBulkWaveId(""); setBulkWaveOpen(true); }} aria-label={`Pindahkan ${selectedIds.size} pendaftar terpilih ke gelombang lain`} className="whitespace-nowrap rounded-lg border border-[var(--brand-primary)]/30 bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5">Pindah gelombang</button>
+              <button onClick={handleBulkSetPending} disabled={bulkPendingSaving} aria-label={`Kembalikan ${selectedIds.size} pendaftar terpilih ke Menunggu`} className="whitespace-nowrap rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Menunggu</button>
             </>
           )}
           {permDelete && (
@@ -1658,8 +1911,8 @@ export default function AdminSPMBPage() {
           status sebagai pill dropdown berjumlah di kanan. */}
       <div className="hidden md:block">
         <FilterBar
-          placeholder="Cari nama, sekolah, email..."
-          searchLabel="Cari nama, sekolah, atau email"
+          placeholder="Cari nama, NISN/NIK, sekolah, email…"
+          searchLabel="Cari nama, NISN/NIK, sekolah, email, atau telepon"
           query={search}
           onQueryChange={(v) => { setSearch(v); setPage(1); }}
           filters={[
@@ -1675,8 +1928,8 @@ export default function AdminSPMBPage() {
 
       {/* Toolbar mobile (<md): pencarian + filter (dengan jumlah) + urut + Pilih */}
       <MobileFilterBar
-        placeholder="Cari nama, sekolah, email…"
-        searchLabel="Cari nama, sekolah, atau email"
+        placeholder="Cari nama, NISN/NIK, sekolah, email…"
+        searchLabel="Cari nama, NISN/NIK, sekolah, email, atau telepon"
         query={search}
         onQueryChange={(v) => { setSearch(v); setPage(1); }}
         filter={{
@@ -1995,6 +2248,24 @@ export default function AdminSPMBPage() {
               >
                 Tolak
               </button>
+              <button
+                type="button"
+                onClick={() => { setBulkWaveId(""); setBulkWaveOpen(true); }}
+                disabled={selectedIds.size === 0}
+                aria-label="Pindahkan pendaftar terpilih ke gelombang lain"
+                className="min-h-10 rounded-xl border border-[var(--brand-primary)]/30 bg-white px-3 py-2 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+              >
+                Gelombang
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkSetPending}
+                disabled={selectedIds.size === 0 || bulkPendingSaving}
+                aria-label="Kembalikan pendaftar terpilih ke Menunggu"
+                className="min-h-10 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+              >
+                Menunggu
+              </button>
             </>
           )}
         </MobileSelectBar>
@@ -2140,19 +2411,62 @@ export default function AdminSPMBPage() {
 
               {viewTab === "berkas" && permSensitive && (
                 <div className="space-y-2">
-                  {([
-                    ["kk", "Kartu Keluarga"],
-                    ["akta", "Akta Kelahiran"],
-                    ["surat_sekolah", "Surat Keterangan Sekolah"],
-                    ["ktp_ortu", "KTP Orang Tua"],
-                    ["bukti_transfer", "Bukti Transfer"],
-                  ] as [string, string][]).map(([key, label]) => {
+                  {SPMB_DOCUMENT_KEYS.map((key) => {
+                    const label = SPMB_DOCUMENT_LABELS[key];
                     const url = signedUrls[key];
                     const hasFile = !!url;
                     const ext = hasFile ? url.split(".").pop()?.split("?")[0]?.toLowerCase() || "" : "";
                     const isImage = ["jpg", "jpeg", "png", "gif", "webp"].includes(ext);
                     const isPdf = ext === "pdf";
-                    return <BerkasItem key={key} label={label} url={hasFile ? url : null} isImage={isImage} isPdf={isPdf} />;
+                    const v = docVerifs[key];
+                    return (
+                      <div key={key} className="rounded-xl border border-slate-100 p-2">
+                        <BerkasItem label={label} url={hasFile ? url : null} isImage={isImage} isPdf={isPdf} />
+                        {permVerify && hasFile && (
+                          <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-1">
+                            {v?.status === "verified" ? (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                                <CheckCircle className="h-3 w-3" /> Valid
+                              </span>
+                            ) : v?.status === "rejected" ? (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+                                <XCircle className="h-3 w-3" /> Ditolak
+                              </span>
+                            ) : (
+                              <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                                Belum diverifikasi
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              disabled={docVerifSaving === key}
+                              onClick={() => handleVerifyDoc(key, "verified")}
+                              className="rounded-lg border border-emerald-200 bg-white px-2 py-1 text-[10px] font-semibold text-emerald-700 disabled:opacity-50"
+                            >
+                              Valid
+                            </button>
+                            <button
+                              type="button"
+                              disabled={docVerifSaving === key}
+                              onClick={() => handleVerifyDoc(key, "rejected")}
+                              className="rounded-lg border border-red-200 bg-white px-2 py-1 text-[10px] font-semibold text-red-700 disabled:opacity-50"
+                            >
+                              Tolak
+                            </button>
+                            {v && v.status !== "pending" && (
+                              <button
+                                type="button"
+                                disabled={docVerifSaving === key}
+                                onClick={() => handleVerifyDoc(key, "pending")}
+                                className="text-[10px] font-semibold text-slate-400 hover:underline disabled:opacity-50"
+                              >
+                                Reset
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
                   })}
                 </div>
               )}
@@ -2246,6 +2560,36 @@ export default function AdminSPMBPage() {
             <div className="mt-6 flex gap-3">
               <button onClick={() => setDeleteItem(null)} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Batal</button>
               <button onClick={handleDelete} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700">Ya, Hapus</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── BULK MOVE WAVE MODAL ────────────────────── */}
+      {bulkWaveOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => !bulkWaveSaving && setBulkWaveOpen(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--brand-primary)]/10 mx-auto">
+              <CalendarIcon className="h-6 w-6 text-[var(--brand-primary)]" />
+            </div>
+            <h3 className="text-center text-lg font-bold text-slate-800">Pindah {selectedIds.size} Pendaftar?</h3>
+            <p className="mt-2 text-center text-sm text-slate-500">Pilih gelombang tujuan untuk pendaftar terpilih.</p>
+            <select
+              value={bulkWaveId}
+              onChange={(e) => setBulkWaveId(e.target.value)}
+              disabled={bulkWaveSaving}
+              className="mt-4 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
+            >
+              <option value="">Tanpa gelombang</option>
+              {waves.map((w) => (
+                <option key={w.id} value={w.id}>{w.name}{w.is_published ? "" : " (draf)"}</option>
+              ))}
+            </select>
+            <div className="mt-6 flex gap-3">
+              <button onClick={() => setBulkWaveOpen(false)} disabled={bulkWaveSaving} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Batal</button>
+              <button onClick={handleBulkMoveWave} disabled={bulkWaveSaving} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-50">
+                {bulkWaveSaving ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : "Pindahkan"}
+              </button>
             </div>
           </div>
         </div>

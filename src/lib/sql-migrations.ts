@@ -85,4 +85,12 @@ export const LEDGER_MIGRATIONS: readonly LedgerMigration[] = [
     file: "supabase/migrations/0013_audit_logs_indexes.sql",
     description: "Index audit_logs untuk filter Logs",
   },
+  {
+    file: "supabase/migrations/0014_spmb_document_verification.sql",
+    description: "Verifikasi berkas SPMB per dokumen + agregat publik",
+  },
+  {
+    file: "supabase/migrations/0015_spmb_waves_template_search.sql",
+    description: "Kuota/jadwal gelombang, template WA, index pencarian SPMB",
+  },
 ] as const;
