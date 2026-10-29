@@ -18,6 +18,7 @@ import {
   Warning,
   Users,
   CalendarBlank,
+  Download,
   X,
 } from "@/components/Icons";
 import { FilterBar } from "@/components/admin/FilterBar";
@@ -42,6 +43,39 @@ const ACTION_BADGE: Record<string, string> = {
   update: "border-blue-100 bg-blue-50 text-[var(--brand-accent)]",
   delete: "border-red-100 bg-red-50 text-red-600",
 };
+
+/** Render before/after sebagai pasangan kunci; fallback JSON mentah. */
+function AuditDetail({ detail }: { detail: Record<string, unknown> | null }) {
+  const d = detail ?? {};
+  const before = (d.before && typeof d.before === "object" ? d.before : null) as Record<string, unknown> | null;
+  const after = (d.after && typeof d.after === "object" ? d.after : null) as Record<string, unknown> | null;
+
+  if (before && after) {
+    const keys = Array.from(new Set([...Object.keys(before), ...Object.keys(after)]));
+    return (
+      <div className="space-y-1.5">
+        {keys.map((key) => {
+          const b = before[key];
+          const a = after[key];
+          if (JSON.stringify(b) === JSON.stringify(a)) return null;
+          return (
+            <div key={key} className="rounded-lg border border-slate-100 bg-white px-2 py-1.5 text-[11px]">
+              <p className="font-semibold text-slate-600">{key}</p>
+              <p className="mt-0.5 break-words text-red-600 line-through">{JSON.stringify(b)}</p>
+              <p className="break-words text-emerald-700">{JSON.stringify(a)}</p>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <pre className="max-h-44 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-slate-50 p-2 text-[11px] leading-relaxed text-slate-600">
+      {JSON.stringify(d, null, 2)}
+    </pre>
+  );
+}
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -83,6 +117,9 @@ function AdminLogsInner() {
   const [search, setSearch] = useState("");
   const [action, setAction] = useState<AuditAction | "">("");
   const [entity, setEntity] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
   const [page, setPage] = useState(1);
   // Baris timeline mobile yang sedang dibuka detailnya (JSON payload).
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -96,12 +133,20 @@ function AdminLogsInner() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const filterKey = JSON.stringify({ action, entity, search, page, actorId });
+  const filterKey = JSON.stringify({ action, entity, search, fromDate, toDate, page, actorId, refreshKey });
 
   useEffect(() => {
     let cancelled = false;
-    const key = JSON.stringify({ action, entity, search, page, actorId });
-    getAuditLogs({ action, entity, search, page, actorId: actorId || undefined })
+    const key = JSON.stringify({ action, entity, search, fromDate, toDate, page, actorId, refreshKey });
+    getAuditLogs({
+      action,
+      entity,
+      search,
+      page,
+      actorId: actorId || undefined,
+      fromDate: fromDate || undefined,
+      toDate: toDate || undefined,
+    })
       .then((res) => {
         if (!cancelled) setResult({ key, ...res });
       })
@@ -119,7 +164,7 @@ function AdminLogsInner() {
     return () => {
       cancelled = true;
     };
-  }, [action, entity, search, page, actorId]);
+  }, [action, entity, search, fromDate, toDate, page, actorId, refreshKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -139,11 +184,40 @@ function AdminLogsInner() {
   const rows = current?.rows ?? [];
   const count = current?.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
-  const hasFilters = Boolean(action || entity || searchInput);
+  const hasFilters = Boolean(action || entity || searchInput || fromDate || toDate);
 
   function applyFilter(mutate: () => void) {
     mutate();
     setPage(1);
+  }
+
+  function exportCsv() {
+    const cell = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const header = ["Waktu", "Aksi", "Objek", "Entity ID", "Aktor", "Detail"];
+    const lines = [header.map(cell).join(";")];
+    for (const row of rows) {
+      lines.push(
+        [
+          formatTime(row.created_at),
+          AUDIT_ACTION_LABELS[row.action] ?? row.action,
+          AUDIT_ENTITY_LABELS[row.entity_type] ?? row.entity_type,
+          row.entity_id ?? "",
+          row.actor_name ?? "Sistem",
+          JSON.stringify(row.detail ?? {}),
+        ]
+          .map(cell)
+          .join(";")
+      );
+    }
+    const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `log-aktivitas-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -160,6 +234,23 @@ function AdminLogsInner() {
               Siapa, apa, kapan — riwayat perubahan konten &amp; SPMB
             </p>
           </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setRefreshKey((k) => k + 1)}
+            className="min-h-10 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+          >
+            Muat ulang
+          </button>
+          <button
+            type="button"
+            onClick={exportCsv}
+            disabled={rows.length === 0}
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+          >
+            <Download className="h-3.5 w-3.5" /> Ekspor CSV
+          </button>
         </div>
       </div>
 
@@ -257,6 +348,42 @@ function AdminLogsInner() {
         </>
       )}
 
+      {available && (
+        <div className="mb-4 flex flex-wrap items-end gap-2">
+          <div>
+            <label htmlFor="log-from" className="mb-1 block text-[11px] font-semibold text-slate-500">Dari tanggal</label>
+            <input
+              id="log-from"
+              type="date"
+              value={fromDate}
+              max={toDate || undefined}
+              onChange={(e) => applyFilter(() => setFromDate(e.target.value))}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700"
+            />
+          </div>
+          <div>
+            <label htmlFor="log-to" className="mb-1 block text-[11px] font-semibold text-slate-500">Sampai tanggal</label>
+            <input
+              id="log-to"
+              type="date"
+              value={toDate}
+              min={fromDate || undefined}
+              onChange={(e) => applyFilter(() => setToDate(e.target.value))}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700"
+            />
+          </div>
+          {(fromDate || toDate) && (
+            <button
+              type="button"
+              onClick={() => applyFilter(() => { setFromDate(""); setToDate(""); })}
+              className="mt-5 text-xs font-semibold text-slate-500 hover:underline"
+            >
+              Reset tanggal
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Hasil: memuat / error / kosong / tabel */}
       {available && loading && (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#dce3ed] bg-white px-6 py-14 text-center">
@@ -348,9 +475,7 @@ function AdminLogsInner() {
                         <summary className="cursor-pointer text-xs font-semibold text-[var(--brand-accent)] hover:underline">
                           Lihat
                         </summary>
-                        <pre className="mt-2 max-h-44 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-slate-50 p-2 text-[11px] leading-relaxed text-slate-600">
-                          {JSON.stringify(row.detail ?? {}, null, 2)}
-                        </pre>
+                        <AuditDetail detail={row.detail} />
                       </details>
                     </td>
                   </tr>
@@ -414,9 +539,7 @@ function AdminLogsInner() {
                   />
                   {open && (
                     <div className="border-t border-slate-100 bg-slate-50/70 px-3 py-2.5">
-                      <pre className="max-h-44 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-slate-100 bg-white p-2 text-[11px] leading-relaxed text-slate-600">
-                        {JSON.stringify(row.detail ?? {}, null, 2)}
-                      </pre>
+                      <AuditDetail detail={row.detail} />
                     </div>
                   )}
                 </div>

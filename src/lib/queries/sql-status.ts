@@ -32,7 +32,18 @@ export interface SqlMigrationStatus {
    *                 runner ada.
    */
   source: "ledger" | "probe";
+  /** Metadata ledger (hanya bila `source = ledger`). */
+  appliedAt?: string | null;
+  appliedBy?: string | null;
+  checksum?: string | null;
 }
+
+type LedgerRow = {
+  filename: string;
+  applied_at?: string | null;
+  applied_by?: string | null;
+  checksum?: string | null;
+};
 
 /**
  * Probe RPC ada/tidak. PostgREST mencocokkan RPC berdasarkan SIGNATURE
@@ -142,16 +153,20 @@ const MIGRATIONS: MigrationDef[] = [
 ];
 
 /** Baca ledger `schema_migrations`. Kosong bila tabel belum ada / tanpa akses. */
-async function readLedger(db: Db): Promise<Set<string>> {
-  const { data, error } = await db.from("schema_migrations").select("filename");
+async function readLedger(db: Db): Promise<Map<string, LedgerRow>> {
+  const { data, error } = await db
+    .from("schema_migrations")
+    .select("filename, applied_at, applied_by, checksum");
   if (error) {
     // Tabel belum dibuat (runner belum pernah jalan) atau RLS menolak —
     // keduanya bukan kondisi error bagi halaman ini.
-    return new Set();
+    return new Map();
   }
   // `filename` = basename (lihat scripts/db-migrate.mjs). Normalkan supaya
   // pencocokan dengan `LEDGER_MIGRATIONS` (path repo) tidak meleset.
-  return new Set((data ?? []).map((r) => ledgerKey(r.filename as string)));
+  return new Map(
+    ((data ?? []) as LedgerRow[]).map((r) => [ledgerKey(r.filename), r])
+  );
 }
 
 /** Cek semua migrasi — tiap probe gagal ditelan sebagai `false`. */
@@ -171,12 +186,18 @@ export async function getSqlMigrationStatuses(): Promise<SqlMigrationStatus[]> {
     }))
   );
 
-  const fromLedger: SqlMigrationStatus[] = LEDGER_MIGRATIONS.map((m) => ({
-    file: m.file,
-    description: m.description,
-    applied: ledger.has(ledgerKey(m.file)),
-    source: "ledger" as const,
-  }));
+  const fromLedger: SqlMigrationStatus[] = LEDGER_MIGRATIONS.map((m) => {
+    const row = ledger.get(ledgerKey(m.file));
+    return {
+      file: m.file,
+      description: m.description,
+      applied: Boolean(row),
+      source: "ledger" as const,
+      appliedAt: row?.applied_at ?? null,
+      appliedBy: row?.applied_by ?? null,
+      checksum: row?.checksum ?? null,
+    };
+  });
 
   // Migrasi berurutan ditampilkan lebih dulu (paling relevan untuk tindakan).
   return [...fromLedger, ...probed];

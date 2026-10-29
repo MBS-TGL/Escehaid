@@ -15,6 +15,7 @@ export async function getAgendaEvents(): Promise<AgendaEvent[]> {
   const { data, error } = await supabase
     .from("agenda_events")
     .select("*")
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
   if (error) {
     // Melempar error agar panel admin bisa membedakan "kosong" vs "gagal
@@ -30,6 +31,7 @@ export async function getActiveAgendaEvents(): Promise<AgendaEvent[]> {
     .from("agenda_events")
     .select("id, title, event_date")
     .eq("is_active", true)
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
   if (error) return [];
   return (data || []) as AgendaEvent[];
@@ -57,13 +59,26 @@ export async function updateAgendaEvent(id: string, data: Partial<Pick<AgendaEve
 }
 
 export async function deleteAgendaEvent(id: string): Promise<{ error?: string }> {
-  const { error } = await supabase.from("agenda_events").delete().eq("id", id);
+  const { error } = await supabase
+    .from("agenda_events")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) return { error: error.message };
   return {};
 }
 
 export async function deleteAgendaEventBulk(ids: string[]): Promise<{ error?: string }> {
-  const { error } = await supabase.from("agenda_events").delete().in("id", ids);
+  const { error } = await supabase
+    .from("agenda_events")
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", ids);
+  if (error) return { error: error.message };
+  return {};
+}
+
+/** Hapus permanen dari Sampah (bukan dipakai UI modul Agenda). */
+export async function purgeAgendaEvent(id: string): Promise<{ error?: string }> {
+  const { error } = await supabase.from("agenda_events").delete().eq("id", id);
   if (error) return { error: error.message };
   return {};
 }

@@ -100,7 +100,22 @@ export default function SqlStatusClientPage({ statuses }: { statuses: SqlMigrati
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3.5 text-sm text-slate-600">{s.description}</td>
+                <td className="px-4 py-3.5 text-sm text-slate-600">
+                  {s.description}
+                  {(s.appliedAt || s.appliedBy || s.checksum) && (
+                    <span className="mt-1 block text-[11px] text-slate-400">
+                      {s.appliedAt && (
+                        <>Dijalankan {new Date(s.appliedAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}</>
+                      )}
+                      {s.appliedBy && <> · oleh {s.appliedBy}</>}
+                      {s.checksum && (
+                        <span className="ml-1 font-mono" title={s.checksum}>
+                          · {s.checksum.slice(0, 10)}…
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3.5 text-center">
                   {s.applied ? (
                     <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">

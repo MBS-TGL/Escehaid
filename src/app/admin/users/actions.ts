@@ -790,15 +790,23 @@ export async function saveRolePermissions(
     .eq("role_key", roleKey);
   const before = (beforeRows ?? []).map((r) => r.permission as string).sort();
 
-  // Ganti penuh: hapus semua baris peran ini, sisipkan yang baru.
-  const { error: delErr } = await supabase.from("role_permissions").delete().eq("role_key", roleKey);
-  if (delErr) return { success: false, error: delErr.message };
-
-  if (finalPerms.length > 0) {
-    const { error: insErr } = await supabase
-      .from("role_permissions")
-      .insert(finalPerms.map((p) => ({ role_key: roleKey, permission: p })));
-    if (insErr) return { success: false, error: insErr.message };
+  // Ganti penuh dalam SATU transaksi — jangan delete-then-insert dari client
+  // (insert gagal bisa meninggalkan role tanpa izin). RPC 0012 yang menangani.
+  const { error: rpcErr } = await supabase.rpc("replace_role_permissions", {
+    p_role_key: roleKey,
+    p_permissions: finalPerms,
+  });
+  if (rpcErr) {
+    const missing =
+      rpcErr.code === "42883" ||
+      rpcErr.code === "PGRST202" ||
+      /Could not find the function|does not exist/i.test(rpcErr.message ?? "");
+    return {
+      success: false,
+      error: missing
+        ? "Fungsi transaksional belum ada — jalankan migrasi 0012_role_permissions_rpc.sql."
+        : rpcErr.message,
+    };
   }
 
   await logSystem(supabase, "update", "role_permissions", roleKey, {

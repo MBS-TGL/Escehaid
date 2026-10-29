@@ -73,4 +73,16 @@ export const LEDGER_MIGRATIONS: readonly LedgerMigration[] = [
     file: "supabase/migrations/0010_sql_ledger_permission.sql",
     description: "Policy baca schema_migrations mengikuti izin sql:manage (halaman /admin/sql)",
   },
+  {
+    file: "supabase/migrations/0011_agenda_soft_delete.sql",
+    description: "Soft delete agenda_events (Recycle Bin)",
+  },
+  {
+    file: "supabase/migrations/0012_role_permissions_rpc.sql",
+    description: "RPC transaksional replace_role_permissions",
+  },
+  {
+    file: "supabase/migrations/0013_audit_logs_indexes.sql",
+    description: "Index audit_logs untuk filter Logs",
+  },
 ] as const;

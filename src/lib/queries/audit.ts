@@ -99,6 +99,10 @@ export interface AuditLogFilters {
   search?: string;
   /** Filter per aktor (dari halaman Users: "Riwayat aktivitas"). */
   actorId?: string;
+  /** Awal rentang tanggal (YYYY-MM-DD, inklusif). */
+  fromDate?: string;
+  /** Akhir rentang tanggal (YYYY-MM-DD, inklusif sampai 23:59:59 lokal). */
+  toDate?: string;
 }
 
 export interface AuditLogResult {
@@ -124,6 +128,8 @@ export async function getAuditLogs(filters: AuditLogFilters = {}): Promise<Audit
   if (filters.action) query = query.eq("action", filters.action);
   if (filters.entity) query = query.eq("entity_type", filters.entity);
   if (filters.actorId) query = query.eq("actor_id", filters.actorId);
+  if (filters.fromDate) query = query.gte("created_at", `${filters.fromDate}T00:00:00+07:00`);
+  if (filters.toDate) query = query.lte("created_at", `${filters.toDate}T23:59:59.999+07:00`);
 
   const term = sanitizeSearchTerm(filters.search ?? "");
   if (term) query = query.or(`actor_name.ilike.%${term}%,entity_id.ilike.%${term}%`);

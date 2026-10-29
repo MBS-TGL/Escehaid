@@ -261,6 +261,9 @@ export function RolesTab() {
               {DEFAULT_ROLES.find((r) => r.key === selectedRole)?.description ??
                 "Atur izin modul untuk peran ini."}
             </p>
+            <p className="mt-1 text-[11px] font-medium text-amber-700">
+              Perubahan akan berlaku untuk {userCountByRole[selectedRole] ?? 0} pengguna dengan peran ini.
+            </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <div className="flex items-center gap-1.5 text-xs text-slate-500 hidden sm:flex">

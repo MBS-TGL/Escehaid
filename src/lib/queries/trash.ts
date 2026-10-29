@@ -5,6 +5,7 @@ import { purgeGallery } from "./gallery";
 import { purgeDownload } from "./downloads";
 import { purgeActivity } from "./activities";
 import { purgeAchievement } from "./achievements";
+import { purgeAgendaEvent } from "./agenda";
 
 /**
  * Sampah (Recycle Bin) terpusat — membaca baris yang di-soft-delete
@@ -39,6 +40,7 @@ const TRASH_TABLES: TrashTableDef[] = [
   { table: "gallery", label: "Galeri", titleColumn: "title", fallbackTitle: "Tanpa judul" },
   { table: "downloads", label: "Unduhan", titleColumn: "title", fallbackTitle: "Tanpa judul" },
   { table: "announcements", label: "Pengumuman", titleColumn: "text", fallbackTitle: "Tanpa teks" },
+  { table: "agenda_events", label: "Agenda", titleColumn: "title", fallbackTitle: "Tanpa judul" },
 ];
 
 /** Hapus permanen — delegasi ke purgeX modul agar pembersihan media
@@ -50,6 +52,7 @@ const PURGERS: Record<string, (id: string) => Promise<{ error?: string }>> = {
   downloads: (id) => purgeDownload(id),
   activities: (id) => purgeActivity(id),
   achievements: (id) => purgeAchievement(id),
+  agenda_events: (id) => purgeAgendaEvent(id),
 };
 
 function tableDef(table: string): TrashTableDef | null {
