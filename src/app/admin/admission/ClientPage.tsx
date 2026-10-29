@@ -1245,17 +1245,17 @@ export default function AdminSPMBPage() {
                       <li
                         ref={setNodeRef}
                         style={style}
-                        className={`flex flex-col gap-3 p-4 transition-colors sm:flex-row sm:items-center sm:justify-between ${isDragging ? "bg-slate-50 opacity-70" : ""}`}
+                        className={`flex flex-wrap items-start gap-3 p-4 transition-colors sm:flex-nowrap sm:items-center ${isDragging ? "bg-slate-50 opacity-70" : ""}`}
                       >
-                        <div className="min-w-0">
+                        <SortableGrip
+                          index={index}
+                          label={w.name}
+                          disabled={dragDisabled}
+                          attributes={attributes}
+                          listeners={listeners}
+                        />
+                        <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <SortableGrip
-                              index={index}
-                              label={w.name}
-                              disabled={dragDisabled}
-                              attributes={attributes}
-                              listeners={listeners}
-                            />
                             <span className="text-sm font-semibold text-slate-800">{w.name}</span>
                             <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${st.cls}`}>{st.label}</span>
                             {!w.is_published && (
@@ -1276,7 +1276,7 @@ export default function AdminSPMBPage() {
                           {w.note && <p className="mt-1 text-xs text-slate-400">{w.note}</p>}
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
                           {permUpdate && (
                             <button onClick={() => handleToggleWave(w)}
                               title={w.is_published ? "Sembunyikan dari website" : "Tampilkan di website"}
