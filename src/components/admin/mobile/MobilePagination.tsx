@@ -46,72 +46,23 @@ export function MobilePagination({
   itemLabel?: string;
   className?: string;
 }) {
-  const options = pageSize !== undefined
-    ? Array.from(new Set([...pageSizeOptions, pageSize])).sort((a, b) => a - b)
-    : pageSizeOptions;
-  /* ── Compact floating dropdown (shared style) ────────────────────── */
-  function PageSizeDropdown() {
-    const [open, setOpen] = useState(false);
-    const wrapRef = useRef<HTMLDivElement>(null);
-    const triggerRef = useRef<HTMLButtonElement>(null);
-    const listRef = useRef<HTMLDivElement>(null);
-    const { pos, reposition } = useFloatingPanel({
-      triggerRef, open, onTriggerLost: () => setOpen(false), maxHeight: 200, gap: 4,
-    });
-    useEffect(() => {
-      function out(e: MouseEvent) {
-        const t = e.target as Node;
-        if (wrapRef.current?.contains(t) || listRef.current?.contains(t)) return;
-        setOpen(false);
-      }
-      document.addEventListener("mousedown", out);
-      return () => document.removeEventListener("mousedown", out);
-    }, []);
-    useEffect(() => {
-      if (!open) return;
-      const fn = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
-      window.addEventListener("keydown", fn);
-      return () => window.removeEventListener("keydown", fn);
-    }, [open]);
-    function toggle() {
-      if (open) { setOpen(false); return; }
-      if (!triggerRef.current) return;
-      reposition(); setOpen(true);
-    }
-    const dropdown = open && pos
-      ? createPortal(
-          <div ref={listRef} style={{ position: "fixed", top: pos.top, bottom: pos.bottom, left: pos.left, width: pos.width, maxHeight: pos.maxHeight, zIndex: 10000 }}
-            className="overflow-auto rounded-xl border border-[#dce3ed] bg-white py-1 shadow-lg">
-            {options.map((n) => (
-              <button key={n} type="button" onClick={() => { onPageSizeChange!(n); onPageChange(1); setOpen(false); }}
-                className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-[#f4f7fb] ${
-                  n === pageSize ? "bg-[var(--brand-accent)]/10 font-semibold text-[var(--brand-primary)]" : "text-[#172033]"
-                }`}>{n}</button>
-            ))}
-          </div>, document.body) : null;
-    return (
-      <div ref={wrapRef} className="relative">
-        <button ref={triggerRef} type="button" onClick={toggle} aria-haspopup="listbox" aria-expanded={open}
-          className="flex min-w-[3rem] items-center justify-between gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50 focus:border-[var(--brand-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]">
-          {pageSize}
-          <svg className={`h-3 w-3 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        {dropdown}
-      </div>
-    );
-  }
+  const options =
+    pageSize !== undefined
+      ? Array.from(new Set([...pageSizeOptions, pageSize])).sort((a, b) => a - b)
+      : pageSizeOptions;
 
   return (
-    <div
-      className={`border-t border-slate-100 bg-white px-4 py-3 md:hidden ${className}`}
-    >
+    <div className={`border-t border-slate-100 bg-white px-4 py-3 md:hidden ${className}`}>
       {/* Selector baris (opsional) */}
       {pageSize !== undefined && onPageSizeChange && (
         <div className="mb-2.5 flex items-center gap-1.5 text-xs text-[#64748b]">
           Tampilkan
-          <PageSizeDropdown />
+          <PageSizeDropdown
+            options={options}
+            pageSize={pageSize}
+            onPageSizeChange={onPageSizeChange}
+            onPageChange={onPageChange}
+          />
           baris
         </div>
       )}
@@ -150,3 +101,120 @@ export function MobilePagination({
   );
 }
 
+/* ── PageSizeDropdown (top-level, bukan nested) ──────────────────────── */
+function PageSizeDropdown({
+  options,
+  pageSize,
+  onPageSizeChange,
+  onPageChange,
+}: {
+  options: readonly number[];
+  pageSize: number;
+  onPageSizeChange: (size: number) => void;
+  onPageChange: (page: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const { pos, reposition } = useFloatingPanel({
+    triggerRef,
+    open,
+    onTriggerLost: () => setOpen(false),
+    maxHeight: 200,
+    gap: 4,
+  });
+
+  useEffect(() => {
+    function out(e: MouseEvent) {
+      const t = e.target as Node;
+      if (wrapRef.current?.contains(t) || listRef.current?.contains(t)) return;
+      setOpen(false);
+    }
+    document.addEventListener("mousedown", out);
+    return () => document.removeEventListener("mousedown", out);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const fn = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", fn);
+    return () => window.removeEventListener("keydown", fn);
+  }, [open]);
+
+  function toggle() {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    if (!triggerRef.current) return;
+    reposition();
+    setOpen(true);
+  }
+
+  const dropdown =
+    open && pos
+      ? createPortal(
+          <div
+            ref={listRef}
+            style={{
+              position: "fixed",
+              top: pos.top,
+              bottom: pos.bottom,
+              left: pos.left,
+              width: pos.width,
+              maxHeight: pos.maxHeight,
+              zIndex: 10000,
+            }}
+            className="overflow-auto rounded-xl border border-[#dce3ed] bg-white py-1 shadow-lg"
+          >
+            {options.map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => {
+                  onPageSizeChange(n);
+                  onPageChange(1);
+                  setOpen(false);
+                }}
+                className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-[#f4f7fb] ${
+                  n === pageSize
+                    ? "bg-[var(--brand-accent)]/10 font-semibold text-[var(--brand-primary)]"
+                    : "text-[#172033]"
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )
+      : null;
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={toggle}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className="flex min-w-[3rem] items-center justify-between gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50 focus:border-[var(--brand-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
+      >
+        {pageSize}
+        <svg
+          className={`h-3 w-3 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {dropdown}
+    </div>
+  );
+}
