@@ -817,7 +817,7 @@ export default function AdminSPMBPage() {
       : filtered;
     const headers = [
       "No", "Nama Lengkap", "NISN", "NIK", "Email", "Telepon", "Orang Tua/Wali", "Asal Sekolah",
-      "Jalur", "Gelombang", "Status", "Tanggal Daftar",
+      "Jalur", "Program", "Gelombang", "Status", "Tanggal Daftar",
       "Berkas Lengkap", "Berkas Terverifikasi", "Catatan Admin",
       ...customCols.map((c) => c.label),
     ];
@@ -854,6 +854,7 @@ export default function AdminSPMBPage() {
           normalizeName(r.parent_name),
           normalizeSchool(r.previous_school),
           pathLabels[r.registration_path] || r.registration_path,
+          r.documents?.program ?? "",
           waveLabel(r.wave_id) || "-",
           statusConfig[r.status]?.label || r.status,
           new Date(r.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
@@ -2119,6 +2120,11 @@ export default function AdminSPMBPage() {
                               Impor
                             </span>
                           )}
+                          {item.documents?.program && (
+                            <span className="ml-1.5 inline-block rounded-md border border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/10 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-[var(--brand-primary)]" title="Pilihan program">
+                              {item.documents.program}
+                            </span>
+                          )}
                         </p>
                         {item.email && <p className="mt-0.5 text-xs text-slate-400">{item.email}</p>}
                         {ds && ds.total > 0 && (
@@ -2379,6 +2385,11 @@ export default function AdminSPMBPage() {
                     <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white">
                       {pathLabels[viewItem.registration_path] || viewItem.registration_path}
                     </span>
+                    {viewItem.documents?.program && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white" title="Pilihan program">
+                        {viewItem.documents.program}
+                      </span>
+                    )}
                     {waveLabel(viewItem.wave_id) && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white">
                         <CalendarBlank className="h-2.5 w-2.5" />
@@ -3075,6 +3086,7 @@ function RegistrationMobileRow({
             <>
               {item.documents?.input_source === "admin" && <QuietBadge>Manual</QuietBadge>}
               {item.documents?.input_source === "import" && <QuietBadge>Impor</QuietBadge>}
+              {item.documents?.program && <QuietBadge>{item.documents.program}</QuietBadge>}
               {docSummary && docSummary.total > 0 && <QuietBadge>Berkas {docSummary.verified}/{SPMB_DOCUMENT_KEYS.length}</QuietBadge>}
               {late && <QuietBadge>Lewat {PENDING_SLA_DAYS} hari</QuietBadge>}
               {item.status === "rejected" && <QuietBadge>Ditolak</QuietBadge>}
