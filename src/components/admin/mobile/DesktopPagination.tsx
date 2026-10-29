@@ -1,6 +1,9 @@
 "use client";
 
+import { useRef, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { CaretLeft, CaretRight } from "@/components/Icons";
+import { useFloatingPanel } from "@/components/ui/useFloatingPanel";
 
 /**
  * Footer tabel desktop (≥ md): selector "Tampilkan N baris" + info rentang +
@@ -11,6 +14,115 @@ import { CaretLeft, CaretRight } from "@/components/Icons";
  */
 export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 export type PageSizeOption = (typeof PAGE_SIZE_OPTIONS)[number];
+
+/* ── Compact floating dropdown (no form chrome) ─────────────────────────── */
+function PageSizeDropdown({
+  value,
+  options,
+  onChange,
+}: {
+  value: number;
+  options: readonly number[];
+  onChange: (v: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const { pos, reposition } = useFloatingPanel({
+    triggerRef,
+    open,
+    onTriggerLost: () => setOpen(false),
+    maxHeight: 200,
+    gap: 4,
+  });
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      const t = e.target as Node;
+      if (wrapRef.current?.contains(t)) return;
+      if (listRef.current?.contains(t)) return;
+      setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  function toggle() {
+    if (open) { setOpen(false); return; }
+    if (!triggerRef.current) return;
+    reposition();
+    setOpen(true);
+  }
+
+  const dropdown =
+    open && pos
+      ? createPortal(
+          <div
+            ref={listRef}
+            style={{
+              position: "fixed",
+              top: pos.top,
+              bottom: pos.bottom,
+              left: pos.left,
+              width: pos.width,
+              maxHeight: pos.maxHeight,
+              zIndex: 10000,
+            }}
+            className="overflow-auto rounded-xl border border-[#dce3ed] bg-white py-1 shadow-lg"
+          >
+            {options.map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => { onChange(n); setOpen(false); }}
+                className={`w-full px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-[#f4f7fb] ${
+                  n === value
+                    ? "bg-[var(--brand-accent)]/10 font-semibold text-[var(--brand-primary)]"
+                    : "text-[#172033]"
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )
+      : null;
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={toggle}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className="flex min-w-[3rem] items-center justify-between gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50 focus:border-[var(--brand-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
+      >
+        {value}
+        <svg
+          className={`h-3 w-3 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {dropdown}
+    </div>
+  );
+}
 
 export function DesktopPagination({
   page,
@@ -46,26 +158,19 @@ export function DesktopPagination({
       className={`flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${className}`}
     >
       {/* Kiri: selector baris + teks rentang */}
-      <div className="flex items-center gap-3">
-        <label className="flex items-center gap-1.5 text-xs text-slate-400">
-          Tampilkan
-          <select
-            value={pageSize}
-            onChange={(e) => {
-              onPageSizeChange(Number(e.target.value));
-              onPageChange(1);
-            }}
-            className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-xs font-medium text-slate-600 shadow-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
-          >
-            {options.map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
-          baris
-        </label>
-        <p className="text-xs text-slate-400">
+      <div className="flex items-center gap-2 text-xs text-slate-400">
+        Tampilkan
+        <PageSizeDropdown
+          value={pageSize}
+          options={options}
+          onChange={(newSize) => {
+            onPageSizeChange(newSize);
+            onPageChange(1);
+          }}
+        />
+        baris
+        <span className="mx-0.5 text-slate-300">·</span>
+        <p>
           {total === 0 ? "0" : `${from}\u2013${to}`} dari {total} {itemLabel}
         </p>
       </div>
