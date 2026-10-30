@@ -29,8 +29,6 @@ import {
   Users,
   Database,
   CheckCircle,
-  CaretLeft,
-  CaretRight,
 } from "@/components/Icons";
 import { FilterBar, type FilterGroup } from "@/components/admin/FilterBar";
 import {
@@ -78,26 +76,6 @@ const EMPTY_LIST: MediaFile[] = [];
 
 /** File per halaman — grid desktop & daftar mobile memakai halaman yang sama. */
 // PAGE_SIZE moved to state
-
-/**
- * Window nomor halaman untuk bar paginasi: ≤9 halaman tampil penuh; lebih
- * dari itu dipadatkan jadi "1 … [sekitar current] … N" (media bisa punya
- * ratusan file — deret penuh akan membanjiri bar).
- */
-function pageWindow(total: number, current: number): (number | "…")[] {
-  if (total <= 9) return Array.from({ length: total }, (_, i) => i + 1);
-  const nums = Array.from(
-    new Set([1, total, current - 1, current, current + 1].filter((n) => n >= 1 && n <= total))
-  ).sort((a, b) => a - b);
-  const out: (number | "…")[] = [];
-  let prev = 0;
-  for (const n of nums) {
-    if (prev && n - prev > 1) out.push("…");
-    out.push(n);
-    prev = n;
-  }
-  return out;
-}
 
 /**
  * Media library admin: lihat / cari / hapus file Storage per bucket.

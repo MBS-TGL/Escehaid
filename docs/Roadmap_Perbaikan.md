@@ -93,7 +93,7 @@ Yang tersisa adalah penyempurnaan, tercantum di bawah.
 - [ ] **17k. Perkuat sanitasi `next` auth-callback** — sekarang hanya guard `startsWith("/")` + tanpa `//`; pakai whitelist regex ketat untuk path relatif. `src/app/auth/callback/route.ts:8`
 - [ ] **17l. Verifikasi error update flag `must_change_password`** — bila RLS menolak update, user terjebak loop redirect setelah ganti password. `src/app/api/auth/change-password/route.ts:34-41`
 - [ ] **17m. Default-deny RBAC halaman admin** — sekarang hanya 4 prefix (`users|logs|settings|flags`) yang di-gate di proxy; modul lain sepenuhnya bergantung RLS DB. `src/proxy.ts:47-52`
-- [ ] **17n. Vite config** — ESM di `vitest.config.ts` memunculkan peringatan `configLoader: 'native'`; ganti ekstensi `.mjs` atau set `"type": "module"` di package.json.
+- [x] **17n. Vite config** ✅ — `vitest.config.ts` → `vitest.config.mts` + alias `@` via `import.meta.url` (bukan `__dirname`), sehingga `npm test` jalan di Windows maupun CI.
 - [ ] **17o. Test komponen publik** — tambah test dasar untuk Navbar/SearchOverlay + guard ukuran bundle client di CI.
 
 ---

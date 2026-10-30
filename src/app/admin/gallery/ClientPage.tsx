@@ -21,8 +21,6 @@ import {
   Video,
   Image as ImageIcon,
   X,
-  CaretLeft,
-  CaretRight,
   Plus,
   PencilSimple,
   Trash,

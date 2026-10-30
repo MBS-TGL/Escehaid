@@ -42,8 +42,6 @@ import {
   X,
   XCircle,
   MapPin,
-  CaretLeft,
-  CaretRight,
   Plus,
   PencilSimple,
   Trash,

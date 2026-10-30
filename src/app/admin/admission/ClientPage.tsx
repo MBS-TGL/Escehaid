@@ -65,8 +65,6 @@ import {
   Envelope,
   MapPin,
   GraduationCap,
-  CaretLeft,
-  CaretRight,
   Plus,
   PencilSimple,
   Trash,

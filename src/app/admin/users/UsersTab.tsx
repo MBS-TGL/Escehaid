@@ -65,8 +65,6 @@ import {
   XCircle,
   Users,
   UsersThree,
-  CaretLeft,
-  CaretRight,
   X,
   Warning,
   Trash,

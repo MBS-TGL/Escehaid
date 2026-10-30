@@ -40,8 +40,6 @@ import {
   X,
   FileText,
   User,
-  CaretLeft,
-  CaretRight,
   Plus,
   PencilSimple,
   Trash,

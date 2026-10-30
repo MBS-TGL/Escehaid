@@ -12,8 +12,6 @@ import type { AuditAction, AuditLogResult } from "@/lib/queries";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import {
   CaretDown,
-  CaretLeft,
-  CaretRight,
   Scroll,
   Warning,
   Users,
@@ -166,7 +164,7 @@ function AdminLogsInner() {
     return () => {
       cancelled = true;
     };
-  }, [action, entity, search, fromDate, toDate, page, actorId, refreshKey]);
+  }, [action, entity, search, fromDate, toDate, page, pageSize, actorId, refreshKey]);
 
   useEffect(() => {
     let cancelled = false;

@@ -11,8 +11,6 @@ import {
   Trash,
   ArrowUUpLeft,
   XCircle,
-  CaretLeft,
-  CaretRight,
 } from "@/components/Icons";
 import { DesktopPagination, MobilePagination } from "@/components/admin/mobile";
 
