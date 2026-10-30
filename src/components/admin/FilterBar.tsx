@@ -68,7 +68,7 @@ function FilterDropdown({ group }: { group: FilterGroup }) {
       >
         <span className="flex min-w-0 items-center gap-1.5 sm:gap-2">
           <span className="shrink-0 text-slate-400">{group.icon ?? <Funnel className="h-4 w-4" />}</span>
-          <span className="min-w-0 max-w-[9rem] truncate">{current?.label}</span>
+          <span className="min-w-0 max-w-[9rem] truncate capitalize">{current?.label}</span>
           {typeof current?.count === "number" && (
             <span className="rounded-full bg-[var(--brand-primary)] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white tabular-nums">
               {current.count}
@@ -96,7 +96,7 @@ function FilterDropdown({ group }: { group: FilterGroup }) {
                   dari teks label panjang ("Belum Dibaca Dahulu"). `hint` tetap
                   satu baris karena ia keterangan sekunder. */}
               <span className="min-w-0 flex-1 break-words leading-snug">
-                {opt.label}
+                <span className="capitalize">{opt.label}</span>
                 {opt.hint && (
                   <span className="block truncate text-xs font-normal text-slate-400">{opt.hint}</span>
                 )}

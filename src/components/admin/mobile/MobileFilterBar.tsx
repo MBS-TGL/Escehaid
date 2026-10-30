@@ -27,6 +27,8 @@ type DropdownProps = {
   icon?: ReactNode;
   /** Badge angka di samping label tombol (nilainya saat ini). */
   badge?: number;
+  /** Tampilkan label dalam Capitalize Each Word (filter; bukan urutan). */
+  capitalize?: boolean;
 };
 
 function Dropdown({
@@ -37,6 +39,7 @@ function Dropdown({
   onChoose,
   icon,
   badge,
+  capitalize = false,
 }: DropdownProps) {
   const { open, toggle, triggerRef, menuRef, menuId, panelStyle, onMenuKeyDown } = useMenu({
     menuMinWidth: 180,
@@ -55,7 +58,7 @@ function Dropdown({
         className="flex h-11 w-full min-w-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white pl-2.5 pr-2 text-sm font-semibold text-slate-700 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
       >
         {icon && <span className="shrink-0 text-slate-400">{icon}</span>}
-        <span className="min-w-0 flex-1 truncate text-left">{triggerLabel}</span>
+        <span className={`min-w-0 flex-1 truncate text-left${capitalize ? " capitalize" : ""}`}>{triggerLabel}</span>
         {typeof badge === "number" && (
           <span className="shrink-0 rounded-full bg-[var(--brand-primary)] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white tabular-nums">
             {badge}
@@ -84,7 +87,7 @@ function Dropdown({
                 onChoose(opt.key);
               }}
             >
-              <span className="min-w-0 flex-1 break-words leading-snug">{opt.label}</span>
+              <span className={`min-w-0 flex-1 break-words leading-snug${capitalize ? " capitalize" : ""}`}>{opt.label}</span>
               {typeof opt.count === "number" && (
                 <span className="shrink-0 text-xs font-semibold text-slate-400 tabular-nums">
                   {opt.count}
@@ -251,6 +254,7 @@ export function MobileFilterBar({
       options={filter.options}
       onChoose={filter.onChange}
       badge={currentFilter?.count}
+      capitalize
     />
   );
   const filter2Dropdown = filter2 && (
@@ -262,6 +266,7 @@ export function MobileFilterBar({
       onChoose={filter2.onChange}
       icon={filter2.icon}
       badge={currentFilter2?.count}
+      capitalize
     />
   );
   const filter3Dropdown = filter3 && (
@@ -273,6 +278,7 @@ export function MobileFilterBar({
       onChoose={filter3.onChange}
       icon={filter3.icon}
       badge={currentFilter3?.count}
+      capitalize
     />
   );
   const filter4Dropdown = filter4 && (
@@ -284,6 +290,7 @@ export function MobileFilterBar({
       onChoose={filter4.onChange}
       icon={filter4.icon}
       badge={currentFilter4?.count}
+      capitalize
     />
   );
   const sortDropdown = sort && (
