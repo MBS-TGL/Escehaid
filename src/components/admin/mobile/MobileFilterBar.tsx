@@ -164,6 +164,7 @@ export function MobileFilterBar({
   filter,
   filter2,
   filter3,
+  filter4,
   sort,
   action,
   selectMode = false,
@@ -208,6 +209,19 @@ export function MobileFilterBar({
     /** Ikon kiri tombol (opsional). */
     icon?: ReactNode;
   };
+  /**
+   * Filter keempat (opsional) — mis. jenis kelamin di halaman SPMB. Bila ada,
+   * baris kontrol dipecah: [filter · filter2] / [filter3 · filter4] / [urut · aksi].
+   */
+  filter4?: {
+    value: string;
+    options: MobileFilterOption[];
+    onChange: (key: string) => void;
+    /** aria-label tombol & menu (mis. "Filter jenis kelamin"). */
+    menuLabel?: string;
+    /** Ikon kiri tombol (opsional). */
+    icon?: ReactNode;
+  };
   sort?: {
     value: string;
     options: MobileSortOption[];
@@ -223,10 +237,11 @@ export function MobileFilterBar({
   const currentFilter = filter?.options.find((o) => o.key === filter.value);
   const currentFilter2 = filter2?.options.find((o) => o.key === filter2.value);
   const currentFilter3 = filter3?.options.find((o) => o.key === filter3.value);
+  const currentFilter4 = filter4?.options.find((o) => o.key === filter4.value);
   const currentSort = sort?.options.find((o) => o.key === sort.value);
 
   /** Ada filter tambahan + (urut/aksi) → baris kontrol dipecah jadi dua. */
-  const stackedControls = !!((filter && (filter2 || filter3)) && (sort || action));
+  const stackedControls = !!((filter && (filter2 || filter3 || filter4)) && (sort || action));
 
   const filterDropdown = filter && (
     <Dropdown
@@ -258,6 +273,17 @@ export function MobileFilterBar({
       onChoose={filter3.onChange}
       icon={filter3.icon}
       badge={currentFilter3?.count}
+    />
+  );
+  const filter4Dropdown = filter4 && (
+    <Dropdown
+      triggerLabel={currentFilter4?.label ?? "Filter"}
+      menuLabel={filter4.menuLabel ?? "Filter tambahan"}
+      currentKey={filter4.value}
+      options={filter4.options}
+      onChoose={filter4.onChange}
+      icon={filter4.icon}
+      badge={currentFilter4?.count}
     />
   );
   const sortDropdown = sort && (
@@ -311,16 +337,21 @@ export function MobileFilterBar({
       </div>
 
       {/* Baris kontrol — ≤3 kontrol: satu baris [filter · urut · aksi].
-          Ada filter tambahan: DUA baris [filter · filter2] / [filter3 · urut · aksi],
-          supaya tidak padat di layar 360px (aksi ml-auto menempel kanan). */}
+          Ada filter tambahan: DUA baris [filter · filter2] / [filter3 · filter4]
+          lalu [urut · aksi], supaya tidak padat di layar 360px. */}
       {stackedControls ? (
         <>
           <div className="flex items-center gap-2">
             {filterDropdown}
             {filter2Dropdown}
           </div>
+          {(filter3Dropdown || filter4Dropdown) && (
+            <div className="flex items-center gap-2">
+              {filter3Dropdown}
+              {filter4Dropdown}
+            </div>
+          )}
           <div className="flex items-center gap-2">
-            {filter3Dropdown}
             {sortDropdown}
             {actionGroup}
           </div>
@@ -330,6 +361,7 @@ export function MobileFilterBar({
           {filterDropdown}
           {filter2Dropdown}
           {filter3Dropdown}
+          {filter4Dropdown}
           {sortDropdown}
           {actionGroup}
         </div>

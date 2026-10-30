@@ -7,6 +7,16 @@ export const SPMB_PATH_LABELS: Record<string, string> = {
   beasiswa: "Beasiswa",
 };
 
+/** Label gender untuk daftar admin — "Putra"/"Putri" (nilai DB tetap L/P). */
+export const SPMB_GENDER_LABELS: Record<string, string> = {
+  L: "Putra",
+  P: "Putri",
+};
+
+export function spmbGenderLabel(gender: string): string {
+  return SPMB_GENDER_LABELS[gender] ?? "—";
+}
+
 /** Nilai filter "tanpa program" untuk baris lama yang belum punya `documents.program`. */
 export const SPMB_NO_PROGRAM = "none";
 
@@ -19,6 +29,8 @@ export type SpmbFilterState = {
   path: string;
   /** Program: `"all"`, `SPMB_NO_PROGRAM`, atau nama program. */
   program: string;
+  /** Jenis kelamin: `"all"`, `"L"`, atau `"P"`. */
+  gender: string;
 };
 
 /** Program yang tersimpan di jsonb `documents.program` ("" bila belum diisi). */
@@ -45,6 +57,10 @@ export function matchesSpmbSearch(row: SpmbRegistration, search: string): boolea
   const program = (docs.program || "").toLowerCase();
   const path = (row.registration_path || "").toLowerCase();
   const pathLabel = (SPMB_PATH_LABELS[row.registration_path] || row.registration_path || "").toLowerCase();
+  // "putra"/"putri"/"laki"/"perempuan". Huruf tunggal L/P tidak dipakai di
+  // pencarian (terlalu ramai — "reguler" pun mengandung "l"); pakai filter JK.
+  const genderSearch = row.gender === "P" ? "putri perempuan" : "putra laki laki";
+  const genderMatch = genderSearch.includes(q);
 
   return (
     (row.full_name || "").toLowerCase().includes(q) ||
@@ -56,7 +72,8 @@ export function matchesSpmbSearch(row: SpmbRegistration, search: string): boolea
     customText.includes(q) ||
     program.includes(q) ||
     path.includes(q) ||
-    pathLabel.includes(q)
+    pathLabel.includes(q) ||
+    genderMatch
   );
 }
 
@@ -68,11 +85,12 @@ export function filterSpmbRegistrations(
   rows: SpmbRegistration[],
   state: SpmbFilterState
 ): SpmbRegistration[] {
-  const { search, status, path, program } = state;
+  const { search, status, path, program, gender } = state;
 
   return rows.filter((row) => {
     const matchStatus = !status || status === "all" || row.status === status;
     const matchPath = !path || path === "all" || row.registration_path === path;
+    const matchGender = !gender || gender === "all" || row.gender === gender;
 
     const rowProgram = spmbProgramOf(row);
     const matchProgram =
@@ -80,6 +98,6 @@ export function filterSpmbRegistrations(
       program === "all" ||
       (program === SPMB_NO_PROGRAM ? rowProgram === "" : rowProgram === program);
 
-    return matchStatus && matchPath && matchProgram && matchesSpmbSearch(row, search);
+    return matchStatus && matchPath && matchGender && matchProgram && matchesSpmbSearch(row, search);
   });
 }

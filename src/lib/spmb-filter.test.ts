@@ -4,6 +4,7 @@ import {
   filterSpmbRegistrations,
   matchesSpmbSearch,
   SPMB_NO_PROGRAM,
+  spmbGenderLabel,
   spmbProgramOf,
 } from "./spmb-filter";
 
@@ -30,7 +31,7 @@ function makeRow(overrides: Partial<SpmbRegistration> = {}): SpmbRegistration {
   };
 }
 
-const ALL = { search: "", status: "all", path: "all", program: "all" };
+const ALL = { search: "", status: "all", path: "all", program: "all", gender: "all" };
 
 describe("spmbProgramOf", () => {
   it("mengembalikan program dari documents", () => {
@@ -39,6 +40,17 @@ describe("spmbProgramOf", () => {
 
   it("mengembalikan string kosong bila documents null", () => {
     expect(spmbProgramOf(makeRow({ documents: null }))).toBe("");
+  });
+});
+
+describe("spmbGenderLabel", () => {
+  it("memetakan L/P ke Putra/Putri", () => {
+    expect(spmbGenderLabel("L")).toBe("Putra");
+    expect(spmbGenderLabel("P")).toBe("Putri");
+  });
+
+  it("memberi fallback untuk nilai tak dikenal", () => {
+    expect(spmbGenderLabel("X")).toBe("—");
   });
 });
 
@@ -74,14 +86,25 @@ describe("matchesSpmbSearch", () => {
     expect(matchesSpmbSearch(makeRow(), "")).toBe(true);
     expect(matchesSpmbSearch(makeRow(), "   ")).toBe(true);
   });
+
+  it("mencari gender lewat putra/putri/perempuan/laki", () => {
+    const putra = makeRow({ gender: "L" });
+    const putri = makeRow({ gender: "P" });
+
+    expect(matchesSpmbSearch(putra, "putra")).toBe(true);
+    expect(matchesSpmbSearch(putra, "laki")).toBe(true);
+    expect(matchesSpmbSearch(putri, "putri")).toBe(true);
+    expect(matchesSpmbSearch(putri, "perempuan")).toBe(true);
+    expect(matchesSpmbSearch(putra, "putri")).toBe(false);
+  });
 });
 
 describe("filterSpmbRegistrations", () => {
   const rows = [
-    makeRow({ id: "a", registration_path: "reguler", status: "pending", documents: { program: "SMP Boarding" } }),
-    makeRow({ id: "b", registration_path: "prestasi", status: "accepted", documents: { program: "SMA Boarding" } }),
-    makeRow({ id: "c", registration_path: "beasiswa", status: "rejected", documents: { program: "SMP Full Day (Non Boarding)" } }),
-    makeRow({ id: "d", registration_path: "reguler", status: "pending", documents: null }),
+    makeRow({ id: "a", gender: "L", registration_path: "reguler", status: "pending", documents: { program: "SMP Boarding" } }),
+    makeRow({ id: "b", gender: "P", registration_path: "prestasi", status: "accepted", documents: { program: "SMA Boarding" } }),
+    makeRow({ id: "c", gender: "L", registration_path: "beasiswa", status: "rejected", documents: { program: "SMP Full Day (Non Boarding)" } }),
+    makeRow({ id: "d", gender: "P", registration_path: "reguler", status: "pending", documents: null }),
   ];
 
   it("mengembalikan semua baris tanpa filter", () => {
@@ -103,17 +126,23 @@ describe("filterSpmbRegistrations", () => {
     expect(result.map((r) => r.id)).toEqual(["a"]);
   });
 
+  it("memfilter jenis kelamin", () => {
+    expect(filterSpmbRegistrations(rows, { ...ALL, gender: "L" }).map((r) => r.id)).toEqual(["a", "c"]);
+    expect(filterSpmbRegistrations(rows, { ...ALL, gender: "P" }).map((r) => r.id)).toEqual(["b", "d"]);
+  });
+
   it("memfilter baris tanpa program lewat sentinel none", () => {
     const result = filterSpmbRegistrations(rows, { ...ALL, program: SPMB_NO_PROGRAM });
     expect(result.map((r) => r.id)).toEqual(["d"]);
   });
 
-  it("menggabungkan status + jalur + program + pencarian", () => {
+  it("menggabungkan status + jalur + program + gender + pencarian", () => {
     const result = filterSpmbRegistrations(rows, {
       search: "boarding",
       status: "accepted",
       path: "prestasi",
       program: "SMA Boarding",
+      gender: "P",
     });
     expect(result.map((r) => r.id)).toEqual(["b"]);
   });

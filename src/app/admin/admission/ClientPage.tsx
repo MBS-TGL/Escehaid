@@ -48,7 +48,7 @@ import type { SpmbDocumentKey, SpmbDocumentVerification, SpmbRegistration, SpmbW
 import type { SpmbMessageTemplate } from "@/lib/queries";
 import type { RegistrationPath } from "@/lib/queries";
 import { SPMB_DOCUMENT_KEYS, SPMB_DOCUMENT_LABELS, SPMB_PROGRAMS } from "@/lib/spmb-registration";
-import { filterSpmbRegistrations, SPMB_NO_PROGRAM } from "@/lib/spmb-filter";
+import { filterSpmbRegistrations, spmbGenderLabel, SPMB_NO_PROGRAM } from "@/lib/spmb-filter";
 import { fillSpmbTemplate, spmbWhatsappHref } from "@/lib/spmb-message";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -130,7 +130,13 @@ const pathColors: Record<string, string> = {
   beasiswa: "bg-purple-50 text-purple-700",
 };
 
-type SortField = "created_at" | "full_name" | "status" | "registration_path";
+/** Warna chip jenis kelamin: biru = Putra, rose = Putri. */
+const genderStyles: Record<string, string> = {
+  L: "border-blue-200 bg-blue-50 text-blue-700",
+  P: "border-rose-200 bg-rose-50 text-rose-700",
+};
+
+type SortField = "created_at" | "full_name" | "status" | "registration_path" | "gender";
 type SortDir = "asc" | "desc";
 
 /** Tab utama halaman: daftar pendaftar atau pengelolaan gelombang. */
@@ -199,6 +205,7 @@ export default function AdminSPMBPage() {
   const [filter, setFilter] = useState<string>("all");
   const [pathFilter, setPathFilter] = useState<string>("all");
   const [programFilter, setProgramFilter] = useState<string>("all");
+  const [genderFilter, setGenderFilter] = useState<string>("all");
   const [data, setData] = useState<SpmbRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -720,6 +727,7 @@ export default function AdminSPMBPage() {
       status: filter,
       path: pathFilter,
       program: programFilter,
+      gender: genderFilter,
     });
 
     result.sort((a, b) => {
@@ -727,12 +735,13 @@ export default function AdminSPMBPage() {
       if (sortField === "full_name") cmp = a.full_name.localeCompare(b.full_name);
       else if (sortField === "status") cmp = a.status.localeCompare(b.status);
       else if (sortField === "registration_path") cmp = (a.registration_path || "").localeCompare(b.registration_path || "");
+      else if (sortField === "gender") cmp = (a.gender || "").localeCompare(b.gender || "");
       else cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       return sortDir === "asc" ? cmp : -cmp;
     });
 
     return result;
-  }, [data, search, filter, pathFilter, programFilter, sortField, sortDir]);
+  }, [data, search, filter, pathFilter, programFilter, genderFilter, sortField, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
@@ -789,6 +798,12 @@ export default function AdminSPMBPage() {
       : []),
   ];
 
+  const genderOptions = [
+    { key: "all", label: "Semua jenis kelamin", count: data.length },
+    { key: "L", label: "Putra", count: data.filter((d) => d.gender === "L").length },
+    { key: "P", label: "Putri", count: data.filter((d) => d.gender === "P").length },
+  ];
+
   const allVisibleSelected = paginated.length > 0 && paginated.every((item) => selectedIds.has(item.id));
 
   function toggleSelectAll() {
@@ -838,7 +853,7 @@ export default function AdminSPMBPage() {
       ? filtered.filter((r) => selectedIds.has(r.id))
       : filtered;
     const headers = [
-      "No", "Nama Lengkap", "NISN", "NIK", "Email", "Telepon", "Orang Tua/Wali", "Asal Sekolah",
+      "No", "Nama Lengkap", "Jenis Kelamin", "NISN", "NIK", "Email", "Telepon", "Orang Tua/Wali", "Asal Sekolah",
       "Program", "Jalur", "Gelombang", "Status", "Tanggal Daftar",
       "Berkas Lengkap", "Berkas Terverifikasi", "Catatan Admin",
       ...customCols.map((c) => c.label),
@@ -869,6 +884,7 @@ export default function AdminSPMBPage() {
         [
           i + 1,
           normalizeName(r.full_name),
+          spmbGenderLabel(r.gender),
           cell(r.documents?.nisn ?? "", true),
           cell(r.documents?.nik ?? "", true),
           r.email,
@@ -1999,8 +2015,8 @@ export default function AdminSPMBPage() {
           status sebagai pill dropdown berjumlah di kanan. */}
       <div className="hidden md:block">
         <FilterBar
-          placeholder="Cari nama, NISN/NIK, sekolah, program, jalur…"
-          searchLabel="Cari nama, NISN/NIK, sekolah, program, jalur, email, atau telepon"
+          placeholder="Cari nama, NISN/NIK, sekolah, program, jalur, putra/putri…"
+          searchLabel="Cari nama, NISN/NIK, sekolah, program, jalur, jenis kelamin, email, atau telepon"
           query={search}
           onQueryChange={(v) => { setSearch(v); setPage(1); }}
           filters={[
@@ -2022,14 +2038,20 @@ export default function AdminSPMBPage() {
               onChange: (k) => { setProgramFilter(k); setPage(1); setSelectedIds(new Set()); },
               menuLabel: "Filter program",
             },
+            {
+              value: genderFilter,
+              options: genderOptions,
+              onChange: (k) => { setGenderFilter(k); setPage(1); setSelectedIds(new Set()); },
+              menuLabel: "Filter jenis kelamin",
+            },
           ]}
         />
       </div>
 
       {/* Toolbar mobile (<md): pencarian + filter (dengan jumlah) + urut + Pilih */}
       <MobileFilterBar
-        placeholder="Cari nama, NISN/NIK, sekolah, program, jalur…"
-        searchLabel="Cari nama, NISN/NIK, sekolah, program, jalur, email, atau telepon"
+        placeholder="Cari nama, NISN/NIK, sekolah, program, jalur, putra/putri…"
+        searchLabel="Cari nama, NISN/NIK, sekolah, program, jalur, jenis kelamin, email, atau telepon"
         query={search}
         onQueryChange={(v) => { setSearch(v); setPage(1); }}
         filter={{
@@ -2050,6 +2072,12 @@ export default function AdminSPMBPage() {
           onChange: (k) => { setProgramFilter(k); setPage(1); setSelectedIds(new Set()); },
           menuLabel: "Filter program",
         }}
+        filter4={{
+          value: genderFilter,
+          options: genderOptions,
+          onChange: (k) => { setGenderFilter(k); setPage(1); setSelectedIds(new Set()); },
+          menuLabel: "Filter jenis kelamin",
+        }}
         sort={{
           value: `${sortField}:${sortDir}`,
           options: [
@@ -2061,6 +2089,8 @@ export default function AdminSPMBPage() {
             { key: "status:desc", label: "Status Z–A" },
             { key: "registration_path:asc", label: "Jalur A–Z" },
             { key: "registration_path:desc", label: "Jalur Z–A" },
+            { key: "gender:asc", label: "Putra dulu" },
+            { key: "gender:desc", label: "Putri dulu" },
           ],
           onChange: (k) => {
             const [f, d] = k.split(":");
@@ -2092,6 +2122,9 @@ export default function AdminSPMBPage() {
                 <th className="cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("full_name")}>
                   <span className="flex items-center gap-1">Nama {sortIcon("full_name")}</span>
                 </th>
+                <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none" onClick={() => toggleSort("gender")}>
+                  <span className="flex items-center gap-1">JK {sortIcon("gender")}</span>
+                </th>
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 md:table-cell">Asal Sekolah</th>
                 <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none" onClick={() => toggleSort("registration_path")}>
                   <span className="flex items-center gap-1">Jalur {sortIcon("registration_path")}</span>
@@ -2107,14 +2140,14 @@ export default function AdminSPMBPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={8} className="px-4 py-16 text-center">
+                <tr><td colSpan={9} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
                     <p className="text-sm text-slate-500">Memuat data pendaftar...</p>
                   </div>
                 </td></tr>
               ) : loadError ? (
-                <tr><td colSpan={8} className="px-4 py-16 text-center">
+                <tr><td colSpan={9} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
                       <Warning className="h-6 w-6 text-red-400" />
@@ -2127,7 +2160,7 @@ export default function AdminSPMBPage() {
                   </div>
                 </td></tr>
               ) : paginated.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-16 text-center">
+                <tr><td colSpan={9} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
                       <Users className="h-8 w-8 text-slate-300" />
@@ -2185,6 +2218,11 @@ export default function AdminSPMBPage() {
                             {ds.pending > 0 && ` · ${ds.pending} menunggu`}
                           </p>
                         )}
+                      </td>
+                      <td className="hidden px-4 py-3.5 sm:table-cell">
+                        <span className={`inline-block rounded-md border px-2 py-0.5 text-[11px] font-semibold ${genderStyles[item.gender] || "border-slate-200 bg-slate-100 text-slate-600"}`}>
+                          {spmbGenderLabel(item.gender)}
+                        </span>
                       </td>
                       <td className="hidden px-4 py-3.5 text-sm text-slate-600 md:table-cell">{normalizeSchool(item.previous_school) || "-"}</td>
                       <td className="hidden px-4 py-3.5 sm:table-cell">
@@ -3142,6 +3180,9 @@ function RegistrationMobileRow({
         }
         subtitle={
           <>
+            <span className={`inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${genderStyles[item.gender] || "border-slate-200 bg-slate-100 text-slate-600"}`}>
+              {spmbGenderLabel(item.gender)}
+            </span>
             <span className={`inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${pathColors[item.registration_path] || "bg-slate-100 text-slate-600"}`}>
               {pathLabels[item.registration_path] || item.registration_path}
             </span>
