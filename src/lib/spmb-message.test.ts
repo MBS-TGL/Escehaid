@@ -3,9 +3,18 @@ import { fillSpmbTemplate, spmbWhatsappHref } from "./spmb-message";
 
 describe("fillSpmbTemplate", () => {
   it("mengganti semua placeholder dengan nilai yang diberikan", () => {
-    const body = "Halo {nama}, gelombang {gelombang}. NISN: {nisn}.";
-    expect(fillSpmbTemplate(body, { nama: "Ahmad", gelombang: "Gelombang 1", nisn: "0012345678" })).toBe(
-      "Halo Ahmad, gelombang Gelombang 1. NISN: 0012345678."
+    const body = "Yth. Bpk/Ibu {orang_tua}, wali dari {nama}. Jalur {jalur}, program {program}, gelombang {gelombang}. NISN: {nisn}.";
+    expect(
+      fillSpmbTemplate(body, {
+        nama: "Ahmad",
+        orang_tua: "Budi Santoso",
+        jalur: "Reguler",
+        program: "Tahfidz",
+        gelombang: "Gelombang 1",
+        nisn: "0012345678",
+      })
+    ).toBe(
+      "Yth. Bpk/Ibu Budi Santoso, wali dari Ahmad. Jalur Reguler, program Tahfidz, gelombang Gelombang 1. NISN: 0012345678."
     );
   });
 

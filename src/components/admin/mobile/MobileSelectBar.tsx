@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Checks, X } from "@/components/Icons";
+import { Checks, Trash, X } from "@/components/Icons";
 
 /**
  * Tinggi KONTEN bar navigasi bawah admin (MobileNav.tsx), TANPA safe-area.
@@ -50,6 +50,7 @@ export function MobileSelectBar({
   onDelete,
   onCancel,
   deleteLabel = "Hapus",
+  deleteIconOnly = false,
   children,
 }: {
   count: number;
@@ -57,9 +58,12 @@ export function MobileSelectBar({
   onDelete?: () => void;
   onCancel: () => void;
   deleteLabel?: string;
+  /** Tampilkan tombol hapus hanya ikon Trash (cocok saat baris aksi padat) */
+  deleteIconOnly?: boolean;
   /** Aksi tambahan antara jumlah dan Hapus (mis. "Terbitkan"/"Draft"). */
   children?: ReactNode;
 }) {
+  const isIconOnly = deleteIconOnly || deleteLabel === "";
   return (
     <div
       role="region"
@@ -79,19 +83,29 @@ export function MobileSelectBar({
 
         {/* Satu baris: bila aksi melebihi lebar layar, area ini yang bergeser —
             tombol keluar tetap terlihat. `[&>button]:shrink-0` menjaga tombol
-            tidak menyusut jadi elipsis. */}
-        <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-2 overflow-x-auto scrollbar-hide [scrollbar-width:none] [&>button]:shrink-0 [&>select]:shrink-0">
-          {children}
-          {onDelete && (
-            <button
-              type="button"
-              onClick={onDelete}
-              disabled={count === 0}
-              className="min-h-11 whitespace-nowrap rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-            >
-              {deleteLabel}
-            </button>
-          )}
+            tidak menyusut jadi elipsis. `ml-auto` pada inner flex (bukan
+            justify-end pada overflow container) mencegah konten kiri terpotong
+            permanen dan tak bisa di-scroll. */}
+        <div className="flex min-w-0 flex-1 items-center overflow-x-auto scrollbar-hide [scrollbar-width:none]">
+          <div className="ml-auto flex items-center gap-2 [&>button]:shrink-0 [&>select]:shrink-0">
+            {children}
+            {onDelete && (
+              <button
+                type="button"
+                onClick={onDelete}
+                disabled={count === 0}
+                aria-label={deleteLabel || "Hapus item terpilih"}
+                title={deleteLabel || "Hapus item terpilih"}
+                className={`whitespace-nowrap rounded-xl border border-red-200 bg-white font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${
+                  isIconOnly
+                    ? "flex h-10 w-10 items-center justify-center p-0"
+                    : "min-h-11 px-3 py-2 text-sm"
+                }`}
+              >
+                {isIconOnly ? <Trash className="h-5 w-5" /> : deleteLabel}
+              </button>
+            )}
+          </div>
         </div>
 
         <button

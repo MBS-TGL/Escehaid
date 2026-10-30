@@ -29,6 +29,10 @@ type DropdownProps = {
   badge?: number;
   /** Tampilkan label dalam Capitalize Each Word (filter; bukan urutan). */
   capitalize?: boolean;
+  /** Mode ringkas: hanya tampilkan ikon (atau label pendek bila tanpa ikon) + indikator aktif */
+  compact?: boolean;
+  /** Title tooltip saat hover/fokus */
+  title?: string;
 };
 
 function Dropdown({
@@ -40,10 +44,14 @@ function Dropdown({
   icon,
   badge,
   capitalize = false,
+  compact = false,
+  title,
 }: DropdownProps) {
   const { open, toggle, triggerRef, menuRef, menuId, panelStyle, onMenuKeyDown } = useMenu({
     menuMinWidth: 180,
   });
+
+  const isFiltered = currentKey !== "all" && currentKey !== "";
 
   return (
     <div className="relative flex min-w-0 flex-1 items-center">
@@ -54,18 +62,39 @@ function Dropdown({
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
         aria-label={menuLabel}
+        title={title || menuLabel}
         onClick={toggle}
-        className="flex h-11 w-full min-w-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white pl-2.5 pr-2 text-sm font-semibold text-slate-700 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+        className={`flex h-11 w-full min-w-0 items-center justify-center rounded-xl border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${
+          isFiltered
+            ? "border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/5 text-[var(--brand-primary)] font-semibold shadow-xs"
+            : "border-slate-200 bg-white text-slate-700 hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)]"
+        } ${compact ? "px-1.5" : "gap-1.5 pl-2.5 pr-2 text-sm font-semibold"}`}
       >
-        {icon && <span className="shrink-0 text-slate-400">{icon}</span>}
-        <span className={`min-w-0 flex-1 truncate text-left${capitalize ? " capitalize" : ""}`}>{triggerLabel}</span>
-        {typeof badge === "number" && (
+        {icon && (
+          <span className={`shrink-0 ${isFiltered ? "text-[var(--brand-primary)]" : "text-slate-500"}`}>
+            {icon}
+          </span>
+        )}
+        {!compact && (
+          <span className={`min-w-0 flex-1 truncate text-left${capitalize ? " capitalize" : ""}`}>
+            {triggerLabel}
+          </span>
+        )}
+        {!compact && typeof badge === "number" && (
           <span className="shrink-0 rounded-full bg-[var(--brand-primary)] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white tabular-nums">
             {badge}
           </span>
         )}
+        {compact && isFiltered && (
+          <span
+            aria-hidden="true"
+            className="ml-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand-primary)]"
+          />
+        )}
         <CaretDown
-          className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`shrink-0 text-slate-400 transition-transform ${compact ? "h-3 w-3 ml-0.5" : "h-3.5 w-3.5"} ${
+            open ? "rotate-180" : ""
+          }`}
         />
       </button>
 
@@ -168,6 +197,7 @@ export function MobileFilterBar({
   filter2,
   filter3,
   filter4,
+  compactFilters = false,
   sort,
   action,
   selectMode = false,
@@ -185,6 +215,8 @@ export function MobileFilterBar({
     onChange: (key: string) => void;
     /** aria-label tombol & menu (mis. "Filter status"). */
     menuLabel?: string;
+    /** Ikon kiri tombol (opsional). */
+    icon?: ReactNode;
   };
   /**
    * Filter kedua (opsional) — mis. tipe kegiatan di halaman Kegiatan.
@@ -225,6 +257,11 @@ export function MobileFilterBar({
     /** Ikon kiri tombol (opsional). */
     icon?: ReactNode;
   };
+  /**
+   * Jadikan filter-filter dalam 1 baris grid kompak (khusus ikon + status aktif).
+   * Urut & Aksi ditaruh di baris tersendiri di bawahnya.
+   */
+  compactFilters?: boolean;
   sort?: {
     value: string;
     options: MobileSortOption[];
@@ -253,8 +290,10 @@ export function MobileFilterBar({
       currentKey={filter.value}
       options={filter.options}
       onChoose={filter.onChange}
+      icon={filter.icon}
       badge={currentFilter?.count}
       capitalize
+      compact={compactFilters}
     />
   );
   const filter2Dropdown = filter2 && (
@@ -267,6 +306,7 @@ export function MobileFilterBar({
       icon={filter2.icon}
       badge={currentFilter2?.count}
       capitalize
+      compact={compactFilters}
     />
   );
   const filter3Dropdown = filter3 && (
@@ -279,6 +319,7 @@ export function MobileFilterBar({
       icon={filter3.icon}
       badge={currentFilter3?.count}
       capitalize
+      compact={compactFilters}
     />
   );
   const filter4Dropdown = filter4 && (
@@ -291,6 +332,7 @@ export function MobileFilterBar({
       icon={filter4.icon}
       badge={currentFilter4?.count}
       capitalize
+      compact={compactFilters}
     />
   );
   const sortDropdown = sort && (
@@ -303,7 +345,7 @@ export function MobileFilterBar({
     />
   );
   const actionGroup = action && (
-    <div className={`flex shrink-0 items-center gap-2${stackedControls ? " ml-auto" : ""}`}>{action}</div>
+    <div className={`flex shrink-0 items-center gap-2${stackedControls || compactFilters ? " ml-auto" : ""}`}>{action}</div>
   );
 
   if (selectMode) {
@@ -343,10 +385,25 @@ export function MobileFilterBar({
         </div>
       </div>
 
-      {/* Baris kontrol — ≤3 kontrol: satu baris [filter · urut · aksi].
-          Ada filter tambahan: DUA baris [filter · filter2] / [filter3 · filter4]
-          lalu [urut · aksi], supaya tidak padat di layar 360px. */}
-      {stackedControls ? (
+      {/* Baris kontrol */}
+      {compactFilters ? (
+        <>
+          {/* Baris 2: 4 filter ikon dalam 1 baris */}
+          <div className="grid grid-cols-4 gap-2">
+            {filterDropdown}
+            {filter2Dropdown}
+            {filter3Dropdown}
+            {filter4Dropdown}
+          </div>
+          {/* Baris 3: Urutkan + Aksi (Pilih) */}
+          {(sortDropdown || actionGroup) && (
+            <div className="flex items-center gap-2">
+              {sortDropdown}
+              {actionGroup}
+            </div>
+          )}
+        </>
+      ) : stackedControls ? (
         <>
           <div className="flex items-center gap-2">
             {filterDropdown}

@@ -2,26 +2,32 @@
  * Utilitas template pesan SPMB (WhatsApp) — fungsi murni supaya mudah diuji.
  *
  * Template disimpan di tabel `spmb_message_templates` (migrasi 0015) dan
- * memakai placeholder `{nama}`, `{gelombang}`, `{nisn}`. Placeholder yang
- * tidak punya nilai diganti tanda "-" agar pesan tidak menyisakan kurung
- * kurawal yang membingungkan penerima.
+ * memakai placeholder `{nama}`, `{orang_tua}`, `{gelombang}`, `{jalur}`,
+ * `{program}`, `{nisn}`. Placeholder yang tidak punya nilai diganti tanda
+ * "-" agar pesan tidak menyisakan kurung kurawal yang membingungkan penerima.
  */
 import { waLink } from "./site-config";
 
 export interface SpmbTemplateVars {
   nama?: string | null;
+  orang_tua?: string | null;
   gelombang?: string | null;
+  jalur?: string | null;
+  program?: string | null;
   nisn?: string | null;
 }
 
-/** Isi placeholder `{nama}` / `{gelombang}` / `{nisn}` pada template. */
+/** Isi placeholder `{nama}` / `{orang_tua}` / `{gelombang}` / `{jalur}` / `{program}` / `{nisn}` pada template. */
 export function fillSpmbTemplate(body: string, vars: SpmbTemplateVars): string {
   const values: Record<keyof SpmbTemplateVars, string> = {
     nama: (vars.nama ?? "").trim() || "-",
+    orang_tua: (vars.orang_tua ?? "").trim() || "-",
     gelombang: (vars.gelombang ?? "").trim() || "-",
+    jalur: (vars.jalur ?? "").trim() || "-",
+    program: (vars.program ?? "").trim() || "-",
     nisn: (vars.nisn ?? "").trim() || "-",
   };
-  return body.replace(/\{(nama|gelombang|nisn)\}/g, (_m, key: keyof SpmbTemplateVars) => values[key]);
+  return body.replace(/\{(nama|orang_tua|gelombang|jalur|program|nisn)\}/g, (_m, key: keyof SpmbTemplateVars) => values[key]);
 }
 
 /**
