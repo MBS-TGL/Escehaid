@@ -2117,11 +2117,16 @@ export default function AdminSPMBPage() {
                                 Manual
                               </span>
                             )}
-                            {item.documents?.input_source === "import" && (
-                              <span className="inline-block rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500" title="Diimpor massal dari ekspor Google Form">
-                                Impor
-                              </span>
-                            )}
+                          {item.documents?.input_source === "import" && (
+                            <span className="ml-1.5 inline-block rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-500" title="Diimpor massal dari ekspor Google Form">
+                              Impor
+                            </span>
+                          )}
+                          {item.documents?.program && (
+                            <span title="Pilihan program" className="ml-1.5 inline-block rounded-md border border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/10 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-[var(--brand-primary)]">
+                              {item.documents.program}
+                            </span>
+                          )}
                             {item.documents?.program && (
                               <span
                                 title="Pilihan program"
@@ -3083,6 +3088,11 @@ function RegistrationMobileRow({
             <>
               {item.documents?.input_source === "admin" && <QuietBadge>Manual</QuietBadge>}
               {item.documents?.input_source === "import" && <QuietBadge>Impor</QuietBadge>}
+              {item.documents?.program && (
+                <QuietBadge className="bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]" title="Pilihan program">
+                  {item.documents.program}
+                </QuietBadge>
+              )}
               {item.documents?.program && <QuietBadge>{item.documents.program}</QuietBadge>}
               {docSummary && docSummary.total > 0 && <QuietBadge>Berkas {docSummary.verified}/{SPMB_DOCUMENT_KEYS.length}</QuietBadge>}
               {late && <QuietBadge>Lewat {PENDING_SLA_DAYS} hari</QuietBadge>}

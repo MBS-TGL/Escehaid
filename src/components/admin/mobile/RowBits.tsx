@@ -168,12 +168,15 @@ export function MobileThumb({
 export function QuietBadge({
   children,
   className = "",
+  title,
 }: {
   children: ReactNode;
   className?: string;
+  title?: string;
 }) {
   return (
     <span
+      title={title}
       className={`inline-flex h-5 items-center rounded-md bg-slate-200/70 px-1.5 text-[11px] font-semibold leading-none text-slate-600 ${className}`}
     >
       {children}
