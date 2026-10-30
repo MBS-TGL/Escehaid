@@ -47,7 +47,8 @@ import { formatRelativeTime, daysSince, PENDING_SLA_DAYS } from "@/lib/admin-dis
 import type { SpmbDocumentKey, SpmbDocumentVerification, SpmbRegistration, SpmbWave, SpmbFormField, SpmbFieldType } from "@/lib/supabase";
 import type { SpmbMessageTemplate } from "@/lib/queries";
 import type { RegistrationPath } from "@/lib/queries";
-import { SPMB_DOCUMENT_KEYS, SPMB_DOCUMENT_LABELS } from "@/lib/spmb-registration";
+import { SPMB_DOCUMENT_KEYS, SPMB_DOCUMENT_LABELS, SPMB_PROGRAMS } from "@/lib/spmb-registration";
+import { filterSpmbRegistrations, SPMB_NO_PROGRAM } from "@/lib/spmb-filter";
 import { fillSpmbTemplate, spmbWhatsappHref } from "@/lib/spmb-message";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -196,6 +197,8 @@ export default function AdminSPMBPage() {
   const permSensitive = can("spmb:view_sensitive");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("all");
+  const [pathFilter, setPathFilter] = useState<string>("all");
+  const [programFilter, setProgramFilter] = useState<string>("all");
   const [data, setData] = useState<SpmbRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -712,28 +715,11 @@ export default function AdminSPMBPage() {
 
   // Filtered + Sorted
   const filtered = useMemo(() => {
-    const result = data.filter((item) => {
-      const q = search.toLowerCase();
-      // Jawaban pertanyaan tambahan ikut dicari (kunci cf_<id> di documents).
-      const customText = item.documents
-        ? Object.keys(item.documents)
-            .filter((k) => k.startsWith("cf_"))
-            .map((k) => item.documents?.[k] || "")
-            .join(" ")
-            .toLowerCase()
-        : "";
-      const nisn = (item.documents?.nisn || "").toLowerCase();
-      const nik = (item.documents?.nik || "").toLowerCase();
-      const matchSearch =
-        item.full_name.toLowerCase().includes(q) ||
-        (item.previous_school && item.previous_school.toLowerCase().includes(q)) ||
-        (item.email && item.email.toLowerCase().includes(q)) ||
-        (item.phone && item.phone.toLowerCase().includes(q)) ||
-        nisn.includes(q) ||
-        nik.includes(q) ||
-        customText.includes(q);
-      const matchFilter = filter === "all" || item.status === filter;
-      return matchSearch && matchFilter;
+    const result = filterSpmbRegistrations(data, {
+      search,
+      status: filter,
+      path: pathFilter,
+      program: programFilter,
     });
 
     result.sort((a, b) => {
@@ -746,7 +732,7 @@ export default function AdminSPMBPage() {
     });
 
     return result;
-  }, [data, search, filter, sortField, sortDir]);
+  }, [data, search, filter, pathFilter, programFilter, sortField, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
@@ -758,12 +744,49 @@ export default function AdminSPMBPage() {
     rejected: data.filter((d) => d.status === "rejected").length,
   };
 
-  // Opsi dropdown status — dipakai toolbar desktop & mobile agar seragam.
+  // Opsi dropdown filter — dipakai toolbar desktop & mobile agar seragam.
+  // Label "Semua ..." sengaja menyebut dimensinya supaya tiga pill tidak
+  // sama-sama terbaca "Semua".
   const statusOptions = [
-    { key: "all", label: "Semua", count: stats.total },
+    { key: "all", label: "Semua status", count: stats.total },
     { key: "pending", label: "Menunggu", count: stats.pending },
     { key: "accepted", label: "Diterima", count: stats.accepted },
     { key: "rejected", label: "Ditolak", count: stats.rejected },
+  ];
+
+  const pathOptions = [
+    { key: "all", label: "Semua jalur", count: data.length },
+    ...Object.entries(pathLabels).map(([key, label]) => ({
+      key,
+      label,
+      count: data.filter((d) => d.registration_path === key).length,
+    })),
+  ];
+
+  const programValues = [
+    ...SPMB_PROGRAMS,
+    ...Array.from(
+      new Set(
+        data
+          .map((d) => d.documents?.program)
+          .filter((p): p is string => !!p && !SPMB_PROGRAMS.includes(p))
+      )
+    ),
+  ];
+  const programOptions = [
+    { key: "all", label: "Semua program", count: data.length },
+    ...programValues.map((program) => ({
+      key: program,
+      label: program,
+      count: data.filter((d) => d.documents?.program === program).length,
+    })),
+    ...(data.some((d) => !d.documents?.program)
+      ? [{
+          key: SPMB_NO_PROGRAM,
+          label: "Tanpa program",
+          count: data.filter((d) => !d.documents?.program).length,
+        }]
+      : []),
   ];
 
   const allVisibleSelected = paginated.length > 0 && paginated.every((item) => selectedIds.has(item.id));
@@ -1976,8 +1999,8 @@ export default function AdminSPMBPage() {
           status sebagai pill dropdown berjumlah di kanan. */}
       <div className="hidden md:block">
         <FilterBar
-          placeholder="Cari nama, NISN/NIK, sekolah, email…"
-          searchLabel="Cari nama, NISN/NIK, sekolah, email, atau telepon"
+          placeholder="Cari nama, NISN/NIK, sekolah, program, jalur…"
+          searchLabel="Cari nama, NISN/NIK, sekolah, program, jalur, email, atau telepon"
           query={search}
           onQueryChange={(v) => { setSearch(v); setPage(1); }}
           filters={[
@@ -1987,20 +2010,45 @@ export default function AdminSPMBPage() {
               onChange: (k) => { setFilter(k); setPage(1); setSelectedIds(new Set()); },
               menuLabel: "Filter status",
             },
+            {
+              value: pathFilter,
+              options: pathOptions,
+              onChange: (k) => { setPathFilter(k); setPage(1); setSelectedIds(new Set()); },
+              menuLabel: "Filter jalur",
+            },
+            {
+              value: programFilter,
+              options: programOptions,
+              onChange: (k) => { setProgramFilter(k); setPage(1); setSelectedIds(new Set()); },
+              menuLabel: "Filter program",
+            },
           ]}
         />
       </div>
 
       {/* Toolbar mobile (<md): pencarian + filter (dengan jumlah) + urut + Pilih */}
       <MobileFilterBar
-        placeholder="Cari nama, NISN/NIK, sekolah, email…"
-        searchLabel="Cari nama, NISN/NIK, sekolah, email, atau telepon"
+        placeholder="Cari nama, NISN/NIK, sekolah, program, jalur…"
+        searchLabel="Cari nama, NISN/NIK, sekolah, program, jalur, email, atau telepon"
         query={search}
         onQueryChange={(v) => { setSearch(v); setPage(1); }}
         filter={{
           value: filter,
           options: statusOptions,
           onChange: (k) => { setFilter(k); setPage(1); setSelectedIds(new Set()); },
+          menuLabel: "Filter status",
+        }}
+        filter2={{
+          value: pathFilter,
+          options: pathOptions,
+          onChange: (k) => { setPathFilter(k); setPage(1); setSelectedIds(new Set()); },
+          menuLabel: "Filter jalur",
+        }}
+        filter3={{
+          value: programFilter,
+          options: programOptions,
+          onChange: (k) => { setProgramFilter(k); setPage(1); setSelectedIds(new Set()); },
+          menuLabel: "Filter program",
         }}
         sort={{
           value: `${sortField}:${sortDir}`,
