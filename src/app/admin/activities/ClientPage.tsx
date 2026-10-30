@@ -257,7 +257,7 @@ export default function AdminActivitiesPage() {
   // (MobileFilterBar) agar label & jumlah di kedua versi selalu seragam.
   const statusOptions = useMemo(
     () => [
-      { key: "all", label: "Semua", count: activities.length },
+      { key: "all", label: "Semua Status", count: activities.length },
       { key: "published", label: "Diterbitkan", count: stats.published },
       { key: "draft", label: "Draft", count: stats.draft },
     ],

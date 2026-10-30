@@ -757,14 +757,14 @@ export default function AdminSPMBPage() {
   // Label "Semua ..." sengaja menyebut dimensinya supaya tiga pill tidak
   // sama-sama terbaca "Semua".
   const statusOptions = [
-    { key: "all", label: "Semua status", count: stats.total },
+    { key: "all", label: "Semua Status", count: stats.total },
     { key: "pending", label: "Menunggu", count: stats.pending },
     { key: "accepted", label: "Diterima", count: stats.accepted },
     { key: "rejected", label: "Ditolak", count: stats.rejected },
   ];
 
   const pathOptions = [
-    { key: "all", label: "Semua jalur", count: data.length },
+    { key: "all", label: "Semua Jalur", count: data.length },
     ...Object.entries(pathLabels).map(([key, label]) => ({
       key,
       label,
@@ -783,7 +783,7 @@ export default function AdminSPMBPage() {
     ),
   ];
   const programOptions = [
-    { key: "all", label: "Semua program", count: data.length },
+    { key: "all", label: "Semua Program", count: data.length },
     ...programValues.map((program) => ({
       key: program,
       label: program,
@@ -792,14 +792,14 @@ export default function AdminSPMBPage() {
     ...(data.some((d) => !d.documents?.program)
       ? [{
           key: SPMB_NO_PROGRAM,
-          label: "Tanpa program",
+          label: "Tanpa Program",
           count: data.filter((d) => !d.documents?.program).length,
         }]
       : []),
   ];
 
   const genderOptions = [
-    { key: "all", label: "Semua jenis kelamin", count: data.length },
+    { key: "all", label: "Semua Jenis Kelamin", count: data.length },
     { key: "L", label: "Putra", count: data.filter((d) => d.gender === "L").length },
     { key: "P", label: "Putri", count: data.filter((d) => d.gender === "P").length },
   ];

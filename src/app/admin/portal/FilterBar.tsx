@@ -7,7 +7,7 @@ export type PortalFilter = "all" | "active" | "soon" | "inactive";
 // Label mengikuti tiga status di StatusControl; jumlah tiga chip terakhir
 // (Tayang + Segera Hadir + Disembunyikan) selalu berjumlah sama dengan Total.
 const CHIPS: { key: PortalFilter; label: string }[] = [
-  { key: "all", label: "Semua" },
+  { key: "all", label: "Semua Status" },
   { key: "active", label: "Tayang" },
   { key: "soon", label: "Segera Hadir" },
   { key: "inactive", label: "Disembunyikan" },

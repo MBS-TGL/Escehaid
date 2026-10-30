@@ -1018,7 +1018,7 @@ export default function AdminPortalPage() {
   // Opsi filter mobile (MobileFilterBar) — label & jumlah dari sumber yang
   // sama dengan toolbar desktop agar tak pernah beda.
   const CHIPS_FILTER: { key: string; label: string; count: number }[] = [
-    { key: "all", label: "Semua", count: counts.all },
+    { key: "all", label: "Semua Status", count: counts.all },
     { key: "active", label: "Tayang", count: counts.active },
     { key: "soon", label: "Segera Hadir", count: counts.soon },
     { key: "inactive", label: "Disembunyikan", count: counts.inactive },

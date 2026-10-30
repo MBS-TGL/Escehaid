@@ -390,7 +390,7 @@ export default function AdminBeritaPage() {
 
   // Opsi dropdown status — dipakai toolbar desktop & mobile agar seragam.
   const statusOptions = [
-    { key: "all", label: "Semua", count: news.length },
+    { key: "all", label: "Semua Status", count: news.length },
     { key: "published", label: "Diterbitkan", count: stats.published },
     { key: "draft", label: "Draft", count: stats.draft },
   ];

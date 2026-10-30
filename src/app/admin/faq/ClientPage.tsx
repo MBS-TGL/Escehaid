@@ -124,7 +124,7 @@ export default function FaqClientPage() {
     label: SCOPE_META[k].label,
   }));
   const statusOptions = [
-    { key: "all", label: "Semua", count: items.length },
+    { key: "all", label: "Semua Status", count: items.length },
     { key: "active", label: "Aktif", count: activeCount },
     { key: "inactive", label: "Nonaktif", count: inactiveCount },
   ];

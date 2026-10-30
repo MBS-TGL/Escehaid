@@ -272,7 +272,7 @@ export default function AdminAchievementsPage() {
     {
       value: filter,
       options: [
-        { key: "all", label: "Semua", count: achievements.length },
+        { key: "all", label: "Semua Kategori", count: achievements.length },
         ...categories.map((cat) => ({
           key: cat,
           label: catMeta(cat).label,

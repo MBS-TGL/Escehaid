@@ -166,7 +166,7 @@ export default function AdminGalleryPage() {
     {
       value: typeFilter,
       options: [
-        { key: "all", label: "Semua", count: gallery.length },
+        { key: "all", label: "Semua Tipe", count: gallery.length },
         { key: "foto", label: "Foto", count: stats.foto },
         { key: "video", label: "Video", count: stats.video },
       ],

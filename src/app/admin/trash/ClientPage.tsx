@@ -12,7 +12,8 @@ import {
   ArrowUUpLeft,
   XCircle,
 } from "@/components/Icons";
-import { DesktopPagination, MobilePagination } from "@/components/admin/mobile";
+import { DesktopPagination, MobileFilterBar, MobilePagination } from "@/components/admin/mobile";
+import { FilterBar } from "@/components/admin/FilterBar";
 
 // PAGE_SIZE moved to state
 const RETENTION_DAYS = 30;
@@ -84,6 +85,16 @@ export default function TrashClientPage() {
   const modules = useMemo(
     () => ["all", ...Array.from(new Set(items.map((i) => i.table)))],
     [items]
+  );
+
+  const moduleOptions = useMemo(
+    () =>
+      modules.map((m) => ({
+        key: m,
+        label: m === "all" ? "Semua Modul" : items.find((i) => i.table === m)?.label ?? m,
+        count: m === "all" ? items.length : items.filter((i) => i.table === m).length,
+      })),
+    [modules, items]
   );
 
   const filtered = useMemo(() => {
@@ -212,27 +223,37 @@ export default function TrashClientPage() {
         </div>
       </div>
 
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <input
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+      {/* Filter + pencarian memakai komponen bersama agar gaya, label
+          (Capitalize Each Word), jumlah opsi, dan versi mobile konsisten
+          dengan halaman admin lain. */}
+      <div className="hidden md:block">
+        <FilterBar
           placeholder="Cari di sampah…"
-          className="w-full max-w-md rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:border-[var(--brand-primary)] focus:outline-none"
+          searchLabel="Cari di sampah"
+          query={search}
+          onQueryChange={(v) => { setSearch(v); setPage(1); }}
+          filters={[
+            {
+              value: moduleFilter,
+              options: moduleOptions,
+              onChange: (k) => { setModuleFilter(k); setPage(1); },
+              menuLabel: "Filter modul",
+            },
+          ]}
         />
-        <select
-          value={moduleFilter}
-          onChange={(e) => { setModuleFilter(e.target.value); setPage(1); }}
-          aria-label="Filter modul"
-          className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700"
-        >
-          {modules.map((m) => (
-            <option key={m} value={m}>
-              {m === "all" ? "Semua modul" : items.find((i) => i.table === m)?.label ?? m}
-            </option>
-          ))}
-        </select>
-        <span className="text-xs text-slate-400 sm:ml-auto">{filtered.length} item</span>
       </div>
+      <MobileFilterBar
+        placeholder="Cari di sampah…"
+        searchLabel="Cari di sampah"
+        query={search}
+        onQueryChange={(v) => { setSearch(v); setPage(1); }}
+        filter={{
+          value: moduleFilter,
+          options: moduleOptions,
+          onChange: (k) => { setModuleFilter(k); setPage(1); },
+          menuLabel: "Filter modul",
+        }}
+      />
 
       {canSelect && paged.length > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5">

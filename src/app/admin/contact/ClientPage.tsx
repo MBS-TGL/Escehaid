@@ -147,7 +147,7 @@ export default function AdminContactPage() {
 
   // Opsi dropdown status — dipakai toolbar desktop & mobile agar seragam.
   const statusOptions = [
-    { key: "all", label: "Semua", count: stats.total },
+    { key: "all", label: "Semua Status", count: stats.total },
     { key: "unread", label: "Belum Dibaca", count: stats.unread },
     { key: "read", label: "Sudah Dibaca", count: stats.read },
   ];

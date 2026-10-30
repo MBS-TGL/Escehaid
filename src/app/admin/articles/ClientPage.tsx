@@ -394,7 +394,7 @@ export default function AdminArticlesPage() {
 
   // Opsi dropdown status — dipakai toolbar desktop & mobile agar seragam.
   const statusOptions = [
-    { key: "all", label: "Semua", count: articles.length },
+    { key: "all", label: "Semua Status", count: articles.length },
     { key: "published", label: "Diterbitkan", count: stats.published },
     { key: "draft", label: "Draft", count: stats.draft },
   ];

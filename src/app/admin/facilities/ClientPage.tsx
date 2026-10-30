@@ -218,7 +218,7 @@ export default function AdminFacilitiesPage() {
 
   // Opsi dropdown status — dipakai toolbar desktop & mobile agar seragam.
   const statusOptions = [
-    { key: "all", label: "Semua", count: stats.total },
+    { key: "all", label: "Semua Status", count: stats.total },
     { key: "active", label: "Aktif", count: stats.active },
     { key: "inactive", label: "Nonaktif", count: stats.inactive },
   ];

@@ -30,7 +30,7 @@ const ENTITY_OPTIONS = Object.entries(AUDIT_ENTITY_LABELS).map(([value, label]) 
 }));
 
 const ACTION_FILTERS: { value: AuditAction | ""; label: string }[] = [
-  { value: "", label: "Semua aksi" },
+  { value: "", label: "Semua Aksi" },
   { value: "create", label: AUDIT_ACTION_LABELS.create },
   { value: "update", label: AUDIT_ACTION_LABELS.update },
   { value: "delete", label: AUDIT_ACTION_LABELS.delete },
@@ -314,7 +314,7 @@ function AdminLogsInner() {
             filter2={{
               value: entity,
               options: [
-                { key: "", label: "Semua objek" },
+                { key: "", label: "Semua Objek" },
                 ...ENTITY_OPTIONS.map((o) => ({ key: o.value, label: o.label })),
               ],
               onChange: (k) => applyFilter(() => setEntity(k)),
@@ -336,7 +336,7 @@ function AdminLogsInner() {
                 {
                   value: entity,
                   options: [
-                    { key: "", label: "Semua objek" },
+                    { key: "", label: "Semua Objek" },
                     ...ENTITY_OPTIONS.map((o) => ({ key: o.value, label: o.label })),
                   ],
                   onChange: (k) => applyFilter(() => setEntity(k)),
