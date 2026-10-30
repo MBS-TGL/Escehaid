@@ -2120,11 +2120,6 @@ export default function AdminSPMBPage() {
                               Impor
                             </span>
                           )}
-                          {item.documents?.program && (
-                            <span title="Pilihan program" className="ml-1.5 inline-block rounded-md border border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/10 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-[var(--brand-primary)]">
-                              {item.documents.program}
-                            </span>
-                          )}
                             {item.documents?.program && (
                               <span
                                 title="Pilihan program"
@@ -3091,7 +3086,6 @@ function RegistrationMobileRow({
                   {item.documents.program}
                 </QuietBadge>
               )}
-              {item.documents?.program && <QuietBadge>{item.documents.program}</QuietBadge>}
               {docSummary && docSummary.total > 0 && <QuietBadge>Berkas {docSummary.verified}/{SPMB_DOCUMENT_KEYS.length}</QuietBadge>}
               {late && <QuietBadge>Lewat {PENDING_SLA_DAYS} hari</QuietBadge>}
               {item.status === "rejected" && <QuietBadge>Ditolak</QuietBadge>}
