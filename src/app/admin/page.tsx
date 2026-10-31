@@ -24,6 +24,7 @@ import {
   Plus,
   Eye,
   Heartbeat,
+  ChartLine,
 } from "@/components/Icons";
 import { StatCard, StatCardGroup, statGridClass } from "@/components/ui";
 import { getBackupManifest } from "@/lib/queries/backup";
@@ -89,6 +90,7 @@ const spmbStatusLabel: Record<string, string> = {
 const quickActions: { label: string; href: string; icon: IconType; roles: string[]; mobile: boolean }[] = [
   { label: "Lihat website", href: "/", icon: Eye, roles: [...CONTENT_ROLES, "teacher", "student"], mobile: true },
   { label: "Tulis berita", href: "/admin/news", icon: Plus, roles: CONTENT_ROLES, mobile: true },
+  { label: "Analitik situs", href: "/admin/analytics", icon: ChartLine, roles: ADMIN_ROLES, mobile: true },
   // Sudah ada di bottom nav (HP) & sidebar (desktop): disembunyikan di HP.
   // "Buka pendaftar" & "Lihat pesan" dihapus — duplikat navigasi sidebar.
   { label: "Tambah pengumuman", href: "/admin/announcements", icon: Bell, roles: CONTENT_ROLES, mobile: false },
@@ -830,6 +832,12 @@ async function SystemStatusCard({ supabase }: { supabase: Sb }) {
       tone: ciTone,
       value: ci ? `${ci.name} · ${ci.conclusion ?? ci.status}` : "tidak tersedia",
       href: ci?.url,
+    },
+    {
+      label: "Trafik Publik",
+      tone: "ok",
+      value: "beacon aktif (tanpa cookie)",
+      href: "/admin/analytics",
     },
   ];
 

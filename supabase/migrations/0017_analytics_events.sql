@@ -49,6 +49,94 @@ end $$;
 -- membaca lewat fungsi agregat SECURITY DEFINER.
 grant select on public.analytics_events to authenticated;
 
+-- ── Fungsi agregat (SECURITY DEFINER + cek izin analitik:read) ───────────────
+
+-- Deret harian jumlah page-view + host perujuk terpopuler + kelas perangkat.
+-- Panggilan satu request → dashboard analitik tanpa round-trip ganda.
+
+create or replace function public.admin_analytics_summary(
+  p_from timestamptz,
+  p_to timestamptz
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result jsonb;
+begin
+  if not public.has_permission(auth.uid(), 'analitik:read') then
+    return null;
+  end if;
+
+  select jsonb_build_object(
+    'total_views', (
+      select count(*) from analytics_events e
+       where e.created_at >= p_from and e.created_at < p_to
+    ),
+    'daily', (
+      select coalesce(jsonb_agg(jsonb_build_object(
+        'day', d.day, 'views', coalesce(c.views, 0)
+      ) order by d.day), '[]'::jsonb)
+      from (
+        select generate_series(
+          (p_from at time zone 'Asia/Jakarta')::date,
+          ((p_to at time zone 'Asia/Jakarta')::date)::timestamp,
+          interval '1 day'
+        ) as day
+      ) d
+      left join (
+        select (created_at at time zone 'Asia/Jakarta')::date as day,
+               count(*)::int as views
+          from analytics_events
+         where created_at >= p_from and created_at < p_to
+         group by 1
+      ) c on c.day = d.day
+    ),
+    'top_paths', (
+      select coalesce(jsonb_agg(jsonb_build_object('path', path, 'views', views)), '[]'::jsonb)
+      from (
+        select path, count(*)::int as views
+          from analytics_events
+         where created_at >= p_from and created_at < p_to
+         group by path
+         order by views desc, path asc
+         limit 12
+      ) t
+    ),
+    'top_referrers', (
+      select coalesce(jsonb_agg(jsonb_build_object('host', host, 'views', views)), '[]'::jsonb)
+      from (
+        select referrer_host as host, count(*)::int as views
+          from analytics_events
+         where created_at >= p_from and created_at < p_to
+           and referrer_host is not null
+         group by referrer_host
+         order by views desc
+         limit 8
+      ) r
+    ),
+    'devices', (
+      select coalesce(jsonb_agg(jsonb_build_object('device_class', device_class, 'views', views)), '[]'::jsonb)
+      from (
+        select device_class, count(*)::int as views
+          from analytics_events
+         where created_at >= p_from and created_at < p_to
+         group by device_class
+      ) dv
+    )
+  ) into result;
+
+  return result;
+end;
+$$;
+
+revoke all on function public.admin_analytics_summary(timestamptz, timestamptz) from public;
+-- Administrator panel membaca lewat sesi cookie (PostgREST RPC).
+grant execute on function public.admin_analytics_summary(timestamptz, timestamptz) to authenticated;
+
 -- ── VERIFIKASI ──────────────────────────────────────────────────────────────
 --   select policyname from pg_policies where tablename = 'analytics_events';
 --   select indexname from pg_indexes where tablename = 'analytics_events';
+--   \df+ admin_analytics_summary

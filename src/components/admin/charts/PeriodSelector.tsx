@@ -8,12 +8,14 @@ import Link from "next/link";
 export const PERIODS = [7, 30, 90] as const;
 export type PeriodDays = (typeof PERIODS)[number];
 
-export function isPeriod(value: string | undefined): boolean {
-  return (PERIODS as readonly unknown[]).includes(value ?? "");
+export function isPeriod(value: unknown): value is PeriodDays {
+  const num = typeof value === "number" ? value : Number(value);
+  return (PERIODS as readonly number[]).includes(num);
 }
 
 export function parsePeriod(value: string | undefined): PeriodDays {
-  return isPeriod(value) ? (Number(value) as PeriodDays) : 30;
+  const num = Number(value);
+  return isPeriod(num) ? num : 30;
 }
 
 /** Link selector: `currentHref` tetap dipertahankan (dgn path asal), hanya `p` diganti. */

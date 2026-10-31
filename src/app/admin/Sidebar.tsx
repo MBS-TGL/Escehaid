@@ -114,6 +114,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "Cadangan", href: "/admin/backup", icon: Database, perm: "backup:read" },
       { label: "Diagnostik", href: "/admin/diagnostics", icon: Heartbeat, perm: "diagnostik:read" },
+      { label: "Analitik", href: "/admin/analytics", icon: ChartLine, perm: "analitik:read" },
     ],
   },
   {

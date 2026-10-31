@@ -6,7 +6,9 @@ import { ToastProvider } from "@/components/ui/Toast";
 import PublicShell from "@/components/PublicShell";
 import Footer from "@/components/Footer";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import AnalyticsBeacon from "@/components/AnalyticsBeacon";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
+import { isFeatureEnabled } from "@/lib/flags";
 import { DEFAULT_THEME } from "@/lib/settings/theme";
 import { getSchoolProfile } from "@/lib/queries/profile";
 import { getActiveAnnouncements } from "@/lib/queries/announcements";
@@ -112,10 +114,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Dibagi dengan pembacaan di dalam getSiteSettings (React `cache`) — tetap
   // satu query profil per request. Diteruskan ke PublicShell → Footer
   // (nomor WhatsApp panitia SPMB + badge akreditasi).
-  const [settings, profile, rawAnnouncements] = await Promise.all([
+  const [settings, profile, rawAnnouncements, analyticsEnabled] = await Promise.all([
     getSiteSettings(),
     getSchoolProfile(),
     getActiveAnnouncements(),
+    // Beacon analitik tertutup flag: matikan = client component tidak masuk DOM.
+    isFeatureEnabled("admin_analytics"),
   ]);
   // Announcements & footer disiapkan di sini (server) — PublicShell tetap
   // client, tetapi keduanya tiba sebagai slot/prop siap render.
@@ -268,6 +272,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           </PublicShell>
         </ToastProvider>
         <ServiceWorkerRegister />
+        {analyticsEnabled && <AnalyticsBeacon />}
       </body>
     </html>
   );
