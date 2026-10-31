@@ -26,7 +26,7 @@ interface RuleItem {
   comparator: "gt" | "gte" | "lt" | "lte" | "eq" | "neq";
   threshold: number;
   enabled: boolean;
-  channel: "webhook" | "whatsapp";
+  channel: "webhook" | "whatsapp" | "telegram";
   recipients: string[];
   cooldown_minutes: number;
   created_at: string;
@@ -61,7 +61,7 @@ export default function AutomationClientPage({
   const [metricKey, setMetricKey] = useState(ALERT_METRIC_CATALOG[0]?.key || "");
   const [comparator, setComparator] = useState<RuleItem["comparator"]>("gte");
   const [threshold, setThreshold] = useState(1);
-  const [channel, setChannel] = useState<"webhook" | "whatsapp">("webhook");
+  const [channel, setChannel] = useState<"webhook" | "whatsapp" | "telegram">("webhook");
   const [recipientsStr, setRecipientsStr] = useState("");
   const [cooldown, setCooldown] = useState(60);
   const [saving, setSaving] = useState(false);
@@ -109,7 +109,7 @@ export default function AutomationClientPage({
     await deleteAlertRuleAction(id);
   };
 
-  const handleTestSend = async (targetChannel: "webhook" | "whatsapp") => {
+  const handleTestSend = async (targetChannel: "webhook" | "whatsapp" | "telegram") => {
     setTesting(true);
     const res = await testAlertRuleAction(targetChannel);
     setTesting(false);
@@ -143,6 +143,16 @@ export default function AutomationClientPage({
           >
             <Globe className="h-3.5 w-3.5 text-blue-500" />
             {testing ? "Menguji…" : "Tes Webhook"}
+          </button>
+
+          <button
+            type="button"
+            disabled={testing}
+            onClick={() => handleTestSend("telegram")}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+          >
+            <Envelope className="h-3.5 w-3.5 text-sky-500" />
+            {testing ? "Menguji…" : "Tes Telegram"}
           </button>
 
           <button
@@ -190,10 +200,16 @@ export default function AutomationClientPage({
                         className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
                           rule.channel === "whatsapp"
                             ? "bg-emerald-50 text-emerald-700"
-                            : "bg-blue-50 text-blue-700"
+                            : rule.channel === "telegram"
+                              ? "bg-sky-50 text-sky-700"
+                              : "bg-blue-50 text-blue-700"
                         }`}
                       >
-                        {rule.channel === "whatsapp" ? "WhatsApp (Fonnte)" : "Webhook"}
+                        {rule.channel === "whatsapp"
+                          ? "WhatsApp (Fonnte)"
+                          : rule.channel === "telegram"
+                            ? "Telegram Bot"
+                            : "Webhook"}
                       </span>
                     </div>
 
@@ -363,11 +379,12 @@ export default function AutomationClientPage({
                 <select
                   id="channel-select"
                   value={channel}
-                  onChange={(e) => setChannel(e.target.value as "webhook" | "whatsapp")}
+                  onChange={(e) => setChannel(e.target.value as "webhook" | "whatsapp" | "telegram")}
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none"
                 >
                   <option value="webhook">Webhook (Discord/Slack)</option>
                   <option value="whatsapp">WhatsApp (Fonnte API)</option>
+                  <option value="telegram">Telegram (Bot API)</option>
                 </select>
               </div>
 
@@ -385,17 +402,19 @@ export default function AutomationClientPage({
               </div>
             </div>
 
-            {channel === "whatsapp" && (
+            {(channel === "whatsapp" || channel === "telegram") && (
               <div>
                 <label htmlFor="recipients-input" className="block font-semibold text-slate-700">
-                  Nomor Tujuan WhatsApp (Pisahkan koma)
+                  {channel === "whatsapp"
+                    ? "Nomor Tujuan WhatsApp (Pisahkan koma)"
+                    : "Target Chat ID Telegram (Kosongkan jika memakai default env)"}
                 </label>
                 <input
                   id="recipients-input"
                   type="text"
                   value={recipientsStr}
                   onChange={(e) => setRecipientsStr(e.target.value)}
-                  placeholder="Mis. 08123456789, 08523456789"
+                  placeholder={channel === "whatsapp" ? "Mis. 08123456789, 08523456789" : "Mis. -100123456789 (ID Grup) atau 12345678"}
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none"
                 />
               </div>

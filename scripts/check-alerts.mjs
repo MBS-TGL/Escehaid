@@ -117,6 +117,36 @@ async function main() {
 
     const alertMessage = `Aturan "${rule.name}" terpicu dengan nilai teramati ${observedValue} (${rule.comparator} ${rule.threshold}).`;
 
+    // Kirim pesan sesuai kanal yang dipilih
+    let deliveryStatus = "sent";
+    let deliveryError = "";
+
+    try {
+      if (rule.channel === "telegram" && process.env.TELEGRAM_BOT_TOKEN) {
+        const chatId = rule.recipients?.[0] || process.env.TELEGRAM_CHAT_ID;
+        if (chatId) {
+          await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: chatId,
+              text: `🚨 <b>[ALERT ESCEHA] ${rule.name}</b>\n\n${alertMessage}`,
+              parse_mode: "HTML",
+            }),
+          });
+        }
+      } else if (rule.channel === "webhook" && process.env.ALERT_WEBHOOK_URL) {
+        await fetch(process.env.ALERT_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: `🚨 **[ALERT ESCEHA] ${rule.name}**\n${alertMessage}` }),
+        });
+      }
+    } catch (err) {
+      deliveryStatus = "failed";
+      deliveryError = err instanceof Error ? err.message : String(err);
+    }
+
     // Catat ke alert_events
     await supabase.from("alert_events").insert({
       rule_id: rule.id,
@@ -124,7 +154,8 @@ async function main() {
       metric_key: rule.metric_key,
       observed_value: observedValue,
       message: alertMessage,
-      delivery_status: "sent",
+      delivery_status: deliveryStatus,
+      delivery_error: deliveryError,
       delivered_at: new Date().toISOString(),
     });
   }

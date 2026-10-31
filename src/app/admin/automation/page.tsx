@@ -28,7 +28,7 @@ export default async function AutomationPage() {
     comparator: "gt" | "gte" | "lt" | "lte" | "eq" | "neq";
     threshold: number;
     enabled: boolean;
-    channel: "webhook" | "whatsapp";
+    channel: "webhook" | "whatsapp" | "telegram";
     recipients: string[];
     cooldown_minutes: number;
     created_at: string;

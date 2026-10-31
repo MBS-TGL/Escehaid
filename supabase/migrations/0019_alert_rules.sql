@@ -20,7 +20,7 @@ create table if not exists public.alert_rules (
   comparator text not null check (comparator in ('gt', 'gte', 'lt', 'lte', 'eq', 'neq')),
   threshold numeric not null default 0,
   enabled boolean not null default true,
-  channel text not null default 'webhook' check (channel in ('webhook', 'whatsapp')),
+  channel text not null default 'webhook' check (channel in ('webhook', 'whatsapp', 'telegram')),
   recipients jsonb not null default '[]'::jsonb, -- nomor WA grup/individu atau null
   cooldown_minutes integer not null default 60 check (cooldown_minutes between 0 and 10080),
   created_at timestamptz not null default now(),

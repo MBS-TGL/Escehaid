@@ -1,4 +1,4 @@
-export type NotifyChannel = "webhook" | "whatsapp";
+export type NotifyChannel = "webhook" | "whatsapp" | "telegram";
 
 export interface NotifyPayload {
   title: string;
