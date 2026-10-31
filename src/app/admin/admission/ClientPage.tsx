@@ -82,7 +82,10 @@ import {
   CalendarBlank,
   Upload,
   WhatsappLogo,
+  SquaresFour,
 } from "@/components/Icons";
+import { PipelineBoard } from "./PipelineBoard";
+import { BroadcastWaModal } from "./BroadcastWaModal";
 import {
   MobileFilterBar,
   MobilePagination,
@@ -144,7 +147,7 @@ type SortField = "created_at" | "full_name" | "status" | "registration_path" | "
 type SortDir = "asc" | "desc";
 
 /** Tab utama halaman: daftar pendaftar atau pengelolaan gelombang. */
-type MainTab = "registrations" | "waves" | "form" | "settings";
+type MainTab = "registrations" | "pipeline" | "waves" | "form" | "settings";
 
 /** State form tambah/edit gelombang pendaftaran. */
 type WaveFormState = {
@@ -255,6 +258,7 @@ export default function AdminSPMBPage() {
 
   // Gelombang pendaftaran
   const [mainTab, setMainTab] = useState<MainTab>("registrations");
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
   /** Mode sumber pendaftaran (kartu "Sumber Pendaftaran" di tab Gelombang). */
   const [regMode, setRegMode] = useState<"google_form" | "internal">("google_form");
   const [regModeSaving, setRegModeSaving] = useState(false);
@@ -1221,7 +1225,17 @@ export default function AdminSPMBPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Header + Tab */}
-      <PageHeader active={mainTab} onSelect={setMainTab} onExport={handleExportCsv} onAdd={() => setAddOpen(true)} onImport={() => setImportOpen(true)} canCreate={permCreate} canImport={permImport} canExport={permExport} />
+      <PageHeader
+        active={mainTab}
+        onSelect={setMainTab}
+        onExport={handleExportCsv}
+        onAdd={() => setAddOpen(true)}
+        onImport={() => setImportOpen(true)}
+        onBroadcast={() => setBroadcastOpen(true)}
+        canCreate={permCreate}
+        canImport={permImport}
+        canExport={permExport}
+      />
 
       {/* ── MODAL LINK GOOGLE FORM ─────────────────────── */}
       {googleModal && (
@@ -2905,17 +2919,35 @@ export default function AdminSPMBPage() {
           )}
         </>
       )}
+
+      {mainTab === "pipeline" && (
+        <PipelineBoard
+          registrations={data}
+          docSummary={docSummary}
+          onOpenDetail={openDetail}
+          onUpdateStatus={handleUpdateStatus}
+        />
+      )}
+
+      {broadcastOpen && (
+        <BroadcastWaModal
+          isOpen={broadcastOpen}
+          onClose={() => setBroadcastOpen(false)}
+          registrations={data}
+        />
+      )}
     </div>
   );
 }
 
 /** Header halaman + tab "Pendaftar" / "Gelombang Pendaftaran". */
-function PageHeader({ active, onSelect, onExport, onAdd, onImport, canCreate, canImport, canExport }: {
+function PageHeader({ active, onSelect, onExport, onAdd, onImport, onBroadcast, canCreate, canImport, canExport }: {
   active: MainTab;
   onSelect: (tab: MainTab) => void;
   onExport: () => void;
   onAdd: () => void;
   onImport: () => void;
+  onBroadcast?: () => void;
   /** Izin aksi tombol header — sembunyikan yang tidak dimiliki. */
   canCreate: boolean;
   canImport: boolean;
@@ -2923,6 +2955,7 @@ function PageHeader({ active, onSelect, onExport, onAdd, onImport, canCreate, ca
 }) {
   const tabs: { key: MainTab; label: string; icon: React.ElementType }[] = [
     { key: "registrations", label: "Pendaftar", icon: Users },
+    { key: "pipeline", label: "Pipeline", icon: SquaresFour },
     { key: "waves", label: "Gelombang", icon: CalendarBlank },
     { key: "form", label: "Formulir", icon: NotePencil },
     { key: "settings", label: "Pengaturan", icon: Gear },
@@ -2958,6 +2991,12 @@ function PageHeader({ active, onSelect, onExport, onAdd, onImport, canCreate, ca
               <button onClick={onExport} className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:flex-none">
                 <Download className="h-4 w-4" />
                 Export CSV
+              </button>
+            )}
+            {onBroadcast && (
+              <button onClick={onBroadcast} className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 shadow-sm transition-colors hover:bg-emerald-100 sm:flex-none">
+                <WhatsappLogo className="h-4 w-4" />
+                Broadcast WA
               </button>
             )}
           </div>

@@ -90,6 +90,10 @@ export interface SpmbRegistration {
   documents: Record<string, string> | null;
   admin_notes: string;
   wave_id?: string | null;
+  /** Kolom wawancara (migrasi 0020) */
+  interview_at?: string | null;
+  interview_note?: string;
+  interviewed_by?: string | null;
   created_at: string;
   updated_at: string;
 }
