@@ -2481,11 +2481,15 @@ export default function AdminSPMBPage() {
               )}
             </MobileSelectBar>
           )}
+        </>
+      )}
 
-          {/* ── VIEW MODAL ──────────────────────────────── */}
-          {viewItem && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setViewItem(null)}>
-              <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      {/* ── MODALS & SLIDE-OVERS (SHARED ANTAR TAB) ──────────────────── */}
+
+      {/* ── VIEW MODAL ──────────────────────────────── */}
+      {viewItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setViewItem(null)}>
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
                 {/* Profile Header */}
                 <div className="bg-gradient-to-r from-[var(--brand-primary)] via-[var(--brand-primary-light)] to-[var(--brand-accent)] px-6 py-5 text-white">
                   <div className="flex items-center gap-4">
@@ -2917,14 +2921,13 @@ export default function AdminSPMBPage() {
               </div>
             </div>
           )}
-        </>
-      )}
 
       {mainTab === "pipeline" && (
         <PipelineBoard
           registrations={data}
           docSummary={docSummary}
           onOpenDetail={openDetail}
+          onOpenConfirmStatus={(id, status) => setConfirmAction({ id, status })}
           onUpdateStatus={handleUpdateStatus}
         />
       )}
