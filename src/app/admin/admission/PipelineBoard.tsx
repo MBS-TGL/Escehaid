@@ -332,14 +332,14 @@ export function PipelineBoard({
         <div
           ref={trackRef}
           onScroll={updateScrollState}
-          className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 pt-1 px-0.5 snap-x snap-mandatory scroll-smooth"
+          className="flex gap-4 overflow-x-auto scrollbar-hide p-1.5 snap-x snap-mandatory scroll-smooth"
         >
           {columns.map((col) => {
             const Icon = col.icon;
             return (
               <div
                 key={col.key}
-                className="flex flex-col w-[85vw] sm:w-[calc(50%-0.5rem)] lg:w-[calc((100%-2rem)/3)] shrink-0 snap-start rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3 shadow-xs"
+                className="flex flex-col w-[85vw] sm:w-[calc(50%-0.5rem)] lg:w-[calc((100%-2rem)/3)] shrink-0 snap-start rounded-2xl border border-slate-200 bg-slate-50/70 p-3 shadow-xs"
               >
                 {/* Header Kolom */}
                 <div
