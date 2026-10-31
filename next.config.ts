@@ -45,6 +45,101 @@ const nextConfig: NextConfig = {
   // halaman publik (/news/[slug], /articles/[slug], ...) gagal dengan
   // ENOENT saat "Collecting page data".
   serverExternalPackages: ["isomorphic-dompurify", "jsdom"],
+
+  // ── Output File Tracing Exclusions (hemat Vercel Functions Storage) ──
+  // Next.js men-trace SEMUA file yang terjangkau dari import graph tiap
+  // route — termasuk `import()` dinamis. Di repo ini dua dependency berat
+  // terseret ke function yang tidak membutuhkannya saat runtime:
+  //
+  // 1. @aws-sdk/* + @smithy/* (~1.27 MB per function × ±43 function ≈ 54 MB).
+  //    Rantai: barrel `@/lib/queries` → `queries/media.ts` (storageFrom) →
+  //    `lib/storage.ts` → `import("@aws-sdk/client-s3")` dinamis. Padahal
+  //    operasi S3/R2 hanya dijalankan 3 API route + 4 halaman admin tertentu
+  //    (lihat daftar PENGECUALIAN di bawah). Semua query lain
+  //    (news/articles/activities/dll.) hanya lewat `storage-remote.ts`
+  //    (fetch ke API route) atau `getPublicUrl` (string-concat murni).
+  //
+  // 2. jsdom + ekosistemnya TIDAK di-exclude di sini: audit NFT membuktikan
+  //    hanya 7 function yang men-trace jsdom (news/[slug], articles/[slug],
+  //    activities/[slug], admin/news, admin/articles, admin/activities,
+  //    api/ai/refine) — tepat yang memanggil sanitize()/RichContent saat
+  //    SSR. Exclude jsdom akan merusak sanitize server-side.
+  //
+  // Format key: route ternormalisasi Next.js (mis. "/news/[slug]"), dicocokkan
+  // dengan picomatch `contains:true` (lihat collect-build-traces.js). Karena
+  // itu key ditulis EKSPLISIT per route — JANGAN pakai key umum seperti "/"
+  // atau "/admin" karena akan ikut match route sensitif di bawah.
+  //
+  // PENGECUALIAN (sengaja TIDAK ada key-nya = SDK tetap dibawa):
+  //  - /api/admin/storage (+ /signed-url) — import storageFrom langsung
+  //  - /api/spmb/upload — import storageFrom langsung
+  //  - /admin/media — via server action media/actions.ts → storageFrom.list()
+  //  - /admin — via getBackupManifest() (dynamic S3Client+GetObjectCommand)
+  //  - /admin/backup — via getBackupManifest()
+  //  - /admin/diagnostics — via collectDiagnostics() → getR2Usage()+manifest
+  //  - "/" (homepage) — key "/" akan match SEMUA route, jadi dikorbankan
+  //    (1 function tetap membawa SDK, aman).
+  outputFileTracingExcludes: {
+    // ── Halaman publik (tidak ada yang menyentuh S3 langsung) ──
+    "/news": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/news/[slug]": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/articles": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/articles/[slug]": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/activities": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/activities/[slug]": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/achievements": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admission": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admission/register": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admission/status": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/contact": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/downloads": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/ekskul/[slug]": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/gallery": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/portal": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/profile": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/program": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/search": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/privacy": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/terms": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/rss.xml": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/sitemap.xml": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/robots.txt": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    // ── Halaman admin konten (storage hanya via fetch ke /api/admin/storage,
+    //     bukan import SDK langsung; admin/media, /admin, backup, diagnostics
+    //     SENGAJA tidak ada di daftar ini) ──
+    "/admin/news": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/articles": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/activities": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/achievements": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/admission": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/agenda": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/announcements": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/change-password": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/contact": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/downloads": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/ekskul": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/facilities": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/flags": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/gallery": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/login": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/logs": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/portal": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/program": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/settings": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/teachers": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/users": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/admin/403": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    // ── API routes non-storage ──
+    "/api/ai/refine": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/api/auth/login": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/api/auth/logout": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/api/auth/session": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/api/auth/reset": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/api/auth/change-password": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/api/search": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/api/revalidate": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/auth/callback": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+  },
   allowedDevOrigins: ["192.168.2.106"],
   devIndicators: {
     position: "bottom-right",

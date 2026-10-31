@@ -1,0 +1,49 @@
+# ── .vercelignore ──────────────────────────────────────────────────────────
+# File ini mengecualikan direktori dan file yang tidak dibutuhkan runtime dari
+# deployment artifact Vercel. Mengurangi ukuran upload dan Functions Storage.
+#
+# Aturan mengikuti .gitignore syntax.
+# Referensi: https://vercel.com/docs/deployments/vercelignore
+# ───────────────────────────────────────────────────────────────────────────
+
+# Dev tooling & CI
+.codegraph/
+.opencode/
+.agents/
+.zcode/
+.githooks/
+.github/
+
+# Dokumentasi & arsip — tidak dibaca runtime
+docs/
+Reminder.md
+CUTOVER-R2.md
+TODO.md
+README.md
+CLAUDE.md
+AGENTS.md
+database.md
+*.md
+
+# Scripts Node — hanya dijalankan lokal/CI, bukan di Vercel function runtime
+scripts/
+
+# SQL migrations & backup — tidak dibaca runtime
+supabase/
+supabase_backup/
+database.sql
+
+# Test files — tidak dipakai di production
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+vitest.config.mts
+vitest.setup.ts
+
+# Sumber gambar besar yang sudah di-serve via CDN Cloudflare R2
+# (public/ yang kecil masih ikut karena dipakai Next.js image optimizer)
+
+# Cache build lokal — tidak perlu di-upload
+.next/cache/
+.next/dev/
