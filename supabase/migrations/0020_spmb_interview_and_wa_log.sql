@@ -60,7 +60,7 @@ create unique index if not exists spmb_message_log_idem_idx
   on public.spmb_message_log (
     registration_id,
     template_key,
-    (sent_queued_at at time zone 'Asia/Jakarta')::date
+    ((sent_queued_at at time zone 'Asia/Jakarta')::date)
   );
 
 -- Opt-out: nomor yang minta dihentikan tidak pernah dikirim ulang.
