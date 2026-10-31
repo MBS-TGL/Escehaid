@@ -6,7 +6,9 @@ export async function postRevalidate(
   type?: "page" | "layout"
 ): Promise<void> {
   try {
-    // Ambil session token untuk otorisasi di server
+    // Hanya membaca access_token untuk diteruskan sebagai Bearer ke route
+    // server. Route memverifikasi token via getUser(token) sebelum otorisasi,
+    // jadi session.user TIDAK dipakai untuk keputusan keamanan di sini.
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token ?? "";
     const res = await fetch("/api/revalidate", {

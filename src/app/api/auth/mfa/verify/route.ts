@@ -31,9 +31,11 @@ export async function POST(req: Request) {
   }
 
   const supabase = await createClient();
-  // Hanya sesi yang sudah melewati email+password (AAL1) yang boleh di sini.
-  const { data: sessionData } = await supabase.auth.getSession();
-  if (!sessionData.session) {
+  // Hanya user yang sudah melewati email+password (AAL1) yang boleh di sini.
+  // getUser() memvalidasi JWT ke server Auth; getSession() hanya membaca
+  // cookie mentah dan tidak boleh dipakai sebagai gate otentikasi.
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
     return NextResponse.json({ error: "Sesi tidak ditemukan — login ulang." }, { status: 401 });
   }
 

@@ -41,6 +41,9 @@ const STRING_FIELDS = Object.keys(EMPTY) as (keyof RefineData)[];
 
 export async function refineDraft(target: ImportTarget, rawText: string): Promise<RefineResult> {
   try {
+    // Hanya membaca access_token untuk diteruskan sebagai Bearer ke route
+    // server. Route memverifikasi token via getUser(token) sebelum otorisasi,
+    // jadi session.user TIDAK dipakai untuk keputusan keamanan di sini.
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token ?? "";
     const res = await fetch("/api/ai/refine", {

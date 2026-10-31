@@ -23,19 +23,31 @@ interface SessionRow {
   created_at: string;
 }
 
-async function currentSessionId(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string | null> {
+/**
+ * Identitas pemanggil dari JWT terverifikasi (getClaims memvalidasi tanda
+ * tangan secara lokal). JANGAN pakai getSession()/session.user di sini:
+ * nilainya dibaca mentah dari cookie dan bisa dipalsukan — user.id dari
+ * sana dipakai untuk filter `user_id` sehingga harus otentik.
+ */
+async function verifiedIdentity(
+  supabase: Awaited<ReturnType<typeof createClient>>
+): Promise<{ userId: string; sessionId: string | null } | null> {
   const { data: claims } = await supabase.auth.getClaims();
-  return (claims?.claims as { session_id?: string } | null)?.session_id ?? null;
+  const userId = claims?.claims?.sub;
+  if (!userId) return null;
+  const sessionId =
+    (claims?.claims as { session_id?: string } | null)?.session_id ?? null;
+  return { userId, sessionId };
 }
 
 export async function GET() {
   const supabase = await createClient();
-  const { data: sessionData } = await supabase.auth.getSession();
-  if (!sessionData.session) {
+  const identity = await verifiedIdentity(supabase);
+  if (!identity) {
     return NextResponse.json({ error: "Tidak terautentikasi." }, { status: 401 });
   }
 
-  const current = await currentSessionId(supabase);
+  const current = identity.sessionId;
   const { data, error } = await supabase
     .from("sessions")
     .select("session_id, user_agent, ip, last_seen_at, created_at")
@@ -76,12 +88,12 @@ export async function POST(req: Request) {
   }
 
   const supabase = await createClient();
-  const { data: sessionData } = await supabase.auth.getSession();
-  if (!sessionData.session) {
+  const identity = await verifiedIdentity(supabase);
+  if (!identity) {
     return NextResponse.json({ error: "Tidak terautentikasi." }, { status: 401 });
   }
 
-  const current = await currentSessionId(supabase);
+  const current = identity.sessionId;
 
   // Invalidasi sungguhan: token semua sesi lain dicabut di level Supabase Auth.
   const { error } = await supabase.auth.signOut({ scope: "others" });
@@ -94,7 +106,7 @@ export async function POST(req: Request) {
     await supabase
       .from("sessions")
       .update({ revoked_at: new Date().toISOString() })
-      .eq("user_id", sessionData.session.user.id)
+      .eq("user_id", identity.userId)
       .neq("session_id", current)
       .is("revoked_at", null);
   }
@@ -103,7 +115,7 @@ export async function POST(req: Request) {
     .rpc("log_activity", {
       p_action: "delete",
       p_entity_type: "sessions",
-      p_entity_id: sessionData.session.user.id,
+      p_entity_id: identity.userId,
       p_detail: { module: "security", action: "sign_out_others", current_session: current },
     })
     .then(() => undefined, () => undefined);

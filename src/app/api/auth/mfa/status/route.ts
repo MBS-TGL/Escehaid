@@ -11,8 +11,10 @@ export const runtime = "nodejs";
 
 export async function GET() {
   const supabase = await createClient();
-  const { data: sessionData } = await supabase.auth.getSession();
-  if (!sessionData.session) {
+  // getUser() memvalidasi JWT ke server Auth; getSession() hanya membaca
+  // cookie mentah dan tidak boleh dipakai sebagai gate otentikasi.
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
     return NextResponse.json({ error: "Tidak terautentikasi." }, { status: 401 });
   }
 
