@@ -120,9 +120,6 @@ export function knownAdminPaths(): string[] {
  * tanpa alasan.
  */
 export const ADMIN_PLANNED_ROUTES: readonly string[] = [
-  // Fase 3 — inbox review + kalender redaksi
-  "/admin/review",
-  "/admin/calendar",
   // Fase 4 — otomatisasi + kualitas konten
   "/admin/automation",
   "/admin/quality",

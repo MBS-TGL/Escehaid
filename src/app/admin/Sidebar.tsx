@@ -35,6 +35,7 @@ import {
   Code,
   Warning,
   ChartLine,
+  Clock,
 } from "@/components/Icons";
 import { usePermissions } from "./PermissionsProvider";
 
@@ -72,6 +73,8 @@ export const navGroups: NavGroup[] = [
   {
     title: "Konten",
     items: [
+      { label: "Inbox Review", href: "/admin/review", icon: Clock, perm: "berita:review" },
+      { label: "Kalender Redaksi", href: "/admin/calendar", icon: CalendarBlank, perm: "kalender:read" },
       { label: "Berita", href: "/admin/news", icon: Newspaper, perm: "berita:read" },
       { label: "Artikel", href: "/admin/articles", icon: Note, perm: "artikel:read" },
       { label: "Pengumuman", href: "/admin/announcements", icon: Bell, perm: "pengumuman:read" },
