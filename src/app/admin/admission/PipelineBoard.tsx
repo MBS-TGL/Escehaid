@@ -56,14 +56,20 @@ export function PipelineBoard({
   const trackRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0); // 0 = Kolom 1-3, 1 = Kolom 3-5
 
-  // Update indikator scroll panah
+  // Update indikator scroll panah & slide index
   const updateScrollState = useCallback(() => {
     const el = trackRef.current;
     if (!el) return;
     const maxScroll = el.scrollWidth - el.clientWidth;
-    setCanScrollLeft(el.scrollLeft > 10);
-    setCanScrollRight(maxScroll > 10 && el.scrollLeft < maxScroll - 10);
+    setCanScrollLeft(el.scrollLeft > 20);
+    setCanScrollRight(maxScroll > 20 && el.scrollLeft < maxScroll - 20);
+
+    if (maxScroll > 0) {
+      const progress = el.scrollLeft / maxScroll;
+      setCurrentSlide(progress > 0.5 ? 1 : 0);
+    }
   }, []);
 
   useEffect(() => {
@@ -88,9 +94,20 @@ export function PipelineBoard({
   const scrollTrack = (direction: "left" | "right") => {
     const el = trackRef.current;
     if (!el) return;
-    const colStep = 336; // 320px column width + 16px gap
+    // Di layar desktop geser 2 kolom agar mulus bertransisi dari 1-3 ke 3-5
+    const step = el.clientWidth * 0.68;
     el.scrollBy({
-      left: direction === "left" ? -colStep : colStep,
+      left: direction === "left" ? -step : step,
+      behavior: "smooth",
+    });
+  };
+
+  const scrollToSlide = (index: number) => {
+    const el = trackRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    el.scrollTo({
+      left: index === 0 ? 0 : maxScroll,
       behavior: "smooth",
     });
   };
@@ -260,23 +277,48 @@ export function PipelineBoard({
             <span className="text-[10px] text-slate-400">santri</span>
           </div>
 
-          {/* Navigasi Panah Slide (Gaya Ekskul/Teacher Carousel) */}
-          <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-1">
+          {/* Navigasi Carousel Slider (Panah Kiri & Kanan + Indikator Slide) */}
+          <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/80 p-1">
             <button
               type="button"
               onClick={() => scrollTrack("left")}
               disabled={!canScrollLeft}
               aria-label="Geser kolom ke kiri"
-              className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200/60 bg-white text-slate-600 shadow-2xs transition-all hover:border-[var(--brand-accent)] hover:bg-[var(--brand-primary)] hover:text-white disabled:pointer-events-none disabled:opacity-30 cursor-pointer"
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200/70 bg-white text-slate-600 shadow-2xs transition-all hover:border-[var(--brand-accent)] hover:bg-[var(--brand-primary)] hover:text-white disabled:pointer-events-none disabled:opacity-30 cursor-pointer"
             >
               <CaretLeft className="h-4 w-4" />
             </button>
+
+            {/* Indikator Dot Paginasi Slide (Tahap 1-3 vs 3-5) */}
+            <div className="flex items-center gap-1 px-1">
+              <button
+                type="button"
+                onClick={() => scrollToSlide(0)}
+                title="Tampilkan Tahap 1 - 3"
+                className={`h-2 rounded-full transition-all duration-200 ${
+                  currentSlide === 0
+                    ? "w-4 bg-[var(--brand-primary)]"
+                    : "w-2 bg-slate-300 hover:bg-slate-400"
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => scrollToSlide(1)}
+                title="Tampilkan Tahap 3 - 5"
+                className={`h-2 rounded-full transition-all duration-200 ${
+                  currentSlide === 1
+                    ? "w-4 bg-[var(--brand-primary)]"
+                    : "w-2 bg-slate-300 hover:bg-slate-400"
+                }`}
+              />
+            </div>
+
             <button
               type="button"
               onClick={() => scrollTrack("right")}
               disabled={!canScrollRight}
               aria-label="Geser kolom ke kanan"
-              className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200/60 bg-white text-slate-600 shadow-2xs transition-all hover:border-[var(--brand-accent)] hover:bg-[var(--brand-primary)] hover:text-white disabled:pointer-events-none disabled:opacity-30 cursor-pointer"
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200/70 bg-white text-slate-600 shadow-2xs transition-all hover:border-[var(--brand-accent)] hover:bg-[var(--brand-primary)] hover:text-white disabled:pointer-events-none disabled:opacity-30 cursor-pointer"
             >
               <CaretRight className="h-4 w-4" />
             </button>
@@ -285,32 +327,8 @@ export function PipelineBoard({
       </div>
 
       {/* ── Carousel Slider Rail / Pipeline Columns ── */}
-      <div className="relative group">
-        {/* Floating Side Arrow: Left (Muncul saat hover & aktif) */}
-        {canScrollLeft && (
-          <button
-            type="button"
-            onClick={() => scrollTrack("left")}
-            aria-label="Previous Column"
-            className="hidden sm:flex absolute -left-3.5 top-1/2 z-30 h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-[var(--brand-primary)] shadow-lg backdrop-blur-xs transition-all duration-200 hover:scale-105 hover:border-[var(--brand-accent)] hover:bg-[var(--brand-primary)] hover:text-white cursor-pointer active:scale-95"
-          >
-            <CaretLeft className="h-5 w-5" />
-          </button>
-        )}
-
-        {/* Floating Side Arrow: Right (Muncul saat hover & aktif) */}
-        {canScrollRight && (
-          <button
-            type="button"
-            onClick={() => scrollTrack("right")}
-            aria-label="Next Column"
-            className="hidden sm:flex absolute -right-3.5 top-1/2 z-30 h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-[var(--brand-primary)] shadow-lg backdrop-blur-xs transition-all duration-200 hover:scale-105 hover:border-[var(--brand-accent)] hover:bg-[var(--brand-primary)] hover:text-white cursor-pointer active:scale-95"
-          >
-            <CaretRight className="h-5 w-5" />
-          </button>
-        )}
-
-        {/* Track Pembungkus Kolom Kanban (Scrollbar Tersembunyi & Snap Aman) */}
+      <div className="relative">
+        {/* Track Pembungkus Kolom Kanban (Scrollbar Bersih & Tepat 3 Kolom di Layar Lebar) */}
         <div
           ref={trackRef}
           onScroll={updateScrollState}
@@ -321,7 +339,7 @@ export function PipelineBoard({
             return (
               <div
                 key={col.key}
-                className="flex flex-col w-[300px] sm:w-[320px] shrink-0 snap-start rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3 shadow-xs"
+                className="flex flex-col w-[85vw] sm:w-[calc(50%-0.5rem)] lg:w-[calc((100%-2rem)/3)] shrink-0 snap-start rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3 shadow-xs"
               >
                 {/* Header Kolom */}
                 <div
