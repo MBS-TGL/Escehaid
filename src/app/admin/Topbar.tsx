@@ -24,6 +24,7 @@ import {
   Scroll,
   Download,
   ShieldCheck,
+  ChartLine,
 } from "@/components/Icons";
 import {
   getUnreadNotificationCount,
@@ -34,6 +35,7 @@ import {
 import type { Notification } from "@/lib/queries";
 import { readRecentMenus, saveRecentMenu } from "@/lib/recent-menus";
 import Highlight from "@/components/public/Highlight";
+import { Modal } from "@/components/ui";
 import { usePermissions } from "./PermissionsProvider";
 
 interface UserProfile {
@@ -56,6 +58,7 @@ const navSearchItems = [
   { label: "Log Aktivitas", href: "/admin/logs", icon: Scroll, perm: "logs:read" },
   { label: "Kelola Prestasi", href: "/admin/achievements", icon: Trophy, perm: "prestasi:read" },
   { label: "Pesan Masuk", href: "/admin/contact", icon: Envelope, perm: "kontak:read" },
+  { label: "Analitik Trafik", href: "/admin/analytics", icon: ChartLine, perm: "analitik:read" },
 ];
 
 const ROLE_TO_SYSTEM: Record<string, string> = {
@@ -111,6 +114,12 @@ export default function AdminTopbar({
   const [activeIndex, setActiveIndex] = useState(-1);
   /** href menu yang "Baru dibuka" (localStorage maks 4). */
   const [recentHrefs, setRecentHrefs] = useState<string[]>([]);
+  /** Hasil pencarian global server (Fase 2) */
+  const [serverGroups, setServerGroups] = useState<
+    { key: string; title: string; items: { id: string; label: string; subLabel?: string; href: string }[] }[]
+  >([]);
+  const [serverSearching, setServerSearching] = useState(false);
+  const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -150,6 +159,8 @@ export default function AdminTopbar({
     setRecentHrefs(saveRecentMenu(item.href));
     setSearchOpen(false);
     setSearchQuery("");
+    setServerGroups([]);
+    setServerSearching(false);
     setActiveIndex(-1);
     router.push(item.href);
   };
@@ -187,6 +198,34 @@ export default function AdminTopbar({
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, [fetchNotifications]);
+
+  // Debounced search ke server saat query >= 2 karakter
+  useEffect(() => {
+    if (!searchOpen || searchQuery.trim().length < 2) {
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setServerSearching(true);
+      try {
+        const res = await fetch(`/api/admin/command-search?q=${encodeURIComponent(searchQuery.trim())}`);
+        if (res.ok && !cancelled) {
+          const json = await res.json();
+          setServerGroups(json.groups || []);
+        }
+      } catch {
+        // Abaikan kegagalan jaringan
+      } finally {
+        if (!cancelled) setServerSearching(false);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchQuery, searchOpen]);
 
   // Request browser notification permission.
   // Status izin dibaca langsung saat dibutuhkan (lihat efek di bawah), sehingga
@@ -232,6 +271,8 @@ export default function AdminTopbar({
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
         setSearchOpen(false);
         setSearchQuery("");
+        setServerGroups([]);
+        setServerSearching(false);
         setActiveIndex(-1);
       }
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
@@ -273,8 +314,19 @@ export default function AdminTopbar({
       if (e.key === "Escape") {
         setSearchOpen(false);
         setSearchQuery("");
+        setServerGroups([]);
+        setServerSearching(false);
         setActiveIndex(-1);
         setNotifOpen(false);
+        setShortcutHelpOpen(false);
+      }
+      // Shortcut '?' untuk bantuan (hanya jika tidak sedang fokus di input)
+      if (
+        e.key === "?" &&
+        !["INPUT", "TEXTAREA"].includes((document.activeElement?.tagName || ""))
+      ) {
+        e.preventDefault();
+        setShortcutHelpOpen((prev) => !prev);
       }
     }
     document.addEventListener("keydown", handleKeyDown);
@@ -346,73 +398,128 @@ export default function AdminTopbar({
             </kbd>
           </button>
 
-          {/* Search dropdown */}
+          {/* Search dropdown — Palette 2.0 */}
           {searchOpen && (
-            <div className="absolute left-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white py-2 shadow-xl">
+            <div className="absolute left-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white py-2 shadow-2xl sm:w-96 z-50">
               <div className="flex items-center gap-2 border-b border-slate-100 px-3 pb-2">
-                <MagnifyingGlass className="h-4 w-4 text-slate-400" />
+                <MagnifyingGlass className="h-4 w-4 text-slate-400 shrink-0" />
                 <input
                   ref={searchInputRef}
                   type="text"
                   value={searchQuery}
                   onChange={(e) => {
-                    setSearchQuery(e.target.value);
+                    const val = e.target.value;
+                    setSearchQuery(val);
+                    if (val.trim().length < 2) {
+                      setServerGroups([]);
+                      setServerSearching(false);
+                    }
                     setActiveIndex(-1);
                   }}
                   onKeyDown={onSearchKeyDown}
-                  placeholder="Cari menu admin..."
+                  placeholder="Cari menu, konten, pendaftar, aksi..."
                   role="combobox"
-                  aria-expanded={visibleNav.length > 0}
+                  aria-expanded={visibleNav.length > 0 || serverGroups.length > 0}
                   aria-controls="admin-search-listbox"
-                  aria-activedescendant={
-                    activeIndex >= 0 && activeIndex < visibleNav.length
-                      ? `admin-search-option-${activeIndex}`
-                      : undefined
-                  }
-                  aria-label="Cari menu admin"
+                  aria-label="Cari global admin"
                   className="flex-1 bg-transparent text-sm text-slate-800 outline-none placeholder-slate-400"
                 />
-              </div>
-              <ul id="admin-search-listbox" role="listbox" aria-label="Menu admin" className="max-h-64 overflow-y-auto py-1">
-                {visibleNav.length === 0 ? (
-                  <li role="presentation" className="px-3 py-4 text-center text-xs text-slate-400">
-                    {searchQuery ? "Tidak ada menu yang cocok" : "Ketik untuk mencari menu"}
-                  </li>
-                ) : !searchQuery && (
-                  <li role="presentation" className="flex items-center justify-between px-3 pb-1 pt-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                      Baru dibuka
-                    </span>
-                  </li>
+                {serverSearching && (
+                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--brand-accent)] border-t-transparent" />
                 )}
-                {visibleNav.map((item, index) => {
-                  const isActive = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
-                  const highlighted = index === activeIndex;
-                  return (
-                    <li key={item.href} role="none">
-                      <Link
-                        id={`admin-search-option-${index}`}
-                        role="option"
-                        aria-selected={highlighted}
-                        href={item.href}
-                        onClick={() => openNavItem(item)}
-                        className={`flex items-center gap-3 px-3 py-2.5 text-sm transition-colors ${highlighted
-                            ? "bg-slate-100 text-slate-800"
-                            : isActive
-                              ? "bg-[var(--brand-primary)]/5 text-[var(--brand-primary)] font-semibold hover:bg-slate-50"
-                              : "text-slate-600 hover:bg-slate-50"
+              </div>
+
+              <div id="admin-search-listbox" role="listbox" className="max-h-80 overflow-y-auto py-1">
+                {visibleNav.length === 0 && serverGroups.length === 0 && !serverSearching ? (
+                  <div className="px-3 py-6 text-center text-xs text-slate-400">
+                    {searchQuery ? "Tidak ada hasil yang cocok" : "Ketik untuk mencari menu, berita, pendaftar, atau aksi"}
+                  </div>
+                ) : null}
+
+                {/* Bagian 1: Navigasi / Menu */}
+                {visibleNav.length > 0 && (
+                  <div>
+                    <div className="px-3 pb-1 pt-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        {searchQuery ? "Menu Navigasi" : "Baru Dibuka"}
+                      </span>
+                    </div>
+                    {visibleNav.map((item, index) => {
+                      const isActive = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
+                      const highlighted = index === activeIndex;
+                      return (
+                        <Link
+                          key={item.href}
+                          role="option"
+                          aria-selected={highlighted}
+                          href={item.href}
+                          onClick={() => openNavItem(item)}
+                          className={`flex items-center gap-3 px-3 py-2 text-sm transition-colors ${
+                            highlighted
+                              ? "bg-slate-100 text-slate-800"
+                              : isActive
+                                ? "bg-[var(--brand-primary)]/5 font-semibold text-[var(--brand-primary)] hover:bg-slate-50"
+                                : "text-slate-600 hover:bg-slate-50"
                           }`}
+                        >
+                          <item.icon className="h-4 w-4 shrink-0 text-slate-400" />
+                          <span className="min-w-0 flex-1 truncate">
+                            <Highlight text={item.label} query={searchQuery} />
+                          </span>
+                          {isActive && <span className="text-[10px] font-bold text-[var(--brand-primary)]">Aktif</span>}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Bagian 2: Hasil Server Berkelompok (Fase 2) */}
+                {serverGroups.map((group) => (
+                  <div key={group.key} className="mt-2 border-t border-slate-100 pt-2">
+                    <div className="px-3 pb-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        {group.title}
+                      </span>
+                    </div>
+                    {group.items.map((item) => (
+                      <Link
+                        key={item.id}
+                        href={item.href}
+                        onClick={() => {
+                          setSearchOpen(false);
+                          setSearchQuery("");
+                          router.push(item.href);
+                        }}
+                        className="flex flex-col gap-0.5 px-3 py-2 text-sm transition-colors hover:bg-slate-50"
                       >
-                        <item.icon className="h-4 w-4 flex-shrink-0" />
-                        <span className="min-w-0 flex-1 truncate">
+                        <span className="font-medium text-slate-800 truncate">
                           <Highlight text={item.label} query={searchQuery} />
                         </span>
-                        {isActive && <span className="ml-auto text-[10px] font-bold text-[var(--brand-primary)]">Aktif</span>}
+                        {item.subLabel && (
+                          <span className="text-[11px] text-slate-400 truncate">
+                            {item.subLabel}
+                          </span>
+                        )}
                       </Link>
-                    </li>
-                  );
-                })}
-              </ul>
+                    ))}
+                  </div>
+                ))}
+              </div>
+
+              {/* Footer palette dengan petunjuk shortcut */}
+              <div className="border-t border-slate-100 px-3 py-1.5 flex items-center justify-between text-[11px] text-slate-400 bg-slate-50/50 rounded-b-2xl">
+                <span>Tekan <kbd className="rounded bg-slate-200 px-1 font-mono text-[10px]">Esc</kbd> untuk menutup</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchOpen(false);
+                    setShortcutHelpOpen(true);
+                  }}
+                  className="hover:text-[var(--brand-primary)] hover:underline"
+                >
+                  Shortcut Keyboard (?)
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -573,6 +680,38 @@ export default function AdminTopbar({
           )}
         </div>
       </div>
+      {/* Modal Bantuan Shortcut Keyboard (?) */}
+      {shortcutHelpOpen && (
+        <Modal
+          open={shortcutHelpOpen}
+          onClose={() => setShortcutHelpOpen(false)}
+          title="Pintasan Keyboard (Shortcuts)"
+        >
+          <div className="space-y-3 text-xs text-slate-600">
+            <p className="text-slate-400">Pintasan praktis untuk bernavigasi lebih cepat di panel admin:</p>
+            <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-slate-50/50">
+              <div className="flex items-center justify-between p-2.5">
+                <span>Buka / Tutup Pencarian Global</span>
+                <kbd className="rounded bg-white px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-700 shadow-sm border border-slate-200">
+                  Ctrl + K / ⌘K
+                </kbd>
+              </div>
+              <div className="flex items-center justify-between p-2.5">
+                <span>Tutup Dialog / Modal / Palette</span>
+                <kbd className="rounded bg-white px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-700 shadow-sm border border-slate-200">
+                  Escape
+                </kbd>
+              </div>
+              <div className="flex items-center justify-between p-2.5">
+                <span>Buka Bantuan Pintasan ini</span>
+                <kbd className="rounded bg-white px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-700 shadow-sm border border-slate-200">
+                  ?
+                </kbd>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
     </header>
   );
 }
