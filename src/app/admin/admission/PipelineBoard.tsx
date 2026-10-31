@@ -219,20 +219,20 @@ export function PipelineBoard({
       </div>
 
       {/* ── Kanban Grid / Pipeline Columns ── */}
-      <div className="grid grid-cols-1 gap-4 overflow-x-auto pb-4 md:grid-cols-2 xl:grid-cols-5 min-w-full">
+      <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x scroll-smooth">
         {columns.map((col) => {
           const Icon = col.icon;
           return (
             <div
               key={col.key}
-              className="flex flex-col min-w-[280px] rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3 shadow-xs"
+              className="flex flex-col w-[300px] sm:w-[320px] shrink-0 snap-start rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3 shadow-xs"
             >
               {/* Header Kolom */}
               <div
-                className={`flex items-center justify-between rounded-xl border px-3 py-2.5 mb-3 transition-colors ${col.headerBg}`}
+                className={`flex items-center justify-between rounded-xl border px-3 py-2.5 mb-3 select-none ${col.headerBg}`}
               >
                 <div className="flex items-center gap-2">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/80 shadow-2xs">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-white shadow-xs">
                     <Icon className="h-3.5 w-3.5" />
                   </div>
                   <div>
@@ -241,18 +241,18 @@ export function PipelineBoard({
                   </div>
                 </div>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-bold tabular-nums shadow-2xs ${col.pillColor}`}
+                  className={`rounded-full px-2 py-0.5 text-xs font-bold tabular-nums shadow-xs ${col.pillColor}`}
                 >
                   {col.items.length}
                 </span>
               </div>
 
               {/* List Kartu Calon Santri */}
-              <div className="flex-1 space-y-2.5 overflow-y-auto max-h-[calc(100vh-23rem)] pr-0.5 custom-scrollbar">
+              <div className="flex-1 space-y-3 overflow-y-auto min-h-[380px] max-h-[calc(100vh-21rem)] pr-1">
                 {col.items.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200/80 bg-white/40 p-6 text-center">
+                  <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white/60 py-10 px-4 text-center">
                     <p className="text-xs text-slate-400 font-medium">Tidak ada pendaftar</p>
-                    <p className="text-[10px] text-slate-300 mt-0.5">di tahapan ini</p>
+                    <p className="text-[10px] text-slate-400/80 mt-0.5">di tahapan ini</p>
                   </div>
                 ) : (
                   col.items.map((item) => {
@@ -276,7 +276,7 @@ export function PipelineBoard({
                       <div
                         key={item.id}
                         onClick={() => onOpenDetail(item)}
-                        className={`group relative cursor-pointer rounded-xl border border-slate-200/80 bg-white p-3 shadow-2xs transition-all duration-150 hover:-translate-y-0.5 hover:shadow-sm ${col.accentBorder}`}
+                        className={`group relative w-full cursor-pointer rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs transition-all duration-150 hover:border-slate-300 hover:shadow-sm ${col.accentBorder}`}
                       >
                         {/* Avatar & Header Kartu */}
                         <div className="flex items-start gap-2.5">
@@ -293,10 +293,10 @@ export function PipelineBoard({
                             <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
                               {item.gender && (
                                 <span
-                                  className={`rounded px-1 py-0.2 font-semibold ${
+                                  className={`rounded px-1.5 py-0.5 font-semibold text-[10px] ${
                                     item.gender === "L"
-                                      ? "bg-blue-50 text-blue-600"
-                                      : "bg-rose-50 text-rose-600"
+                                      ? "bg-blue-50 text-blue-600 border border-blue-100"
+                                      : "bg-rose-50 text-rose-600 border border-rose-100"
                                   }`}
                                 >
                                   {item.gender === "L" ? "Putra" : "Putri"}
@@ -310,14 +310,14 @@ export function PipelineBoard({
 
                         {/* Asal Sekolah */}
                         {item.previous_school && (
-                          <div className="mt-2 flex items-center gap-1.5 text-[10.5px] text-slate-500">
-                            <Buildings className="h-3 w-3 shrink-0 text-slate-400" />
+                          <div className="mt-2.5 flex items-center gap-1.5 text-[10.5px] text-slate-500">
+                            <Buildings className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                             <span className="truncate">{normalizeSchool(item.previous_school)}</span>
                           </div>
                         )}
 
                         {/* Badges: Jalur & Kelengkapan Berkas */}
-                        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
+                        <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[10px]">
                           <span
                             className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-semibold ${pathBadgeStyle}`}
                           >
@@ -342,8 +342,8 @@ export function PipelineBoard({
 
                         {/* Jadwal Wawancara */}
                         {item.interview_at && (
-                          <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-purple-50/80 px-2 py-1 text-[10px] font-medium text-purple-700">
-                            <CalendarCheck className="h-3 w-3 shrink-0 text-purple-500" />
+                          <div className="mt-2.5 flex items-center gap-1.5 rounded-lg border border-purple-100 bg-purple-50/80 px-2 py-1 text-[10.5px] font-medium text-purple-700">
+                            <CalendarCheck className="h-3.5 w-3.5 shrink-0 text-purple-500" />
                             <span className="truncate">
                               Wawancara:{" "}
                               {new Date(item.interview_at).toLocaleDateString("id-ID", {
@@ -355,7 +355,7 @@ export function PipelineBoard({
                         )}
 
                         {/* Aksi Cepat / Footer Kartu */}
-                        <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                        <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -370,7 +370,7 @@ export function PipelineBoard({
 
                           {item.status === "pending" && (
                             <div
-                              className="flex items-center gap-1"
+                              className="flex items-center gap-1.5"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <button
@@ -382,7 +382,7 @@ export function PipelineBoard({
                                     void onUpdateStatus(item.id, "accepted");
                                   }
                                 }}
-                                className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10.5px] text-emerald-700 font-bold hover:bg-emerald-100 transition-colors shadow-2xs"
+                                className="rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10.5px] text-emerald-700 font-bold hover:bg-emerald-100 transition-colors shadow-2xs"
                               >
                                 Terima
                               </button>
@@ -395,7 +395,7 @@ export function PipelineBoard({
                                     void onUpdateStatus(item.id, "rejected");
                                   }
                                 }}
-                                className="rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10.5px] text-rose-700 font-bold hover:bg-rose-100 transition-colors shadow-2xs"
+                                className="rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10.5px] text-rose-700 font-bold hover:bg-rose-100 transition-colors shadow-2xs"
                               >
                                 Tolak
                               </button>
