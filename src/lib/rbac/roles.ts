@@ -110,6 +110,8 @@ const CONTENT_PERMISSIONS: readonly string[] = [
   // hapus, tetapi TIDAK boleh purge permanen (`sampah:delete`).
   "sampah:read",
   "sampah:update",
+  // Kalender redaksi lintas modul (terbit konten + agenda + gelombang SPMB).
+  "kalender:read",
 ];
 
 const SPMB_PERMISSIONS: readonly string[] = [
@@ -172,6 +174,15 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       "backup:read",
       "backup:update",
       "diagnostik:read",
+      // Modul baru (analytics / kualitas / automation / review konten) —
+      // review-konten sengaja TIDAK ada di CONTENT_PERMISSIONS: operator konten
+      // hanya boleh mengajukan, bukan menyetujui; approval milik admin.
+      "berita:review",
+      "artikel:review",
+      "analitik:read",
+      "kualitas:read",
+      "otomasi:read",
+      "otomasi:manage",
     ],
   },
   {

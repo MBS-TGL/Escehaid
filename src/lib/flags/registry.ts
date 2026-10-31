@@ -56,6 +56,51 @@ export const FEATURE_FLAGS: readonly FeatureFlagDef[] = [
     highImpact: false,
     category: "Eksperimental",
   },
+  {
+    key: "admin_analytics",
+    name: "Analitik Admin",
+    description:
+      "Kumpulan trafik publik tanpa cookie (beacon internal) + halaman /admin/analytics. Matikan = beacon berhenti & halaman kosong; data lama dihapus lewat purge 90 hari.",
+    defaultEnabled: true,
+    highImpact: false,
+    category: "Sistem",
+  },
+  {
+    key: "content_approval",
+    name: "Alur Review Konten",
+    description:
+      "Saat aktif, pengguna tanpa izin review (mis. operator konten) harus mengajukan review sebelum konten terbit. Admin dengan berita:review tetap bisa terbit langsung.",
+    defaultEnabled: false,
+    highImpact: true,
+    category: "Konten",
+  },
+  {
+    key: "admin_alerts",
+    name: "Alert Otomatis",
+    description:
+      "Evaluasi aturan alert terjadwal + pengiriman webhook/WhatsApp (Fonnte). Aturan dibuat di /admin/automation; nonaktif = tidak ada pesan keluar.",
+    defaultEnabled: false,
+    highImpact: true,
+    category: "Sistem",
+  },
+  {
+    key: "spmb_pipeline",
+    name: "Pipeline SPMB",
+    description:
+      "Tampilan kanban tahap pendaftar + wawancara + broadcast WA di /admin/admission.",
+    defaultEnabled: false,
+    highImpact: false,
+    category: "Admisi",
+  },
+  {
+    key: "admin_push",
+    name: "Web Push Notifikasi",
+    description:
+      "Notifikasi browser (Web Push) ke admin untuk review/alert/notifikasi penting. Butuh env VAPID.",
+    defaultEnabled: false,
+    highImpact: false,
+    category: "Sistem",
+  },
 ] as const;
 
 export type FeatureFlagKey = (typeof FEATURE_FLAGS)[number]["key"];

@@ -43,6 +43,7 @@ export const MODULE_REGISTRY: readonly PermissionModule[] = [
       { key: "update", label: "Mengubah" },
       { key: "delete", label: "Menghapus" },
       { key: "publish", label: "Mempublikasikan" },
+      { key: "review", label: "Menyetujui review" },
     ],
   },
   {
@@ -54,6 +55,7 @@ export const MODULE_REGISTRY: readonly PermissionModule[] = [
       { key: "update", label: "Mengubah" },
       { key: "delete", label: "Menghapus" },
       { key: "publish", label: "Mempublikasikan" },
+      { key: "review", label: "Menyetujui review" },
     ],
   },
   {
@@ -277,6 +279,33 @@ export const MODULE_REGISTRY: readonly PermissionModule[] = [
     key: "dev",
     label: "Alat Developer",
     description: "Tautan pemantauan developer: Sentry & Uptime Monitor",
+    actions: [{ key: "read", label: "Melihat" }],
+  },
+  {
+    key: "analitik",
+    label: "Analitik",
+    description: "Tren & insight situs (halaman /admin/analytics, tanpa cookie)",
+    actions: [{ key: "read", label: "Melihat" }],
+  },
+  {
+    key: "kualitas",
+    label: "Kualitas Konten",
+    description: "Audit data & SEO: alt text, slug, link, media yatim (/admin/quality)",
+    actions: [{ key: "read", label: "Melihat" }],
+  },
+  {
+    key: "otomasi",
+    label: "Otomatisasi",
+    description: "Aturan alert meterik + kanal kirim webhook/WhatsApp (/admin/automation)",
+    actions: [
+      { key: "read", label: "Melihat" },
+      { key: "manage", label: "Mengelola" },
+    ],
+  },
+  {
+    key: "kalender",
+    label: "Kalender",
+    description: "Kalender redaksi: terbit konten + agenda + gelombang (/admin/calendar)",
     actions: [{ key: "read", label: "Melihat" }],
   },
 ] as const;

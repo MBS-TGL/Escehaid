@@ -3,6 +3,7 @@ import { readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import {
   ADMIN_EXEMPT_EXACT,
+  ADMIN_PLANNED_ROUTES,
   ADMIN_ROUTE_PERMISSIONS,
   requiredPermissionFor,
 } from "@/lib/rbac/admin-routes";
@@ -70,11 +71,15 @@ describe("peta rute admin: kelengkapan", () => {
     expect(new Set(prefixes).size).toBe(prefixes.length);
   });
 
-  it("setiap entri peta benar-benar dipakai sebuah halaman", () => {
+  it("setiap entri peta benar-benar dipakai sebuah halaman (kecuali di DAFTAR PLANNED)", () => {
     const stale = ADMIN_ROUTE_PERMISSIONS.filter(
       ([prefix]) => !ROUTES.includes(prefix)
     ).map(([prefix]) => prefix);
-    expect(stale, "Entri peta tanpa halaman — hapus agar tidak menyesatkan").toEqual([]);
+    expect(stale.filter((p) => !ADMIN_PLANNED_ROUTES.includes(p)),
+      "Entri peta tanpa halaman — hapus agar tidak menyesatkan").toEqual([]);
+    // Semua entri yang tidak berhalaman harus terdaftar eksplisit di daftar
+    // planned; kalaupun halaman sudah ada, cukup dilepas dari daftar.
+    for (const p of stale) expect(ADMIN_PLANNED_ROUTES.includes(p), p).toBe(true);
   });
 
   it("setiap pengecualian adalah halaman yang ada", () => {

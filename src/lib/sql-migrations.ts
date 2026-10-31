@@ -93,4 +93,24 @@ export const LEDGER_MIGRATIONS: readonly LedgerMigration[] = [
     file: "supabase/migrations/0015_spmb_waves_template_search.sql",
     description: "Kuota/jadwal gelombang, template WA, index pencarian SPMB",
   },
+  {
+    file: "supabase/migrations/0016_admin_saved_views.sql",
+    description: "Tampilan tersimpan halaman daftar admin (pribadi & dibagikan)",
+  },
+  {
+    file: "supabase/migrations/0017_analytics_events.sql",
+    description: "Event analytics internal tanpa cookie (halaman /admin/analytics)",
+  },
+  {
+    file: "supabase/migrations/0018_content_revisions.sql",
+    description: "Riwayat revisi konten (snapshot + restore)",
+  },
+  {
+    file: "supabase/migrations/0019_alert_rules.sql",
+    description: "Aturan otomatis & riwayat alert (halaman /admin/automation)",
+  },
+  {
+    file: "supabase/migrations/0020_spmb_interview_and_wa_log.sql",
+    description: "Wawancara SPMB + log broadcast WA (Fonnte) + opt-out",
+  },
 ] as const;

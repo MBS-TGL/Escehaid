@@ -20,9 +20,12 @@ export const ADMIN_ROUTE_PERMISSIONS: ReadonlyArray<readonly [prefix: string, pe
   ["/admin/activities", "kegiatan:read"],
   ["/admin/admission", "spmb:read"],
   ["/admin/agenda", "agenda:read"],
+  ["/admin/analytics", "analitik:read"],
   ["/admin/announcements", "pengumuman:read"],
   ["/admin/articles", "artikel:read"],
+  ["/admin/automation", "otomasi:manage"],
   ["/admin/backup", "backup:read"],
+  ["/admin/calendar", "kalender:read"],
   ["/admin/contact", "kontak:read"],
   ["/admin/diagnostics", "diagnostik:read"],
   ["/admin/downloads", "unduhan:read"],
@@ -36,6 +39,8 @@ export const ADMIN_ROUTE_PERMISSIONS: ReadonlyArray<readonly [prefix: string, pe
   ["/admin/news", "berita:read"],
   ["/admin/portal", "portal:read"],
   ["/admin/program", "program:read"],
+  ["/admin/quality", "kualitas:read"],
+  ["/admin/review", "berita:review"],
   ["/admin/settings", "settings:manage"],
   ["/admin/sql", "sql:manage"],
   ["/admin/teachers", "guru:read"],
@@ -107,3 +112,20 @@ export function requiredPermissionFor(pathname: string): AdminRouteDecision {
 export function knownAdminPaths(): string[] {
   return [...ADMIN_EXEMPT_EXACT, ...ADMIN_ROUTE_PERMISSIONS.map(([p]) => p)];
 }
+
+/**
+ * Entri peta yang barisnya BELUM punya halaman (halaman dibangun bertahap) —
+ * badan halaman datang menyusul per fase. Dipisah agar test "entri tanpa
+ * halaman" hafal daftar ini secara eksplisit dan gagal bila entri menganggur
+ * tanpa alasan.
+ */
+export const ADMIN_PLANNED_ROUTES: readonly string[] = [
+  // Fase 1 — analitik (beacon + insight)
+  "/admin/analytics",
+  // Fase 3 — inbox review + kalender redaksi
+  "/admin/review",
+  "/admin/calendar",
+  // Fase 4 — otomatisasi + kualitas konten
+  "/admin/automation",
+  "/admin/quality",
+];
