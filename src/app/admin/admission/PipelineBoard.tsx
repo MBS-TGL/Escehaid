@@ -63,8 +63,8 @@ export function PipelineBoard({
     const el = trackRef.current;
     if (!el) return;
     const maxScroll = el.scrollWidth - el.clientWidth;
-    setCanScrollLeft(el.scrollLeft > 20);
-    setCanScrollRight(maxScroll > 20 && el.scrollLeft < maxScroll - 20);
+    setCanScrollLeft(el.scrollLeft > 15);
+    setCanScrollRight(maxScroll > 15 && el.scrollLeft < maxScroll - 15);
 
     if (maxScroll > 0) {
       const progress = el.scrollLeft / maxScroll;
@@ -77,9 +77,16 @@ export function PipelineBoard({
     const el = trackRef.current;
     if (!el) return;
 
+    // Saat ukuran viewport atau sidebar berubah (collapse/expand),
+    // bila masih di slide awal, pastikan scrollLeft tetap di titik 0 agar border kiri tidak hanyut
     const observer =
       typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(() => updateScrollState())
+        ? new ResizeObserver(() => {
+            updateScrollState();
+            if (el.scrollLeft < 30) {
+              el.scrollLeft = 0;
+            }
+          })
         : null;
 
     observer?.observe(el);
@@ -332,14 +339,14 @@ export function PipelineBoard({
         <div
           ref={trackRef}
           onScroll={updateScrollState}
-          className="flex gap-4 overflow-x-auto scrollbar-hide p-1.5 snap-x snap-mandatory scroll-smooth"
+          className="flex gap-4 overflow-x-auto scrollbar-hide py-2 px-1 snap-x snap-mandatory scroll-smooth scroll-pl-1"
         >
           {columns.map((col) => {
             const Icon = col.icon;
             return (
               <div
                 key={col.key}
-                className="flex flex-col w-[85vw] sm:w-[calc(50%-0.5rem)] lg:w-[calc((100%-2rem)/3)] shrink-0 snap-start rounded-2xl border border-slate-200 bg-slate-50/70 p-3 shadow-xs"
+                className="flex flex-col w-[85vw] sm:w-[calc((100%-1rem)/2)] xl:w-[calc((100%-2rem)/3)] shrink-0 snap-start rounded-2xl border border-slate-200 bg-slate-50/70 p-3 shadow-xs"
               >
                 {/* Header Kolom */}
                 <div
