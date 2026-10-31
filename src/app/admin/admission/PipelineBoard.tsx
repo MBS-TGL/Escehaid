@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import {
   Users,
   Clock,
@@ -12,6 +12,8 @@ import {
   Funnel,
   X,
   GraduationCap,
+  CaretLeft,
+  CaretRight,
 } from "@/components/Icons";
 import { normalizeName, normalizeSchool } from "@/lib/format-name";
 import type { SpmbRegistration } from "@/lib/supabase";
@@ -50,6 +52,48 @@ export function PipelineBoard({
 }) {
   const [search, setSearch] = useState("");
   const [selectedPath, setSelectedPath] = useState<string>("all");
+
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  // Update indikator scroll panah
+  const updateScrollState = useCallback(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    setCanScrollLeft(el.scrollLeft > 10);
+    setCanScrollRight(maxScroll > 10 && el.scrollLeft < maxScroll - 10);
+  }, []);
+
+  useEffect(() => {
+    updateScrollState();
+    const el = trackRef.current;
+    if (!el) return;
+
+    const observer =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => updateScrollState())
+        : null;
+
+    observer?.observe(el);
+    window.addEventListener("resize", updateScrollState);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", updateScrollState);
+    };
+  }, [updateScrollState]);
+
+  const scrollTrack = (direction: "left" | "right") => {
+    const el = trackRef.current;
+    if (!el) return;
+    const colStep = 336; // 320px column width + 16px gap
+    el.scrollBy({
+      left: direction === "left" ? -colStep : colStep,
+      behavior: "smooth",
+    });
+  };
 
   const filteredRegistrations = useMemo(() => {
     let list = registrations;
@@ -177,7 +221,7 @@ export function PipelineBoard({
           )}
         </div>
 
-        {/* Filter Jalur & Total Pill */}
+        {/* Filter Jalur & Carousel Controls */}
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-1">
             <span className="px-2 text-[11px] font-medium text-slate-400 flex items-center gap-1">
@@ -215,201 +259,254 @@ export function PipelineBoard({
             <span className="font-bold text-slate-800">{filteredRegistrations.length}</span>
             <span className="text-[10px] text-slate-400">santri</span>
           </div>
+
+          {/* Navigasi Panah Slide (Gaya Ekskul/Teacher Carousel) */}
+          <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-1">
+            <button
+              type="button"
+              onClick={() => scrollTrack("left")}
+              disabled={!canScrollLeft}
+              aria-label="Geser kolom ke kiri"
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200/60 bg-white text-slate-600 shadow-2xs transition-all hover:border-[var(--brand-accent)] hover:bg-[var(--brand-primary)] hover:text-white disabled:pointer-events-none disabled:opacity-30 cursor-pointer"
+            >
+              <CaretLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollTrack("right")}
+              disabled={!canScrollRight}
+              aria-label="Geser kolom ke kanan"
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200/60 bg-white text-slate-600 shadow-2xs transition-all hover:border-[var(--brand-accent)] hover:bg-[var(--brand-primary)] hover:text-white disabled:pointer-events-none disabled:opacity-30 cursor-pointer"
+            >
+              <CaretRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* ── Kanban Grid / Pipeline Columns ── */}
-      <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x scroll-smooth">
-        {columns.map((col) => {
-          const Icon = col.icon;
-          return (
-            <div
-              key={col.key}
-              className="flex flex-col w-[300px] sm:w-[320px] shrink-0 snap-start rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3 shadow-xs"
-            >
-              {/* Header Kolom */}
+      {/* ── Carousel Slider Rail / Pipeline Columns ── */}
+      <div className="relative group">
+        {/* Floating Side Arrow: Left (Muncul saat hover & aktif) */}
+        {canScrollLeft && (
+          <button
+            type="button"
+            onClick={() => scrollTrack("left")}
+            aria-label="Previous Column"
+            className="hidden sm:flex absolute -left-3.5 top-1/2 z-30 h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-[var(--brand-primary)] shadow-lg backdrop-blur-xs transition-all duration-200 hover:scale-105 hover:border-[var(--brand-accent)] hover:bg-[var(--brand-primary)] hover:text-white cursor-pointer active:scale-95"
+          >
+            <CaretLeft className="h-5 w-5" />
+          </button>
+        )}
+
+        {/* Floating Side Arrow: Right (Muncul saat hover & aktif) */}
+        {canScrollRight && (
+          <button
+            type="button"
+            onClick={() => scrollTrack("right")}
+            aria-label="Next Column"
+            className="hidden sm:flex absolute -right-3.5 top-1/2 z-30 h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-[var(--brand-primary)] shadow-lg backdrop-blur-xs transition-all duration-200 hover:scale-105 hover:border-[var(--brand-accent)] hover:bg-[var(--brand-primary)] hover:text-white cursor-pointer active:scale-95"
+          >
+            <CaretRight className="h-5 w-5" />
+          </button>
+        )}
+
+        {/* Track Pembungkus Kolom Kanban (Scrollbar Tersembunyi & Snap Aman) */}
+        <div
+          ref={trackRef}
+          onScroll={updateScrollState}
+          className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 pt-1 px-0.5 snap-x snap-mandatory scroll-smooth"
+        >
+          {columns.map((col) => {
+            const Icon = col.icon;
+            return (
               <div
-                className={`flex items-center justify-between rounded-xl border px-3 py-2.5 mb-3 select-none ${col.headerBg}`}
+                key={col.key}
+                className="flex flex-col w-[300px] sm:w-[320px] shrink-0 snap-start rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3 shadow-xs"
               >
-                <div className="flex items-center gap-2">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-white shadow-xs">
-                    <Icon className="h-3.5 w-3.5" />
-                  </div>
-                  <div>
-                    <span className="block text-xs font-bold leading-tight">{col.title}</span>
-                    <span className="block text-[10px] font-medium opacity-80">{col.badge}</span>
-                  </div>
-                </div>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-bold tabular-nums shadow-xs ${col.pillColor}`}
+                {/* Header Kolom */}
+                <div
+                  className={`flex items-center justify-between rounded-xl border px-3 py-2.5 mb-3 select-none ${col.headerBg}`}
                 >
-                  {col.items.length}
-                </span>
-              </div>
-
-              {/* List Kartu Calon Santri */}
-              <div className="flex-1 space-y-3 overflow-y-auto min-h-[380px] max-h-[calc(100vh-21rem)] pr-1">
-                {col.items.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white/60 py-10 px-4 text-center">
-                    <p className="text-xs text-slate-400 font-medium">Tidak ada pendaftar</p>
-                    <p className="text-[10px] text-slate-400/80 mt-0.5">di tahapan ini</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-white shadow-xs">
+                      <Icon className="h-3.5 w-3.5" />
+                    </div>
+                    <div>
+                      <span className="block text-xs font-bold leading-tight">{col.title}</span>
+                      <span className="block text-[10px] font-medium opacity-80">{col.badge}</span>
+                    </div>
                   </div>
-                ) : (
-                  col.items.map((item) => {
-                    const ds = docSummary[item.id];
-                    const name = normalizeName(item.full_name);
-                    const initials = name
-                      .split(" ")
-                      .map((w) => w[0])
-                      .join("")
-                      .slice(0, 2)
-                      .toUpperCase();
-                    const dateStr = new Date(item.created_at).toLocaleDateString("id-ID", {
-                      day: "numeric",
-                      month: "short",
-                    });
-                    const pathKey = item.registration_path || "reguler";
-                    const pathLabel = pathLabels[pathKey] || pathKey.toUpperCase();
-                    const pathBadgeStyle = pathStyles[pathKey] || "border-slate-200 bg-slate-100 text-slate-700";
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-bold tabular-nums shadow-xs ${col.pillColor}`}
+                  >
+                    {col.items.length}
+                  </span>
+                </div>
 
-                    return (
-                      <div
-                        key={item.id}
-                        onClick={() => onOpenDetail(item)}
-                        className={`group relative w-full cursor-pointer rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs transition-all duration-150 hover:border-slate-300 hover:shadow-sm ${col.accentBorder}`}
-                      >
-                        {/* Avatar & Header Kartu */}
-                        <div className="flex items-start gap-2.5">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-primary)]/10 text-xs font-bold text-[var(--brand-primary)]">
-                            {initials}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p
-                              className="font-semibold text-xs text-slate-800 line-clamp-1 group-hover:text-[var(--brand-primary)] transition-colors"
-                              title={name}
-                            >
-                              {name}
-                            </p>
-                            <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
-                              {item.gender && (
-                                <span
-                                  className={`rounded px-1.5 py-0.5 font-semibold text-[10px] ${
-                                    item.gender === "L"
-                                      ? "bg-blue-50 text-blue-600 border border-blue-100"
-                                      : "bg-rose-50 text-rose-600 border border-rose-100"
-                                  }`}
-                                >
-                                  {item.gender === "L" ? "Putra" : "Putri"}
-                                </span>
-                              )}
-                              <span>&middot;</span>
-                              <span className="tabular-nums">{dateStr}</span>
+                {/* List Kartu Calon Santri */}
+                <div className="flex-1 space-y-3 overflow-y-auto min-h-[380px] max-h-[calc(100vh-21rem)] pr-1">
+                  {col.items.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white/60 py-10 px-4 text-center">
+                      <p className="text-xs text-slate-400 font-medium">Tidak ada pendaftar</p>
+                      <p className="text-[10px] text-slate-400/80 mt-0.5">di tahapan ini</p>
+                    </div>
+                  ) : (
+                    col.items.map((item) => {
+                      const ds = docSummary[item.id];
+                      const name = normalizeName(item.full_name);
+                      const initials = name
+                        .split(" ")
+                        .map((w) => w[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase();
+                      const dateStr = new Date(item.created_at).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                      });
+                      const pathKey = item.registration_path || "reguler";
+                      const pathLabel = pathLabels[pathKey] || pathKey.toUpperCase();
+                      const pathBadgeStyle = pathStyles[pathKey] || "border-slate-200 bg-slate-100 text-slate-700";
+
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => onOpenDetail(item)}
+                          className={`group relative w-full cursor-pointer rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs transition-all duration-150 hover:border-slate-300 hover:shadow-sm ${col.accentBorder}`}
+                        >
+                          {/* Avatar & Header Kartu */}
+                          <div className="flex items-start gap-2.5">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-primary)]/10 text-xs font-bold text-[var(--brand-primary)]">
+                              {initials}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p
+                                className="font-semibold text-xs text-slate-800 line-clamp-1 group-hover:text-[var(--brand-primary)] transition-colors"
+                                title={name}
+                              >
+                                {name}
+                              </p>
+                              <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
+                                {item.gender && (
+                                  <span
+                                    className={`rounded px-1.5 py-0.5 font-semibold text-[10px] ${
+                                      item.gender === "L"
+                                        ? "bg-blue-50 text-blue-600 border border-blue-100"
+                                        : "bg-rose-50 text-rose-600 border border-rose-100"
+                                    }`}
+                                  >
+                                    {item.gender === "L" ? "Putra" : "Putri"}
+                                  </span>
+                                )}
+                                <span>&middot;</span>
+                                <span className="tabular-nums">{dateStr}</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        {/* Asal Sekolah */}
-                        {item.previous_school && (
-                          <div className="mt-2.5 flex items-center gap-1.5 text-[10.5px] text-slate-500">
-                            <Buildings className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                            <span className="truncate">{normalizeSchool(item.previous_school)}</span>
-                          </div>
-                        )}
+                          {/* Asal Sekolah */}
+                          {item.previous_school && (
+                            <div className="mt-2.5 flex items-center gap-1.5 text-[10.5px] text-slate-500">
+                              <Buildings className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                              <span className="truncate">{normalizeSchool(item.previous_school)}</span>
+                            </div>
+                          )}
 
-                        {/* Badges: Jalur & Kelengkapan Berkas */}
-                        <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[10px]">
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-semibold ${pathBadgeStyle}`}
-                          >
-                            <GraduationCap className="h-2.5 w-2.5" />
-                            {pathLabel}
-                          </span>
-
-                          {ds && ds.total > 0 && (
+                          {/* Badges: Jalur & Kelengkapan Berkas */}
+                          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[10px]">
                             <span
-                              className={`rounded-md border px-1.5 py-0.5 font-bold ${
-                                ds.verified === 5
-                                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                  : ds.rejected > 0
-                                    ? "border-red-200 bg-red-50 text-red-700"
-                                    : "border-amber-200 bg-amber-50 text-amber-700"
-                              }`}
+                              className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-semibold ${pathBadgeStyle}`}
                             >
-                              Berkas {ds.verified}/5
+                              <GraduationCap className="h-2.5 w-2.5" />
+                              {pathLabel}
                             </span>
-                          )}
-                        </div>
 
-                        {/* Jadwal Wawancara */}
-                        {item.interview_at && (
-                          <div className="mt-2.5 flex items-center gap-1.5 rounded-lg border border-purple-100 bg-purple-50/80 px-2 py-1 text-[10.5px] font-medium text-purple-700">
-                            <CalendarCheck className="h-3.5 w-3.5 shrink-0 text-purple-500" />
-                            <span className="truncate">
-                              Wawancara:{" "}
-                              {new Date(item.interview_at).toLocaleDateString("id-ID", {
-                                day: "numeric",
-                                month: "short",
-                              })}
-                            </span>
+                            {ds && ds.total > 0 && (
+                              <span
+                                className={`rounded-md border px-1.5 py-0.5 font-bold ${
+                                  ds.verified === 5
+                                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                    : ds.rejected > 0
+                                      ? "border-red-200 bg-red-50 text-red-700"
+                                      : "border-amber-200 bg-amber-50 text-amber-700"
+                                }`}
+                              >
+                                Berkas {ds.verified}/5
+                              </span>
+                            )}
                           </div>
-                        )}
 
-                        {/* Aksi Cepat / Footer Kartu */}
-                        <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onOpenDetail(item);
-                            }}
-                            className="inline-flex items-center gap-1 text-[var(--brand-primary)] font-semibold hover:text-[var(--brand-accent)] transition-colors"
-                          >
-                            <span>Detail</span>
-                            <span className="text-[10px] font-bold">→</span>
-                          </button>
-
-                          {item.status === "pending" && (
-                            <div
-                              className="flex items-center gap-1.5"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (onOpenConfirmStatus) {
-                                    onOpenConfirmStatus(item.id, "accepted");
-                                  } else {
-                                    void onUpdateStatus(item.id, "accepted");
-                                  }
-                                }}
-                                className="rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10.5px] text-emerald-700 font-bold hover:bg-emerald-100 transition-colors shadow-2xs"
-                              >
-                                Terima
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (onOpenConfirmStatus) {
-                                    onOpenConfirmStatus(item.id, "rejected");
-                                  } else {
-                                    void onUpdateStatus(item.id, "rejected");
-                                  }
-                                }}
-                                className="rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10.5px] text-rose-700 font-bold hover:bg-rose-100 transition-colors shadow-2xs"
-                              >
-                                Tolak
-                              </button>
+                          {/* Jadwal Wawancara */}
+                          {item.interview_at && (
+                            <div className="mt-2.5 flex items-center gap-1.5 rounded-lg border border-purple-100 bg-purple-50/80 px-2 py-1 text-[10.5px] font-medium text-purple-700">
+                              <CalendarCheck className="h-3.5 w-3.5 shrink-0 text-purple-500" />
+                              <span className="truncate">
+                                Wawancara:{" "}
+                                {new Date(item.interview_at).toLocaleDateString("id-ID", {
+                                  day: "numeric",
+                                  month: "short",
+                                })}
+                              </span>
                             </div>
                           )}
+
+                          {/* Aksi Cepat / Footer Kartu */}
+                          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenDetail(item);
+                              }}
+                              className="inline-flex items-center gap-1 text-[var(--brand-primary)] font-semibold hover:text-[var(--brand-accent)] transition-colors"
+                            >
+                              <span>Detail</span>
+                              <span className="text-[10px] font-bold">→</span>
+                            </button>
+
+                            {item.status === "pending" && (
+                              <div
+                                className="flex items-center gap-1.5"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (onOpenConfirmStatus) {
+                                      onOpenConfirmStatus(item.id, "accepted");
+                                    } else {
+                                      void onUpdateStatus(item.id, "accepted");
+                                    }
+                                  }}
+                                  className="rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10.5px] text-emerald-700 font-bold hover:bg-emerald-100 transition-colors shadow-2xs"
+                                >
+                                  Terima
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (onOpenConfirmStatus) {
+                                      onOpenConfirmStatus(item.id, "rejected");
+                                    } else {
+                                      void onUpdateStatus(item.id, "rejected");
+                                    }
+                                  }}
+                                  className="rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10.5px] text-rose-700 font-bold hover:bg-rose-100 transition-colors shadow-2xs"
+                                >
+                                  Tolak
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })
-                )}
+                      );
+                    })
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
