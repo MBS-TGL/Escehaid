@@ -1,0 +1,35 @@
+name: Alerts Check
+
+# Evaluasi aturan otomatis dan kirim alert via Webhook / WhatsApp Fonnte.
+# Berjalan setiap 30 menit.
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: alerts-check
+  cancel-in-progress: false
+
+jobs:
+  check-alerts:
+    name: Check Alerts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Install @supabase/supabase-js
+        run: npm install @supabase/supabase-js --no-save
+
+      - name: Run Check Alerts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+          FONNTE_TOKEN: ${{ secrets.FONNTE_TOKEN }}
+        run: node scripts/check-alerts.mjs

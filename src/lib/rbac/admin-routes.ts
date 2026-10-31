@@ -119,8 +119,4 @@ export function knownAdminPaths(): string[] {
  * halaman" hafal daftar ini secara eksplisit dan gagal bila entri menganggur
  * tanpa alasan.
  */
-export const ADMIN_PLANNED_ROUTES: readonly string[] = [
-  // Fase 4 — otomatisasi + kualitas konten
-  "/admin/automation",
-  "/admin/quality",
-];
+export const ADMIN_PLANNED_ROUTES: readonly string[] = [];

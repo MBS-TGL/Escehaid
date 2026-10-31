@@ -75,6 +75,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "Inbox Review", href: "/admin/review", icon: Clock, perm: "berita:review" },
       { label: "Kalender Redaksi", href: "/admin/calendar", icon: CalendarBlank, perm: "kalender:read" },
+      { label: "Kualitas & SEO", href: "/admin/quality", icon: Heartbeat, perm: "kualitas:read" },
       { label: "Berita", href: "/admin/news", icon: Newspaper, perm: "berita:read" },
       { label: "Artikel", href: "/admin/articles", icon: Note, perm: "artikel:read" },
       { label: "Pengumuman", href: "/admin/announcements", icon: Bell, perm: "pengumuman:read" },
@@ -118,6 +119,7 @@ export const navGroups: NavGroup[] = [
       { label: "Cadangan", href: "/admin/backup", icon: Database, perm: "backup:read" },
       { label: "Diagnostik", href: "/admin/diagnostics", icon: Heartbeat, perm: "diagnostik:read" },
       { label: "Analitik", href: "/admin/analytics", icon: ChartLine, perm: "analitik:read" },
+      { label: "Otomatisasi", href: "/admin/automation", icon: Bell, perm: "otomasi:manage" },
     ],
   },
   {
