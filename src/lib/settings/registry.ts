@@ -18,6 +18,11 @@ import {
   PRINCIPAL_QUOTE_FALLBACK,
   missionToLines,
 } from "@/lib/site-content";
+import {
+  DEFAULT_LEGAL_UPDATED,
+  DEFAULT_PRIVACY_BODY,
+  DEFAULT_TERMS_BODY,
+} from "./legal-defaults";
 
 /** Tipe nilai yang dikenal form admin. `richtext` = editor WYSIWYG (HTML). */
 export type SettingType = "text" | "textarea" | "richtext" | "url" | "email" | "image" | "color";
@@ -415,16 +420,17 @@ export const SETTING_FIELDS: SettingField[] = [
   },
 
   // ── Dokumen legal (privasi & syarat) ───────────────────────────────────
-  // Body = HTML dari editor rich text; KOSONG = halaman memakai naskah bawaan
-  // di kode (tidak ada halaman kosong). Tanggal ikut terisi otomatis saat
-  // body disimpan (bisa dioverride manual).
+  // Body = HTML dari editor rich text, TERISI naskah bawaan sebagai titik awal
+  // suntingan (satu sumber kebenaran di legal-defaults.ts). Kosongkan untuk
+  // kembali ke naskah bawaan. Tanggal ikut terisi otomatis saat body disimpan
+  // (bisa dioverride manual).
   {
     key: "legal_privacy_body",
     group: "footer",
     type: "richtext",
     label: "Isi Kebijakan Privasi",
-    help: "Kosongkan untuk memakai naskah bawaan. Menggantikan seluruh isi pasal di /privacy (header & ringkasan tetap).",
-    default: "",
+    help: "Sudah terisi naskah bawaan — sunting seperlunya. Menggantikan seluruh isi pasal di /privacy (header & ringkasan tetap).",
+    default: DEFAULT_PRIVACY_BODY,
     maxLength: 60000,
   },
   {
@@ -433,7 +439,7 @@ export const SETTING_FIELDS: SettingField[] = [
     type: "text",
     label: "Tanggal pembaruan privasi",
     help: "Mis. “19 Oktober 2026”. Terisi otomatis saat isi di atas disimpan.",
-    default: "",
+    default: DEFAULT_LEGAL_UPDATED,
     maxLength: 60,
   },
   {
@@ -441,8 +447,8 @@ export const SETTING_FIELDS: SettingField[] = [
     group: "footer",
     type: "richtext",
     label: "Isi Syarat dan Ketentuan",
-    help: "Kosongkan untuk memakai naskah bawaan. Menggantikan seluruh isi pasal di /terms (header & ringkasan tetap).",
-    default: "",
+    help: "Sudah terisi naskah bawaan — sunting seperlunya. Menggantikan seluruh isi pasal di /terms (header & ringkasan tetap).",
+    default: DEFAULT_TERMS_BODY,
     maxLength: 60000,
   },
   {
@@ -451,7 +457,7 @@ export const SETTING_FIELDS: SettingField[] = [
     type: "text",
     label: "Tanggal pembaruan syarat",
     help: "Mis. “19 Oktober 2026”. Terisi otomatis saat isi di atas disimpan.",
-    default: "",
+    default: DEFAULT_LEGAL_UPDATED,
     maxLength: 60,
   },
 

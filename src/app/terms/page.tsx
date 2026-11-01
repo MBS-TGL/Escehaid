@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { FileText } from "@/components/Icons";
-import LegalArticle, { type LegalSection } from "@/components/LegalArticle";
-import { Callout } from "@/components/LegalParts";
+import LegalArticle from "@/components/LegalArticle";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
+import { DEFAULT_LEGAL_UPDATED, DEFAULT_TERMS_BODY } from "@/lib/settings/legal-defaults";
 import { ogImageOverride, pageOpenGraph } from "@/lib/seo";
 
 const DESCRIPTION =
@@ -24,105 +24,15 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export const revalidate = 86400;
 
-const sections: LegalSection[] = [
-  {
-    id: "penerimaan",
-    title: "Penerimaan ketentuan",
-    content: (
-      <p>
-        Dengan mengakses situs ini, Anda menyetujui syarat dan ketentuan berikut. Jika Anda tidak
-        menyetujuinya, mohon berhenti menggunakan situs ini.
-      </p>
-    ),
-  },
-  {
-    id: "penggunaan-situs",
-    title: "Penggunaan situs",
-    content: (
-      <ul>
-        <li>Situs ini disediakan untuk informasi resmi dan layanan pendaftaran siswa baru.</li>
-        <li>
-          Anda dilarang memanipulasi atau mengganggu ketersediaan situs, mengirim data palsu melalui
-          formulir, atau mengunggah berkas yang bukan dokumentasi resmi Anda.
-        </li>
-        <li>Pengambilan data secara otomatis dalam jumlah besar (scraping) tanpa izin tidak diizinkan.</li>
-      </ul>
-    ),
-  },
-  {
-    id: "pendaftaran-spmb",
-    title: "Pendaftaran SPMB online",
-    content: (
-      <>
-        <ul>
-          <li>
-            Informasi jadwal, persyaratan, dan status pendaftaran yang ditampilkan di situs hanya untuk
-            kemudahan proses; ketentuan resmi mengikuti pengumuman resmi sekolah/panitia.
-          </li>
-          <li>
-            Kebenaran data dan kelengkapan berkas menjadi tanggung jawab pendaftar. Kesalahan data dapat
-            berdampak pada proses verifikasi.
-          </li>
-        </ul>
-        <Callout tone="warning">
-          Pendaftaran melalui situs bukanlah jaminan diterima; seleksi mengikuti ketentuan jalur yang
-          dipilih.
-        </Callout>
-      </>
-    ),
-  },
-  {
-    id: "kekayaan-intelektual",
-    title: "Hak kekayaan intelektual",
-    content: (
-      <p>
-        Logo, foto, artikel, dan materi lain pada situs ini adalah milik SMP Muhammadiyah 4 Tanggul
-        kecuali dinyatakan lain. Kutipan untuk keperluan berita/edukasi diperbolehkan dengan
-        mencantumkan atribusi dan tautan ke sumber.
-      </p>
-    ),
-  },
-  {
-    id: "tautan-pihak-ketiga",
-    title: "Tautan pihak ketiga",
-    content: (
-      <p>
-        Situs ini memuat tautan ke layanan pihak ketiga (mis. Google Maps, WhatsApp, media sosial).
-        Kami tidak bertanggung jawab atas isi dan kebijakan situs-situs tersebut.
-      </p>
-    ),
-  },
-  {
-    id: "batasan-tanggung-jawab",
-    title: "Batasan tanggung jawab",
-    content: (
-      <p>
-        Kami berupaya menjaga keakuratan dan ketersediaan situs, namun situs disediakan
-        &quot;sebagaimana adanya&quot; tanpa jaminan bahwa layanan bebas gangguan sepenuhnya.
-      </p>
-    ),
-  },
-  {
-    id: "perubahan",
-    title: "Perubahan ketentuan",
-    content: (
-      <p>
-        Ketentuan ini dapat diperbarui sewaktu-waktu; versi terbaru selalu tersedia di halaman ini
-        dengan tanggal pembaruan di bagian atas.
-      </p>
-    ),
-  },
-];
-
-const FALLBACK_UPDATED = "19 Oktober 2026";
-
 export default async function TermsPage() {
-  // Naskah kustom admin (kosong = naskah bawaan di bawah). Admin menyimpan →
-  // revalidatePath("/terms") sehingga ISR ikut disegarkan.
+  // Naskah selalu terisi: override admin → default registry (naskah bawaan di
+  // legal-defaults.ts). Admin menyimpan → revalidatePath("/terms") sehingga
+  // ISR ikut disegarkan. Tidak ada halaman kosong.
   const settings = await getSiteSettings();
   const brand = toPublicBrand(settings);
-  const customBody = (settings.values.legal_terms_body || "").trim() || null;
-  const updated = (settings.values.legal_terms_updated || "").trim() || FALLBACK_UPDATED;
+  const body = (settings.values.legal_terms_body || "").trim() || DEFAULT_TERMS_BODY;
+  const updated = (settings.values.legal_terms_updated || "").trim() || DEFAULT_LEGAL_UPDATED;
+
   return (
     <LegalArticle
       title="Syarat dan Ketentuan"
@@ -136,10 +46,10 @@ export default async function TermsPage() {
         { title: "Data pendaftar harus benar", text: "Kebenaran data dan kelengkapan berkas menjadi tanggung jawab pendaftar." },
         { title: "Bukan jaminan diterima", text: "Seleksi mengikuti ketentuan jalur dan pengumuman resmi panitia." },
       ]}
-      sections={sections}
+      sections={[]}
       brand={brand}
       related={{ href: "/privacy", label: "Kebijakan Privasi" }}
-      customBody={customBody}
+      customBody={body}
     />
   );
 }
