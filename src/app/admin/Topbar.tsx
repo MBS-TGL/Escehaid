@@ -25,7 +25,9 @@ import {
 import type { Notification } from "@/lib/queries";
 import { readRecentMenus, saveRecentMenu } from "@/lib/recent-menus";
 import {
+  ADMIN_DARK_MODE_KEY,
   applyAdminDarkMode,
+  parseAdminDarkModeValue,
   readAdminDarkMode,
   saveAdminDarkMode,
 } from "@/lib/admin-dark-mode";
@@ -132,10 +134,19 @@ export default function AdminTopbar({
   }, []);
 
   // Terapkan atribut mode gelap ke <html> setiap nilai berubah (termasuk
-  // mount pertama — lazy init di atas hanya mengisi state).
+  // mount pertama — lazy init di atas hanya mengisi state). Event `storage`
+  // menyinkronkan antar-tab: toggle di satu tab ikut mengubah tab lain tanpa
+  // reload (event hanya menyala di tab LAIN, jadi tanpa guard loop).
   useEffect(() => {
     applyAdminDarkMode(darkMode);
   }, [darkMode]);
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key === ADMIN_DARK_MODE_KEY) setDarkMode(parseAdminDarkModeValue(e.newValue));
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   function toggleDarkMode() {
     const next = !darkMode;
@@ -532,16 +543,19 @@ export default function AdminTopbar({
 
       {/* Right: actions */}
       <div className="ml-auto flex items-center gap-2">
-        {/* Mode gelap admin (beta) — toggle opt-in, preferensi per-browser */}
+        {/* Mode gelap admin — toggle opt-in, preferensi per-browser.
+            Ikon memakai key agar remount tiap ganti → animasi pop CSS jalan. */}
         <button
           type="button"
           onClick={toggleDarkMode}
           aria-pressed={darkMode}
           aria-label={darkMode ? "Matikan mode gelap" : "Nyalakan mode gelap"}
-          title={darkMode ? "Matikan mode gelap (beta)" : "Nyalakan mode gelap (beta)"}
+          title={darkMode ? "Matikan mode gelap" : "Nyalakan mode gelap"}
           className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
         >
-          {darkMode ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+          <span key={darkMode ? "sun" : "moon"} className="admin-dark-icon">
+            {darkMode ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+          </span>
         </button>
         {/* Notification bell */}
         <div className="relative" ref={notifRef}>

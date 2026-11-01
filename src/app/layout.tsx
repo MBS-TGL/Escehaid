@@ -8,6 +8,7 @@ import Footer from "@/components/Footer";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import AnalyticsBeacon from "@/components/AnalyticsBeacon";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
+import { ADMIN_DARK_INIT_SCRIPT } from "@/lib/admin-dark-mode";
 import { isFeatureEnabled } from "@/lib/flags";
 import { DEFAULT_THEME } from "@/lib/settings/theme";
 import { getSchoolProfile } from "@/lib/queries/profile";
@@ -215,6 +216,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${jakartaSans.variable} ${jetbrainsMono.variable} ${quoteSerif.variable} h-full antialiased`}
     >
       <head>
+        {/* Anti-kedip mode gelap admin: baca localStorage & pasang atribut
+            SEBELUM paint pertama. Murni tampilan (tanpa konten sensitif);
+            CSP tidak melarang inline script di sini. */}
+        <script
+          id="admin-dark-init"
+          dangerouslySetInnerHTML={{ __html: ADMIN_DARK_INIT_SCRIPT }}
+        />
         {/* Warna merek dari Pengaturan Situs. Di-render di server (SSR) sehingga
             tidak ada kilatan warna default saat halaman dibuka. Menimpa nilai
             fallback di globals.css karena ditempatkan SETELAH stylesheet.

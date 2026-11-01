@@ -41,6 +41,12 @@
   --disabled-surface: #eef1f5;
   --disabled-text: #7b8794; /* 3.23:1 di atas --disabled-surface */
   --disabled-border: #e2e7ee;
+
+  /* Warna chart admin (src/components/admin/charts): variabel agar batang
+     navy terbaca di kartu gelap. Di-resolve saat dipakai → ikut warna merek
+     kustom admin dari <style id="brand-theme">. */
+  --admin-chart-bar: var(--brand-primary);
+  --admin-chart-track: #e2e8f0;
 }
 
 @theme inline {
@@ -691,74 +697,456 @@ textarea:disabled {
   opacity: 1;
 }
 
-/* ── Mode gelap admin (beta, opt-in) ──────────────────────────────────────
+/* ── Mode gelap admin (opt-in) ────────────────────────────────────────────
    Diaktifkan lewat toggle di Topbar → atribut `data-admin-dark="true"` di
-   <html> (preferensi localStorage per-browser). Di-scope
-   `:has(#admin-sidebar)` supaya TIDAK bocor ke halaman publik — sidebar
-   admin selalu ada di DOM (disembunyikan via CSS di mobile, tetap di DOM).
+   <html> (preferensi localStorage per-browser + skrip anti-kedip di <head>
+   root layout). Di-scope `:has(#admin-sidebar, .admin-boot)` supaya TIDAK bocor ke
+   halaman publik — sidebar admin selalu ada di DOM (disembunyikan via CSS
+   di mobile, tetap di DOM). Halaman login (tanpa sidebar) sengaja tetap
+   terang.
 
    Aturan TANPA layer supaya menang atas utilitas Tailwind (pola yang sama
-   dengan aturan button:disabled di bawah). Cakupan beta: chrome + kartu +
-   teks + input + border; badge status berwarna & editor teks dibiarkan
-   terang agar kontrasnya tetap terjaga. */
-html[data-admin-dark="true"]:has(#admin-sidebar) {
+   dengan aturan button:disabled di bawah). Cakupan: chrome + kartu + tabel
+   + teks + input + dropdown portal + pratinjau prose + warna semantik +
+   toolbar editor. Pastel semantik (toast, badge, kotak error) jadi tint di
+   atas gelap; kanvas tulis editor tetap putih ala "kertas" (toolbar-nya
+   yang digelapkan).
+   Teks memakai `:not(.tiptap-editor)` agar kanvas putih tak ikut terang. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) {
   color-scheme: dark;
+  --admin-bg: #0f172a;
+  --admin-surface: #1e293b;
+  --admin-inset: #0f172a;
+  --admin-hover: #334155;
+  --admin-border: #334155;
+  --admin-text: #e2e8f0;
+  /* Varian terang yang mengikuti warna merek kustom admin (color-mix):
+     teks --brand-primary (navy) tak terbaca di atas latar gelap. */
+  --admin-brand-text: color-mix(in srgb, var(--brand-primary) 22%, white);
+  --admin-accent-text: color-mix(in srgb, var(--brand-accent) 45%, white);
+  /* Batang chart navy → aksen terang; rel kosong abu gelap. */
+  --admin-chart-bar: var(--admin-accent-text);
+  --admin-chart-track: #334155;
 }
-html[data-admin-dark="true"]:has(#admin-sidebar) body {
-  background-color: #0f172a;
-  color: #e2e8f0;
+@media (prefers-reduced-motion: no-preference) {
+  html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) body {
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
 }
-html[data-admin-dark="true"]:has(#admin-sidebar) aside#admin-sidebar,
-html[data-admin-dark="true"]:has(#admin-sidebar) header {
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) body {
+  background-color: var(--admin-bg);
+  color: var(--admin-text);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) aside#admin-sidebar,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) header {
   background-color: rgba(15, 23, 42, 0.92);
   border-color: #1e293b;
 }
-html[data-admin-dark="true"]:has(#admin-sidebar) .bg-white,
-html[data-admin-dark="true"]:has(#admin-sidebar) .bg-white\/80 {
-  background-color: #1e293b;
+/* ── Permukaan netral ── */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-white,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-white\/80,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-white\/95 {
+  background-color: var(--admin-surface);
 }
-html[data-admin-dark="true"]:has(#admin-sidebar) .bg-slate-50 {
-  background-color: #0f172a;
+/* Putih DI ATAS warna merek dikecualikan: badge jumlah di item nav aktif
+   dan pil tab tersegmentasi duduk di atas latar --brand-primary — bila ikut
+   jadi permukaan gelap, kontrasnya runtuh (gelap di atas navy). Teks
+   navy-nya pun dikembalikan agar tetap navy di atas putih. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[var\(--brand-primary\)\] .bg-white {
+  background-color: #ffffff;
 }
-html[data-admin-dark="true"]:has(#admin-sidebar) .bg-slate-100 {
-  background-color: #334155;
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[var\(--brand-primary\)\] .text-\[var\(--brand-primary\)\] {
+  color: var(--brand-primary);
 }
-html[data-admin-dark="true"]:has(#admin-sidebar) .text-slate-800,
-html[data-admin-dark="true"]:has(#admin-sidebar) .text-slate-700 {
-  color: #f1f5f9;
+/* Knob switch toggle (lingkaran putih melayang di atas track) tetap putih —
+   konvensi switch; knob gelap di atas track biru/abu terlihat "mati". */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-slate-300 .bg-white,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[var\(--brand-accent\)\] .bg-white,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-emerald-500 .bg-white,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-amber-500 .bg-white {
+  background-color: #ffffff;
 }
-html[data-admin-dark="true"]:has(#admin-sidebar) .text-slate-600 {
-  color: #cbd5e1;
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-slate-50,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-slate-50\/80,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-slate-50\/50,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-slate-50\/60,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-slate-50\/70,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[#f4f7fb\] {
+  background-color: var(--admin-inset);
 }
-html[data-admin-dark="true"]:has(#admin-sidebar) .text-slate-500 {
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-slate-100,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-slate-200,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-slate-200\/60,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-slate-200\/70 {
+  background-color: var(--admin-hover);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-slate-300 {
+  background-color: #475569;
+}
+/* Titik carousel aktif StatCardRow — gelap di atas gelap tak terlihat. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-slate-800 {
+  background-color: #cbd5e1;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .focus\:bg-white:focus {
+  background-color: var(--admin-inset);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-white:hover {
+  background-color: var(--admin-hover);
+}
+/* Thumb tersegmentasi non-aktif saat hover (pil tab StatusControl dkk):
+   putih 70% menyala di atas track gelap → surface. Versi non-hover
+   (thumb aktif) sudah surface lewat aturan .bg-white global. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-white\/70:hover {
+  background-color: var(--admin-hover);
+}
+/* Skeleton shimmer: rel gelap + kilau redup (via-white/40 terlalu terang). */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .before\:via-white\/40::before {
+  --tw-gradient-to: transparent;
+  --tw-gradient-from: transparent;
+  --tw-gradient-stops: var(--tw-gradient-from), rgba(148, 163, 184, 0.12), var(--tw-gradient-to);
+}
+/* Wash tinta brand 5% (bulk bar dsb, item aktif palette) tak kasatmata di
+   atas gelap — sama seperti kasus /[0.03] di bawah. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[var\(--brand-primary\)\]\/5 {
+  background-color: color-mix(in srgb, var(--brand-accent) 14%, transparent);
+}
+/* ── Token heks kustom ───────────────────────────────────────────────────
+   Medallion ikon header, subjudul secondary, medallion kuning prestasi,
+   judul portal/mobile-row, dan badge kuning StatusControl. */
+/* Medallion ikon biru muda → tint brand; ikon aksennya ikut terang. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[#e4ecf6\] {
+  background-color: color-mix(in srgb, var(--brand-accent) 14%, transparent);
+}
+/* Subjudul abu-biru custom → slate terang. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-\[#64748b\] {
   color: #94a3b8;
 }
-html[data-admin-dark="true"]:has(#admin-sidebar) .border-slate-200,
-html[data-admin-dark="true"]:has(#admin-sidebar) .border-slate-200\/80,
-html[data-admin-dark="true"]:has(#admin-sidebar) .border-slate-200\/90,
-html[data-admin-dark="true"]:has(#admin-sidebar) .border-slate-100 {
-  border-color: #334155;
+/* Kuning sembat: medallion → tint; ikon/teks → kuning terang (kontras AA
+   di atas tint/gelap, mengikuti rona --brand-highlight). */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[#f4d21f\]\/10 {
+  background-color: color-mix(in srgb, var(--brand-highlight) 14%, transparent);
 }
-html[data-admin-dark="true"]:has(#admin-sidebar) .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
-html[data-admin-dark="true"]:has(#admin-sidebar) .divide-slate-50 > :not([hidden]) ~ :not([hidden]) {
-  border-color: #334155;
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-\[#f4d21f\] {
+  color: var(--brand-highlight);
 }
-html[data-admin-dark="true"]:has(#admin-sidebar) .hover\:bg-slate-50:hover,
-html[data-admin-dark="true"]:has(#admin-sidebar) .hover\:bg-slate-100:hover {
-  background-color: #334155;
+/* Judul navy pekat (portal, baris mobile, nama pengirim) → terang. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-\[#0f2a4d\],
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-\[#082b59\] {
+  color: #f1f5f9;
 }
-html[data-admin-dark="true"]:has(#admin-sidebar) input:not([type="checkbox"]):not([type="radio"]),
-html[data-admin-dark="true"]:has(#admin-sidebar) select,
-html[data-admin-dark="true"]:has(#admin-sidebar) textarea {
-  background-color: #0f172a;
-  border-color: #334155;
+/* Badge kuning StatusControl (hijau masuk semantik di atas): latar krem →
+   tint, teks cokelat → kuning terang; hover ikut tint. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[#e6f6ee\] {
+  background-color: color-mix(in srgb, #10b981 12%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[#f7f2e6\] {
+  background-color: color-mix(in srgb, #f59e0b 12%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-\[#0b6b3a\] {
+  color: #6ee7b7;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-\[#7a5200\],
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-\[#7a6600\] {
+  color: #fcd34d;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-\[#d8efe2\]:hover {
+  background-color: color-mix(in srgb, #10b981 22%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-\[#efe4cd\]:hover {
+  background-color: color-mix(in srgb, #f59e0b 22%, transparent);
+}
+/* Badge kuning artikel (border kuning solid) → border tint. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[#f4d21f\]\/20 {
+  background-color: color-mix(in srgb, var(--brand-highlight) 18%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[#f4d21f\]\/30,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-\[#f4d21f\]\/30:hover {
+  background-color: color-mix(in srgb, var(--brand-highlight) 26%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-\[#f4d21f\] {
+  border-color: color-mix(in srgb, var(--brand-highlight) 45%, transparent);
+}
+/* Sorotan pencarian (mark): tint aksen naik agar terbaca di atas gelap. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) mark {
+  background-color: color-mix(in srgb, var(--brand-accent) 45%, transparent);
+}
+/* ── Teks netral (kanvas editor dikecualikan — tetap kertas putih) ── */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-slate-800:not(.tiptap-editor),
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-slate-700:not(.tiptap-editor),
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-slate-900:not(.tiptap-editor) {
+  color: #f1f5f9;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-slate-600:not(.tiptap-editor) {
+  color: #cbd5e1;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-slate-500:not(.tiptap-editor) {
+  color: #94a3b8;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-\[#172033\]:not(.tiptap-editor) {
+  color: var(--admin-text);
+}
+/* Teks warna merek → varian terang (mengikuti kustomisasi admin). */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-\[var\(--brand-primary\)\] {
+  color: var(--admin-brand-text);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-\[var\(--brand-accent\)\] {
+  color: var(--admin-accent-text);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:text-\[var\(--brand-primary\)\]:hover {
+  color: var(--admin-brand-text);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:text-\[var\(--brand-accent\)\]:hover {
+  color: var(--admin-accent-text);
+}
+/* hover:text netral gelap → terang (hover-bg di dark sudah gelap). */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:text-slate-600:hover {
   color: #e2e8f0;
 }
-/* Editor teks & pratinjau konten tetap terang (beta) — warna tipografi
-   eksplisitnya (.tiptap-editor h2, .prose) dirancang untuk latar putih. */
-html[data-admin-dark="true"]:has(#admin-sidebar) .tiptap-editor {
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:text-slate-700:hover,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:text-slate-800:hover,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:text-slate-900:hover {
+  color: #f1f5f9;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .group:hover .group-hover\:text-\[var\(--brand-primary\)\] {
+  color: var(--admin-brand-text);
+}
+/* ── Border & pembatas ── */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-slate-200,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-slate-200\/80,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-slate-200\/90,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-slate-200\/50,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-slate-200\/60,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-slate-200\/70,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-slate-100,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-slate-300,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-\[#dce3ed\] {
+  border-color: var(--admin-border);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .divide-slate-50 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--admin-border);
+}
+/* ── Latar hover ── */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-slate-50:hover,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-slate-50\/80:hover,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-slate-50\/70:hover,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-slate-50\/60:hover,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-slate-50\/50:hover,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-slate-100:hover,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-\[#f4f7fb\]:hover {
+  background-color: var(--admin-hover);
+}
+/* ── Kontrol form + pemicu Select/DatePicker (tombol berpenampilan input) ── */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) input:not([type="checkbox"]):not([type="radio"]),
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) select,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) textarea,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) button[data-field-type="select"],
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) button[data-field-type="datepicker"] {
+  background-color: var(--admin-inset);
+  border-color: var(--admin-border);
+  color: var(--admin-text);
+}
+/* ── Warna semantik: pastel terang → tinta di atas gelap ─────────────────
+   Pola dark-mode standar: latar pastel (red-50) jadi tint transparan,
+   teksnya (red-700) naik ke varian 300-an agar kontras di atas gelap.
+   Mencakup toast, badge status, kotak error, ikon medallion, dan tombol
+   ghost/aksi halus. Tombol SOLID (bg-red-600 + text-white) tidak disentuh —
+   sudah gelap dan terbaca. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-red-50 {
+  background-color: color-mix(in srgb, #ef4444 12%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-emerald-50,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-green-50 {
+  background-color: color-mix(in srgb, #10b981 12%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-amber-50 {
+  background-color: color-mix(in srgb, #f59e0b 12%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-blue-50 {
+  background-color: color-mix(in srgb, #3b82f6 12%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-purple-50 {
+  background-color: color-mix(in srgb, #8b5cf6 12%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-red-100 {
+  background-color: color-mix(in srgb, #ef4444 18%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-emerald-100 {
+  background-color: color-mix(in srgb, #10b981 18%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-amber-100 {
+  background-color: color-mix(in srgb, #f59e0b 18%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-blue-100 {
+  background-color: color-mix(in srgb, #3b82f6 18%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-purple-100 {
+  background-color: color-mix(in srgb, #8b5cf6 18%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-red-700 {
+  color: #fca5a5;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-red-600 {
+  color: #f87171;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-emerald-700,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-emerald-800,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-green-700 {
+  color: #6ee7b7;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-emerald-600 {
+  color: #34d399;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-amber-700,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-amber-800 {
+  color: #fcd34d;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-amber-600 {
+  color: #fbbf24;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-blue-700 {
+  color: #93c5fd;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-blue-600 {
+  color: #60a5fa;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-purple-700 {
+  color: #c4b5fd;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-purple-600 {
+  color: #a78bfa;
+}
+/* Border semantik pastel → garis tint agar menyatu dengan latar gelap. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-red-200 {
+  border-color: color-mix(in srgb, #ef4444 35%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-emerald-200,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-green-200 {
+  border-color: color-mix(in srgb, #10b981 35%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-amber-200 {
+  border-color: color-mix(in srgb, #f59e0b 35%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-blue-200 {
+  border-color: color-mix(in srgb, #3b82f6 35%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-purple-200 {
+  border-color: color-mix(in srgb, #8b5cf6 35%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-red-300 {
+  border-color: color-mix(in srgb, #ef4444 50%, transparent);
+}
+/* Ring pastel (box-shadow, bukan border) → tint senada agar thumb pil
+   tersegmentasi (StatusControl) tetap punya garis tepi di atas gelap. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .ring-emerald-200\/70 {
+  --tw-ring-color: color-mix(in srgb, #10b981 40%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .ring-amber-200\/70 {
+  --tw-ring-color: color-mix(in srgb, #f59e0b 40%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .ring-slate-300,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .ring-slate-200 {
+  --tw-ring-color: var(--admin-border);
+}
+/* Hover semantik: ghost Edit/Hapus & tombol aksi halus tetap "hover halus"
+   (tint), bukan kotak pastel terang yang menyala di atas gelap. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-red-50:hover {
+  background-color: color-mix(in srgb, #ef4444 14%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-emerald-50:hover {
+  background-color: color-mix(in srgb, #10b981 14%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-amber-50:hover {
+  background-color: color-mix(in srgb, #f59e0b 14%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-blue-50:hover {
+  background-color: color-mix(in srgb, #3b82f6 14%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-purple-50:hover {
+  background-color: color-mix(in srgb, #8b5cf6 14%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-red-100:hover {
+  background-color: color-mix(in srgb, #ef4444 22%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-emerald-100:hover {
+  background-color: color-mix(in srgb, #10b981 22%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-amber-100:hover {
+  background-color: color-mix(in srgb, #f59e0b 22%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:text-red-600:hover {
+  color: #f87171;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:text-blue-600:hover {
+  color: #60a5fa;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:text-emerald-600:hover {
+  color: #34d399;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:text-amber-600:hover {
+  color: #fbbf24;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:text-purple-600:hover {
+  color: #a78bfa;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:text-red-500:hover {
+  color: #fca5a5;
+}
+/* Baris terpilih (tinta brand 3% tak kasatmata di latar gelap) → naik ke 14%. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[var\(--brand-primary\)\]\/\[0\.03\] {
+  background-color: color-mix(in srgb, var(--brand-accent) 14%, transparent);
+}
+/* Pratinjau konten (RichContent/prose di modal admin): warna eksplisitnya
+   dirancang untuk kertas putih → petakan ke terang di permukaan gelap. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .prose :where(p, li, ul, ol):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  color: #cbd5e1;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .prose :where(h2, h3, h4, strong):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  color: var(--admin-brand-text);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .prose :where(em, blockquote):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  color: #94a3b8;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .prose :where(a):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  color: var(--admin-accent-text);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  background-color: var(--admin-hover);
+  color: var(--admin-text);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .prose :where(pre):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  background-color: var(--admin-inset);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .prose :where(th):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  background-color: var(--admin-inset);
+  color: #f1f5f9;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .prose :where(th, td, hr):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  border-color: var(--admin-border);
+}
+/* Editor teks: kanvas "kertas" putih (beta) — warna tipografi eksplisitnya
+   (.tiptap-editor h2, .prose) dirancang untuk latar putih. Kembalikan warna
+   warisan gelap karena elemennya membawa text-slate-700 yang ikut terang. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .tiptap-editor {
   background-color: #ffffff;
   border-radius: 0.75rem;
+  color: #334155;
+}
+/* Ikon toggle mode gelap: putar-masuk tiap ganti (key berubah → remount). */
+@keyframes admin-dark-pop {
+  from {
+    transform: rotate(-90deg) scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(0) scale(1);
+    opacity: 1;
+  }
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .admin-dark-icon,
+html:has(#admin-sidebar, .admin-boot) .admin-dark-icon {
+  display: inline-flex;
+  animation: admin-dark-pop 0.28s ease;
 }
 
 /* ── Cetak detail Pesan Masuk (/admin/contact) ─────────────────────────────

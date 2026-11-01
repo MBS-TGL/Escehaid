@@ -7,8 +7,8 @@
  *  - Warna dari variabel brand CSS agar ikut tema situs.
  */
 
-const BRAND = "var(--brand-primary)";
-const GRID = "#e2e8f0";
+const BRAND = "var(--admin-chart-bar, var(--brand-primary))";
+const GRID = "var(--admin-chart-track, #e2e8f0)";
 
 /** Sumbu label kompak: "12 Jul". */
 export function dayLabelHid(iso: string): string {
@@ -55,7 +55,8 @@ export function Sparkline({
   const max = scaleMax(values);
   const path = linePath(values, width, height, max);
   // Area di bawah digaris bawah (fill transparan) agar bentuk lebih terbaca
-  // pada kartu kecil.
+  // pada kartu kecil. Warna lewat `style` (bukan atribut presentasi SVG) —
+  // `var()` di atribut seperti stroke="var(--x)" tidak di-resolve browser.
   const area = `${path} L${width},${height} L0,${height} Z`;
   return (
     <svg
@@ -66,8 +67,8 @@ export function Sparkline({
       className={className}
       role="presentation"
     >
-      <path d={area} fill={BRAND} fillOpacity="0.08" />
-      <path d={path} fill="none" stroke={BRAND} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+      <path d={area} style={{ fill: BRAND }} fillOpacity="0.08" />
+      <path d={path} fill="none" style={{ stroke: BRAND }} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );
 }
