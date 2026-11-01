@@ -236,13 +236,13 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
               </CSSFadeIn>
             )}
 
-            {/* Share + Back */}
-            <CSSFadeIn className="mt-10 flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <Link href="/articles" className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-accent)] hover:text-[var(--brand-primary)]">
+            {/* Share + Back — satu baris di semua lebar (termasuk mobile) */}
+            <CSSFadeIn className="mt-10 flex flex-row items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 sm:px-5 sm:py-4">
+              <Link href="/articles" className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-sm font-semibold text-[var(--brand-accent)] hover:text-[var(--brand-primary)]">
                 <ArrowLeft className="h-4 w-4" /> Semua Artikel
               </Link>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Bagikan</span>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="hidden text-xs font-semibold uppercase tracking-wider text-slate-400 min-[420px]:inline">Bagikan</span>
                 <ShareButtons url={articleUrl} title={article.title} variant="solid" />
               </div>
             </CSSFadeIn>

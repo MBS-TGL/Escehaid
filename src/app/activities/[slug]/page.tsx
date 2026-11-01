@@ -349,13 +349,13 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               </CSSFadeIn>
             )}
 
-            {/* Share + Back (pola Berita) */}
-            <CSSFadeIn className="mt-10 flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <Link href="/activities" className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-accent)] hover:text-[var(--brand-primary)]">
+            {/* Share + Back (pola Berita) — satu baris di semua lebar (termasuk mobile) */}
+            <CSSFadeIn className="mt-10 flex flex-row items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 sm:px-5 sm:py-4">
+              <Link href="/activities" className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-sm font-semibold text-[var(--brand-accent)] hover:text-[var(--brand-primary)]">
                 <ArrowLeft className="h-4 w-4" /> Semua Kegiatan
               </Link>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Bagikan</span>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="hidden text-xs font-semibold text-slate-400 uppercase tracking-wider min-[420px]:inline">Bagikan</span>
                 <div className="flex items-center gap-1.5">
                   <ShareButtons url={activityUrl} title={activity.title} variant="outline" />
                   <CopyLinkButton url={activityUrl} compact className={copyBtnClass} />
