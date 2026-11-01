@@ -408,8 +408,7 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
         onConfirm={() => void handleResetGroup()}
         title={`Kembalikan pengaturan ${groupMeta.label} ke bawaan?`}
         message="Seluruh perubahan pada tab ini akan dihapus dan situs kembali memakai nilai profil sekolah / bawaan. Tindakan ini dicatat di Log Aktivitas."
-        confirmLabel="Kembalikan ke bawaan"
-        cancelLabel="Pertahankan perubahan"
+        confirmLabel="Ya, Kembalikan"
         variant="warning"
         loading={saving}
       />
