@@ -6,6 +6,7 @@ import { BarChartWithAxis, DeltaBadge } from "@/components/admin/charts";
 import { InsightCard, InsightGrid } from "@/components/admin/charts/InsightCard";
 import { ChartLine, Globe, Plus, Minus, Info, Eye, DeviceMobile, CalendarBlank } from "@/components/Icons";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
+import { AnalyticsExportButton } from "./ExportButton";
 
 export const metadata: Metadata = {
   title: "Analitik",
@@ -95,7 +96,10 @@ export default async function AnalyticsPage({
             </p>
           </div>
         </div>
-        <PeriodSelector basePath="/admin/analytics" current={period} />
+        <div className="flex flex-wrap items-center gap-2">
+          <PeriodSelector basePath="/admin/analytics" current={period} />
+          <AnalyticsExportButton data={curData} periodLabel={`${period} hari terakhir`} />
+        </div>
       </div>
 
       {/* ── Metrik Cepat (StatPillGroup) ── */}
