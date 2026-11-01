@@ -244,7 +244,7 @@ export default function Footer({
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-[1296px] flex-col items-center gap-3 px-6 py-6 text-center text-xs text-white/60 sm:text-sm md:flex-row md:items-center md:justify-between md:px-10 md:pr-20 md:text-left">
           <p className="truncate whitespace-nowrap leading-relaxed">
-            &copy; {new Date().getFullYear()} SMP Muhammadiyah 4. {brand.copyright}
+            &copy; {new Date().getFullYear()} SMPM 4 Tanggul. {brand.copyright}
           </p>
           {LEGAL_LINKS.length > 0 && (
             <ul className="flex flex-wrap items-center gap-x-3 gap-y-1">
