@@ -4,6 +4,7 @@ import PageHero from "@/components/public/PageHero";
 import LegalToc from "@/components/LegalToc";
 import { PrintButton } from "@/components/LegalParts";
 import { RichContent } from "@/components/RichContent";
+import { prepareLegalBody } from "@/lib/legal-toc";
 
 const SITE_URL = "https://www.smpmuh4tanggul.sch.id";
 
@@ -52,6 +53,9 @@ export default function LegalArticle({
    */
   customBody?: string | null;
 }) {
+  // Naskah admin → ToC dari <h2> + id anchor disisipkan (server, tanpa DOM).
+  // Tanpa <h2> → aside kosong dihindari, fallback artikel tunggal.
+  const prepared = customBody?.trim() ? prepareLegalBody(customBody) : null;
   return (
     <div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{
@@ -102,11 +106,23 @@ export default function LegalArticle({
           ))}
         </section>
 
-        {/* Daftar isi + isi — atau naskah kustom admin bila ada */}
-        {customBody?.trim() ? (
-          <article className="mt-10 min-w-0 max-w-[760px] lg:mt-14">
-            <RichContent content={customBody} />
-          </article>
+        {/* Daftar isi + isi — atau naskah kustom admin (dengan ToC bila ada h2) */}
+        {prepared ? (
+          prepared.items.length > 0 ? (
+            <div className="mt-10 grid gap-8 lg:mt-14 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-14">
+              <aside>
+                <LegalToc items={prepared.items} />
+              </aside>
+
+              <article className="min-w-0 max-w-[760px]">
+                <RichContent content={prepared.html} />
+              </article>
+            </div>
+          ) : (
+            <article className="mt-10 min-w-0 max-w-[760px] lg:mt-14">
+              <RichContent content={prepared.html} />
+            </article>
+          )
         ) : (
           <div className="mt-10 grid gap-8 lg:mt-14 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-14">
             <aside>
