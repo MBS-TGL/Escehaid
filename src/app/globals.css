@@ -848,18 +848,13 @@ html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-\[var\(
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-\[var\(--brand-accent\)\]\/10:hover {
   background-color: color-mix(in srgb, var(--brand-accent) 22%, transparent);
 }
-/* Kepala tabel disamakan dengan badan: thead memakai bg-slate-50/70–80
-   (→ inset #0f172a) sementara baris tbody di surface (#1e293b) — garis
-   #334155 yang sama terlihat LEBIH TEGAS di perbatasan thead/baris-1
-   karena latar atasnya lebih gelap. Inilah "belang" di baris paling atas.
-   thead disamakan ke surface sehingga semua garis horizontal identik;
-   teks th kecil-uppercase tetap menjadi pembeda header. */
-html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) thead.bg-slate-50\/80,
-html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) thead.bg-slate-50\/70,
-html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) thead.bg-slate-50,
-html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) thead tr.bg-slate-50\/80,
-html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) thead tr.bg-slate-50\/70 {
-  background-color: var(--admin-surface);
+/* Kepala tabel mengikuti rel inset (bg-slate-50/80 → --admin-inset) agar
+   terbedakan dari badan (surface), sama seperti light mode (abu vs putih).
+   Border thead + divide tbody sama-sama --admin-border sehingga garisnya
+   konsisten. Aturan thead polos mencakup tabel tanpa class bg (backup/logs/
+   automation) yang latarnya transparan → ikut inset. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) thead {
+  background-color: var(--admin-inset);
 }
 /* ── Token heks kustom ───────────────────────────────────────────────────
    Medallion ikon header, subjudul secondary, medallion kuning prestasi,
