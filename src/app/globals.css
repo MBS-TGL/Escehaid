@@ -708,10 +708,12 @@ textarea:disabled {
    Aturan TANPA layer supaya menang atas utilitas Tailwind (pola yang sama
    dengan aturan button:disabled di bawah). Cakupan: chrome + kartu + tabel
    + teks + input + dropdown portal + pratinjau prose + warna semantik +
-   toolbar editor. Pastel semantik (toast, badge, kotak error) jadi tint di
-   atas gelap; kanvas tulis editor tetap putih ala "kertas" (toolbar-nya
-   yang digelapkan).
-   Teks memakai `:not(.tiptap-editor)` agar kanvas putih tak ikut terang. */
+   kanvas editor + toolbar editor. Pastel semantik (toast, badge, kotak
+   error) jadi tint di atas gelap; kanvas TULIS editor ikut gelap (area
+   kerja, bukan pratinjau) — yang tetap terang hanya pratinjau `prose`/portal
+   yang memang dirender untuk publik.
+   Teks memakai `:not(.tiptap-editor)` agar aturan teks global tak menimpa
+   tipografi kanvas (yang dipetakan ulang khusus di bawah). */
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) {
   color-scheme: dark;
   --admin-bg: #0f172a;
@@ -783,7 +785,8 @@ html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-slate-50\/80,
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-slate-50\/50,
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-slate-50\/60,
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-slate-50\/70,
-html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[#f4f7fb\] {
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[#f4f7fb\],
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[#f4f7fb\]\/60 {
   background-color: var(--admin-inset);
 }
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-slate-100,
@@ -817,10 +820,46 @@ html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .before\:via-white
   --tw-gradient-from: transparent;
   --tw-gradient-stops: var(--tw-gradient-from), rgba(148, 163, 184, 0.12), var(--tw-gradient-to);
 }
-/* Wash tinta brand 5% (bulk bar dsb, item aktif palette) tak kasatmata di
-   atas gelap — sama seperti kasus /[0.03] di bawah. */
-html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[var\(--brand-primary\)\]\/5 {
+/* Wash tinta brand 5–20% (bulk bar, ikon medallion, pil, hover halus)
+   tak kasatmata di atas gelap — navy 5% di atas #1e293b ≈ tak terlihat.
+   Dipetakan ke tint aksen (lebih terang dari primary) bertingkat mengikuti
+   opasitas asal; hover sedikit lebih kuat, pola yang sama dengan semantik
+   di atas. Mencakup 140+ pemakaian bg-/hover:bg-primary|accent /5–/20. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[var\(--brand-primary\)\]\/5,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[var\(--brand-accent\)\]\/5 {
+  background-color: color-mix(in srgb, var(--brand-accent) 12%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[var\(--brand-primary\)\]\/8 {
   background-color: color-mix(in srgb, var(--brand-accent) 14%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[var\(--brand-primary\)\]\/10,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[var\(--brand-accent\)\]\/10 {
+  background-color: color-mix(in srgb, var(--brand-accent) 18%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[var\(--brand-primary\)\]\/20,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-\[var\(--brand-accent\)\]\/20 {
+  background-color: color-mix(in srgb, var(--brand-accent) 24%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-\[var\(--brand-primary\)\]\/5:hover,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-\[var\(--brand-accent\)\]\/5:hover {
+  background-color: color-mix(in srgb, var(--brand-accent) 16%, transparent);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-\[var\(--brand-primary\)\]\/10:hover,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .hover\:bg-\[var\(--brand-accent\)\]\/10:hover {
+  background-color: color-mix(in srgb, var(--brand-accent) 22%, transparent);
+}
+/* Kepala tabel disamakan dengan badan: thead memakai bg-slate-50/70–80
+   (→ inset #0f172a) sementara baris tbody di surface (#1e293b) — garis
+   #334155 yang sama terlihat LEBIH TEGAS di perbatasan thead/baris-1
+   karena latar atasnya lebih gelap. Inilah "belang" di baris paling atas.
+   thead disamakan ke surface sehingga semua garis horizontal identik;
+   teks th kecil-uppercase tetap menjadi pembeda header. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) thead.bg-slate-50\/80,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) thead.bg-slate-50\/70,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) thead.bg-slate-50,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) thead tr.bg-slate-50\/80,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) thead tr.bg-slate-50\/70 {
+  background-color: var(--admin-surface);
 }
 /* ── Token heks kustom ───────────────────────────────────────────────────
    Medallion ikon header, subjudul secondary, medallion kuning prestasi,
@@ -882,7 +921,8 @@ html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-\[#f4d21f\
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) mark {
   background-color: color-mix(in srgb, var(--brand-accent) 45%, transparent);
 }
-/* ── Teks netral (kanvas editor dikecualikan — tetap kertas putih) ── */
+/* ── Teks netral (tipografi kanvas editor dipetakan khusus di bawah,
+   jadi dikecualikan di sini agar tak tertimpa aturan global) ── */
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-slate-800:not(.tiptap-editor),
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-slate-700:not(.tiptap-editor),
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .text-slate-900:not(.tiptap-editor) {
@@ -931,7 +971,8 @@ html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-slate-200\
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-slate-200\/70,
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-slate-100,
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-slate-300,
-html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-\[#dce3ed\] {
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-\[#dce3ed\],
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-\[#dce3ed\]\/60 {
   border-color: var(--admin-border);
 }
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
@@ -1136,13 +1177,64 @@ html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .prose :where(th):
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .prose :where(th, td, hr):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
   border-color: var(--admin-border);
 }
-/* Editor teks: kanvas "kertas" putih (beta) — warna tipografi eksplisitnya
-   (.tiptap-editor h2, .prose) dirancang untuk latar putih. Kembalikan warna
-   warisan gelap karena elemennya membawa text-slate-700 yang ikut terang. */
+/* ── Kanvas editor ikut gelap ───────────────────────────────────────────
+   Kanvas tulis (.tiptap-editor) BUKAN pratinjau — ia area kerja, jadi ikut
+   gelap seperti input lain (inset). Tipografi eksplisit light-nya
+   (h2 navy, p slate, code, tabel, mark kuning, hr) dipetakan ulang di sini.
+   Toolbar & footer wrapper sudah gelap via aturan permukaan netral. */
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .tiptap-editor {
-  background-color: #ffffff;
+  background-color: var(--admin-inset);
   border-radius: 0.75rem;
-  color: #334155;
+  color: var(--admin-text);
+}
+/* EditorContent membawa text-slate-700 eksplisit + dikecualikan dari aturan
+   teks global (:not(.tiptap-editor)) — kembalikan ke terang di sini. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .tiptap-editor.text-slate-700 {
+  color: var(--admin-text);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .tiptap-editor h2,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .tiptap-editor h3,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .tiptap-editor h4 {
+  color: #f1f5f9;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .tiptap-editor p,
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .tiptap-editor li {
+  color: #cbd5e1;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .tiptap-editor blockquote {
+  color: #94a3b8;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .tiptap-editor a {
+  color: var(--admin-accent-text);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .tiptap-editor a:hover {
+  color: var(--admin-brand-text);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .tiptap-editor hr {
+  border-top-color: var(--admin-border);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .tiptap-editor mark {
+  background-color: color-mix(in srgb, var(--brand-highlight) 30%, transparent);
+  color: #fefce8;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .tiptap-editor code {
+  background-color: var(--admin-hover);
+  color: var(--admin-text);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .tiptap-editor pre {
+  background-color: #020617;
+  border: 1px solid var(--admin-border);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .tiptap-editor th {
+  background-color: var(--admin-surface);
+  border-color: var(--admin-border);
+  color: #f1f5f9;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .tiptap-editor td {
+  border-color: var(--admin-border);
+}
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .tiptap-editor table .selectedCell {
+  background-color: color-mix(in srgb, var(--brand-accent) 22%, transparent);
 }
 /* Ikon toggle mode gelap: putar-masuk tiap ganti (key berubah → remount). */
 @keyframes admin-dark-pop {
