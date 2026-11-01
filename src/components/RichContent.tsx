@@ -16,7 +16,7 @@ const CONTENT_CLASSES = `
   prose-a:text-[var(--brand-accent)] prose-a:no-underline prose-a:font-medium hover:prose-a:underline [&_a]:break-words
   prose-strong:text-[var(--brand-primary)] prose-strong:font-bold
   prose-em:text-slate-600
-  prose-img:rounded-2xl prose-img:shadow-md prose-img:my-8 prose-img:max-w-full prose-img:h-auto
+  prose-img:mx-auto prose-img:rounded-2xl prose-img:shadow-md prose-img:my-8 prose-img:max-w-full prose-img:max-h-[70vh] prose-img:w-auto prose-img:object-contain md:prose-img:max-h-[75vh]
   prose-blockquote:border-l-4 prose-blockquote:border-[var(--brand-accent)] prose-blockquote:bg-gradient-to-r prose-blockquote:from-amber-50 prose-blockquote:to-transparent prose-blockquote:py-4 prose-blockquote:pr-6 prose-blockquote:pl-6 prose-blockquote:rounded-r-xl prose-blockquote:italic prose-blockquote:text-slate-600
   prose-li:text-gray-700 prose-li:leading-[1.7] prose-li:my-1 [&_li>p]:my-0
   prose-ol:my-4 prose-ol:pl-6 prose-ul:my-4 prose-ul:pl-6
