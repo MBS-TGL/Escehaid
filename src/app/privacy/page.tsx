@@ -27,10 +27,16 @@ export const revalidate = 86400;
 const TH = "px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500";
 const TD = "px-4 py-3 align-top text-sm leading-relaxed text-slate-600";
 
+const FALLBACK_UPDATED = "19 Oktober 2026";
+
 export default async function PrivacyPage() {
-  // Kontak diambil dari Pengaturan Situs; `revalidatePath` dipanggil admin saat
-  // menyimpan sehingga ISR di halaman ini ikut disegarkan.
-  const brand = toPublicBrand(await getSiteSettings());
+  // Kontak + naskah kustom diambil dari Pengaturan Situs; admin menyimpan →
+  // revalidatePath("/privacy") sehingga ISR ikut disegarkan. Body kosong =
+  // naskah bawaan di bawah (tidak ada halaman kosong).
+  const settings = await getSiteSettings();
+  const brand = toPublicBrand(settings);
+  const customBody = (settings.values.legal_privacy_body || "").trim() || null;
+  const updated = (settings.values.legal_privacy_updated || "").trim() || FALLBACK_UPDATED;
   const contact = brand.email
     ? brand.email
     : brand.whatsapp
@@ -169,7 +175,7 @@ export default async function PrivacyPage() {
     <LegalArticle
       title="Kebijakan Privasi"
       description={DESCRIPTION}
-      updated="19 Oktober 2026"
+      updated={updated}
       path="/privacy"
       icon={ShieldCheck}
       audience="Berlaku untuk pengunjung & pendaftar SPMB"
@@ -181,6 +187,7 @@ export default async function PrivacyPage() {
       sections={sections}
       brand={brand}
       related={{ href: "/terms", label: "Syarat dan Ketentuan" }}
+      customBody={customBody}
     />
   );
 }

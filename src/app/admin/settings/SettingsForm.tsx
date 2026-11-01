@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import { usePermissions } from "@/app/admin/PermissionsProvider";
 import { ConfirmModal } from "@/components/ui/Modal";
+import { RichTextEditor } from "@/components/ui";
 import { MediaPicker } from "./MediaPicker";
 import { resetGroupSettings, saveGroupSettings } from "./actions";
 import {
@@ -474,6 +475,10 @@ function Field({
           onChange={(e) => onChange(e.target.value)}
           className={inputClass}
         />
+      ) : field.type === "richtext" ? (
+        <div className={disabled ? "pointer-events-none opacity-60" : undefined}>
+          <RichTextEditor value={value} onChange={onChange} />
+        </div>
       ) : field.type === "image" ? (
         <MediaPicker
           label={""}

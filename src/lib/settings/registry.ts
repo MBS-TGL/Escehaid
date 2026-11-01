@@ -19,8 +19,8 @@ import {
   missionToLines,
 } from "@/lib/site-content";
 
-/** Tipe nilai yang dikenal form admin. */
-export type SettingType = "text" | "textarea" | "url" | "email" | "image" | "color";
+/** Tipe nilai yang dikenal form admin. `richtext` = editor WYSIWYG (HTML). */
+export type SettingType = "text" | "textarea" | "richtext" | "url" | "email" | "image" | "color";
 
 /** Enam grup tampil sebagai tab di /admin/settings. */
 export type SettingGroup = "identitas" | "kontak" | "media_sosial" | "seo" | "footer" | "tema";
@@ -412,6 +412,47 @@ export const SETTING_FIELDS: SettingField[] = [
     help: "Tampil setelah “© <tahun> <nama situs>”.",
     default: "Hak cipta dilindungi.",
     maxLength: 120,
+  },
+
+  // ── Dokumen legal (privasi & syarat) ───────────────────────────────────
+  // Body = HTML dari editor rich text; KOSONG = halaman memakai naskah bawaan
+  // di kode (tidak ada halaman kosong). Tanggal ikut terisi otomatis saat
+  // body disimpan (bisa dioverride manual).
+  {
+    key: "legal_privacy_body",
+    group: "footer",
+    type: "richtext",
+    label: "Isi Kebijakan Privasi",
+    help: "Kosongkan untuk memakai naskah bawaan. Menggantikan seluruh isi pasal di /privacy (header & ringkasan tetap).",
+    default: "",
+    maxLength: 60000,
+  },
+  {
+    key: "legal_privacy_updated",
+    group: "footer",
+    type: "text",
+    label: "Tanggal pembaruan privasi",
+    help: "Mis. “19 Oktober 2026”. Terisi otomatis saat isi di atas disimpan.",
+    default: "",
+    maxLength: 60,
+  },
+  {
+    key: "legal_terms_body",
+    group: "footer",
+    type: "richtext",
+    label: "Isi Syarat dan Ketentuan",
+    help: "Kosongkan untuk memakai naskah bawaan. Menggantikan seluruh isi pasal di /terms (header & ringkasan tetap).",
+    default: "",
+    maxLength: 60000,
+  },
+  {
+    key: "legal_terms_updated",
+    group: "footer",
+    type: "text",
+    label: "Tanggal pembaruan syarat",
+    help: "Mis. “19 Oktober 2026”. Terisi otomatis saat isi di atas disimpan.",
+    default: "",
+    maxLength: 60,
   },
 
   // ── Tema ────────────────────────────────────────────────────────────────

@@ -76,12 +76,37 @@ async function logActivity(
   }
 }
 
+/** Tanggal Indonesia "19 Oktober 2026" — untuk cap pembaruan dokumen legal. */
+function todayId(): string {
+  const bulan = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+  ];
+  const d = new Date();
+  return `${d.getDate()} ${bulan[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/**
+ * Pasangan body → kunci tanggalnya. Bila body diisi/diubah tapi tanggal
+ * tidak ikut diubah manual, tanggal diisi otomatis hari ini.
+ */
+const LEGAL_DATE_PAIRS: Record<string, string> = {
+  legal_privacy_body: "legal_privacy_updated",
+  legal_terms_body: "legal_terms_updated",
+};
+
 /** Setelah tulis: buang cache data + render ulang seluruh layout (publik & admin). */
-function revalidateEverything() {
+function revalidateEverything(group: SettingGroup) {
   // `updateTag` = kedaluwarsa seketika (read-your-own-writes): admin langsung
   // melihat hasil simpannya, bukan nilai lama dari cache stale-while-revalidate.
   updateTag(SITE_SETTINGS_TAG);
   revalidatePath("/", "layout");
+  // Dokumen legal punya ISR sendiri (revalidate harian) — segarkan eksplisit
+  // agar perubahan admin langsung tampil di /privacy & /terms.
+  if (group === "footer") {
+    revalidatePath("/privacy");
+    revalidatePath("/terms");
+  }
 }
 
 /**
@@ -99,13 +124,28 @@ async function applyGroupValues(
   const values: Record<string, string> = {};
   for (const field of fields) {
     if (!(field.key in desired)) continue; // kolom tidak dikirim form → lewati
-    const value = (desired[field.key] ?? "").trim();
+    // Body richtext dipertahankan apa adanya (HTML); yang lain di-trim.
+    const raw = desired[field.key] ?? "";
+    const value = field.type === "richtext" ? raw : raw.trim();
     const message = validateSettingValue(field, value);
     if (message) fieldErrors[field.key] = message;
     values[field.key] = value;
   }
   if (Object.keys(fieldErrors).length > 0) {
     return { success: false, error: "Beberapa isian belum valid.", fieldErrors };
+  }
+
+  // 1b. Cap tanggal otomatis dokumen legal: body diisi/diubah tapi tanggal
+  // tidak ikut diubah manual → isi hari ini. Body dikosongkan → tanggal ikut
+  // dihapus (kembali ke naskah bawaan + tanggal bawaan).
+  for (const [bodyKey, dateKey] of Object.entries(LEGAL_DATE_PAIRS)) {
+    if (!(bodyKey in values)) continue;
+    const bodyDirty = values[bodyKey].trim() !== "";
+    const dateSent = dateKey in values;
+    const dateValue = (values[dateKey] ?? "").trim();
+    if (bodyDirty && !dateSent) values[dateKey] = todayId();
+    else if (!bodyDirty && !dateSent) values[dateKey] = "";
+    else values[dateKey] = dateValue;
   }
 
   // 2. Validasi lintas-kunci khusus tema (kontras WCAG).
@@ -176,7 +216,7 @@ async function applyGroupValues(
     changes: rows.map((r) => ({ key: r.key, before: r.before, after: r.after })),
   });
 
-  revalidateEverything();
+  revalidateEverything(group);
 
   return { success: true, changes: rows.length };
 }

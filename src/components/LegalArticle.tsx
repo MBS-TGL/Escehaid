@@ -3,6 +3,7 @@ import type { ComponentProps, ReactNode } from "react";
 import PageHero from "@/components/public/PageHero";
 import LegalToc from "@/components/LegalToc";
 import { PrintButton } from "@/components/LegalParts";
+import { RichContent } from "@/components/RichContent";
 
 const SITE_URL = "https://www.smpmuh4tanggul.sch.id";
 
@@ -30,6 +31,7 @@ export default function LegalArticle({
   sections,
   brand,
   related,
+  customBody,
 }: {
   title: string;
   description: string;
@@ -42,6 +44,13 @@ export default function LegalArticle({
   sections: LegalSection[];
   brand: { email?: string | null; whatsapp?: string | null };
   related: { href: string; label: string };
+  /**
+   * Naskah kustom admin (HTML, dari Pengaturan Situs). Bila terisi → menggantikan
+   * seluruh area daftar isi + pasal dengan satu render RichContent (sanitize +
+   * prose, konsisten dengan konten berita). Header, ringkasan, kartu kontak,
+   * dan tautan pasangan tetap tampil.
+   */
+  customBody?: string | null;
 }) {
   return (
     <div>
@@ -93,61 +102,67 @@ export default function LegalArticle({
           ))}
         </section>
 
-        {/* Daftar isi + isi */}
-        <div className="mt-10 grid gap-8 lg:mt-14 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-14">
-          <aside>
-            <LegalToc items={sections.map(({ id, title }) => ({ id, title }))} />
-          </aside>
-
-          <article className="min-w-0 max-w-[760px]">
-            {sections.map((s, i) => (
-              <section key={s.id} id={s.id} className="scroll-mt-28 border-t border-slate-200 py-8 first:border-t-0 first:pt-0">
-                <h2 className="group flex items-baseline gap-3 text-xl font-semibold tracking-tight text-[var(--brand-primary)]">
-                  <span className="text-sm font-medium tabular-nums text-[var(--brand-accent)]">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <a href={`#${s.id}`} className="no-underline">
-                    {s.title}
-                    <span className="ml-2 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100 print:hidden" aria-hidden>#</span>
-                  </a>
-                </h2>
-                <div className="[&_li]:mt-1 [&_p]:mt-3 [&_p]:text-[15px] [&_p]:leading-relaxed [&_p]:text-slate-600 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:text-[15px] [&_ul]:leading-relaxed [&_ul]:text-slate-600 [&_a]:font-medium [&_a]:text-[var(--brand-accent)] [&_a]:underline-offset-2 hover:[&_a]:underline">
-                  {s.content}
-                </div>
-              </section>
-            ))}
-
-            {/* Kartu kontak */}
-            <div className="mt-6 rounded-2xl bg-[var(--brand-primary)] p-6 text-white md:p-8 print:hidden">
-              <h2 className="text-lg font-semibold">Ada pertanyaan?</h2>
-              <p className="mt-1.5 text-sm leading-relaxed text-white/75">
-                Tim kami siap membantu menjelaskan isi halaman ini atau menindaklanjuti permintaan Anda.
-              </p>
-              <div className="mt-5 flex flex-wrap gap-3">
-                {brand.email && (
-                  <a href={`mailto:${brand.email}`} className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[var(--brand-primary)] transition-opacity hover:opacity-90">
-                    Kirim email
-                  </a>
-                )}
-                {brand.whatsapp && (
-                  <a href={waLink(brand.whatsapp)} target="_blank" rel="noopener noreferrer" className="rounded-full bg-white/10 px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/25 transition-colors hover:bg-white/20">
-                    WhatsApp
-                  </a>
-                )}
-                <Link href="/contact" className="rounded-full px-5 py-2.5 text-sm font-semibold text-white/85 ring-1 ring-white/20 transition-colors hover:bg-white/10">
-                  Halaman kontak
-                </Link>
-              </div>
-            </div>
-
-            <p className="mt-8 text-sm text-slate-500 print:hidden">
-              Lihat juga:{" "}
-              <Link href={related.href} className="font-semibold text-[var(--brand-accent)] underline-offset-2 hover:underline">
-                {related.label} →
-              </Link>
-            </p>
+        {/* Daftar isi + isi — atau naskah kustom admin bila ada */}
+        {customBody?.trim() ? (
+          <article className="mt-10 min-w-0 max-w-[760px] lg:mt-14">
+            <RichContent content={customBody} />
           </article>
+        ) : (
+          <div className="mt-10 grid gap-8 lg:mt-14 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-14">
+            <aside>
+              <LegalToc items={sections.map(({ id, title }) => ({ id, title }))} />
+            </aside>
+
+            <article className="min-w-0 max-w-[760px]">
+              {sections.map((s, i) => (
+                <section key={s.id} id={s.id} className="scroll-mt-28 border-t border-slate-200 py-8 first:border-t-0 first:pt-0">
+                  <h2 className="group flex items-baseline gap-3 text-xl font-semibold tracking-tight text-[var(--brand-primary)]">
+                    <span className="text-sm font-medium tabular-nums text-[var(--brand-accent)]">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <a href={`#${s.id}`} className="no-underline">
+                      {s.title}
+                      <span className="ml-2 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100 print:hidden" aria-hidden>#</span>
+                    </a>
+                  </h2>
+                  <div className="[&_li]:mt-1 [&_p]:mt-3 [&_p]:text-[15px] [&_p]:leading-relaxed [&_p]:text-slate-600 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:text-[15px] [&_ul]:leading-relaxed [&_ul]:text-slate-600 [&_a]:font-medium [&_a]:text-[var(--brand-accent)] [&_a]:underline-offset-2 hover:[&_a]:underline">
+                    {s.content}
+                  </div>
+                </section>
+              ))}
+            </article>
+          </div>
+        )}
+
+        {/* Kartu kontak + tautan pasangan — selalu tampil di kedua mode */}
+        <div className="mt-6 max-w-[760px] rounded-2xl bg-[var(--brand-primary)] p-6 text-white md:p-8 print:hidden">
+          <h2 className="text-lg font-semibold">Ada pertanyaan?</h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-white/75">
+            Tim kami siap membantu menjelaskan isi halaman ini atau menindaklanjuti permintaan Anda.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            {brand.email && (
+              <a href={`mailto:${brand.email}`} className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[var(--brand-primary)] transition-opacity hover:opacity-90">
+                Kirim email
+              </a>
+            )}
+            {brand.whatsapp && (
+              <a href={waLink(brand.whatsapp)} target="_blank" rel="noopener noreferrer" className="rounded-full bg-white/10 px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/25 transition-colors hover:bg-white/20">
+                WhatsApp
+              </a>
+            )}
+            <Link href="/contact" className="rounded-full px-5 py-2.5 text-sm font-semibold text-white/85 ring-1 ring-white/20 transition-colors hover:bg-white/10">
+              Halaman kontak
+            </Link>
+          </div>
         </div>
+
+        <p className="mt-8 text-sm text-slate-500 print:hidden">
+          Lihat juga:{" "}
+          <Link href={related.href} className="font-semibold text-[var(--brand-accent)] underline-offset-2 hover:underline">
+            {related.label} →
+          </Link>
+        </p>
       </div>
     </div>
   );

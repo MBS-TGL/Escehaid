@@ -114,13 +114,20 @@ const sections: LegalSection[] = [
   },
 ];
 
+const FALLBACK_UPDATED = "19 Oktober 2026";
+
 export default async function TermsPage() {
-  const brand = toPublicBrand(await getSiteSettings());
+  // Naskah kustom admin (kosong = naskah bawaan di bawah). Admin menyimpan →
+  // revalidatePath("/terms") sehingga ISR ikut disegarkan.
+  const settings = await getSiteSettings();
+  const brand = toPublicBrand(settings);
+  const customBody = (settings.values.legal_terms_body || "").trim() || null;
+  const updated = (settings.values.legal_terms_updated || "").trim() || FALLBACK_UPDATED;
   return (
     <LegalArticle
       title="Syarat dan Ketentuan"
       description={DESCRIPTION}
-      updated="19 Oktober 2026"
+      updated={updated}
       path="/terms"
       icon={FileText}
       audience="Berlaku untuk seluruh pengguna situs"
@@ -132,6 +139,7 @@ export default async function TermsPage() {
       sections={sections}
       brand={brand}
       related={{ href: "/privacy", label: "Kebijakan Privasi" }}
+      customBody={customBody}
     />
   );
 }
