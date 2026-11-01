@@ -1,29 +1,26 @@
 import DOMPurify from "isomorphic-dompurify";
 
 /**
- * Hook sekali per proses: cabut atribut dimensi inline (`width`, `height`,
- * `style`) pada <img> agar tidak menjebol batas `prose-img:max-h-[70vh]` di
- * RichContent (mis. foto 3000px atau `style="width:2000px"` dari editor).
- * Idempoten — dipasang ulang pun hanya menghapus atribut yang sama.
+ * Regex sadar-quote untuk satu tag <img> pada HTML yang SUDAH disanitasi
+ * (nilai atribut boleh mengandung `>`, mis. `style="a>b"`).
+ * Murni operasi string — tanpa hook DOM dan tanpa global browser, aman di SSR.
  */
-let imgHookInstalled = false;
-function ensureImgHook() {
-  if (imgHookInstalled) return;
-  imgHookInstalled = true;
-  DOMPurify.addHook("uponSanitizeElement", (node) => {
-    // `node` realm jsdom — jangan pakai `instanceof Element` global (tak ada di SSR).
-    if (node.nodeName === "IMG") {
-      const el = node as unknown as { removeAttribute(attr: string): void };
-      el.removeAttribute("width");
-      el.removeAttribute("height");
-      el.removeAttribute("style");
-    }
-  });
+const IMG_TAG_RE = /<img\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi;
+/** Atribut dimensi inline yang dicabut khusus pada <img>. */
+const IMG_DIM_ATTR_RE = /\s+(?:width|height|style)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi;
+
+/**
+ * Cabut `width`/`height`/`style` inline pada <img> agar foto raksasa dari
+ * editor (mis. `width="3000"` atau `style="width:2000px"`) tidak menjebol
+ * batas `prose-img:max-h-[70vh]` di RichContent. Elemen lain tak tersentuh
+ * (mis. `style="text-align:center"` TipTap pada <p> tetap hidup).
+ */
+function stripImgDimensions(html: string): string {
+  return html.replace(IMG_TAG_RE, (tag) => tag.replace(IMG_DIM_ATTR_RE, ""));
 }
 
 export function sanitize(html: string): string {
-  ensureImgHook();
-  return DOMPurify.sanitize(html, {
+  const clean = DOMPurify.sanitize(html, {
     ALLOWED_TAGS: [
       "p", "br", "strong", "em", "u", "s", "a", "span", "sub", "sup",
       "h1", "h2", "h3", "h4", "h5", "h6",
@@ -42,4 +39,5 @@ export function sanitize(html: string): string {
     ],
     ALLOW_DATA_ATTR: false,
   });
+  return stripImgDimensions(clean);
 }
