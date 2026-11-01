@@ -242,7 +242,7 @@ export default function Footer({
           bukan site_short_name agar branding tempat lain tak ikut berubah).
           Kanan: tautan legal dengan pemisah. */}
       <div className="border-t border-white/10">
-        <div className="mx-auto flex max-w-[1296px] flex-col gap-3 px-6 py-6 text-xs text-white/60 sm:text-sm md:flex-row md:items-center md:justify-between md:px-10 md:pr-20">
+        <div className="mx-auto flex max-w-[1296px] flex-col items-center gap-3 px-6 py-6 text-center text-xs text-white/60 sm:text-sm md:flex-row md:items-center md:justify-between md:px-10 md:pr-20 md:text-left">
           <p className="truncate whitespace-nowrap leading-relaxed">
             &copy; {new Date().getFullYear()} SMP Muhammadiyah 4. {brand.copyright}
           </p>
