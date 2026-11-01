@@ -188,7 +188,7 @@ export default function NotificationsClientPage() {
               menuLabel: "Filter status notifikasi",
               value: filter,
               options: [
-                { key: "all", label: "Semua", count: items.length },
+                { key: "all", label: "Semua Status", count: items.length },
                 { key: "unread", label: "Belum dibaca", count: unread },
                 { key: "read", label: "Dibaca", count: items.length - unread },
               ],
@@ -208,7 +208,7 @@ export default function NotificationsClientPage() {
           filter={{
             value: filter,
             options: [
-              { key: "all", label: "Semua", count: items.length },
+              { key: "all", label: "Semua Status", count: items.length },
               { key: "unread", label: "Belum dibaca", count: unread },
               { key: "read", label: "Dibaca", count: items.length - unread },
             ],
