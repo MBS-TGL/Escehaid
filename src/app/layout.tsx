@@ -213,6 +213,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="id"
+      suppressHydrationWarning
       className={`${jakartaSans.variable} ${jetbrainsMono.variable} ${quoteSerif.variable} h-full antialiased`}
     >
       <head>
