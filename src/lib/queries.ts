@@ -16,6 +16,7 @@ export * from "./queries/gallery";
 export * from "./queries/media";
 export * from "./queries/news";
 export * from "./queries/news-media";
+export * from "./queries/notifications";
 export * from "./queries/portal";
 export * from "./queries/program";
 export * from "./queries/profile";

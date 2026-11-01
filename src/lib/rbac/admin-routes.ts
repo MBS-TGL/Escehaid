@@ -56,6 +56,8 @@ export const ADMIN_ROUTE_PERMISSIONS: ReadonlyArray<readonly [prefix: string, pe
  *   redirect, wajib bisa dimuat walau tanpa izin apa pun.
  * - `/admin/security`: pengaturan akun PRIBADI (nama, sandi, 2FA, sesi) —
  *   bukan data milik modul, jadi tidak boleh bergantung pada izin modul.
+ * - `/admin/notifications`: pusat notifikasi PRIBADI (baris milik sendiri via
+ *   RLS `auth.uid() = user_id`) — sama alasannya dengan `/admin/security`.
  */
 export const ADMIN_EXEMPT_EXACT: readonly string[] = [
   "/admin",
@@ -63,6 +65,7 @@ export const ADMIN_EXEMPT_EXACT: readonly string[] = [
   "/admin/403",
   "/admin/change-password",
   "/admin/security",
+  "/admin/notifications",
 ] as const;
 
 /**

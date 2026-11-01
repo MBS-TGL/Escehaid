@@ -588,10 +588,18 @@ export default function AdminTopbar({
                 )}
               </div>
               {notifications.length > 0 && (
-                <div className="border-t border-slate-100 px-4 py-2.5">
+                <div className="flex items-center gap-1 border-t border-slate-100 px-4 py-2.5">
+                  <Link
+                    href="/admin/notifications"
+                    onClick={() => setNotifOpen(false)}
+                    className="flex-1 text-center text-xs font-semibold text-slate-600 hover:text-[var(--brand-primary)]"
+                  >
+                    Lihat semua
+                  </Link>
+                  <span aria-hidden className="text-slate-200">|</span>
                   <button onClick={handleMarkAllAsRead}
-                    className="block w-full text-center text-xs font-semibold text-[var(--brand-accent)] hover:text-[var(--brand-primary)]">
-                    Tandai semua sudah dibaca
+                    className="flex-1 text-center text-xs font-semibold text-[var(--brand-accent)] hover:text-[var(--brand-primary)]">
+                    Tandai semua dibaca
                   </button>
                 </div>
               )}
