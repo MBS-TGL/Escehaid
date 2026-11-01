@@ -990,9 +990,9 @@ function AdminContactInner() {
                 href={`mailto:${detailItem.email}?subject=${encodeURIComponent(`Re: ${detailItem.subject || "Pesan dari Website"}`)}`}
                 aria-label="Balas via Email"
                 title="Balas via Email"
-                className="flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-3 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] sm:flex-auto sm:px-4">
+                className="flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-3 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] sm:flex-1 sm:px-4">
                 <Envelope className="h-4 w-4 shrink-0" />
-                <span className="hidden whitespace-nowrap sm:inline">Email</span>
+                <span className="hidden min-w-0 truncate sm:inline">Email</span>
               </a>
               {detailItem.phone && (
                 <a
@@ -1000,9 +1000,9 @@ function AdminContactInner() {
                   target="_blank" rel="noopener noreferrer"
                   aria-label="Balas via WhatsApp"
                   title="Balas via WhatsApp"
-                  className="flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 sm:flex-auto sm:px-4">
+                  className="flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 sm:flex-1 sm:px-4">
                   <WhatsappLogo className="h-4 w-4 shrink-0 text-emerald-600" />
-                  <span className="hidden whitespace-nowrap sm:inline">WhatsApp</span>
+                  <span className="hidden min-w-0 truncate sm:inline">WhatsApp</span>
                 </a>
               )}
               {permUpdate && (
@@ -1010,13 +1010,13 @@ function AdminContactInner() {
                   onClick={handleDetailToggleRead}
                   aria-label={detailItem.is_read ? "Tandai belum dibaca" : "Tandai sudah dibaca"}
                   title={detailItem.is_read ? "Tandai belum dibaca" : "Tandai sudah dibaca"}
-                  className={`flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold sm:flex-auto sm:px-4 ${
+                  className={`flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold sm:flex-1 sm:px-4 ${
                     detailItem.is_read
                       ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
                       : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                   }`}>
                   {detailItem.is_read ? <Clock className="h-4 w-4 shrink-0" /> : <CheckCircle className="h-4 w-4 shrink-0" />}
-                  <span className="hidden whitespace-nowrap sm:inline">{detailItem.is_read ? "Belum Dibaca" : "Dibaca"}</span>
+                  <span className="hidden min-w-0 truncate sm:inline">{detailItem.is_read ? "Belum Dibaca" : "Dibaca"}</span>
                 </button>
               )}
               <button
@@ -1024,18 +1024,18 @@ function AdminContactInner() {
                 onClick={() => window.print()}
                 aria-label="Cetak pesan ini"
                 title="Cetak detail pesan"
-                className="flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 sm:flex-auto sm:px-4 print:hidden">
+                className="flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 sm:flex-1 sm:px-4 print:hidden">
                 <Printer className="h-4 w-4 shrink-0" />
-                <span className="hidden whitespace-nowrap sm:inline">Cetak</span>
+                <span className="hidden min-w-0 truncate sm:inline">Cetak</span>
               </button>
               {permDelete && (
                 <button
                   onClick={() => { setDetailItem(null); setDeleteItem(detailItem); }}
                   aria-label="Hapus pesan ini"
                   title="Hapus pesan ini"
-                  className="flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100 sm:flex-auto sm:px-4 print:hidden">
+                  className="flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100 sm:flex-1 sm:px-4 print:hidden">
                   <Trash className="h-4 w-4 shrink-0" />
-                  <span className="hidden whitespace-nowrap sm:inline">Hapus</span>
+                  <span className="hidden min-w-0 truncate sm:inline">Hapus</span>
                 </button>
               )}
             </div>
