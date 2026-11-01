@@ -111,11 +111,11 @@ export default async function BeritaPage({ searchParams }: { searchParams: Promi
         ) : (
           <>
             {/* Grid — 3 kolom, kartu terbaru di kiri-atas */}
-            <CSSStagger stagger={60} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <CSSStagger stagger={60} className="grid items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {berita.map((item, idx) => {
                 const cat = newsCategory(item.category);
                 return (
-                  <div key={item.id}>
+                  <div key={item.id} className="h-full min-w-0">
                     <ContentCard
                       href={`/news/${item.slug}`}
                       title={item.title}

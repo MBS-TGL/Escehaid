@@ -62,7 +62,7 @@ function activityBadges(item: Activity): { label: string; cls: string; live?: bo
 /** Kartu grid untuk seksi "Sudah Berlangsung" — pakai kartu konten kanonik. */
 function ActivityCard({ item }: { item: Activity }) {
   return (
-    <div>
+    <div className="h-full min-w-0">
       <ContentCard
         href={`/activities/${item.slug}`}
         title={item.title}
@@ -343,7 +343,7 @@ export default async function ActivitiesPage({
                     {pastItems.length}
                   </span>
                 </div>
-                <CSSStagger stagger={60} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                <CSSStagger stagger={60} className="grid items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3">
                   {pastPageItems.map((item) => (
                     <ActivityCard key={item.id} item={item} />
                   ))}

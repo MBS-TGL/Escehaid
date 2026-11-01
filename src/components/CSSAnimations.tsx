@@ -111,7 +111,7 @@ export function CSSStagger({
         ? children.map((child, i) => (
           <div
             key={i}
-            className="anim-reveal"
+            className="anim-reveal h-full"
             style={{
               opacity: visible ? 1 : 0,
               transform: visible ? "none" : "translateY(15px)",
