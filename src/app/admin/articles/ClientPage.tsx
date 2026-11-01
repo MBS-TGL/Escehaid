@@ -74,6 +74,8 @@ import {
 } from "@/components/admin/mobile";
 import { DesktopPagination } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
+import { ContentRevisionsSlideOver } from "@/components/admin/ContentRevisionsSlideOver";
+import { recordRevisionAction } from "@/app/admin/review/actions";
 
 const EXCERPT_MAX = 160;
 const WORDS_PER_MINUTE = 200;
@@ -240,6 +242,8 @@ export default function AdminArticlesPage() {
   const [bulkDelete, setBulkDelete] = useState(false);
   // Terbitkan ke publik (dari menu ⋯ mobile) selalu lewat konfirmasi singkat.
   const [publishItem, setPublishItem] = useState<ArticleWithAuthor | null>(null);
+  // Riwayat revisi konten (snapshot otomatis per simpan + pulihkan).
+  const [historyItem, setHistoryItem] = useState<ArticleWithAuthor | null>(null);
 
   // Form panel
   const [formOpen, setFormOpen] = useState(false);
@@ -779,10 +783,25 @@ export default function AdminArticlesPage() {
       if (error) { setFormError(error); toast(error, "error"); setFormSaving(false); return; }
       revalidateArticles(data?.slug, editItem.slug).catch(() => {});
       toast("Artikel berhasil diperbarui", "success");
+      // Snapshot revisi otomatis (best-effort).
+      recordRevisionAction({
+        entityType: "articles",
+        entityId: editItem.id,
+        snapshot: { ...rowPayload, slug: data?.slug || rowPayload.slug },
+        note: "Perubahan konten",
+      }).catch(() => {});
     } else {
       const { data, error } = await createArticle(rowPayload);
       if (error) { setFormError(error); toast(error, "error"); setFormSaving(false); return; }
       revalidateArticles(data?.slug).catch(() => {});
+      if (data?.id) {
+        recordRevisionAction({
+          entityType: "articles",
+          entityId: data.id,
+          snapshot: { ...rowPayload, slug: data.slug || rowPayload.slug },
+          note: "Versi awal",
+        }).catch(() => {});
+      }
       if (!form.is_published) {
         toast("Artikel disimpan sebagai draft", "success");
       } else if (publishedUtc && new Date(publishedUtc).getTime() > Date.now()) {
@@ -1127,6 +1146,9 @@ export default function AdminArticlesPage() {
                         <button onClick={() => openEdit(item)} aria-label={`Edit ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
                           <PencilSimple className="h-4 w-4" />
                         </button>
+                        <button onClick={() => setHistoryItem(item)} aria-label={`Riwayat ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Riwayat revisi">
+                          <Clock className="h-4 w-4" />
+                        </button>
                         {permCreate && (
                           <button onClick={() => openDuplicate(item)} aria-label={`Duplikat ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-purple-50 hover:text-purple-600" title="Duplikat">
                             <Files className="h-4 w-4" />
@@ -1222,6 +1244,7 @@ export default function AdminArticlesPage() {
                 onDuplicate={openDuplicate}
                 onDelete={setDeleteItem}
                 onPublish={requestPublish}
+                onHistory={setHistoryItem}
               />
             ))
           )}
@@ -1820,6 +1843,18 @@ export default function AdminArticlesPage() {
           <RichContent content={form.content || "<p>Konten belum tersedia.</p>"} />
         </div>
       </Modal>
+
+      {/* ── RIWAYAT REVISI ────────────────────────────── */}
+      {historyItem && (
+        <ContentRevisionsSlideOver
+          isOpen={!!historyItem}
+          onClose={() => setHistoryItem(null)}
+          entityType="articles"
+          entityId={historyItem.id}
+          currentTitle={historyItem.title}
+          onRestored={fetchArticles}
+        />
+      )}
     </div>
   );
 }
@@ -1849,6 +1884,7 @@ function ArticleMobileRow({
   onDuplicate,
   onDelete,
   onPublish,
+  onHistory,
 }: {
   item: ArticleWithAuthor;
   selected: boolean;
@@ -1864,6 +1900,7 @@ function ArticleMobileRow({
   onDuplicate: (a: ArticleWithAuthor) => void;
   onDelete: (a: ArticleWithAuthor) => void;
   onPublish: (a: ArticleWithAuthor) => void;
+  onHistory: (a: ArticleWithAuthor) => void;
 }) {
   const status = articleStatus(item);
   const DOT_TONE =
@@ -1883,6 +1920,7 @@ function ArticleMobileRow({
         }]
       : []),
     { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) },
+    { key: "history", label: "Riwayat", icon: <Clock className="h-4 w-4" />, run: () => onHistory(item) },
     ...(canPublish
       ? [
           {

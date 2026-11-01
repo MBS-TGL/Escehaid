@@ -77,6 +77,8 @@ import { FilterBar } from "@/components/admin/FilterBar";
 import AiFillPanel from "@/components/admin/AiFillPanel";
 import VideoUrlField from "@/components/admin/VideoUrlField";
 import type { RefineData } from "@/lib/queries/ai";
+import { ContentRevisionsSlideOver } from "@/components/admin/ContentRevisionsSlideOver";
+import { recordRevisionAction } from "@/app/admin/review/actions";
 
 
 const categoryConfig: Record<string, { label: string; color: string }> = {
@@ -231,6 +233,8 @@ export default function AdminBeritaPage() {
   const [bulkDelete, setBulkDelete] = useState(false);
   // Terbitkan ke publik (dari menu ⋯ mobile) selalu lewat konfirmasi singkat.
   const [publishItem, setPublishItem] = useState<News | null>(null);
+  // Riwayat revisi konten (snapshot otomatis per simpan + pulihkan).
+  const [historyItem, setHistoryItem] = useState<News | null>(null);
 
   // Form panel
   const [formOpen, setFormOpen] = useState(false);
@@ -722,6 +726,16 @@ export default function AdminBeritaPage() {
       savedSlug = data?.slug || "";
     }
 
+    // ── Snapshot revisi otomatis (best-effort, tak menghalangi simpan) ──
+    if (newsId) {
+      recordRevisionAction({
+        entityType: "news",
+        entityId: newsId,
+        snapshot: { ...rowPayload, slug: savedSlug || rowPayload.slug },
+        note: editItem ? "Perubahan konten" : "Versi awal",
+      }).catch(() => {});
+    }
+
     // ── Upload lampiran bila ada ──
     let attachmentError = "";
     if (attachmentFile && newsId) {
@@ -1063,6 +1077,9 @@ export default function AdminBeritaPage() {
                         <button onClick={() => openEdit(item)} aria-label={`Edit ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit">
                           <PencilSimple className="h-4 w-4" />
                         </button>
+                        <button onClick={() => setHistoryItem(item)} aria-label={`Riwayat ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Riwayat revisi">
+                          <Clock className="h-4 w-4" />
+                        </button>
                         {permCreate && (
                           <button onClick={() => openDuplicate(item)} aria-label={`Duplikat ${item.title}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-purple-50 hover:text-purple-600" title="Duplikat">
                             <Files className="h-4 w-4" />
@@ -1158,6 +1175,7 @@ export default function AdminBeritaPage() {
                 onDuplicate={openDuplicate}
                 onDelete={setDeleteItem}
                 onPublish={requestPublish}
+                onHistory={setHistoryItem}
               />
             ))
           )}
@@ -1749,6 +1767,18 @@ export default function AdminBeritaPage() {
       >
         <NewsPreview form={form} imagePreview={imagePreview} device={previewDevice} />
       </Modal>
+
+      {/* ── RIWAYAT REVISI ────────────────────────────── */}
+      {historyItem && (
+        <ContentRevisionsSlideOver
+          isOpen={!!historyItem}
+          onClose={() => setHistoryItem(null)}
+          entityType="news"
+          entityId={historyItem.id}
+          currentTitle={historyItem.title}
+          onRestored={fetchNews}
+        />
+      )}
     </div>
   );
 }
@@ -1838,6 +1868,7 @@ function NewsMobileRow({
   onDuplicate,
   onDelete,
   onPublish,
+  onHistory,
 }: {
   item: NewsWithAuthor;
   selected: boolean;
@@ -1853,6 +1884,7 @@ function NewsMobileRow({
   onDuplicate: (n: News) => void;
   onDelete: (n: News) => void;
   onPublish: (n: News) => void;
+  onHistory: (n: News) => void;
 }) {
   const status = newsStatus(item);
   const DOT_TONE =
@@ -1864,6 +1896,7 @@ function NewsMobileRow({
   const actions: RowAction[] = [
     { key: "view", label: "Lihat", icon: <Eye className="h-4 w-4" />, run: () => onView(item) },
     { key: "edit", label: "Edit", icon: <PencilSimple className="h-4 w-4" />, run: () => onEdit(item) },
+    { key: "history", label: "Riwayat", icon: <Clock className="h-4 w-4" />, run: () => onHistory(item) },
     ...(canPublish
       ? [
           {
