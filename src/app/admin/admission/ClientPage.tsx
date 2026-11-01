@@ -49,6 +49,8 @@ import type { SpmbMessageTemplate } from "@/lib/queries";
 import type { RegistrationPath } from "@/lib/queries";
 import { SPMB_DOCUMENT_KEYS, SPMB_DOCUMENT_LABELS, SPMB_PROGRAMS } from "@/lib/spmb-registration";
 import { filterSpmbRegistrations, spmbGenderLabel, SPMB_NO_PROGRAM } from "@/lib/spmb-filter";
+import { buildSpmbMonthlyRecap, buildSpmbRecapCsv } from "@/lib/admin-reports";
+import { downloadCsv } from "@/lib/download-csv";
 import { fillSpmbTemplate, spmbWhatsappHref } from "@/lib/spmb-message";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -929,6 +931,17 @@ export default function AdminSPMBPage() {
     toast(`${exportRows.length} pendaftar diekspor ke CSV${selectedIds.size > 0 ? " (terpilih)" : ""}`, "success");
   }
 
+  /** Rekap bulanan siap cetak: total/menunggu/diterima/ditolak per bulan daftar. */
+  function handleExportRecap() {
+    const recap = buildSpmbMonthlyRecap(data);
+    if (recap.length === 0) {
+      toast("Belum ada data pendaftar untuk direkap.", "error");
+      return;
+    }
+    downloadCsv(`rekap-spmb-bulanan-${new Date().toISOString().slice(0, 10)}.csv`, buildSpmbRecapCsv(recap));
+    toast(`${recap.length} bulan direkap ke CSV.`, "success");
+  }
+
   async function handleUpdateStatus(id: string, status: "accepted" | "rejected") {
     try {
       await updateRegistrationStatus(id, status);
@@ -1229,6 +1242,7 @@ export default function AdminSPMBPage() {
         active={mainTab}
         onSelect={setMainTab}
         onExport={handleExportCsv}
+        onRecap={handleExportRecap}
         onAdd={() => setAddOpen(true)}
         onImport={() => setImportOpen(true)}
         onBroadcast={() => setBroadcastOpen(true)}
@@ -2944,10 +2958,11 @@ export default function AdminSPMBPage() {
 }
 
 /** Header halaman + tab "Pendaftar" / "Gelombang Pendaftaran". */
-function PageHeader({ active, onSelect, onExport, onAdd, onImport, onBroadcast, canCreate, canImport, canExport }: {
+function PageHeader({ active, onSelect, onExport, onRecap, onAdd, onImport, onBroadcast, canCreate, canImport, canExport }: {
   active: MainTab;
   onSelect: (tab: MainTab) => void;
   onExport: () => void;
+  onRecap: () => void;
   onAdd: () => void;
   onImport: () => void;
   onBroadcast?: () => void;
@@ -2994,6 +3009,12 @@ function PageHeader({ active, onSelect, onExport, onAdd, onImport, onBroadcast, 
               <button onClick={onExport} className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:flex-none">
                 <Download className="h-4 w-4" />
                 Export CSV
+              </button>
+            )}
+            {canExport && (
+              <button onClick={onRecap} title="Unduh rekap total/menunggu/diterima/ditolak per bulan daftar" className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:flex-none">
+                <CalendarBlank className="h-4 w-4" />
+                Rekap Bulanan
               </button>
             )}
             {onBroadcast && (
