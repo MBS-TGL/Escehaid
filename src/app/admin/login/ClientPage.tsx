@@ -2,6 +2,18 @@
 
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+
+/**
+ * Autofocus hanya di desktop (pointer halus): di HP autofocus langsung
+ * membuka keyboard dan menggeser layout saat halaman baru dibuka.
+ * Ref callback stabil (di luar komponen) agar tidak re-focus tiap render.
+ */
+function focusDesktopOnly(el: HTMLInputElement | null) {
+  if (!el) return;
+  if (typeof window !== "undefined" && window.matchMedia("(pointer: fine)").matches) {
+    el.focus();
+  }
+}
 import Link from "next/link";
 import Image from "next/image";
 import { Eye, EyeSlash, Warning, ArrowRight, ArrowLeft, GraduationCap, Users, BookOpen, CheckCircle, ShieldCheck } from "@/components/Icons";
@@ -161,11 +173,13 @@ function LoginForm() {
       </div>
 
       {/* ── RIGHT PANEL — Form Login / Reset ───────────── */}
-      <div className="flex-1 flex items-center justify-center relative overflow-hidden p-4">
+      {/* items-start + overflow-y-auto + min-h-dvh: saat keyboard HP terbuka,
+          kartu bisa discroll, tak kepotong di tengah layar. */}
+      <div className="flex-1 flex items-start justify-center relative overflow-y-auto p-4 py-8 min-h-dvh sm:items-center lg:py-4">
         <div className="absolute top-0 right-0 -mr-40 -mt-40 w-[800px] h-[800px] bg-[#f4f7fb] rounded-full blur-3xl pointer-events-none lg:opacity-50" />
 
-        <div className="w-full max-w-md relative z-10">
-          <div className={`bg-white/80 backdrop-blur-xl border border-[#dce3ed]/60 rounded-2xl shadow-xl p-8 md:p-10 transition-all duration-700 ease-out ${mounted ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-90 translate-y-4"}`}>
+        <div className="w-full max-w-md relative z-10 my-auto">
+          <div className={`bg-white/80 backdrop-blur-xl border border-[#dce3ed]/60 rounded-2xl shadow-xl p-6 sm:p-8 md:p-10 transition-all duration-700 ease-out ${mounted ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-90 translate-y-4"}`}>
 
             {mfaStep ? (
               /* ── 2FA VERIFICATION FORM ──── */
@@ -197,7 +211,7 @@ function LoginForm() {
                       onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                       className="block w-full px-4 py-3 rounded-xl border border-[#dce3ed] bg-[#f4f7fb] text-center font-mono text-2xl tracking-[0.4em] text-[var(--brand-primary)] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[var(--brand-accent)]/20 focus:border-[var(--brand-accent)] transition-all"
                       placeholder="000000"
-                      autoFocus
+                      ref={focusDesktopOnly}
                     />
                   </div>
                   <button data-solid
@@ -249,7 +263,7 @@ function LoginForm() {
                         onChange={(e) => setResetEmail(e.target.value)}
                         className="block w-full px-4 py-3 rounded-xl border border-[#dce3ed] bg-[#f4f7fb] text-[var(--brand-primary)] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[var(--brand-accent)]/20 focus:border-[var(--brand-accent)] transition-all text-sm"
                         placeholder="email@mbs.id"
-                        autoFocus
+                        ref={focusDesktopOnly}
                       />
                     </div>
                     <button data-solid data-busy
@@ -276,10 +290,10 @@ function LoginForm() {
               </>
             ) : (
               <>
-                {/* Mobile header */}
-                <div className="text-center mb-10 lg:hidden">
-                  <Image src="/images/Logo-Sekolah.png" alt="Logo" width={199} height={253} sizes="64px" className="mx-auto mb-6 h-16 w-auto object-contain" />
-                  <h2 className="text-3xl font-extrabold text-[var(--brand-primary)] mb-2">Admin Panel</h2>
+                {/* Mobile header — ramping agar form muat di atas fold */}
+                <div className="text-center mb-6 sm:mb-8 lg:hidden">
+                  <Image src="/images/Logo-Sekolah.png" alt="Logo" width={199} height={253} sizes="64px" className="mx-auto mb-4 h-14 w-auto object-contain sm:mb-6 sm:h-16" />
+                  <h2 className="text-2xl font-extrabold text-[var(--brand-primary)] mb-1 sm:mb-2 sm:text-3xl">Admin Panel</h2>
                   <p className="text-slate-500 text-sm">SMP Muhammadiyah 4 Tanggul</p>
                 </div>
 
@@ -312,7 +326,7 @@ function LoginForm() {
                         onChange={(e) => setEmail(e.target.value)}
                         className="block w-full px-4 py-3 rounded-xl border border-[#dce3ed] bg-[#f4f7fb] text-[var(--brand-primary)] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[var(--brand-accent)]/20 focus:border-[var(--brand-accent)] transition-all text-sm"
                         placeholder="email@mbs.id"
-                        autoFocus
+                        ref={focusDesktopOnly}
                       />
                     </div>
                   </div>
@@ -323,7 +337,7 @@ function LoginForm() {
                       <button
                         type="button"
                         onClick={() => { setResetMode(true); setResetEmail(email); setError(""); }}
-                        className="text-xs font-semibold text-[var(--brand-accent)] hover:underline transition-colors"
+                        className="rounded px-1 py-1.5 text-xs font-semibold text-[var(--brand-accent)] hover:underline transition-colors sm:text-sm"
                       >
                         Lupa password?
                       </button>
@@ -341,7 +355,8 @@ function LoginForm() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                        aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 hover:text-slate-600 transition-colors"
                       >
                         {showPassword ? <EyeSlash className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
