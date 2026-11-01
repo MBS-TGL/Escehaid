@@ -278,7 +278,7 @@ function LoginForm() {
               <>
                 {/* Mobile header */}
                 <div className="text-center mb-10 lg:hidden">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 shadow-lg bg-[var(--brand-primary)] overflow-hidden">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 bg-white shadow-md ring-1 ring-[#dce3ed]/70">
                     <Image src="/images/Logo-Sekolah.png" alt="Logo" width={199} height={253} sizes="44px" className="w-11 object-contain" />
                   </div>
                   <h2 className="text-3xl font-extrabold text-[var(--brand-primary)] mb-2">Admin Panel</h2>
