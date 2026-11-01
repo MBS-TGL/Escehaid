@@ -970,8 +970,16 @@ html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-\[#dce3ed\
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .border-\[#dce3ed\]\/60 {
   border-color: var(--admin-border);
 }
-html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
-html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .divide-slate-50 > :not([hidden]) ~ :not([hidden]) {
+/* Override divide v3 (`> :not([hidden]) ~ :not([hidden])`, border-TOP semua
+   kecuali anak pertama) tidak cocok dengan Tailwind v4 yang memakai
+   `:where(.divide-* > :not(:last-child))` (border-BOTTOM semua kecuali anak
+   terakhir). Akibatnya baris pertama tabel (news, dsb.) lolos override dan
+   garisnya tetap slate-100 terang (oklch) sementara baris 2+ gelap
+   (#334155). Selektor di bawah mencerminkan persis elemen yang diwarnai v4
+   sehingga semua garis seragam --admin-border; spesifisitas menang atas
+   :where() (nol) tanpa menyentuh light mode. */
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .divide-slate-100 > :not(:last-child),
+html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .divide-slate-50 > :not(:last-child) {
   border-color: var(--admin-border);
 }
 /* ── Latar hover ── */

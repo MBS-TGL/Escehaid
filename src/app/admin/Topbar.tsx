@@ -605,7 +605,7 @@ export default function AdminTopbar({
                   notifications.map((n) => {
                     const Icon = notifIcon[n.type] || Bell;
                     return (
-                      <div key={n.id} className={`flex gap-3 border-b border-slate-50 px-4 py-3 transition-colors hover:bg-slate-50/50 ${!n.is_read ? "bg-[var(--brand-accent)]/[0.03]" : ""}`}>
+                      <div key={n.id} className={`flex gap-3 border-b border-slate-100 px-4 py-3 transition-colors hover:bg-slate-50/50 ${!n.is_read ? "bg-[var(--brand-accent)]/[0.03]" : ""}`}>
                         <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${notifColor[n.type] || "bg-slate-100 text-slate-500"}`}>
                           <Icon className="h-4 w-4" />
                         </div>
