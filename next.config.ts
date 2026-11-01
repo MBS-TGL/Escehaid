@@ -38,13 +38,10 @@ const nextConfig: NextConfig = {
   experimental: {
     agentUpgrade: "security",
   },
-  // isomorphic-dompurify (→ jsdom) dibaca lewat require asli dari
-  // node_modules, BUKAN di-bundle webpack. Alasan: jsdom versi di bawahnya
-  // membaca browser/default-stylesheet.css via fs + __dirname — saat
-  // di-bundle, __dirname menunjuk ke .next/server/chunks sehingga prerender
-  // halaman publik (/news/[slug], /articles/[slug], ...) gagal dengan
-  // ENOENT saat "Collecting page data".
-  serverExternalPackages: ["isomorphic-dompurify", "jsdom"],
+  // Sanitasi konten (`sanitize-html`, murni parser string tanpa DOM) aman
+  // di-bundle webpack ke chunk RSC — tak ada lagi jsdom/DOMPurify di jalur
+  // server. Entri ini dipertahankan kosong bila kelak ada paket server-only.
+  serverExternalPackages: [],
 
   // ── Output File Tracing Exclusions (hemat Vercel Functions Storage) ──
   // Next.js men-trace SEMUA file yang terjangkau dari import graph tiap
@@ -59,11 +56,11 @@ const nextConfig: NextConfig = {
   //    (news/articles/activities/dll.) hanya lewat `storage-remote.ts`
   //    (fetch ke API route) atau `getPublicUrl` (string-concat murni).
   //
-  // 2. jsdom + ekosistemnya TIDAK di-exclude di sini: audit NFT membuktikan
-  //    hanya 7 function yang men-trace jsdom (news/[slug], articles/[slug],
-  //    activities/[slug], admin/news, admin/articles, admin/activities,
-  //    api/ai/refine) — tepat yang memanggil sanitize()/RichContent saat
-  //    SSR. Exclude jsdom akan merusak sanitize server-side.
+  // 2. jsdom SUDAH dihapus dari jalur server: sanitasi kini memakai
+  //    `sanitize-html` (parser string, tanpa DOM) sehingga tak ada lagi
+  //    dependency berat di route sanitize (news/[slug], articles/[slug],
+  //    activities/[slug], admin konten, api/ai/refine). jsdom tersisa hanya
+  //    sebagai devDependency untuk vitest (environment jsdom test).
   //
   // Format key: route ternormalisasi Next.js (mis. "/news/[slug]"), dicocokkan
   // dengan picomatch `contains:true` (lihat collect-build-traces.js). Karena
