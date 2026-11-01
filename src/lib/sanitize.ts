@@ -15,12 +15,24 @@ import sanitizeHtml from "sanitize-html";
  * list, blockquote, codeBlock, hr), Underline, Link, TextAlign
  * (`style="text-align:…"` di p/heading), TaskList/TaskItem
  * (`data-type`, `data-checked`, checkbox), Highlight (`<mark>` + warna),
- * Image (`<img src/alt/title>`, termasuk base64), tabel & figure/figcaption
- * untuk konten lama. `<iframe>`/`<script>` selalu dibuang.
+ * TextStyle+Color (`<span style="color:…">`), Subscript/Superscript,
+ * Image (`<img src/alt/title>`, termasuk base64), Table (+ resize inline
+ * `min-width` dan `colgroup`/`col`), Youtube (`<div data-youtube-video>` +
+ * `<iframe>` YouTube/Vimeo saja), figure/figcaption untuk konten lama.
+ * `<script>` dan iframe di luar hostAllowlist selalu dibuang.
  */
 
-/** Warna aman untuk highlight: hex / rgb(a) / hsl(a) — tanpa `expression()`. */
+/** Warna aman: hex / rgb(a) / hsl(a) — tanpa `expression()` / `url()`. */
 const COLOR_RE = /^(#[0-9a-f]{3,8}|rgba?\([^)]*\)|hsla?\([^)]*\))$/i;
+/** Satuan lebar kolom tabel hasil resize: angka + px/% — tanpa expression. */
+const WIDTH_RE = /^\d+(\.\d+)?(px|%)$/;
+
+/** Host iframe yang diizinkan (video embed resmi editor). */
+const IFRAME_HOSTS = [
+  "www.youtube.com",
+  "www.youtube-nocookie.com",
+  "player.vimeo.com",
+];
 
 const CONFIG: sanitizeHtml.IOptions = {
   allowedTags: [
@@ -28,9 +40,10 @@ const CONFIG: sanitizeHtml.IOptions = {
     "h1", "h2", "h3", "h4", "h5", "h6",
     "ul", "ol", "li", "mark",
     "blockquote", "pre", "code",
-    "table", "thead", "tbody", "tr", "th", "td",
+    "table", "colgroup", "col", "thead", "tbody", "tr", "th", "td",
     "img", "figure", "figcaption",
     "hr", "div", "label", "input",
+    "iframe",
   ],
   allowedAttributes: {
     a: ["href", "target", "rel", "class", "title"],
@@ -42,19 +55,23 @@ const CONFIG: sanitizeHtml.IOptions = {
     h4: ["style", "class"],
     h5: ["style", "class"],
     h6: ["style", "class"],
-    div: ["style", "class"],
-    span: ["class"],
+    div: ["style", "class", "data-youtube-video"],
+    span: ["style", "class"],
     mark: ["style", "class"],
     ul: ["data-type", "class"],
     li: ["data-checked", "class"],
     input: ["type", "checked", "disabled"],
-    th: ["colspan", "rowspan", "align", "valign", "class"],
-    td: ["colspan", "rowspan", "align", "valign", "class"],
+    table: ["style", "class"],
+    col: ["style", "span"],
+    colgroup: ["span"],
+    th: ["colspan", "rowspan", "align", "valign", "style", "class"],
+    td: ["colspan", "rowspan", "align", "valign", "style", "class"],
     figure: ["class"],
     figcaption: ["class"],
     blockquote: ["class"],
     pre: ["class"],
     code: ["class"],
+    iframe: ["src", "title", "allow", "allowfullscreen", "frameborder"],
   },
   allowedClasses: {
     // Kelas Tailwind arbitrer dari editor (mis. kelas link TipTap) —
@@ -70,12 +87,19 @@ const CONFIG: sanitizeHtml.IOptions = {
     h5: { "text-align": [/^(left|right|center|justify)$/] },
     h6: { "text-align": [/^(left|right|center|justify)$/] },
     div: { "text-align": [/^(left|right|center|justify)$/] },
+    span: { color: [COLOR_RE], "background-color": [COLOR_RE] },
     mark: { "background-color": [COLOR_RE], color: [COLOR_RE] },
+    table: { "min-width": [WIDTH_RE] },
+    col: { "min-width": [WIDTH_RE], width: [WIDTH_RE] },
+    th: { "min-width": [WIDTH_RE], width: [WIDTH_RE], "text-align": [/^(left|right|center|justify)$/] },
+    td: { "min-width": [WIDTH_RE], width: [WIDTH_RE], "text-align": [/^(left|right|center|justify)$/] },
   },
   // Editor mengizinkan gambar base64 (`Image.configure({ allowBase64: true })`).
   allowedSchemesByTag: {
     img: ["http", "https", "data"],
+    iframe: ["https"],
   },
+  allowedIframeHostnames: IFRAME_HOSTS,
 };
 
 /**
@@ -95,6 +119,17 @@ function stripImgDimensions(html: string): string {
   return html.replace(IMG_TAG_RE, (tag) => tag.replace(IMG_DIM_ATTR_RE, ""));
 }
 
+/** Tag <iframe> utuh (termasuk penutupnya bila ada), sadar-quote. */
+const IFRAME_TAG_RE = /<iframe\b(?:[^>"']|"[^"]*"|'[^']*')*>(?:<\/iframe>)?/gi;
+
+/**
+ * Buang <iframe> yang `src`-nya ditolak (host tak dikenal/relatif) — sanitize-html
+ * hanya mencabut atributnya sehingga tersisa tag kosong. Iframe valid (punya src) lolos.
+ */
+function stripSrcLessIframes(html: string): string {
+  return html.replace(IFRAME_TAG_RE, (tag) => (/\ssrc\s*=/i.test(tag) ? tag : ""));
+}
+
 export function sanitize(html: string): string {
-  return stripImgDimensions(sanitizeHtml(html, CONFIG));
+  return stripImgDimensions(stripSrcLessIframes(sanitizeHtml(html, CONFIG)));
 }

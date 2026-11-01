@@ -26,6 +26,9 @@ const CONTENT_CLASSES = `
   prose-table:text-sm prose-table:border-collapse prose-table:block prose-table:max-w-full prose-table:overflow-x-auto
   prose-th:bg-slate-50 prose-th:text-left prose-th:font-semibold prose-th:px-4 prose-th:py-3 prose-th:border prose-th:border-slate-200
   prose-td:px-4 prose-td:py-3 prose-td:border prose-td:border-slate-200
+  [&_div[data-youtube-video]]:my-8 [&_div[data-youtube-video]]:aspect-video [&_div[data-youtube-video]]:w-full [&_div[data-youtube-video]]:overflow-hidden [&_div[data-youtube-video]]:rounded-2xl [&_div[data-youtube-video]]:bg-slate-900 [&_div[data-youtube-video]]:shadow-md
+  [&_div[data-youtube-video]_iframe]:h-full [&_div[data-youtube-video]_iframe]:w-full [&_div[data-youtube-video]_iframe]:border-0
+  prose-sub:text-[0.75em] prose-sup:text-[0.75em]
 `;
 
 export function RichContent({

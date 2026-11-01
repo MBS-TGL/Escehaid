@@ -26,7 +26,7 @@ import AiFillPanel from "@/components/admin/AiFillPanel";
 import VideoUrlField from "@/components/admin/VideoUrlField";
 import type { RefineData } from "@/lib/queries/ai";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
-import { sanitize } from "@/lib/sanitize";
+import { RichContent } from "@/components/RichContent";
 import CoverImage from "@/components/CoverImage";
 import { compressImage } from "@/lib/compress-image";
 import { usePermissions } from "@/app/admin/PermissionsProvider";
@@ -1312,10 +1312,7 @@ export default function AdminArticlesPage() {
               </div>
               {viewItem.excerpt && <p className="mb-4 text-sm text-slate-600 italic border-l-2 border-[#f4d21f] pl-3">{viewItem.excerpt}</p>}
               {looksLikeHtml(viewItem.content || "") ? (
-                <div
-                  className="prose prose-sm max-w-none text-slate-700 leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: sanitize(viewItem.content) }}
-                />
+                <RichContent content={viewItem.content} emptyHint="Tidak ada konten" />
               ) : (
                 <div className="prose prose-sm max-w-none text-slate-700 leading-relaxed whitespace-pre-wrap">
                   {viewItem.content || "Tidak ada konten"}
@@ -1819,27 +1816,8 @@ export default function AdminArticlesPage() {
               <p className="text-base font-medium italic leading-relaxed text-slate-700">{form.excerpt}</p>
             </div>
           )}
-          {/* Konten — kelas prose DISALIN VERBATIM dari /articles/[slug] + sanitize() */}
-          <div
-            className="prose prose-lg prose-slate max-w-none
-              prose-headings:text-[var(--brand-primary)] prose-headings:font-extrabold prose-headings:scroll-mt-24
-              prose-p:text-gray-700 prose-p:leading-[1.9] prose-p:text-justify prose-p:mb-5
-              prose-a:text-[var(--brand-accent)] prose-a:no-underline prose-a:font-medium hover:prose-a:underline
-              prose-strong:text-[var(--brand-primary)] prose-strong:font-bold
-              prose-em:text-slate-600
-              prose-img:rounded-2xl prose-img:shadow-md prose-img:my-8
-              prose-blockquote:border-l-4 prose-blockquote:border-[#f4d21f] prose-blockquote:bg-gradient-to-r prose-blockquote:from-amber-50 prose-blockquote:to-transparent prose-blockquote:py-4 prose-blockquote:pr-6 prose-blockquote:pl-6 prose-blockquote:rounded-r-xl prose-blockquote:italic prose-blockquote:text-slate-600
-              prose-li:text-gray-700 prose-li:leading-relaxed prose-li:mb-1
-              prose-ol:my-5 prose-ol:pl-6
-              prose-ul:my-5 prose-ul:pl-6
-              prose-code:text-[var(--brand-accent)] prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:font-normal prose-code:before:content-none prose-code:after:content-none
-              prose-pre:bg-[var(--brand-primary)] prose-pre:text-white prose-pre:rounded-xl prose-pre:border prose-pre:border-slate-700
-              prose-hr:border-slate-200 prose-hr:my-12
-              prose-table:text-sm prose-table:border-collapse
-              prose-th:bg-slate-50 prose-th:text-left prose-th:font-semibold prose-th:px-4 prose-th:py-3 prose-th:border prose-th:border-slate-200
-              prose-td:px-4 prose-td:py-3 prose-td:border prose-td:border-slate-200"
-            dangerouslySetInnerHTML={{ __html: sanitize(form.content || "<p>Konten belum tersedia.</p>") }}
-          />
+          {/* Konten — komponen bersama RichContent (kelas identik render publik) */}
+          <RichContent content={form.content || "<p>Konten belum tersedia.</p>"} />
         </div>
       </Modal>
     </div>

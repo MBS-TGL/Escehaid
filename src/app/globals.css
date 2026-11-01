@@ -399,6 +399,51 @@ mark {
   border: 1px solid #e2e8f0;
 }
 
+/* Tabel interaktif: sel terpilih + handle resize kolom + video embed. */
+.tiptap-editor table .selectedCell {
+  background-color: color-mix(in srgb, var(--brand-accent) 12%, transparent);
+}
+
+.tiptap-editor table .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: var(--brand-accent);
+  cursor: col-resize;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.tiptap-editor table:hover .column-resize-handle {
+  opacity: 1;
+}
+
+.tiptap-editor table p {
+  margin: 0;
+}
+
+.tiptap-editor div[data-youtube-video] {
+  margin: 0.75rem 0;
+  aspect-ratio: 16 / 9;
+  max-width: 100%;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: #0f172a;
+}
+
+.tiptap-editor div[data-youtube-video] iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.tiptap-editor sub,
+.tiptap-editor sup {
+  font-size: 0.75em;
+}
+
 .tiptap-editor ul[data-type="taskList"] {
   list-style: none;
   padding-left: 0;
