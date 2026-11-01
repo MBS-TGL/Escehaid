@@ -94,8 +94,8 @@ export default async function ProfilPage() {
       />
 
       {/* Tentang Kami */}
-      <section id="sejarah" className="scroll-mt-24 bg-white py-12 sm:py-20 md:scroll-mt-28" style={CV}>
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+      <section id="sejarah" className="scroll-mt-24 bg-white py-14 md:scroll-mt-28 md:py-20" style={CV}>
+        <div className="mx-auto max-w-[1296px] px-6 md:px-10">
           <div className="grid items-center gap-10 lg:grid-cols-12 lg:gap-14">
             {/* Left — Narasi Sejarah (7 cols) */}
             <CSSFadeIn className="lg:col-span-7">
@@ -157,7 +157,7 @@ export default async function ProfilPage() {
       </section>
 
       {/* ── SAMBUTAN KEPALA SEKOLAH ───────────────────────── */}
-      <section id="sambutan" className="relative overflow-hidden bg-[#f4f7fb] py-12 sm:py-16 md:scroll-mt-28 md:py-24" style={CV}>
+      <section id="sambutan" className="relative overflow-hidden bg-[#f4f7fb] py-14 md:scroll-mt-28 md:py-20" style={CV}>
         {/* Watermark kutipan halus di pojok kanan atas */}
         <div
           aria-hidden="true"
@@ -166,7 +166,7 @@ export default async function ProfilPage() {
           <Quotes weight="fill" className="h-44 w-44 md:h-60 md:w-60" />
         </div>
 
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="relative mx-auto max-w-[1296px] px-6 md:px-10">
           <div className="grid items-center gap-10 sm:gap-14 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-16 xl:grid-cols-[360px_minmax(0,1fr)]">
             {/* Kolom Foto Kepala Sekolah — Portrait Elegan Berwibawa */}
             <CSSFadeIn>
@@ -278,8 +278,8 @@ export default async function ProfilPage() {
       </section>
 
       {/* ── VISI & MISI SEKOLAH ───────────────────────────── */}
-      <section id="visi-misi" className="scroll-mt-24 bg-white py-12 sm:py-16 md:scroll-mt-28 md:py-24" style={CV}>
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+      <section id="visi-misi" className="scroll-mt-24 bg-white py-14 md:scroll-mt-28 md:py-20" style={CV}>
+        <div className="mx-auto max-w-[1296px] px-6 md:px-10">
           <CSSFadeIn>
             <div className="mb-12 text-center">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Arah & Landasan</p>
@@ -401,12 +401,17 @@ export default async function ProfilPage() {
 
       {/* Fasilitas Sekolah */}
       {facilities.length > 0 && (
-        <section id="fasilitas" className="scroll-mt-24 bg-[#f4f7fb] py-12 sm:py-20 md:scroll-mt-28" style={CV}>
-          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <section id="fasilitas" className="scroll-mt-24 bg-[#f4f7fb] py-14 md:scroll-mt-28 md:py-20" style={CV}>
+          <div className="mx-auto max-w-[1296px] px-6 md:px-10">
             <CSSFadeIn>
-              <div className="mb-12">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Infrastruktur</p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Fasilitas Sekolah</h2>
+              <div className="mb-8 flex items-end justify-between md:mb-12">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Infrastruktur</p>
+                  <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Fasilitas Sekolah</h2>
+                </div>
+                <span className="hidden rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm md:inline-block">
+                  {facilities.length} Fasilitas
+                </span>
               </div>
             </CSSFadeIn>
 
@@ -442,18 +447,25 @@ export default async function ProfilPage() {
 
       {/* Ekstrakurikuler — hanya dirender bila ada data ekskul aktif */}
       {ekskulList.length > 0 && (
-        <section id="ekstrakurikuler" className="scroll-mt-24 bg-white py-12 sm:py-20 md:scroll-mt-28" style={CV}>
-          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <section id="ekstrakurikuler" className="scroll-mt-24 bg-white py-14 md:scroll-mt-28 md:py-20" style={CV}>
+          <div className="mx-auto max-w-[1296px] px-6 md:px-10">
             <CSSFadeIn>
-              <div className="mb-12">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Pengembangan Diri</p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Ekstrakurikuler</h2>
+              <div className="mb-8 flex items-end justify-between md:mb-12">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Pengembangan Diri</p>
+                  <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Ekstrakurikuler</h2>
+                </div>
+                <span className="hidden rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 md:inline-block">
+                  {ekskulList.length} Ekskul
+                </span>
               </div>
             </CSSFadeIn>
 
-            <CSSStagger stagger={80} className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 lg:gap-6">
+            <CSSStagger stagger={80} className="grid grid-cols-2 items-stretch gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 lg:gap-6">
               {ekskulList.map((item) => (
-                <EkskulCard key={item.id} item={item} />
+                <div key={item.id} className="h-full min-w-0">
+                  <EkskulCard item={item} />
+                </div>
               ))}
             </CSSStagger>
           </div>
@@ -462,8 +474,8 @@ export default async function ProfilPage() {
 
       {/* Prestasi Highlights */}
       {achievements.length > 0 && (
-        <section id="prestasi" className="scroll-mt-24 bg-[#f4f7fb] py-12 sm:py-20 md:scroll-mt-28" style={CV}>
-          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <section id="prestasi" className="scroll-mt-24 bg-[#f4f7fb] py-14 md:scroll-mt-28 md:py-20" style={CV}>
+          <div className="mx-auto max-w-[1296px] px-6 md:px-10">
             <CSSFadeIn>
               <div className="flex flex-col items-center justify-between gap-6 rounded-2xl border border-[#dce3ed] bg-white p-6 sm:flex-row">
                 <div className="flex items-center gap-4">
@@ -516,23 +528,23 @@ export default async function ProfilPage() {
 
       {/* Galeri Preview */}
       {gallery.length > 0 && (
-        <section id="galeri" className="scroll-mt-24 bg-[#f4f7fb] py-12 sm:py-20 md:scroll-mt-28" style={CV}>
-          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <section id="galeri" className="scroll-mt-24 bg-[#f4f7fb] py-14 md:scroll-mt-28 md:py-20" style={CV}>
+          <div className="mx-auto max-w-[1296px] px-6 md:px-10">
             <CSSFadeIn>
-              <div className="mb-12 flex flex-col items-start gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div className="mb-8 flex items-end justify-between md:mb-12">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Dokumentasi</p>
                   <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Galeri Sekolah</h2>
                 </div>
-                <Link href="/gallery" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)]">
+                <Link href="/gallery" className="hidden items-center gap-1.5 text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)] md:inline-flex">
                   Lihat semua <ArrowUpRight className="h-4 w-4" />
                 </Link>
               </div>
             </CSSFadeIn>
 
-            <CSSStagger stagger={60} className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
+            <CSSStagger stagger={60} className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:gap-5 lg:grid-cols-4">
               {gallery.slice(0, 8).map((g) => (
-                <Link key={g.id} href="/gallery" className="group relative block aspect-square overflow-hidden rounded-xl transition-transform duration-150 active:scale-[0.99]">
+                <Link key={g.id} href="/gallery" className="group relative block aspect-square overflow-hidden rounded-2xl transition-transform duration-150 active:scale-[0.99]">
                   <Image
                     src={g.thumbnail_url || g.url || "/images/Ruang-Kelas.jpg"}
                     alt={g.title}
@@ -550,13 +562,22 @@ export default async function ProfilPage() {
                 </Link>
               ))}
             </CSSStagger>
+
+            <div className="mt-6 md:hidden">
+              <Link
+                href="/gallery"
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)]"
+              >
+                Lihat semua galeri <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
         </section>
       )}
 
       {/* Kontak & Lokasi */}
-      <section id="kontak" className="scroll-mt-24 bg-white py-12 sm:py-20 md:scroll-mt-28" style={CV}>
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+      <section id="kontak" className="scroll-mt-24 bg-white py-14 md:scroll-mt-28 md:py-20" style={CV}>
+        <div className="mx-auto max-w-[1296px] px-6 md:px-10">
           <CSSFadeIn>
             <div className="flex flex-col items-center justify-between gap-6 rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-6 sm:flex-row">
               <div className="flex items-center gap-4">
@@ -583,7 +604,7 @@ export default async function ProfilPage() {
         <div className="absolute inset-0 opacity-10">
           <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[var(--brand-highlight)] blur-[120px]" />
         </div>
-        <div className="relative mx-auto flex max-w-7xl flex-col items-center gap-7 px-4 py-12 text-center sm:py-16 md:flex-row md:justify-between md:text-left">
+        <div className="relative mx-auto flex max-w-[1296px] flex-col items-center gap-7 px-6 py-14 text-center md:flex-row md:justify-between md:px-10 md:py-20 md:text-left">
           <CSSFadeIn>
             <div className="max-w-xl">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-highlight)]">Penerimaan Peserta Didik Baru</p>

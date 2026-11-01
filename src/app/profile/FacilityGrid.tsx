@@ -2,93 +2,92 @@
 
 import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import Image from "next/image";
-import { CaretLeft, CaretRight, ImageSquare, X } from "@/components/Icons";
+import { ArrowUpRight, CaretLeft, CaretRight, ImageSquare, X } from "@/components/Icons";
 import { CSSFadeIn } from "@/components/CSSAnimations";
 import type { Facility } from "@/lib/supabase";
 
-/* Rasio media. Kartu pertama selalu lebih tinggi karena lebarnya 2–3 kolom. */
-const RATIO_HERO = "aspect-video";
-const RATIO_CARD = "aspect-[4/3]";
+/* Tinggi dialog pratinjau. */
 const RATIO_DIALOG = "h-[50vh] min-h-[260px]";
 
-/* `sizes` — kolom tiap breakpoint: <768px satu, 768–1023px dua, ≥1024px tiga. */
-const SIZES_CARD = "(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 26rem";
+/* `sizes` dialog pratinjau. */
 const SIZES_DIALOG = "(max-width: 1023px) 92vw, 64rem";
+
+/**
+ * Layout bento sinematik ala beranda — kartu foto penuh + teks overlay.
+ * 5+ item: foto besar kiri (2 kolom 2 baris desktop) + kecil 2x2 kanan.
+ * Di mobile: foto besar span 2 kolom di baris pertama.
+ * Total < 5: adaptasi dinamis agar tidak ada kotak kosong.
+ */
+function bentoSpanClass(index: number, total: number): string {
+  if (total >= 5) {
+    if (index === 0) {
+      return "col-span-2 lg:col-span-2 lg:row-span-2 min-h-[260px] sm:min-h-[320px] lg:min-h-[440px]";
+    }
+    return "col-span-1 lg:col-span-1 lg:row-span-1 min-h-[170px] sm:min-h-[190px] lg:min-h-[210px]";
+  }
+  if (total === 4) {
+    return "col-span-1 lg:col-span-1 min-h-[180px] sm:min-h-[220px] lg:min-h-[260px]";
+  }
+  if (total === 3) {
+    if (index === 0) {
+      return "col-span-2 lg:col-span-2 lg:row-span-2 min-h-[260px] sm:min-h-[320px] lg:min-h-[440px]";
+    }
+    return "col-span-1 lg:col-span-2 lg:row-span-1 min-h-[170px] sm:min-h-[190px] lg:min-h-[210px]";
+  }
+  if (total === 2) {
+    return "col-span-2 sm:col-span-1 lg:col-span-2 min-h-[220px] sm:min-h-[260px] lg:min-h-[320px]";
+  }
+  return "col-span-2 lg:col-span-4 min-h-[280px] sm:min-h-[360px]";
+}
 
 const NAV_BUTTON =
   "inline-flex items-center gap-1.5 rounded-xl border border-[#dce3ed] px-3 py-2 text-xs font-semibold text-[var(--brand-primary)] transition hover:border-[var(--brand-primary)] hover:bg-[#f4f7fb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-1 sm:px-4 sm:py-2.5 sm:text-sm";
 
 /**
- * Bentuk kartu pertama supaya grid selalu terisi penuh — berapa pun jumlah
- * fasilitas. Total sel terpakai = lebar kartu pertama + (n − 1):
- *
- *   lg · 3 kolom   n%3 === 2 → col-span-2            (n−1)+2 = n+1  ÷ 3
- *                  n%3 === 1 → col-span-3            (n−1)+3 = n+2  ÷ 3
- *                  n%3 === 0 → col-span-2 row-span-2 (n−1)+4 = n+3  ÷ 3
- *   md · 2 kolom   col-span-2 hanya saat n ganjil, supaya jumlah sel genap.
- *   < md · 1 kolom selalu penuh tanpa syarat.
- *
- * Kolomnya sendiri tidak diubah (md dua, lg tiga) — hanya lebar kartu pertama
- * yang menyesuaikan, sehingga tidak pernah ada sel kosong di baris mana pun.
+ * Isi kartu bento: foto penuh + overlay sinematik + teks di atas scrim.
+ * Tanpa image_url → placeholder gradient brand + ikon (bukan foto lain).
  */
-function heroSpan(n: number): string {
-  const md = n % 2 === 1 ? "md:col-span-2" : "";
-  const rem = n % 3;
-  const lg =
-    rem === 2 ? "lg:col-span-2" : rem === 1 ? "lg:col-span-3" : "lg:col-span-2 lg:row-span-2";
-  return `${md} ${lg}`.trim();
-}
-
-/** `sizes` untuk kartu pertama, mengikuti kolom yang dipilih heroSpan(). */
-function heroSizes(n: number): string {
-  const md = n % 2 === 1 ? "100vw" : "50vw";
-  const lg = n % 3 === 1 ? "77rem" : "52rem";
-  return `(max-width: 767px) 100vw, (max-width: 1023px) ${md}, ${lg}`;
-}
-
-/**
- * Media kartu. Tanpa image_url → penanda kosong netral (gradasi biru brand +
- * ikon), bukan foto lain.
- */
-function Media({
-  facility,
-  ratio,
-  sizes,
-  fitClass,
-  iconClass,
-  zoom,
-  priority,
-}: {
-  facility: Facility;
-  ratio: string;
-  sizes: string;
-  fitClass: string;
-  iconClass: string;
-  zoom?: boolean;
-  priority?: boolean;
-}) {
+function BentoMedia({ facility, sizes, isLarge }: { facility: Facility; sizes: string; isLarge: boolean }) {
   const src = facility.image_url?.trim() || "";
   return (
-    <div
-      className={`relative w-full overflow-hidden ${ratio} ${
-        src ? "bg-[#f4f7fb]" : "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-light)]"
-      }`}
-    >
+    <>
       {src ? (
         <Image
           src={src}
           alt={facility.name}
           fill
           sizes={sizes}
-          priority={priority}
-          className={`${fitClass} transition-transform duration-500 ${zoom ? "group-hover:scale-105" : ""}`}
+          quality={70}
+          loading="lazy"
+          decoding="async"
+          className="object-cover sm:transition-transform sm:duration-700 sm:ease-out sm:motion-safe:group-hover:scale-105"
         />
       ) : (
-        <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
-          <ImageSquare className={iconClass} />
-        </span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[#0a3570] to-[#0c4482] p-4 text-white">
+          <div className="pointer-events-none absolute -right-8 -top-8 hidden h-36 w-36 rounded-full bg-[var(--brand-highlight)]/15 blur-2xl sm:block" />
+          <div className="pointer-events-none absolute -bottom-8 -left-8 hidden h-36 w-36 rounded-full bg-[var(--brand-accent)]/25 blur-2xl sm:block" />
+          <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-white shadow-xs sm:backdrop-blur-md sm:transition-transform sm:duration-500 sm:group-hover:scale-110">
+            <ImageSquare className="h-6 w-6 text-[var(--brand-highlight)]" />
+          </div>
+          <span className="relative z-10 mt-2 text-[10px] font-semibold tracking-wider text-white/50 uppercase">SMP Muhammadiyah 4</span>
+        </div>
       )}
-    </div>
+
+      {/* Scrim gradient 2-stop (murah di-paint saat scroll HP). */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/90 to-black/10 sm:transition-opacity sm:duration-300 sm:group-hover:from-slate-950/95" />
+
+      {/* Info & nama */}
+      <div className="relative z-10 mt-auto p-4 sm:p-5 lg:p-6">
+        <h3 className={`font-bold text-white drop-shadow-sm leading-snug sm:transition-colors sm:group-hover:text-[var(--brand-highlight)] ${isLarge ? "text-lg sm:text-2xl lg:text-[26px]" : "text-sm sm:text-base line-clamp-1"}`}>
+          {facility.name}
+        </h3>
+        {facility.description && (
+          <p className={`mt-1 font-normal text-slate-200/85 leading-relaxed ${isLarge ? "text-xs sm:text-sm line-clamp-2 max-w-xl" : "hidden sm:line-clamp-1 text-[11px]"}`}>
+            {facility.description}
+          </p>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -98,8 +97,6 @@ export default function FacilityGrid({ facilities }: { facilities: Facility[] })
   const triggerRef = useRef<HTMLElement | null>(null);
   const dialogTouch = useRef<{ x: number; y: number } | null>(null);
   const n = facilities.length;
-  const span = heroSpan(n);
-  const heroSizesValue = heroSizes(n);
   const item = active === null ? null : facilities[active];
 
   /* Buka/tutup <dialog> mengikuti `active`. showModal() menjebak fokus & Esc. */
@@ -174,29 +171,38 @@ export default function FacilityGrid({ facilities }: { facilities: Facility[] })
 
   return (
     <>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {facilities.map((f, i) => (
-          <CSSFadeIn key={f.id} delay={i * 0.08} className={i === 0 ? span : undefined}>
-            <button
-              type="button"
-              onClick={() => open(i)}
-              className="group flex h-full w-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white text-left transition-all hover:shadow-xl hover:shadow-[var(--brand-primary)]/5 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-2"
-            >
-              <Media
-                facility={f}
-                ratio={i === 0 ? RATIO_HERO : RATIO_CARD}
-                sizes={i === 0 ? heroSizesValue : SIZES_CARD}
-                fitClass="object-cover"
-                iconClass="h-10 w-10 text-white/40"
-                zoom
-              />
-              <div className="flex flex-1 flex-col p-4 sm:p-6">
-                <h3 className="text-lg font-semibold text-[var(--brand-primary)]">{f.name}</h3>
-                <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">{f.description}</p>
-              </div>
-            </button>
-          </CSSFadeIn>
-        ))}
+      <div className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
+        {facilities.map((f, i) => {
+          const isLarge = i === 0 && (n >= 5 || n === 3);
+          const sizes = isLarge
+            ? "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 640px"
+            : "(max-width: 768px) 50vw, (max-width: 1024px) 25vw, 320px";
+          return (
+            <CSSFadeIn key={f.id} delay={i * 0.08} className={`h-full ${bentoSpanClass(i, n)}`}>
+              <button
+                type="button"
+                onClick={() => open(i)}
+                aria-label={`Lihat ${f.name}`}
+                className="group relative flex h-full min-h-[inherit] w-full flex-col justify-end overflow-hidden rounded-3xl border border-white/80 bg-slate-900 text-left shadow-md shadow-slate-900/5 ring-1 ring-slate-900/[0.06] sm:transition-all sm:duration-500 sm:ease-out sm:hover:border-white sm:hover:shadow-2xl sm:hover:shadow-[var(--brand-primary)]/20 sm:motion-safe:hover:-translate-y-1 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+              >
+                {/* Badge kategori glassmorphism (blur hanya sm+ agar hemat GPU HP). */}
+                <div className="absolute left-3.5 top-3.5 z-20 sm:left-4 sm:top-4">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-black/50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-xs sm:bg-black/40 sm:backdrop-blur-md">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-highlight)]" />
+                    Fasilitas
+                  </span>
+                </div>
+
+                {/* Tombol aksi panah mini */}
+                <div className="absolute right-3.5 top-3.5 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white opacity-90 sm:right-4 sm:top-4 sm:bg-black/30 sm:opacity-85 sm:backdrop-blur-md sm:transition-all sm:duration-300 sm:group-hover:scale-110 sm:group-hover:border-white sm:group-hover:bg-white sm:group-hover:text-[var(--brand-primary)] sm:group-hover:opacity-100">
+                  <ArrowUpRight className="h-3.5 w-3.5 sm:transition-transform sm:duration-300 sm:group-hover:translate-x-0.5 sm:group-hover:-translate-y-0.5" />
+                </div>
+
+                <BentoMedia facility={f} sizes={sizes} isLarge={isLarge} />
+              </button>
+            </CSSFadeIn>
+          );
+        })}
       </div>
 
       <dialog
@@ -236,14 +242,22 @@ export default function FacilityGrid({ facilities }: { facilities: Facility[] })
             </header>
 
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <Media
-                facility={item}
-                ratio={RATIO_DIALOG}
-                sizes={SIZES_DIALOG}
-                fitClass="object-contain"
-                iconClass="h-16 w-16 text-white/40"
-                priority
-              />
+              {item.image_url?.trim() ? (
+                <div className={`relative w-full overflow-hidden bg-[#f4f7fb] ${RATIO_DIALOG}`}>
+                  <Image
+                    src={item.image_url.trim()}
+                    alt={item.name}
+                    fill
+                    sizes={SIZES_DIALOG}
+                    priority
+                    className="object-contain"
+                  />
+                </div>
+              ) : (
+                <div className={`flex w-full flex-col items-center justify-center bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-light)] p-6 text-white ${RATIO_DIALOG}`}>
+                  <ImageSquare className="h-16 w-16 text-white/40" />
+                </div>
+              )}
               <p className="px-5 py-5 text-sm leading-relaxed text-slate-600">{item.description}</p>
             </div>
 
