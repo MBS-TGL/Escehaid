@@ -720,6 +720,10 @@ html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) {
   --admin-hover: #334155;
   --admin-border: #334155;
   --admin-text: #e2e8f0;
+  /* Chrome (strip atas sidebar + topbar) — satu warna solid yang sama supaya
+     sejajar mulus. Token sendiri (bukan --admin-surface) agar kelak bisa
+     di-frosted tanpa menyentuh kartu. */
+  --admin-chrome: #1e293b;
   /* Varian terang yang mengikuti warna merek kustom admin (color-mix):
      teks --brand-primary (navy) tak terbaca di atas latar gelap. */
   --admin-brand-text: color-mix(in srgb, var(--brand-primary) 22%, white);
@@ -739,8 +743,16 @@ html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) body {
 }
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) aside#admin-sidebar,
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) header {
-  background-color: rgba(15, 23, 42, 0.92);
-  border-color: #1e293b;
+  /* Solid --admin-chrome (bukan translusen): strip brand sidebar (h-16)
+     harus SEAMLESS dengan topbar. Versi lama memakai rgba di sini, tapi
+     selektor ID aside menang atas .bg-white (--admin-surface) sementara
+     header kalah → sidebar #0f172a vs topbar #1e293b. Kini keduanya
+     #1e293b solid; backdrop-blur topbar tetap ada tapi tak terlihat.
+     Hanya background-color yang ditimpa (bukan background-image) sehingga
+     header gradien dasbor tidak ikut rata. Border disamakan dengan
+     --admin-border agar garis h-16 kiri-kanan segaris. */
+  background-color: var(--admin-chrome);
+  border-color: var(--admin-border);
 }
 /* ── Permukaan netral ── */
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .bg-white,
