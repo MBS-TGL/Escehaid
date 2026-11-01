@@ -238,15 +238,13 @@ export default function Footer({
         </div>
       </div>
 
-      {/* Kiri: copyright (2 baris terkendali di mobile, 1 baris di desktop).
+      {/* Kiri: copyright 1 baris di semua lebar (nama pendek khusus bottom-bar —
+          bukan site_short_name agar branding tempat lain tak ikut berubah).
           Kanan: tautan legal dengan pemisah. */}
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-[1296px] flex-col gap-3 px-6 py-6 text-xs text-white/60 sm:text-sm md:flex-row md:items-center md:justify-between md:px-10 md:pr-20">
-          <p className="leading-relaxed">
-            <span className="block sm:inline">
-              &copy; {new Date().getFullYear()} {brand.name}.
-            </span>{" "}
-            <span className="block sm:inline">{brand.copyright}</span>
+          <p className="truncate whitespace-nowrap leading-relaxed">
+            &copy; {new Date().getFullYear()} SMP Muhammadiyah 4. {brand.copyright}
           </p>
           {LEGAL_LINKS.length > 0 && (
             <ul className="flex flex-wrap items-center gap-x-3 gap-y-1">
