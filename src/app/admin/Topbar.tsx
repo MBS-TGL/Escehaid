@@ -13,6 +13,8 @@ import {
   Warning,
   Info,
   ShieldCheck,
+  Moon,
+  Sun,
 } from "@/components/Icons";
 import {
   getUnreadNotificationCount,
@@ -22,6 +24,11 @@ import {
 } from "@/lib/queries";
 import type { Notification } from "@/lib/queries";
 import { readRecentMenus, saveRecentMenu } from "@/lib/recent-menus";
+import {
+  applyAdminDarkMode,
+  readAdminDarkMode,
+  saveAdminDarkMode,
+} from "@/lib/admin-dark-mode";
 import Highlight from "@/components/public/Highlight";
 import { Modal } from "@/components/ui";
 import { usePermissions } from "./PermissionsProvider";
@@ -106,6 +113,10 @@ export default function AdminTopbar({
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notifLoading, setNotifLoading] = useState(false);
+  // Mode gelap admin (beta, opt-in) — preferensi per-browser, default terang.
+  // Lazy initializer (bukan effect) supaya nilai tersimpan langsung dipakai
+  // tanpa kedip; atribut <html> disinkronkan di effect terpisah di bawah.
+  const [darkMode, setDarkMode] = useState(readAdminDarkMode);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -119,6 +130,18 @@ export default function AdminTopbar({
     const id = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(id);
   }, []);
+
+  // Terapkan atribut mode gelap ke <html> setiap nilai berubah (termasuk
+  // mount pertama — lazy init di atas hanya mengisi state).
+  useEffect(() => {
+    applyAdminDarkMode(darkMode);
+  }, [darkMode]);
+
+  function toggleDarkMode() {
+    const next = !darkMode;
+    setDarkMode(next);
+    saveAdminDarkMode(next);
+  }
 
   const filteredNav = searchQuery
     ? navSearchItems.filter(
@@ -509,6 +532,17 @@ export default function AdminTopbar({
 
       {/* Right: actions */}
       <div className="ml-auto flex items-center gap-2">
+        {/* Mode gelap admin (beta) — toggle opt-in, preferensi per-browser */}
+        <button
+          type="button"
+          onClick={toggleDarkMode}
+          aria-pressed={darkMode}
+          aria-label={darkMode ? "Matikan mode gelap" : "Nyalakan mode gelap"}
+          title={darkMode ? "Matikan mode gelap (beta)" : "Nyalakan mode gelap (beta)"}
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+        >
+          {darkMode ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+        </button>
         {/* Notification bell */}
         <div className="relative" ref={notifRef}>
           <button

@@ -2,7 +2,7 @@
 
 import { useAdminBottomBar } from "@/app/admin/AdminChrome";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import Image from "next/image";
 import {
   getNewsListAll,
@@ -79,6 +79,8 @@ import VideoUrlField from "@/components/admin/VideoUrlField";
 import type { RefineData } from "@/lib/queries/ai";
 import { ContentRevisionsSlideOver } from "@/components/admin/ContentRevisionsSlideOver";
 import { recordRevisionAction } from "@/app/admin/review/actions";
+import { supabase } from "@/lib/supabase";
+import { isEditStale } from "@/lib/edit-staleness";
 
 
 const categoryConfig: Record<string, { label: string; color: string }> = {
@@ -235,6 +237,13 @@ export default function AdminBeritaPage() {
   const [publishItem, setPublishItem] = useState<News | null>(null);
   // Riwayat revisi konten (snapshot otomatis per simpan + pulihkan).
   const [historyItem, setHistoryItem] = useState<News | null>(null);
+  // Penjaga tabrakan edit: `updated_at` saat form edit dibuka vs versi DB
+  // terkini. Bila admin lain menyimpan di tengah jalan, minta konfirmasi
+  // agar tidak menimpa diam-diam (tanpa Realtime).
+  const openedUpdatedAtRef = useRef<string | null>(null);
+  const [staleConfirm, setStaleConfirm] = useState<{ latest: string } | null>(null);
+  /** Lanjutkan menyimpan walau versi DB berubah (dipanggil dari modal konfirmasi). */
+  const forceSaveRef = useRef(false);
 
   // Form panel
   const [formOpen, setFormOpen] = useState(false);
@@ -462,6 +471,9 @@ export default function AdminBeritaPage() {
     setEditItem(null);
     setForm(next);
     setBaseline(JSON.stringify(next));
+    openedUpdatedAtRef.current = null;
+    setStaleConfirm(null);
+    forceSaveRef.current = false;
     setImageFile(null);
     setImagePreview("");
     setAttachmentFile(null);
@@ -496,6 +508,9 @@ export default function AdminBeritaPage() {
     setEditItem(item);
     setForm(next);
     setBaseline(JSON.stringify(next));
+    openedUpdatedAtRef.current = item.updated_at ?? null;
+    setStaleConfirm(null);
+    forceSaveRef.current = false;
     setImageFile(null);
     setImagePreview(item.image_url || "");
     setAttachmentFile(null);
@@ -529,6 +544,8 @@ export default function AdminBeritaPage() {
   function closeForm() {
     setFormOpen(false);
     setPendingDraft(null);
+    setStaleConfirm(null);
+    forceSaveRef.current = false;
   }
 
   /** Batal / X / Esc — bila form berubah, minta konfirmasi dulu. */
@@ -679,6 +696,21 @@ export default function AdminBeritaPage() {
     }
     setFormSaving(true);
     setFormError("");
+
+    // ── Penjaga tabrakan edit (mode edit saja, sekali per simpan) ──
+    if (editItem && !forceSaveRef.current) {
+      const { data: latest } = await supabase
+        .from("news")
+        .select("updated_at")
+        .eq("id", editItem.id)
+        .maybeSingle();
+      const latestAt = (latest as { updated_at?: string } | null)?.updated_at ?? null;
+      if (isEditStale(openedUpdatedAtRef.current, latestAt)) {
+        setFormSaving(false);
+        setStaleConfirm({ latest: latestAt as string });
+        return;
+      }
+    }
 
     // ── Upload gambar baru jika ada ──
     let imageUrl = form.image_url;
@@ -1733,6 +1765,22 @@ export default function AdminBeritaPage() {
         description="Perubahan pada form ini belum disimpan dan akan hilang."
         cancelLabel="Lanjut mengedit"
         confirmLabel="Buang"
+      />
+
+      {/* ── KONFIRMASI TIMPA PERUBAHAN ADMIN LAIN ─────── */}
+      <ConfirmModal
+        open={!!staleConfirm}
+        onClose={() => setStaleConfirm(null)}
+        onConfirm={() => {
+          setStaleConfirm(null);
+          forceSaveRef.current = true;
+          void handleSave();
+        }}
+        title="Konten berubah saat Anda mengedit"
+        description="Admin lain menyimpan versi baru setelah form ini dibuka. Simpan tetap akan menimpa versinya (perubahan Anda tetap tercatat di Riwayat Revisi)."
+        cancelLabel="Batal, cek dulu"
+        confirmLabel="Tetap simpan"
+        variant="warning"
       />
 
       {/* ── PRATINJAU (draft/terjadwal) — tanpa route baru, pola Artikel ── */}

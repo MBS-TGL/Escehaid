@@ -3,7 +3,7 @@
 import { useAdminBottomBar } from "@/app/admin/AdminChrome";
 
 import Image from "next/image";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import {
   getArticleListAll,
   getArticleColumnSupport,
@@ -76,6 +76,8 @@ import { DesktopPagination } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
 import { ContentRevisionsSlideOver } from "@/components/admin/ContentRevisionsSlideOver";
 import { recordRevisionAction } from "@/app/admin/review/actions";
+import { supabase } from "@/lib/supabase";
+import { isEditStale } from "@/lib/edit-staleness";
 
 const EXCERPT_MAX = 160;
 const WORDS_PER_MINUTE = 200;
@@ -244,6 +246,13 @@ export default function AdminArticlesPage() {
   const [publishItem, setPublishItem] = useState<ArticleWithAuthor | null>(null);
   // Riwayat revisi konten (snapshot otomatis per simpan + pulihkan).
   const [historyItem, setHistoryItem] = useState<ArticleWithAuthor | null>(null);
+  // Penjaga tabrakan edit: `updated_at` saat form edit dibuka vs versi DB
+  // terkini. Bila admin lain menyimpan di tengah jalan, minta konfirmasi
+  // agar tidak menimpa diam-diam (tanpa Realtime).
+  const openedUpdatedAtRef = useRef<string | null>(null);
+  const [staleConfirm, setStaleConfirm] = useState<{ latest: string } | null>(null);
+  /** Lanjutkan menyimpan walau versi DB berubah (dipanggil dari modal konfirmasi). */
+  const forceSaveRef = useRef(false);
 
   // Form panel
   const [formOpen, setFormOpen] = useState(false);
@@ -464,6 +473,9 @@ export default function AdminArticlesPage() {
     setEditItem(null);
     setForm(emptyForm);
     setInitialForm(emptyForm);
+    openedUpdatedAtRef.current = null;
+    setStaleConfirm(null);
+    forceSaveRef.current = false;
     setSlugTouched(false);
     setSlugOverride(false);
     setAiAssisted(false);
@@ -499,6 +511,9 @@ export default function AdminArticlesPage() {
     setEditItem(item);
     setForm(next);
     setInitialForm(next);
+    openedUpdatedAtRef.current = item.updated_at ?? null;
+    setStaleConfirm(null);
+    forceSaveRef.current = false;
     setSlugTouched(true);
     setSlugOverride(false);
     setAiAssisted(false);
@@ -537,6 +552,8 @@ export default function AdminArticlesPage() {
     setConfirmClose(false);
     setFormOpen(false);
     setPendingDraft(null);
+    setStaleConfirm(null);
+    forceSaveRef.current = false;
     setImagePreview("");
     setImageFile(null);
   }
@@ -735,6 +752,21 @@ export default function AdminArticlesPage() {
     }
     setFormSaving(true);
     setFormError("");
+
+    // ── Penjaga tabrakan edit (mode edit saja, sekali per simpan) ──
+    if (editItem && !forceSaveRef.current) {
+      const { data: latest } = await supabase
+        .from("articles")
+        .select("updated_at")
+        .eq("id", editItem.id)
+        .maybeSingle();
+      const latestAt = (latest as { updated_at?: string } | null)?.updated_at ?? null;
+      if (isEditStale(openedUpdatedAtRef.current, latestAt)) {
+        setFormSaving(false);
+        setStaleConfirm({ latest: latestAt as string });
+        return;
+      }
+    }
 
     let imageUrl = form.image_url;
     if (imageFile) {
@@ -1408,6 +1440,22 @@ export default function AdminArticlesPage() {
         title="Terbitkan Artikel?"
         description={`"${publishItem?.title}" akan tampil di website untuk publik.`}
         confirmLabel="Ya, Terbitkan"
+        variant="warning"
+      />
+
+      {/* ── KONFIRMASI TIMPA PERUBAHAN ADMIN LAIN ─────── */}
+      <ConfirmModal
+        open={!!staleConfirm}
+        onClose={() => setStaleConfirm(null)}
+        onConfirm={() => {
+          setStaleConfirm(null);
+          forceSaveRef.current = true;
+          void handleSave();
+        }}
+        title="Konten berubah saat Anda mengedit"
+        description="Admin lain menyimpan versi baru setelah form ini dibuka. Simpan tetap akan menimpa versinya (perubahan Anda tetap tercatat di Riwayat Revisi)."
+        cancelLabel="Batal, cek dulu"
+        confirmLabel="Tetap simpan"
         variant="warning"
       />
 

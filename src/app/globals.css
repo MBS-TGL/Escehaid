@@ -691,6 +691,76 @@ textarea:disabled {
   opacity: 1;
 }
 
+/* ── Mode gelap admin (beta, opt-in) ──────────────────────────────────────
+   Diaktifkan lewat toggle di Topbar → atribut `data-admin-dark="true"` di
+   <html> (preferensi localStorage per-browser). Di-scope
+   `:has(#admin-sidebar)` supaya TIDAK bocor ke halaman publik — sidebar
+   admin selalu ada di DOM (disembunyikan via CSS di mobile, tetap di DOM).
+
+   Aturan TANPA layer supaya menang atas utilitas Tailwind (pola yang sama
+   dengan aturan button:disabled di bawah). Cakupan beta: chrome + kartu +
+   teks + input + border; badge status berwarna & editor teks dibiarkan
+   terang agar kontrasnya tetap terjaga. */
+html[data-admin-dark="true"]:has(#admin-sidebar) {
+  color-scheme: dark;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar) body {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar) aside#admin-sidebar,
+html[data-admin-dark="true"]:has(#admin-sidebar) header {
+  background-color: rgba(15, 23, 42, 0.92);
+  border-color: #1e293b;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar) .bg-white,
+html[data-admin-dark="true"]:has(#admin-sidebar) .bg-white\/80 {
+  background-color: #1e293b;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar) .bg-slate-50 {
+  background-color: #0f172a;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar) .bg-slate-100 {
+  background-color: #334155;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar) .text-slate-800,
+html[data-admin-dark="true"]:has(#admin-sidebar) .text-slate-700 {
+  color: #f1f5f9;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar) .text-slate-600 {
+  color: #cbd5e1;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar) .text-slate-500 {
+  color: #94a3b8;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar) .border-slate-200,
+html[data-admin-dark="true"]:has(#admin-sidebar) .border-slate-200\/80,
+html[data-admin-dark="true"]:has(#admin-sidebar) .border-slate-200\/90,
+html[data-admin-dark="true"]:has(#admin-sidebar) .border-slate-100 {
+  border-color: #334155;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar) .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+html[data-admin-dark="true"]:has(#admin-sidebar) .divide-slate-50 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #334155;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar) .hover\:bg-slate-50:hover,
+html[data-admin-dark="true"]:has(#admin-sidebar) .hover\:bg-slate-100:hover {
+  background-color: #334155;
+}
+html[data-admin-dark="true"]:has(#admin-sidebar) input:not([type="checkbox"]):not([type="radio"]),
+html[data-admin-dark="true"]:has(#admin-sidebar) select,
+html[data-admin-dark="true"]:has(#admin-sidebar) textarea {
+  background-color: #0f172a;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+/* Editor teks & pratinjau konten tetap terang (beta) — warna tipografi
+   eksplisitnya (.tiptap-editor h2, .prose) dirancang untuk latar putih. */
+html[data-admin-dark="true"]:has(#admin-sidebar) .tiptap-editor {
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+}
+
 /* ── Cetak detail Pesan Masuk (/admin/contact) ─────────────────────────────
    Di layar area cetak disembunyikan; saat print, SEMUA isi halaman
    disembunyikan kecuali area cetak (portal SlideOver fixed ikut hilang

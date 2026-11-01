@@ -4,6 +4,7 @@ export {
   CaretLeft,
   CaretDown,
   Star,
+  Sun,
   Users,
   GraduationCap,
   BookOpen,
