@@ -5,7 +5,7 @@ import { Suspense, cache } from "react";
 import type { ComponentType, ReactNode } from "react";
 import { createClient } from "@/lib/supabase-server";
 import { getWaveStatus } from "@/lib/queries/waves";
-import { toTitleCase, formatRelativeTime, daysSince, PENDING_SLA_DAYS } from "@/lib/admin-display";
+import { toTitleCase, formatRelativeTime, daysSince, PENDING_SLA_DAYS, CONTACT_SLA_DAYS } from "@/lib/admin-display";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -213,12 +213,58 @@ const getSpmbRejected = cache(async (sb: Sb): Promise<CountRes> => {
   const { count, error } = await sb.from("spmb_registrations").select("id", { count: "exact", head: true }).eq("status", "rejected");
   return { count, error };
 });
+/**
+ * Probe kolom `is_archived` (migrasi 0021) — memoized PER REQUEST via react
+ * cache. Bila SQL belum jalan, semua hitungan pesan kembali ke perilaku lama
+ * (seluruh tabel dianggap aktif) dan tidak ada error 400 ke PostgREST.
+ */
+const hasContactArchiveColumn = cache(async (sb: Sb): Promise<boolean> => {
+  const { error } = await sb.from("contact_messages").select("is_archived").limit(0);
+  return !error;
+});
+
 const getContactCount = cache(async (sb: Sb): Promise<CountRes> => {
-  const { count, error } = await sb.from("contact_messages").select("id", { count: "exact", head: true });
+  let q = sb.from("contact_messages").select("id", { count: "exact", head: true });
+  if (await hasContactArchiveColumn(sb)) q = q.eq("is_archived", false);
+  const { count, error } = await q;
   return { count, error };
 });
 const getUnreadCount = cache(async (sb: Sb): Promise<CountRes> => {
-  const { count, error } = await sb.from("contact_messages").select("id", { count: "exact", head: true }).eq("is_read", false);
+  let q = sb.from("contact_messages").select("id", { count: "exact", head: true }).eq("is_read", false);
+  if (await hasContactArchiveColumn(sb)) q = q.eq("is_archived", false);
+  const { count, error } = await q;
+  return { count, error };
+});
+const getArchivedContactCount = cache(async (sb: Sb): Promise<CountRes> => {
+  if (!(await hasContactArchiveColumn(sb))) return { count: 0, error: null };
+  const { count, error } = await sb.from("contact_messages").select("id", { count: "exact", head: true }).eq("is_archived", true);
+  return { count, error };
+});
+const getOverdueContactCount = cache(async (sb: Sb): Promise<CountRes> => {
+  const cutoff = new Date(Date.now() - CONTACT_SLA_DAYS * 86_400_000).toISOString();
+  let q = sb
+    .from("contact_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("is_read", false)
+    .lt("created_at", cutoff);
+  if (await hasContactArchiveColumn(sb)) q = q.eq("is_archived", false);
+  const { count, error } = await q;
+  return { count, error };
+});
+const getTodayContactCount = cache(async (sb: Sb): Promise<CountRes> => {
+  // Awal hari zona Asia/Jakarta sebagai ISO UTC (tengah malam WIB).
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const [y, m, d] = parts.split("-").map(Number);
+  const startOfDay = new Date(Date.UTC(y, m - 1, d) - 7 * 3_600_000).toISOString();
+  const { count, error } = await sb
+    .from("contact_messages")
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", startOfDay);
   return { count, error };
 });
 
@@ -242,9 +288,12 @@ const getRecentSpmb = cache(async (sb: Sb): Promise<ListRes<SpmbRow>> => {
 });
 
 const getRecentMessages = cache(async (sb: Sb): Promise<ListRes<MessageRow>> => {
-  const { data, error } = await sb
+  let q = sb
     .from("contact_messages")
-    .select("id, name, subject, message, is_read, created_at")
+    .select("id, name, subject, message, is_read, created_at");
+  // Arsip tidak tampil di kartu "terbaru" (tetap terlihat via filter Arsip).
+  if (await hasContactArchiveColumn(sb)) q = q.eq("is_archived", false);
+  const { data, error } = await q
     .order("created_at", { ascending: false })
     .limit(5);
   return { data, error };
@@ -274,16 +323,24 @@ const getNextAgenda = cache(async (sb: Sb): Promise<ListRes<AgendaRow>> => {
 
 /** Baris "Perlu perhatian" — memakai count ber-cache yang sama dengan statistik. */
 async function TodoRail({ supabase, isAdmin, canPublish }: { supabase: Sb; isAdmin: boolean; canPublish: boolean }) {
-  const [unreadMsgs, spmbPending, draftNews] = await Promise.all([
+  const [unreadMsgs, overdueMsgs, spmbPending, draftNews] = await Promise.all([
     isAdmin ? getUnreadCount(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
+    isAdmin ? getOverdueContactCount(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
     isAdmin ? getSpmbPending(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
     canPublish ? getDraftNewsCount(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
   ]);
 
   // ── Perlu perhatian: hanya jumlah yang sah (>0) dan relevan untuk role.
   // Query gagal (error) dijauhkan dari todo supaya tidak memicu false alarm.
+  // Pesan: bila ada yang menumpuk ≥SLA, tampilkan itu (lebih mendesak);
+  // kalau tidak, tampilkan sisa belum dibaca biasa.
+  const overdueCount = countValue(overdueMsgs);
+  const msgTodo =
+    overdueCount !== null && overdueCount > 0
+      ? { label: `Pesan menumpuk ≥${CONTACT_SLA_DAYS} hari belum dibaca`, res: overdueMsgs }
+      : { label: "Pesan belum dibaca", res: unreadMsgs };
   const todo = [
-    { label: "Pesan belum dibaca", res: unreadMsgs, href: "/admin/contact", show: isAdmin },
+    { ...msgTodo, href: "/admin/contact?filter=unread", show: isAdmin },
     { label: "Pendaftar menunggu verifikasi", res: spmbPending, href: "/admin/admission", show: isAdmin },
     { label: "Berita masih draft", res: draftNews, href: "/admin/news", show: canPublish },
   ].filter((t) => t.show && countValue(t.res) !== null && (t.res.count ?? 0) > 0);
@@ -323,7 +380,7 @@ async function TodoRail({ supabase, isAdmin, canPublish }: { supabase: Sb; isAdm
 
 /** Grid statistik (mobile padat + desktop StatCard) — count ber-cache + gelombang SPMB. */
 async function StatsSection({ supabase, isAdmin, canPublish }: { supabase: Sb; isAdmin: boolean; canPublish: boolean }) {
-  const [newsCount, articlesCount, galleryCount, achievementsCount, draftNews, spmbCount, spmbPending, spmbAccepted, spmbRejected, spmbWaves, contactCount, unreadMsgs] =
+  const [newsCount, articlesCount, galleryCount, achievementsCount, draftNews, spmbCount, spmbPending, spmbAccepted, spmbRejected, spmbWaves, contactCount, unreadMsgs, todayMsgs, archivedMsgs] =
     await Promise.all([
       canPublish ? getNewsCount(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
       canPublish ? getArticlesCount(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
@@ -337,6 +394,8 @@ async function StatsSection({ supabase, isAdmin, canPublish }: { supabase: Sb; i
       isAdmin ? getSpmbWaves(supabase) : Promise.resolve({ data: null, error: null } as ListRes<WaveRow>),
       isAdmin ? getContactCount(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
       isAdmin ? getUnreadCount(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
+      isAdmin ? getTodayContactCount(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
+      isAdmin ? getArchivedContactCount(supabase) : Promise.resolve({ count: null, error: null } as CountRes),
     ]);
 
   const now = new Date();
@@ -403,7 +462,7 @@ async function StatsSection({ supabase, isAdmin, canPublish }: { supabase: Sb; i
       icon: <Envelope className="h-5 w-5 text-[var(--brand-primary)]" />,
       variant: "brand",
       show: isAdmin,
-      detail: <StatDetail parts={[["belum dibaca", shown(unreadMsgs)]]} />,
+      detail: <StatDetail parts={[["belum dibaca", shown(unreadMsgs)], ["hari ini", shown(todayMsgs)], ["arsip", shown(archivedMsgs)]]} />,
     },
   ];
 
@@ -527,30 +586,36 @@ async function RecentMessagesCard({ supabase }: { supabase: Sb }) {
       ) : (recentMessages.data || []).length === 0 ? (
         <EmptyState icon={Envelope} title="Belum ada pesan" hint="Pesan dari formulir kontak website akan muncul di sini." />
       ) : (
-        (recentMessages.data || []).map((item) => (
-          <Row
-            key={item.id}
-            href="/admin/contact"
-            leading={
-              <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${item.is_read ? "bg-slate-100" : "bg-[var(--brand-primary)]/10"}`}>
-                <Envelope className={`h-4 w-4 ${item.is_read ? "text-slate-400" : "text-[var(--brand-primary)]"}`} />
-              </div>
-            }
-            trailing={
-              !item.is_read ? (
-                <span className="inline-flex items-center rounded-full bg-[var(--brand-accent)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--brand-accent)]">Baru</span>
-              ) : null
-            }
-          >
-            <p className={`line-clamp-1 text-sm text-slate-800 ${item.is_read ? "font-medium" : "font-semibold"}`}>
-              {toTitleCase(item.name) || "Tanpa nama"}
-            </p>
-            <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">
-              {item.subject || "Tanpa subjek"} &middot; {formatRelativeTime(item.created_at, now)}
-            </p>
-            {item.message && <p className="mt-0.5 line-clamp-1 text-[11px] text-slate-400">{item.message}</p>}
-          </Row>
-        ))
+        (recentMessages.data || []).map((item) => {
+          const overdue = !item.is_read && daysSince(item.created_at, now) >= CONTACT_SLA_DAYS;
+          return (
+            <Row
+              key={item.id}
+              href={`/admin/contact?id=${item.id}`}
+              leading={
+                <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${overdue ? "bg-amber-100 ring-2 ring-amber-300" : item.is_read ? "bg-slate-100" : "bg-[var(--brand-primary)]/10"}`}>
+                  <Envelope className={`h-4 w-4 ${overdue ? "text-amber-600" : item.is_read ? "text-slate-400" : "text-[var(--brand-primary)]"}`} />
+                </div>
+              }
+              trailing={
+                overdue ? (
+                  <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">Menumpuk</span>
+                ) : !item.is_read ? (
+                  <span className="inline-flex items-center rounded-full bg-[var(--brand-accent)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--brand-accent)]">Baru</span>
+                ) : null
+              }
+            >
+              <p className={`line-clamp-1 text-sm text-slate-800 ${item.is_read ? "font-medium" : "font-semibold"}`}>
+                {toTitleCase(item.name) || "Tanpa nama"}
+                {overdue && <span className="ml-1.5 font-bold text-amber-600" title={`Belum dibaca ${CONTACT_SLA_DAYS} hari atau lebih`}>!</span>}
+              </p>
+              <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">
+                {item.subject || "Tanpa subjek"} &middot; {formatRelativeTime(item.created_at, now)}
+              </p>
+              {item.message && <p className="mt-0.5 line-clamp-1 text-[11px] text-slate-400">{item.message}</p>}
+            </Row>
+          );
+        })
       )}
     </ListCard>
   );

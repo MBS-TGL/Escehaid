@@ -400,6 +400,8 @@ export interface ContactMessage {
   subject: string;
   message: string;
   is_read: boolean;
+  /** Arsip (migrasi 0021) — opsional agar aman bila kolom belum ada di DB. */
+  is_archived?: boolean | null;
   created_at: string;
 }
 

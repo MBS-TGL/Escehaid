@@ -8,6 +8,46 @@ import { normalizeName } from "./format-name";
 /** Ambang penekanan SPMB pending — dipakai dashboard DAN daftar pendaftar. */
 export const PENDING_SLA_DAYS = 3;
 
+/** Ambang pesan kontak belum dibaca yang dianggap menumpuk (SLA 1 hari). */
+export const CONTACT_SLA_DAYS = 1;
+
+/**
+ * Kategori pesan kontak — DUGAAN heuristik dari kata kunci subjek/isi,
+ * BUKAN klasifikasi resmi (tanpa kolom DB, murni tampilan). Urutan rules =
+ * prioritas: SPMB dulu karena paling sering ditanyakan & paling mendesak.
+ */
+export type ContactCategory = "spmb" | "akademik" | "layanan" | "umum";
+
+export const CONTACT_CATEGORY_LABELS: Record<ContactCategory, string> = {
+  spmb: "SPMB",
+  akademik: "Akademik",
+  layanan: "Layanan",
+  umum: "Umum",
+};
+
+/**
+ * Kata kunci per kategori — dipakai heuristik tampilan SEKALIGUS filter
+ * server (queries/contact.ts membangun `.or()` ilike dari daftar ini),
+ * supaya badge & filter selalu sepakat.
+ */
+export const CONTACT_CATEGORY_KEYWORDS: Record<Exclude<ContactCategory, "umum">, string[]> = {
+  spmb: ["spmb", "ppdb", "pendaftar", "gelombang", "jalur", "seleksi", "diterima", "biaya masuk", "uang pangkal", "daftar ulang"],
+  akademik: ["nilai", "rapor", "raport", "ujian", "ulangan", "tugas", "kelas", "mapel", "guru", "ekstrakurikuler", "ekskul", "tahfidz", "kurikulum"],
+  layanan: ["jadwal", "jam", "libur", "izin", "sakit", "antar", "jemput", "antar-jemput", "transport", "kantin", "seragam", "asrama", "boarding", "beasiswa", "administrasi", "surat"],
+};
+
+const CONTACT_CATEGORY_RULES: { cat: ContactCategory; words: string[] }[] = (
+  Object.keys(CONTACT_CATEGORY_KEYWORDS) as Exclude<ContactCategory, "umum">[]
+).map((cat) => ({ cat, words: CONTACT_CATEGORY_KEYWORDS[cat] }));
+
+export function guessContactCategory(subject: string | null, message: string | null): ContactCategory {
+  const text = `${subject ?? ""} ${message ?? ""}`.toLowerCase();
+  for (const rule of CONTACT_CATEGORY_RULES) {
+    if (rule.words.some((w) => text.includes(w))) return rule.cat;
+  }
+  return "umum";
+}
+
 /**
  * Normalisasi nama ke Title Case untuk TAMPILAN SAJA (data di database
  * tidak diubah). Delegasi ke helper bersama format-name.ts — normalisasi

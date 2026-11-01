@@ -113,4 +113,8 @@ export const LEDGER_MIGRATIONS: readonly LedgerMigration[] = [
     file: "supabase/migrations/0020_spmb_interview_and_wa_log.sql",
     description: "Wawancara SPMB + log broadcast WA (Fonnte) + opt-out",
   },
+  {
+    file: "supabase/migrations/0021_contact_messages_archive.sql",
+    description: "Arsip pesan kontak (is_archived) — alternatif hapus permanen",
+  },
 ] as const;

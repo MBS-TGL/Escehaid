@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toTitleCase, formatRelativeTime, daysSince, PENDING_SLA_DAYS } from "./admin-display";
+import { toTitleCase, formatRelativeTime, daysSince, PENDING_SLA_DAYS, CONTACT_SLA_DAYS, guessContactCategory } from "./admin-display";
 
 const NOW = new Date("2026-10-20T04:00:00.000Z"); // 11:00 WIB
 
@@ -68,5 +68,34 @@ describe("daysSince", () => {
 
   it("konstanta ambang lewat bersama dashboard & tabel", () => {
     expect(PENDING_SLA_DAYS).toBe(3);
+  });
+
+  it("SLA pesan kontak 1 hari", () => {
+    expect(CONTACT_SLA_DAYS).toBe(1);
+    // Kemarin (kalender WIB) sudah menumpuk, hari ini belum.
+    expect(daysSince("2026-10-19T16:59:00.000Z", NOW)).toBeGreaterThanOrEqual(CONTACT_SLA_DAYS);
+    expect(daysSince("2026-10-20T01:00:00.000Z", NOW)).toBeLessThan(CONTACT_SLA_DAYS);
+  });
+});
+
+describe("guessContactCategory", () => {
+  it("SPMB menang atas kata kunci lain (prioritas pertama)", () => {
+    expect(guessContactCategory("Info SPMB", "Berapa biaya masuk gelombang 2?")).toBe("spmb");
+    expect(guessContactCategory("Daftar ulang", "Kapan seleksi?")).toBe("spmb");
+  });
+
+  it("mengenali akademik & layanan", () => {
+    expect(guessContactCategory("Nilai rapor", "Anak saya kelas 7")).toBe("akademik");
+    expect(guessContactCategory("Izin sakit", "Tidak masuk 2 hari")).toBe("layanan");
+    expect(guessContactCategory("Asrama", "Info boarding")).toBe("layanan");
+  });
+
+  it("tanpa kata kunci → umum; null-ish aman", () => {
+    expect(guessContactCategory("Halo", "Assalamualaikum")).toBe("umum");
+    expect(guessContactCategory(null, null)).toBe("umum");
+  });
+
+  it("tidak sensitif kapital", () => {
+    expect(guessContactCategory("PPDB 2026", "")).toBe("spmb");
   });
 });

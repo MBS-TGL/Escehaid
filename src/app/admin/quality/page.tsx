@@ -17,15 +17,15 @@ export interface QualityIssue {
 }
 
 function collectIssues(
-  newsData: { id: string; title: string; summary: string | null; image_alt: string | null; updated_at: string; is_published: boolean }[],
-  articlesData: { id: string; title: string; excerpt: string | null; image_alt: string | null; updated_at: string; is_published: boolean }[],
+  newsData: { id: string; title: string; summary: string | null; image_url: string | null; image_alt: string | null; updated_at: string; is_published: boolean }[],
+  articlesData: { id: string; title: string; excerpt: string | null; image_url: string | null; image_alt: string | null; updated_at: string; is_published: boolean }[],
   nowMs: number
 ): QualityIssue[] {
   const issues: QualityIssue[] = [];
   const STALE_MS = 180 * 86400000; // 180 hari
 
   for (const n of newsData) {
-    if (n.is_published && !n.image_alt?.trim()) {
+    if (n.is_published && n.image_url?.trim() && !n.image_alt?.trim()) {
       issues.push({
         id: `news-alt-${n.id}`,
         type: "news",
@@ -62,7 +62,7 @@ function collectIssues(
   }
 
   for (const a of articlesData) {
-    if (a.is_published && !a.image_alt?.trim()) {
+    if (a.is_published && a.image_url?.trim() && !a.image_alt?.trim()) {
       issues.push({
         id: `art-alt-${a.id}`,
         type: "article",
@@ -93,17 +93,17 @@ async function fetchQualityAudit(supabase: Awaited<ReturnType<typeof createClien
   const [newsRes, articlesRes] = await Promise.all([
     supabase
       .from("news")
-      .select("id, title, summary, image_alt, updated_at, is_published")
+      .select("id, title, summary, image_url, image_alt, updated_at, is_published")
       .limit(100),
     supabase
       .from("articles")
-      .select("id, title, excerpt, image_alt, updated_at, is_published")
+      .select("id, title, excerpt, image_url, image_alt, updated_at, is_published")
       .limit(100),
   ]);
 
   const timestamp = Date.now();
-  type NewsRow = { id: string; title: string; summary: string | null; image_alt: string | null; updated_at: string; is_published: boolean };
-  type ArticleRow = { id: string; title: string; excerpt: string | null; image_alt: string | null; updated_at: string; is_published: boolean };
+  type NewsRow = { id: string; title: string; summary: string | null; image_url: string | null; image_alt: string | null; updated_at: string; is_published: boolean };
+  type ArticleRow = { id: string; title: string; excerpt: string | null; image_url: string | null; image_alt: string | null; updated_at: string; is_published: boolean };
 
   const issues = collectIssues(
     (newsRes.data || []) as NewsRow[],

@@ -176,5 +176,7 @@ export {
   CheckSquare,
   Copy,
   Upload,
-  ArrowsCounterClockwise
+  ArrowsCounterClockwise,
+  Archive,
+  TrayArrowDown
 } from "@phosphor-icons/react/dist/ssr";

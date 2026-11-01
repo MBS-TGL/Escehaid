@@ -27,10 +27,15 @@ export async function GET() {
   if (can(subject, "kontak:read")) {
     queries.push(
       (async () => {
-        const { count } = await supabase
+        // Arsip tidak ikut badge (selesai ditindaklanjuti). Probe kolom dulu:
+        // bila migrasi 0021 belum jalan, kembali ke hitungan lama.
+        const probe = await supabase.from("contact_messages").select("is_archived").limit(0);
+        let q = supabase
           .from("contact_messages")
           .select("id", { count: "exact", head: true })
           .eq("is_read", false);
+        if (!probe.error) q = q.eq("is_archived", false);
+        const { count } = await q;
         if (count) badges["/admin/contact"] = count;
       })()
     );

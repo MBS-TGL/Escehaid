@@ -1,27 +1,44 @@
 "use client";
 
-import { useState } from "react";
-import { submitContactMessage } from "@/lib/queries";
+import { useEffect, useRef, useState } from "react";
 import { MapPin, Envelope, Clock, WhatsappLogo, InstagramLogo, YoutubeLogo, FacebookLogo, TwitterLogo, MusicNotes } from "@/components/Icons";
 import { CSSFadeIn } from "@/components/CSSAnimations";
 import PageHero from "@/components/public/PageHero";
 import type { PublicBrand } from "@/lib/settings";
 
 export default function ContactForm({ brand }: { brand: PublicBrand }) {
-  const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: "", website: "" });
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  // Waktu render form — dipakai server menilai jeda minimum anti-bot.
+  // useRef(null) + isi di effect: Date.now() tak boleh dipanggil saat render
+  // (react-hooks/purity).
+  const renderedAt = useRef<number>(0);
+  useEffect(() => {
+    renderedAt.current = Date.now();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus("loading");
-    const result = await submitContactMessage(form);
-    if (result.success) {
-      setStatus("success");
-      setForm({ name: "", email: "", phone: "", subject: "", message: "" });
-    } else {
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, filledAt: renderedAt.current }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string };
+      if (res.ok && json.success) {
+        setStatus("success");
+        setForm({ name: "", email: "", phone: "", subject: "", message: "", website: "" });
+        renderedAt.current = Date.now();
+      } else {
+        setStatus("error");
+        setErrorMsg(json.error || "Gagal mengirim pesan.");
+      }
+    } catch {
       setStatus("error");
-      setErrorMsg(result.error || "Gagal mengirim pesan.");
+      setErrorMsg("Gagal mengirim pesan. Periksa koneksi lalu coba lagi.");
     }
   };
 
@@ -58,6 +75,21 @@ export default function ContactForm({ brand }: { brand: PublicBrand }) {
                 )}
 
                 <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+                  {/* Honeypot anti-bot: tak terlihat manusia, bot yang mengisi
+                      ditolak diam-diam oleh server (sukses palsu). */}
+                  <div aria-hidden="true" className="absolute -z-10 h-0 overflow-hidden opacity-0">
+                    <label>
+                      Situs web (jangan diisi)
+                      <input
+                        type="text"
+                        name="website"
+                        tabIndex={-1}
+                        autoComplete="off"
+                        value={form.website}
+                        onChange={(e) => setForm({ ...form, website: e.target.value })}
+                      />
+                    </label>
+                  </div>
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-[var(--brand-primary)]">Nama Lengkap *</label>
                     <input
