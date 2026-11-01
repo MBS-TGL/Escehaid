@@ -1,10 +1,11 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Users, GraduationCap, Eye, Checks, ArrowUpRight, Trophy, MapPin, Quotes } from "@/components/Icons";
+import { Users, GraduationCap, Eye, Checks, ArrowUpRight, Trophy, MapPin, Quotes, Play } from "@/components/Icons";
 import { getSchoolProfile, getTeacherList, getFacilityList, getAchievementList, getGalleryList, getEkskulList, registrationHref } from "@/lib/queries";
 import { parseMissionItems } from "@/lib/queries/profile";
 import { VISION_FALLBACK } from "@/lib/site-content";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
+import { achievementCategoryMeta, achievementLevelLabel, capitalizeCategory } from "@/lib/site-config";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import PageHero from "@/components/public/PageHero";
 import TeacherGrid from "./TeacherGrid";
@@ -472,33 +473,97 @@ export default async function ProfilPage() {
         </section>
       )}
 
-      {/* Prestasi Highlights */}
+      {/* Prestasi — showcase 3 teratas + link ke halaman penuh */}
       {achievements.length > 0 && (
         <section id="prestasi" className="scroll-mt-24 bg-[#f4f7fb] py-14 md:scroll-mt-28 md:py-20" style={CV}>
           <div className="mx-auto max-w-[1296px] px-6 md:px-10">
             <CSSFadeIn>
-              <div className="flex flex-col items-center justify-between gap-6 rounded-2xl border border-[#dce3ed] bg-white p-6 sm:flex-row">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--brand-primary)] shadow-lg shadow-[var(--brand-primary)]/20">
-                    <Trophy className="h-6 w-6 text-[var(--brand-highlight)]" weight="fill" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Pencapaian</p>
-                    <h3 className="mt-1 text-lg font-semibold text-[var(--brand-primary)]">Prestasi Sekolah</h3>
-                  </div>
+              <div className="mb-8 flex items-end justify-between md:mb-12">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Pencapaian</p>
+                  <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Prestasi Sekolah</h2>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  {achievements.slice(0, 2).map((a) => (
-                    <span key={a.id} className="hidden rounded-full bg-[var(--brand-accent)]/10 px-3 py-1 text-xs font-semibold text-[var(--brand-accent)] sm:inline-block">
-                      {a.title.length > 30 ? a.title.substring(0, 30) + "..." : a.title}
-                    </span>
-                  ))}
-                  <Link href="/achievements" className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-[var(--brand-accent)]">
+                <div className="flex items-center gap-3">
+                  <span className="hidden rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm md:inline-block">
+                    {achievements.length} Prestasi
+                  </span>
+                  <Link href="/achievements" className="hidden items-center gap-1.5 text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)] md:inline-flex">
                     Lihat semua <ArrowUpRight className="h-4 w-4" />
                   </Link>
                 </div>
               </div>
             </CSSFadeIn>
+
+            <CSSStagger stagger={80} className="grid items-stretch gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+              {achievements.slice(0, 3).map((a) => {
+                const meta = achievementCategoryMeta(a.category);
+                const Icon = meta?.icon || Trophy;
+                const lvl = achievementLevelLabel(a.level) || capitalizeCategory((a.level || "").trim() || "-");
+                return (
+                  <div key={a.id} className="h-full min-w-0">
+                    <Link
+                      href="/achievements"
+                      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#dce3ed] bg-white transition-all hover:border-[var(--brand-accent)]/30 hover:shadow-lg hover:shadow-[var(--brand-primary)]/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+                    >
+                      {a.image_url ? (
+                        <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
+                          <Image
+                            src={a.image_url}
+                            alt={a.image_alt || a.title}
+                            fill
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            loading="lazy"
+                            className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                          {a.video_url && (
+                            <span aria-hidden="true" className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+                              <Play weight="fill" className="h-3 w-3" /> Video
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="relative flex aspect-video w-full items-center justify-center bg-gradient-to-br from-[var(--brand-accent)]/20 to-[var(--brand-accent)]/5">
+                          <Icon weight="fill" className="h-12 w-12 text-[var(--brand-accent)]" />
+                        </div>
+                      )}
+                      <div className="flex flex-1 flex-col p-5">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {a.rank_label && (
+                            <span className="rounded-md bg-[var(--brand-accent)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                              {a.rank_label}
+                            </span>
+                          )}
+                          {a.level && (
+                            <span className="rounded-md bg-[var(--brand-primary)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+                              {lvl}
+                            </span>
+                          )}
+                          <span className="rounded-md border border-[var(--brand-accent)]/20 bg-[var(--brand-accent)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-accent)]">
+                            {meta?.label || capitalizeCategory(a.category || "Prestasi")}
+                          </span>
+                          <span className="text-[11px] text-slate-400">{a.year}</span>
+                        </div>
+                        <h3 className="mt-2.5 text-base font-semibold text-[var(--brand-primary)] line-clamp-2 transition-colors group-hover:text-[var(--brand-accent)]">
+                          {a.title}
+                        </h3>
+                        <p className="mt-auto pt-3 text-xs font-semibold text-[var(--brand-accent)] transition-colors group-hover:text-[var(--brand-primary)]">
+                          Lihat detail
+                        </p>
+                      </div>
+                    </Link>
+                  </div>
+                );
+              })}
+            </CSSStagger>
+
+            <div className="mt-6 md:hidden">
+              <Link
+                href="/achievements"
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)]"
+              >
+                Lihat semua prestasi <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
         </section>
       )}
@@ -575,27 +640,71 @@ export default async function ProfilPage() {
         </section>
       )}
 
-      {/* Kontak & Lokasi */}
+      {/* Kontak & Lokasi — kartu info + peta (mobile: info dulu, peta di bawah) */}
       <section id="kontak" className="scroll-mt-24 bg-white py-14 md:scroll-mt-28 md:py-20" style={CV}>
         <div className="mx-auto max-w-[1296px] px-6 md:px-10">
           <CSSFadeIn>
-            <div className="flex flex-col items-center justify-between gap-6 rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-6 sm:flex-row">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--brand-primary)] shadow-lg shadow-[var(--brand-primary)]/20">
-                  <MapPin className="h-6 w-6 text-[var(--brand-highlight)]" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Lokasi Kami</p>
-                  <p className="mt-1 text-sm text-slate-600">
-                    {profil?.address || "Jl. Pemandian No. 88, Patemon, Tanggul, Jember, Jawa Timur"}
-                  </p>
-                </div>
-              </div>
-              <Link href="/contact" className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-[var(--brand-accent)] sm:w-auto">
-                Hubungi Kami <ArrowUpRight className="h-4 w-4" />
-              </Link>
+            <div className="mb-8 md:mb-12">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Lokasi Kami</p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Kontak & Lokasi</h2>
             </div>
           </CSSFadeIn>
+
+          <div className="grid gap-4 sm:gap-5 lg:grid-cols-2">
+            {/* Kartu info + aksi */}
+            <CSSFadeIn className="h-full">
+              <div className="flex h-full flex-col rounded-2xl border border-[#dce3ed] bg-[#f4f7fb] p-6 sm:p-8">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-primary)] shadow-lg shadow-[var(--brand-primary)]/20">
+                    <MapPin className="h-6 w-6 text-[var(--brand-highlight)]" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-lg font-bold text-[var(--brand-primary)]">SMP Muhammadiyah 4 Tanggul</h3>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                      {profil?.address || "Jl. Pemandian No. 88, Patemon, Tanggul, Jember, Jawa Timur"}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <a
+                    href="https://www.google.com/maps/search/?api=1&query=SMP+Muhammadiyah+4+Tanggul+Jl.+Pemandian+No.+88+Patemon+Tanggul+Jember"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-5 py-3 text-sm font-bold text-white transition-all hover:bg-[var(--brand-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+                  >
+                    <MapPin className="h-4 w-4" /> Petunjuk Arah
+                  </a>
+                  <Link
+                    href="/contact"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dce3ed] bg-white px-5 py-3 text-sm font-semibold text-[var(--brand-primary)] transition hover:border-[var(--brand-primary)] hover:bg-[#f4f7fb] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+                  >
+                    Hubungi Kami <ArrowUpRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+            </CSSFadeIn>
+
+            {/* Kartu peta */}
+            <CSSFadeIn delay={0.08} className="h-full">
+              <div className="relative h-full min-h-[280px] overflow-hidden rounded-2xl border border-[#dce3ed] bg-slate-100 sm:min-h-[320px]">
+                <iframe
+                  title="Peta lokasi SMP Muhammadiyah 4 Tanggul"
+                  src="https://maps.google.com/maps?q=SMP%20Muhammadiyah%204%20Tanggul%20Jl.%20Pemandian%20No.%2088%20Patemon%20Tanggul%20Jember&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  className="absolute inset-0 h-full w-full border-0"
+                />
+                <a
+                  href="https://www.google.com/maps/search/?api=1&query=SMP+Muhammadiyah+4+Tanggul+Jl.+Pemandian+No.+88+Patemon+Tanggul+Jember"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="absolute bottom-3 right-3 rounded-lg bg-white/95 px-3 py-1.5 text-xs font-bold text-[var(--brand-primary)] shadow-md backdrop-blur-sm transition-colors hover:bg-white hover:text-[var(--brand-accent)]"
+                >
+                  Buka di Google Maps
+                </a>
+              </div>
+            </CSSFadeIn>
+          </div>
         </div>
       </section>
 
