@@ -45,4 +45,24 @@ describe("command-providers: global command search", () => {
     const withPermRes = await executeGlobalSearch(dummySupabase, "ahmad", ["spmb:read"]);
     expect(withPermRes.groups.some((g) => g.key === "admission")).toBe(true);
   });
+
+  it("mengindeks menu sidebar baru (review, sampah) dengan gate izin", async () => {
+    // Tanpa izin khusus: menu berperm tidak muncul.
+    const noPerm = await executeGlobalSearch(dummySupabase, "sampah", []);
+    expect(
+      noPerm.groups
+        .flatMap((g) => g.items)
+        .some((i) => i.href === "/admin/trash")
+    ).toBe(false);
+
+    // Dengan izin: muncul dan mengarah ke rute yang benar.
+    const withPerm = await executeGlobalSearch(dummySupabase, "sampah", ["sampah:read"]);
+    const trash = withPerm.groups.flatMap((g) => g.items).find((i) => i.href === "/admin/trash");
+    expect(trash?.label).toContain("Sampah");
+
+    const review = await executeGlobalSearch(dummySupabase, "inbox review", ["berita:review"]);
+    expect(
+      review.groups.flatMap((g) => g.items).some((i) => i.href === "/admin/review")
+    ).toBe(true);
+  });
 });

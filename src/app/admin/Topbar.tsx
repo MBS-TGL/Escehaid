@@ -9,22 +9,10 @@ import {
   Bell,
   CaretDown,
   MagnifyingGlass,
-  House,
-  Users,
-  Megaphone,
-  Note,
-  ImageSquare,
-  Trophy,
-  Envelope,
-  BookOpen,
   CheckCircle,
   Warning,
   Info,
-  FolderOpen,
-  Scroll,
-  Download,
   ShieldCheck,
-  ChartLine,
 } from "@/components/Icons";
 import {
   getUnreadNotificationCount,
@@ -37,6 +25,7 @@ import { readRecentMenus, saveRecentMenu } from "@/lib/recent-menus";
 import Highlight from "@/components/public/Highlight";
 import { Modal } from "@/components/ui";
 import { usePermissions } from "./PermissionsProvider";
+import { navGroups } from "./Sidebar";
 
 interface UserProfile {
   full_name: string;
@@ -44,22 +33,15 @@ interface UserProfile {
   is_active: boolean;
 }
 
-const navSearchItems = [
-  { label: "Dashboard", href: "/admin", icon: House },
-  { label: "Kelola SPMB", href: "/admin/admission", icon: Users, perm: "spmb:read" },
-  { label: "Kelola Berita", href: "/admin/news", icon: Megaphone, perm: "berita:read" },
-  { label: "Kelola Fasilitas", href: "/admin/facilities", icon: ImageSquare, perm: "fasilitas:read" },
-  { label: "Kelola Ekskul", href: "/admin/ekskul", icon: Trophy, perm: "ekskul:read" },
-  { label: "Kelola Program", href: "/admin/program", icon: BookOpen, perm: "program:read" },
-  { label: "Kelola Artikel", href: "/admin/articles", icon: Note, perm: "artikel:read" },
-  { label: "Kelola Galeri", href: "/admin/gallery", icon: ImageSquare, perm: "galeri:read" },
-  { label: "Kelola Unduhan", href: "/admin/downloads", icon: Download, perm: "unduhan:read" },
-  { label: "Media Library", href: "/admin/media", icon: FolderOpen, perm: "media:read" },
-  { label: "Log Aktivitas", href: "/admin/logs", icon: Scroll, perm: "logs:read" },
-  { label: "Kelola Prestasi", href: "/admin/achievements", icon: Trophy, perm: "prestasi:read" },
-  { label: "Pesan Masuk", href: "/admin/contact", icon: Envelope, perm: "kontak:read" },
-  { label: "Analitik Trafik", href: "/admin/analytics", icon: ChartLine, perm: "analitik:read" },
-];
+/**
+ * Daftar menu untuk command palette — DITURUNKAN dari `navGroups` (Sidebar.tsx)
+ * supaya tidak pernah basi: tiap menu baru di sidebar otomatis ikut terindeks.
+ * Tautan eksternal (Sentry/Uptime) dikecualikan — palette memakai router.push
+ * internal.
+ */
+const navSearchItems = navGroups
+  .flatMap((g) => g.items)
+  .filter((it) => !it.external);
 
 const ROLE_TO_SYSTEM: Record<string, string> = {
   developer: "SUPER_ADMIN",
