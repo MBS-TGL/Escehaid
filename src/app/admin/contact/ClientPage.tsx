@@ -39,6 +39,8 @@ import {
   TrayArrowDown,
   Printer,
   CaretDown,
+  Funnel,
+  Tag,
 } from "@/components/Icons";
 import { useToast } from "@/components/ui/Toast";
 import { usePermissions } from "@/app/admin/PermissionsProvider";
@@ -677,22 +679,26 @@ function AdminContactInner() {
         />
       </div>
 
-      {/* Toolbar mobile (<md): pencarian + filter (dengan jumlah) + urut + Pilih */}
+      {/* Toolbar mobile (<md): pencarian + 1 baris ikon (status · kategori · urut · pilih) */}
       <MobileFilterBar
         placeholder="Cari nama, email, subjek, isi…"
         searchLabel="Cari nama, email, subjek, atau isi pesan"
         query={searchInput}
         onQueryChange={(v) => { setSearchInput(v); setPage(1); }}
+        singleRowCompact
         filter={{
           value: filter,
           options: statusOptions,
           onChange: (k) => applyFilter(setFilter, k),
+          menuLabel: "Filter status",
+          icon: <Funnel className="h-4 w-4" />,
         }}
         filter2={{
           value: category,
           options: categoryOptions,
           onChange: (k) => applyFilter(setCategory, k),
           menuLabel: "Filter kategori",
+          icon: <Tag className="h-4 w-4" />,
         }}
         sort={{
           value: `${sortField}:${sortDir}`,
@@ -709,8 +715,9 @@ function AdminContactInner() {
             setSortField(f as SortField);
             setSortDir(d as SortDir);
           },
+          icon: <SortAscending className="h-4 w-4" />,
         }}
-        action={<MobilePickButton onClick={() => setPickMode(true)} />}
+        action={<MobilePickButton onClick={() => setPickMode(true)} iconOnly />}
         selectMode={pickMode}
         selectedCount={selectedIds.size}
         allSelected={allVisibleSelected}

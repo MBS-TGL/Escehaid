@@ -31,6 +31,8 @@ type DropdownProps = {
   capitalize?: boolean;
   /** Mode ringkas: hanya tampilkan ikon (atau label pendek bila tanpa ikon) + indikator aktif */
   compact?: boolean;
+  /** Matikan titik indikator aktif (untuk dropdown Urut — key-nya tak pernah "all") */
+  disableActiveDot?: boolean;
   /** Title tooltip saat hover/fokus */
   title?: string;
 };
@@ -45,6 +47,7 @@ function Dropdown({
   badge,
   capitalize = false,
   compact = false,
+  disableActiveDot = false,
   title,
 }: DropdownProps) {
   const { open, toggle, triggerRef, menuRef, menuId, panelStyle, onMenuKeyDown } = useMenu({
@@ -52,6 +55,11 @@ function Dropdown({
   });
 
   const isFiltered = currentKey !== "all" && currentKey !== "";
+
+  /** Label aksesibel tombol: sertakan nilai aktif agar terbaca screen reader. */
+  const accessibleLabel = compact && triggerLabel !== menuLabel
+    ? `${menuLabel}: ${triggerLabel}`
+    : menuLabel;
 
   return (
     <div className="relative flex min-w-0 flex-1 items-center">
@@ -61,8 +69,8 @@ function Dropdown({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
-        aria-label={menuLabel}
-        title={title || menuLabel}
+        aria-label={accessibleLabel}
+        title={title || accessibleLabel}
         onClick={toggle}
         className={`flex h-11 w-full min-w-0 items-center justify-center rounded-xl border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${
           isFiltered
@@ -85,7 +93,7 @@ function Dropdown({
             {badge}
           </span>
         )}
-        {compact && isFiltered && (
+        {compact && isFiltered && !disableActiveDot && (
           <span
             aria-hidden="true"
             className="ml-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand-primary)]"
@@ -198,6 +206,7 @@ export function MobileFilterBar({
   filter3,
   filter4,
   compactFilters = false,
+  singleRowCompact = false,
   sort,
   action,
   selectMode = false,
@@ -262,10 +271,18 @@ export function MobileFilterBar({
    * Urut & Aksi ditaruh di baris tersendiri di bawahnya.
    */
   compactFilters?: boolean;
+  /**
+   * SATU baris ikon untuk semua kontrol (filter · filter2 · urut · aksi).
+   * Untuk halaman dengan ≤2 filter (mis. Pesan Masuk) — tanpa label panjang,
+   * titik biru = ada filter aktif. Urut & aksi ikut sebaris, bukan baris kedua.
+   */
+  singleRowCompact?: boolean;
   sort?: {
     value: string;
     options: MobileSortOption[];
     onChange: (key: string) => void;
+    /** Ikon kiri tombol (opsional — tampil di mode singleRowCompact). */
+    icon?: ReactNode;
   };
   /** Aksi tambahan di ujung kanan baris kedua, sebelah urut (mis. tombol "Pilih"). */
   action?: ReactNode;
@@ -281,7 +298,7 @@ export function MobileFilterBar({
   const currentSort = sort?.options.find((o) => o.key === sort.value);
 
   /** Ada filter tambahan + (urut/aksi) → baris kontrol dipecah jadi dua. */
-  const stackedControls = !!((filter && (filter2 || filter3 || filter4)) && (sort || action));
+  const stackedControls = !singleRowCompact && !!((filter && (filter2 || filter3 || filter4)) && (sort || action));
 
   const filterDropdown = filter && (
     <Dropdown
@@ -293,7 +310,7 @@ export function MobileFilterBar({
       icon={filter.icon}
       badge={currentFilter?.count}
       capitalize
-      compact={compactFilters}
+      compact={compactFilters || singleRowCompact}
     />
   );
   const filter2Dropdown = filter2 && (
@@ -306,7 +323,7 @@ export function MobileFilterBar({
       icon={filter2.icon}
       badge={currentFilter2?.count}
       capitalize
-      compact={compactFilters}
+      compact={compactFilters || singleRowCompact}
     />
   );
   const filter3Dropdown = filter3 && (
@@ -342,6 +359,9 @@ export function MobileFilterBar({
       currentKey={sort.value}
       options={sort.options}
       onChoose={sort.onChange}
+      icon={sort.icon}
+      compact={singleRowCompact}
+      disableActiveDot={singleRowCompact}
     />
   );
   const actionGroup = action && (
@@ -386,7 +406,14 @@ export function MobileFilterBar({
       </div>
 
       {/* Baris kontrol */}
-      {compactFilters ? (
+      {singleRowCompact ? (
+        <div className="flex items-center gap-2">
+          {filterDropdown}
+          {filter2Dropdown}
+          {sortDropdown}
+          {actionGroup}
+        </div>
+      ) : compactFilters ? (
         <>
           {/* Baris 2: 4 filter ikon dalam 1 baris */}
           <div className="grid grid-cols-4 gap-2">
@@ -435,7 +462,20 @@ export function MobileFilterBar({
 }
 
 /** Tombol "Pilih" bawaan untuk `action` MobileFilterBar. */
-export function MobilePickButton({ onClick }: { onClick: () => void }) {
+export function MobilePickButton({ onClick, iconOnly = false }: { onClick: () => void; iconOnly?: boolean }) {
+  if (iconOnly) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label="Masuk mode pilih"
+        title="Masuk mode pilih"
+        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+      >
+        <CheckSquare className="h-4 w-4 text-[var(--brand-accent)]" />
+      </button>
+    );
+  }
   return (
     <button
       type="button"
