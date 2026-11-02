@@ -41,19 +41,23 @@ export default function DailyAgenda({
         {AGENDA_SECTION_META.subheading}
       </p>
 
-      {/* 4 kartu ringkas — chip + jam tak boleh pecah baris di lebar sempit */}
+      {/* 4 kartu ringkas — chip judul + jam selalu sebaris; judul
+          yang sangat panjang terpotong (…) agar jam tetap utuh */}
       <CSSStagger className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" stagger={70}>
         {DAILY_BLOCKS.map((block) => (
           <article
             key={block.key}
             className="flex h-full flex-col rounded-2xl border border-[#dce3ed] bg-slate-50/60 p-5"
           >
-            <div className="flex flex-col items-start gap-2">
-              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-3 py-1 text-[11px] font-semibold text-white">
-                <MoonStars className="h-3 w-3" aria-hidden="true" />
-                {block.title}
+            <div className="flex items-center gap-2">
+              <span
+                title={block.title}
+                className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-3 py-1 text-[11px] font-semibold text-white"
+              >
+                <MoonStars className="h-3 w-3 shrink-0" aria-hidden="true" />
+                <span className="truncate">{block.title}</span>
               </span>
-              <span className="whitespace-nowrap rounded-full border border-[#dce3ed] bg-white px-2.5 py-1 text-[11px] font-semibold tabular-nums text-[var(--brand-primary)]">
+              <span className="shrink-0 whitespace-nowrap rounded-full border border-[#dce3ed] bg-white px-2.5 py-1 text-[11px] font-semibold tabular-nums text-[var(--brand-primary)]">
                 <Clock className="mr-1 inline h-3 w-3 align-[-1px] text-[var(--brand-accent)]" aria-hidden="true" />
                 {block.timeLabel}
               </span>
