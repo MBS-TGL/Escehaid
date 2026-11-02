@@ -17,6 +17,7 @@ import {
   CaretRight,
   SquaresFour,
   CalendarBlank,
+  BookOpen,
 } from "@/components/Icons";
 
 /**
@@ -33,6 +34,7 @@ type NavIcon = React.ComponentType<{ className?: string; weight?: "regular" | "f
 const sheetLinks = [
   { href: "/portal", label: "Portal", icon: SquaresFour },
   { href: "/profile", label: "Profil", icon: User },
+  { href: "/program", label: "Program", icon: BookOpen },
   { href: "/achievements", label: "Prestasi", icon: Trophy },
   { href: "/activities", label: "Kegiatan", icon: CalendarBlank },
   { href: "/articles", label: "Artikel", icon: Note },
