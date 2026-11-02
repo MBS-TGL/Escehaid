@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import TextAlign from "@tiptap/extension-text-align";
@@ -47,6 +48,7 @@ import {
   VideoCamera,
   Trash,
 } from "@/components/Icons";
+import { useFloatingPanel } from "./useFloatingPanel";
 
 /** Palet warna teks: brand situs + warna dasar tulis. */
 const TEXT_COLORS = [
@@ -111,6 +113,172 @@ function ToolbarBtn({
 
 function ToolbarDivider() {
   return <div className="mx-1 h-6 w-px bg-slate-200" />;
+}
+
+/** Batas ukuran tabel saat sisip: cukup untuk konten artikel, tabel raksasa
+ *  merusak layout mobile walau pratinjau punya overflow-x-auto. */
+const TABLE_MIN_ROWS = 1;
+const TABLE_MAX_ROWS = 20;
+const TABLE_MIN_COLS = 1;
+const TABLE_MAX_COLS = 10;
+
+function clampTableSize(n: number, min: number, max: number, fallback: number): number {
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, Math.floor(n)));
+}
+
+/**
+ * Popover "Sisip tabel" — ganti tombol 3×3 tetap: pilih Baris × Kolom +
+ * opsi baris header. Portal fixed (tidak menggeser toolbar), flip otomatis
+ * + tutup saat trigger hilang mengikuti useFloatingPanel; Escape / klik-luar
+ * menutup tanpa menyisip.
+ */
+function TableInsertPopover({ editor }: { editor: Editor }) {
+  const [open, setOpen] = useState(false);
+  const [rows, setRows] = useState("3");
+  const [cols, setCols] = useState("3");
+  const [withHeader, setWithHeader] = useState(true);
+  const wrapRef = useRef<HTMLSpanElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const { pos, reposition } = useFloatingPanel({
+    triggerRef,
+    open,
+    onTriggerLost: () => setOpen(false),
+    maxHeight: 320,
+    minFit: 240,
+    gap: 6,
+  });
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      const t = e.target as Node;
+      if (wrapRef.current?.contains(t)) return;
+      if (panelRef.current?.contains(t)) return;
+      setOpen(false);
+    }
+    if (!open) return;
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  function toggle() {
+    if (open) { setOpen(false); return; }
+    if (!triggerRef.current) return;
+    setRows("3");
+    setCols("3");
+    setWithHeader(true);
+    reposition();
+    setOpen(true);
+  }
+
+  function insert() {
+    const r = clampTableSize(parseInt(rows, 10), TABLE_MIN_ROWS, TABLE_MAX_ROWS, 3);
+    const c = clampTableSize(parseInt(cols, 10), TABLE_MIN_COLS, TABLE_MAX_COLS, 3);
+    setOpen(false);
+    editor.chain().focus().insertTable({ rows: r, cols: c, withHeaderRow: withHeader }).run();
+  }
+
+  const panel =
+    open && pos
+      ? createPortal(
+          <div
+            ref={panelRef}
+            role="dialog"
+            aria-label="Sisip tabel"
+            style={{
+              position: "fixed",
+              top: pos.top,
+              bottom: pos.bottom,
+              left: pos.left,
+              maxHeight: pos.maxHeight,
+              zIndex: 10000,
+            }}
+            className="w-56 overflow-auto rounded-xl border border-slate-200 bg-white p-3 shadow-lg"
+          >
+            <div className="flex items-center gap-2">
+              <label className="flex-1 text-xs font-semibold text-slate-600">
+                Baris
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={TABLE_MIN_ROWS}
+                  max={TABLE_MAX_ROWS}
+                  value={rows}
+                  onChange={(e) => setRows(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") insert(); }}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm text-slate-700 focus:border-[var(--brand-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
+                />
+              </label>
+              <span className="pt-5 text-sm text-slate-400">×</span>
+              <label className="flex-1 text-xs font-semibold text-slate-600">
+                Kolom
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={TABLE_MIN_COLS}
+                  max={TABLE_MAX_COLS}
+                  value={cols}
+                  onChange={(e) => setCols(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") insert(); }}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm text-slate-700 focus:border-[var(--brand-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-accent)]"
+                />
+              </label>
+            </div>
+            <label className="mt-2.5 flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-600">
+              <input
+                type="checkbox"
+                checked={withHeader}
+                onChange={(e) => setWithHeader(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]"
+              />
+              Baris pertama sebagai header
+            </label>
+            <div className="mt-3 flex justify-end gap-1.5">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-100"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={insert}
+                className="rounded-lg bg-[var(--brand-primary)] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]"
+              >
+                Sisip tabel
+              </button>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
+
+  return (
+    <span ref={wrapRef} className="inline-flex" title="Sisip tabel">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={toggle}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label="Sisip tabel"
+        className="flex h-8 w-8 items-center justify-center rounded-lg text-sm text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+      >
+        <SquaresFour className="h-4 w-4" />
+      </button>
+      {panel}
+    </span>
+  );
 }
 
 export function RichTextEditor({
@@ -430,13 +598,8 @@ export function RichTextEditor({
 
         <ToolbarDivider />
 
-        {/* Tabel */}
-        <ToolbarBtn
-          onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
-          title="Sisip tabel 3×3"
-        >
-          <SquaresFour className="h-4 w-4" />
-        </ToolbarBtn>
+        {/* Tabel: ukuran kustom via popover (pengganti 3×3 tetap) */}
+        <TableInsertPopover editor={editor} />
         {inTable && (
           <>
             <ToolbarBtn
