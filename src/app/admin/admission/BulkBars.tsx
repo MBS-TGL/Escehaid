@@ -25,6 +25,7 @@ export function SpmbBulkBar({
   onMoveWave,
   onMovePath,
   onSetPending,
+  onScheduleInterview,
   onDelete,
   onClear,
 }: {
@@ -37,6 +38,7 @@ export function SpmbBulkBar({
   onMoveWave: () => void;
   onMovePath: () => void;
   onSetPending: () => void;
+  onScheduleInterview: () => void;
   onDelete: () => void;
   onClear: () => void;
 }) {
@@ -49,6 +51,7 @@ export function SpmbBulkBar({
         <>
           <button onClick={onAccept} aria-label={`Terima ${count} pendaftar terpilih`} className="whitespace-nowrap rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Terima</button>
           <button onClick={onReject} aria-label={`Tolak ${count} pendaftar terpilih`} className="whitespace-nowrap rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Tolak</button>
+          <button onClick={onScheduleInterview} aria-label={`Jadwalkan wawancara ${count} pendaftar terpilih`} className="whitespace-nowrap rounded-lg border border-purple-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-purple-700 hover:bg-purple-50">Wawancara</button>
           <button onClick={onMoveWave} aria-label={`Pindahkan ${count} pendaftar terpilih ke gelombang lain`} className="whitespace-nowrap rounded-lg border border-[var(--brand-primary)]/30 bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5">Pindah gelombang</button>
           <button onClick={onMovePath} aria-label={`Ubah jalur ${count} pendaftar terpilih`} className="whitespace-nowrap rounded-lg border border-[var(--brand-primary)]/30 bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5">Jalur</button>
           <button onClick={onSetPending} disabled={bulkPendingSaving} aria-label={`Kembalikan ${count} pendaftar terpilih ke Menunggu`} className="whitespace-nowrap rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Menunggu</button>
@@ -73,6 +76,7 @@ export function SpmbMobileBulkBar({
   onMoveWave,
   onMovePath,
   onSetPending,
+  onScheduleInterview,
   onDelete,
   onCancel,
 }: {
@@ -85,6 +89,7 @@ export function SpmbMobileBulkBar({
   onMoveWave: () => void;
   onMovePath: () => void;
   onSetPending: () => void;
+  onScheduleInterview: () => void;
   onDelete: () => void;
   onCancel: () => void;
 }) {
@@ -116,6 +121,16 @@ export function SpmbMobileBulkBar({
             className="flex h-10 w-10 items-center justify-center rounded-xl border border-red-200 bg-white text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
           >
             <XCircle className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={onScheduleInterview}
+            disabled={count === 0}
+            aria-label="Jadwalkan wawancara pendaftar terpilih"
+            title="Jadwalkan wawancara"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-purple-200 bg-white text-purple-700 transition-colors hover:bg-purple-50 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+          >
+            <CalendarBlank className="h-5 w-5" />
           </button>
           <button
             type="button"

@@ -25,6 +25,15 @@ export interface PipelineItem extends SpmbRegistration {
 
 export type PipelineStage = "new" | "verifying" | "interview" | "accepted" | "rejected";
 
+/**
+ * Jadwal wawancara sudah lewat tapi status masih pending — perlu dijadwal
+ * ulang / ditindaklanjuti. Fungsi module-level (murni per-argumen) agar
+ * lolos aturan purity lint.
+ */
+export function isInterviewOverdue(item: { status: string; interview_at?: string | null }): boolean {
+  return item.status === "pending" && !!item.interview_at && new Date(item.interview_at).getTime() < Date.now();
+}
+
 const pathLabels: Record<string, string> = {
   reguler: "Reguler",
   prestasi: "Prestasi",
@@ -463,14 +472,18 @@ export function PipelineBoard({
 
                           {/* Jadwal Wawancara */}
                           {item.interview_at && (
-                            <div className="mt-2.5 flex items-center gap-1.5 rounded-lg border border-purple-100 bg-purple-50/80 px-2 py-1 text-[10.5px] font-medium text-purple-700">
-                              <CalendarCheck className="h-3.5 w-3.5 shrink-0 text-purple-500" />
+                            <div className={`mt-2.5 flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[10.5px] font-medium ${isInterviewOverdue(item)
+                              ? "border-red-100 bg-red-50/80 text-red-700"
+                              : "border-purple-100 bg-purple-50/80 text-purple-700"
+                              }`}>
+                              <CalendarCheck className={`h-3.5 w-3.5 shrink-0 ${isInterviewOverdue(item) ? "text-red-500" : "text-purple-500"}`} />
                               <span className="truncate">
                                 Wawancara:{" "}
                                 {new Date(item.interview_at).toLocaleDateString("id-ID", {
                                   day: "numeric",
                                   month: "short",
                                 })}
+                                {isInterviewOverdue(item) && " · Lewat jadwal"}
                               </span>
                             </div>
                           )}

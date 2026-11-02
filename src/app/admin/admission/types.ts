@@ -1,7 +1,7 @@
 import type { SpmbFieldType } from "@/lib/supabase";
 
 /** Tab utama halaman: daftar pendaftar atau pengelolaan gelombang. */
-export type MainTab = "registrations" | "pipeline" | "waves" | "form" | "settings";
+export type MainTab = "registrations" | "pipeline" | "interviews" | "waves" | "form" | "settings";
 
 export type SortField = "created_at" | "full_name" | "status" | "registration_path" | "gender";
 export type SortDir = "asc" | "desc";

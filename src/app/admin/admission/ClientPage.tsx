@@ -5,9 +5,11 @@ import { useAdminBottomBar } from "@/app/admin/AdminChrome";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   getRegistrationList,
+  getRegistrationById,
   getRegistrationPage,
   getSpmbAggregates,
   getPipelineRows,
+  getInterviewRows,
   getDuplicateCandidates,
   getRegistrationsByIds,
   clientSearchRemainder,
@@ -82,6 +84,9 @@ import {
 } from "@/components/Icons";
 import { PipelineBoard } from "./PipelineBoard";
 import { BroadcastWaModal } from "./BroadcastWaModal";
+import { InterviewsPanel } from "./InterviewsPanel";
+import { InterviewScheduleModal } from "./InterviewScheduleModal";
+import { scheduleInterviewAction, scheduleInterviewBulkAction } from "./actions";
 import {
   MobileFilterBar,
   MobilePickButton,
@@ -198,6 +203,9 @@ export default function AdminSPMBPage() {
   const [addOpen, setAddOpen] = useState(false);
   /** Modal "Import Pendaftar" (massal dari ekspor Google Form). */
   const [importOpen, setImportOpen] = useState(false);
+  /** Modal jadwal wawancara: tunggal (item) atau massal (selectedIds). */
+  const [interviewTarget, setInterviewTarget] = useState<SpmbRegistration | "bulk" | null>(null);
+  const [interviewSaving, setInterviewSaving] = useState(false);
 
   // Edit panel — form penuh (RegistrationFormSlideOver mode "edit")
   const [editItem, setEditItem] = useState<SpmbRegistration | null>(null);
@@ -351,8 +359,7 @@ export default function AdminSPMBPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchPage, fetchAggregates]);
 
-  /** Baris penuh untuk pipeline (dimuat saat tab pipeline dibuka). */
-  const [pipelineRows, setPipelineRows] = useState<SpmbAdminListRow[]>([]);
+  /** Baris penuh untuk pipeline (dimuat saat tab pipeline dibuka). */  const [pipelineRows, setPipelineRows] = useState<SpmbAdminListRow[]>([]);
   const fetchPipeline = useCallback(() => {
     // setState hanya di callback promise (pola halaman Logs/Notifications).
     return getPipelineRows().then(
@@ -361,11 +368,51 @@ export default function AdminSPMBPage() {
     );
   }, []);
 
-  // Muat pipeline saat tab dibuka / data berubah (kartu butuh nama lengkap).
+  /** Baris wawancara (dimuat saat tab wawancara dibuka). */
+  const [interviewRows, setInterviewRows] = useState<SpmbAdminListRow[]>([]);
+  const [interviewsLoading, setInterviewsLoading] = useState(false);
+  const fetchInterviews = useCallback(() => {
+    // setState lanjutan di callback promise (pola halaman Logs/Notifications).
+    return getInterviewRows().then(
+      (list) => {
+        setInterviewRows(list);
+        setInterviewsLoading(false);
+      },
+      () => {
+        setInterviewRows([]);
+        setInterviewsLoading(false);
+      }
+    );
+  }, []);
   useEffect(() => {
-    if (mainTab !== "pipeline") return;
-    void fetchPipeline();
-  }, [mainTab, fetchPipeline]);
+    if (mainTab !== "interviews") return;
+    void fetchInterviews();
+  }, [mainTab, fetchInterviews]);
+
+  /** Ganti tab — spinner wawancara dinyalakan di sini (event handler, bukan effect). */
+  function handleTabChange(tab: MainTab) {
+    if (tab === "interviews") setInterviewsLoading(true);
+    if (tab === "pipeline") void fetchPipeline();
+    setMainTab(tab);
+  }
+
+  /** Kirim undangan wawancara via template WA (buka wa.me terisi). */
+  function handleSendInterviewInvite(item: SpmbRegistration) {
+    const tpl = waTemplates.find((t) => t.key === "interview_invite") || waTemplates[0];
+    if (!tpl) {
+      toast("Template pesan belum tersedia.", "error");
+      return;
+    }
+    // Sisipkan jadwal ke pesan bila template tidak menyebutkannya.
+    const withSchedule = tpl.key === "interview_invite" && item.interview_at
+      ? {
+          ...tpl,
+          body: `${tpl.body}\nJadwal: ${new Date(item.interview_at).toLocaleString("id-ID", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" })} WIB.`,
+        }
+      : tpl;
+    setViewItem(item);
+    handleSendWaTemplate(withSchedule);
+  }
 
   // ── URL sync + saved views ─────────────────────────────────────────────
   // State filter/sort/page/tab diinisialisasi dari query string (lazy,
@@ -1173,6 +1220,48 @@ export default function AdminSPMBPage() {
     fetchData();
   }
 
+  /** Simpan jadwal wawancara (tunggal dari detail, atau massal dari bulk bar). */
+  async function handleSaveInterview(interviewAtIso: string, note: string) {
+    if (interviewSaving) return;
+    setInterviewSaving(true);
+    try {
+      if (interviewTarget === "bulk") {
+        const ids = Array.from(selectedIds);
+        const res = await scheduleInterviewBulkAction({ registrationIds: ids, interviewAt: interviewAtIso, note });
+        if (!res.success) {
+          toast(res.error || "Gagal menjadwalkan wawancara.", "error");
+          return;
+        }
+        toast(`Wawancara dijadwalkan untuk ${res.data?.updated ?? ids.length} pendaftar.`, "success");
+        exitPickMode();
+      } else if (interviewTarget) {
+        const res = await scheduleInterviewAction({
+          registrationId: interviewTarget.id,
+          interviewAt: interviewAtIso,
+          note,
+        });
+        if (!res.success) {
+          toast(res.error || "Gagal menjadwalkan wawancara.", "error");
+          return;
+        }
+        toast("Jadwal wawancara disimpan.", "success");
+        // Refresh baris detail agar jadwal baru langsung terlihat.
+        try {
+          const fresh = await getRegistrationById(interviewTarget.id);
+          if (fresh) setViewItem(fresh);
+        } catch {
+          // abaikan — daftar di bawah tetap di-refresh
+        }
+      } else {
+        return;
+      }
+    } finally {
+      setInterviewSaving(false);
+    }
+    setInterviewTarget(null);
+    fetchData();
+  }
+
   /** Kembalikan pendaftar terpilih ke status Menunggu (tanpa modal — bukan aksi publik). */
   async function handleBulkSetPending() {
     const ids = Array.from(selectedIds);
@@ -1392,7 +1481,7 @@ export default function AdminSPMBPage() {
       {/* Header + Tab */}
       <PageHeader
         active={mainTab}
-        onSelect={setMainTab}
+        onSelect={handleTabChange}
         onExport={handleExportCsv}
         onExportXlsx={handleExportXlsx}
         onRecap={handleExportRecap}
@@ -2198,6 +2287,7 @@ export default function AdminSPMBPage() {
             onMoveWave={() => { setBulkWaveId(""); setBulkWaveOpen(true); }}
             onMovePath={() => { setBulkPath(""); setBulkPathOpen(true); }}
             onSetPending={handleBulkSetPending}
+            onScheduleInterview={() => setInterviewTarget("bulk")}
             onDelete={() => setBulkDelete(true)}
             onClear={() => setSelectedIds(new Set())}
           />
@@ -2425,6 +2515,7 @@ export default function AdminSPMBPage() {
               onMoveWave={() => { setBulkWaveId(''); setBulkWaveOpen(true); }}
               onMovePath={() => { setBulkPath(''); setBulkPathOpen(true); }}
               onSetPending={handleBulkSetPending}
+              onScheduleInterview={() => setInterviewTarget("bulk")}
               onDelete={() => setBulkDelete(true)}
               onCancel={exitPickMode}
             />
@@ -2453,7 +2544,26 @@ export default function AdminSPMBPage() {
           onVerifyDoc={handleVerifyDoc}
           onSendWa={handleSendWaTemplate}
           onEdit={() => { setViewItem(null); setEditItem(viewItem); }}
+          onScheduleInterview={() => setInterviewTarget(viewItem)}
           onConfirmStatus={(id, status) => { setViewItem(null); setConfirmAction({ id, status }); }}
+        />
+      )}
+
+      {/* ── JADWAL WAWANCARA (TUNGGAL / MASSAL) ──── */}
+      {interviewTarget && (
+        <InterviewScheduleModal
+          open
+          title={interviewTarget === "bulk" ? `Jadwalkan Wawancara ${selectedIds.size} Pendaftar` : "Jadwalkan Wawancara"}
+          subtitle={
+            interviewTarget === "bulk"
+              ? "Satu jadwal yang sama untuk semua pendaftar terpilih."
+              : interviewTarget.full_name
+          }
+          initialAt={interviewTarget === "bulk" ? null : interviewTarget.interview_at}
+          initialNote={interviewTarget === "bulk" ? "" : interviewTarget.interview_note || ""}
+          saving={interviewSaving}
+          onClose={() => !interviewSaving && setInterviewTarget(null)}
+          onSave={handleSaveInterview}
         />
       )}
 
@@ -2540,6 +2650,17 @@ export default function AdminSPMBPage() {
           onOpenDetail={openDetail}
           onOpenConfirmStatus={(id, status) => setConfirmAction({ id, status })}
           onUpdateStatus={handleUpdateStatus}
+        />
+      )}
+
+      {mainTab === "interviews" && (
+        <InterviewsPanel
+          rows={interviewRows}
+          loading={interviewsLoading}
+          canVerify={permVerify}
+          onDetail={openDetail}
+          onReschedule={(item) => setInterviewTarget(item)}
+          onSendInvite={handleSendInterviewInvite}
         />
       )}
 

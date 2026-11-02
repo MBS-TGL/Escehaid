@@ -271,6 +271,18 @@ export async function getPipelineRows(): Promise<SpmbAdminListRow[]> {
   return ((data ?? []) as SpmbAdminListRow[]);
 }
 
+/** Semua baris berjadwal wawancara — dipakai tab Wawancara. */
+export async function getInterviewRows(): Promise<SpmbAdminListRow[]> {
+  const { data, error } = await supabase
+    .from("spmb_admin_registrations")
+    .select("*")
+    .not("interview_at", "is", null)
+    .order("interview_at", { ascending: true })
+    .limit(2000);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as SpmbAdminListRow[]);
+}
+
 /** Kandidat duplikat: id + nama + telepon + NISN/NIK (tanpa PII lain). */
 export async function getDuplicateCandidates(): Promise<
   { id: string; full_name: string; phone: string; nisn: string; nik: string }[]

@@ -43,6 +43,43 @@ export async function scheduleInterviewAction(input: {
 }
 
 /**
+ * Menjadwalkan wawancara banyak pendaftar sekaligus (waktu + catatan sama).
+ * RLS `spmb:update` tetap berlaku — baris yang tak boleh diubah di-skip
+ * diam-diam oleh PostgREST; laporkan jumlah yang benar-benar berubah.
+ */
+export async function scheduleInterviewBulkAction(input: {
+  registrationIds: string[];
+  interviewAt: string;
+  note?: string;
+}): Promise<ActionResult<{ updated: number }>> {
+  const ids = Array.from(new Set(input.registrationIds)).slice(0, 500);
+  if (ids.length === 0) return { success: false, error: "Tidak ada pendaftar dipilih." };
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const userId = claims?.claims?.sub;
+
+  try {
+    const { data, error } = await supabase
+      .from("spmb_registrations")
+      .update({
+        interview_at: input.interviewAt,
+        interview_note: input.note || "",
+        interviewed_by: userId || null,
+        updated_at: new Date().toISOString(),
+      })
+      .in("id", ids)
+      .select("id");
+
+    if (error) return { success: false, error: error.message };
+
+    revalidatePath("/admin/admission");
+    return { success: true, data: { updated: (data ?? []).length } };
+  } catch (e) {
+    return { success: false, error: String(e) };
+  }
+}
+
+/**
  * Deteksi pendaftar ganda (duplikat) berdasarkan NISN atau Nomor Telepon.
  */
 export async function findDuplicateRegistrationsAction(): Promise<
