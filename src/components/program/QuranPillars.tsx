@@ -1,6 +1,7 @@
+import Image from "next/image";
 import { CSSStagger } from "@/components/CSSAnimations";
 import SectionHeading from "@/components/public/SectionHeading";
-import { BookOpen, Clock } from "@/components/Icons";
+import { Clock } from "@/components/Icons";
 import { QURAN_SECTION_META, QURAN_PILLARS } from "@/lib/data/mbs-quran";
 import type { QuranPillarView } from "@/lib/queries/program";
 
@@ -71,8 +72,14 @@ export default function QuranPillars({
         ))}
       </CSSStagger>
 
-      <p className="mt-6 flex items-center gap-1.5 text-xs text-slate-500">
-        <BookOpen className="h-3.5 w-3.5 text-[var(--brand-accent)]" aria-hidden="true" />
+      <p className="mt-6 flex items-center gap-2 text-xs text-slate-500">
+        <Image
+          src="/images/Logo-Wafa.png"
+          alt="Logo Wafa Indonesia"
+          width={400}
+          height={228}
+          className="h-7 w-auto"
+        />
         Bekerja sama dengan Wafa Indonesia
       </p>
     </div>
