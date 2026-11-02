@@ -23,6 +23,24 @@ export interface SpmbListQuery {
   path?: string;
   program?: string;
   gender?: string;
+  /**
+   * Filter cepat "perlu tindakan":
+   * - overdue: pending & lewat SLA (is_overdue dari view)
+   * - docs_rejected: ada berkas ditolak
+   * - docs_incomplete: berkas belum lengkap (uploaded < 5) atau belum
+   *   terverifikasi penuh (doc_verified < 5) atau ada yang ditolak
+   * - no_wave: tanpa gelombang
+   * - duplicates: id ada di `duplicateIds`
+   */
+  action?: "all" | "overdue" | "docs_rejected" | "docs_incomplete" | "no_wave" | "duplicates";
+  /** Id duplikat (dari getDuplicateCandidates) — dipakai action=duplicates. */
+  duplicateIds?: string[];
+  /**
+   * Filter wawancara: scheduled (punya jadwal), unscheduled (pending tanpa
+   * jadwal), this_week (jadwal 7 hari ke depan), overdue (jadwal lewat &
+   * masih pending).
+   */
+  interview?: "all" | "scheduled" | "unscheduled" | "this_week" | "overdue";
   page?: number;
   pageSize?: number;
   sortField?: SpmbSortField;
@@ -109,7 +127,7 @@ function applySearch<T extends { or: (s: string) => T }>(query: T, search: strin
   return query.or(or.join(","));
 }
 
-function applyExact<T extends { eq: (c: string, v: string) => T; filter: (c: string, op: string, v: string) => T; or: (s: string) => T }>(
+function applyExact<T extends { eq: (c: string, v: string | boolean) => T; filter: (c: string, op: string, v: string) => T; or: (s: string) => T; is: (c: string, v: null) => T; not: (c: string, op: string, v: string | null) => T; gt: (c: string, v: number) => T; lt: (c: string, v: number | string) => T; gte: (c: string, v: string) => T; lte: (c: string, v: string) => T; in: (c: string, v: string[]) => T }>(
   query: T,
   params: SpmbListQuery
 ): T {
@@ -122,6 +140,51 @@ function applyExact<T extends { eq: (c: string, v: string) => T; filter: (c: str
       params.program === "none"
         ? q.or("documents->>program.is.null,documents->>program.eq.")
         : q.filter("documents->>program", "eq", params.program);
+  }
+  // ── Filter cepat "perlu tindakan" ──
+  switch (params.action) {
+    case "overdue":
+      q = q.eq("status", "pending").eq("is_overdue", true);
+      break;
+    case "docs_rejected":
+      q = q.gt("doc_rejected", 0);
+      break;
+    case "docs_incomplete":
+      // Belum lengkap (uploaded < 5) ATAU belum terverifikasi penuh ATAU ada yang ditolak.
+      q = q.or("uploaded_docs.lt.5,doc_verified.lt.5,doc_rejected.gt.0");
+      break;
+    case "no_wave":
+      q = q.is("wave_id", null);
+      break;
+    case "duplicates":
+      if (params.duplicateIds && params.duplicateIds.length > 0) {
+        q = q.in("id", params.duplicateIds.slice(0, 2000));
+      } else {
+        // Tanpa kandidat duplikat tidak ada hasil — cegah "tampil semua".
+        q = q.eq("id", "00000000-0000-0000-0000-000000000000");
+      }
+      break;
+    default:
+      break;
+  }
+  // ── Filter wawancara ──
+  const now = new Date().toISOString();
+  const week = new Date(Date.now() + 7 * 86400000).toISOString();
+  switch (params.interview) {
+    case "scheduled":
+      q = q.not("interview_at", "is", null);
+      break;
+    case "unscheduled":
+      q = q.eq("status", "pending").is("interview_at", null);
+      break;
+    case "this_week":
+      q = q.gte("interview_at", now).lte("interview_at", week);
+      break;
+    case "overdue":
+      q = q.eq("status", "pending").lt("interview_at", now);
+      break;
+    default:
+      break;
   }
   return q;
 }
@@ -170,6 +233,63 @@ export async function getFilteredRegistrationIds(params: SpmbListQuery): Promise
   return ids;
 }
 
+/** Baris penuh by daftar id (chunk 500) — dipakai broadcast terpilih. */
+export async function getRegistrationsByIds(ids: string[]): Promise<SpmbAdminListRow[]> {
+  const out: SpmbAdminListRow[] = [];
+  const uniq = Array.from(new Set(ids)).slice(0, 20000);
+  for (let i = 0; i < uniq.length; i += 500) {
+    const chunk = uniq.slice(i, i + 500);
+    const { data, error } = await supabase
+      .from("spmb_admin_registrations")
+      .select("*")
+      .in("id", chunk);
+    if (error) throw new Error(error.message);
+    out.push(...((data ?? []) as SpmbAdminListRow[]));
+  }
+  return out;
+}
+
+/** Satu baris penuh by id — dipakai refresh detail setelah mutasi. */
+export async function getRegistrationById(id: string): Promise<SpmbAdminListRow | null> {
+  const { data, error } = await supabase
+    .from("spmb_admin_registrations")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data ?? null) as SpmbAdminListRow | null;
+}
+
+/** Baris pipeline (pending + interview + final) — kartu butuh kolom ringan. */
+export async function getPipelineRows(): Promise<SpmbAdminListRow[]> {
+  const { data, error } = await supabase
+    .from("spmb_admin_registrations")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(2000);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as SpmbAdminListRow[]);
+}
+
+/** Kandidat duplikat: id + nama + telepon + NISN/NIK (tanpa PII lain). */
+export async function getDuplicateCandidates(): Promise<
+  { id: string; full_name: string; phone: string; nisn: string; nik: string }[]
+> {
+  const { data, error } = await supabase
+    .from("spmb_admin_registrations")
+    .select("id, full_name, phone, documents->>nisn, documents->>nik")
+    .order("created_at", { ascending: false })
+    .limit(20000);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
+    id: String(r.id),
+    full_name: String(r.full_name ?? ""),
+    phone: String(r.phone ?? ""),
+    nisn: String((r.nisn as string | null) ?? (r["documents->>nisn"] as string | null) ?? ""),
+    nik: String((r.nik as string | null) ?? (r["documents->>nik"] as string | null) ?? ""),
+  }));
+}
+
 // ── Agregat ringan (stats/facet/insight) ─────────────────────────────────────
 
 /**
@@ -200,7 +320,7 @@ export async function getSpmbAggregates(): Promise<SpmbAggregateRow[]> {
   const { data, error } = await supabase
     .from("spmb_admin_registrations")
     .select(
-      "id, status, registration_path, gender, previous_school, wave_id, created_at, updated_at, interview_at, reregistration_status, is_overdue, doc_total, doc_verified, doc_rejected, uploaded_docs, program:documents->>program"
+      "id, status, registration_path, gender, previous_school, wave_id, created_at, updated_at, interview_at, reregistration_status, is_overdue, doc_total, doc_verified, doc_rejected, uploaded_docs, documents->>program"
     )
     .order("created_at", { ascending: false })
     .limit(20000);

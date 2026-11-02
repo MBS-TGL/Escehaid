@@ -537,7 +537,7 @@ function buildRow(index: number, raw: Record<string, string>): ImportRow {
 
 /* ─── Duplikat ────────────────────────────────────────────── */
 
-type ExistingRow = { full_name: string; documents: Record<string, string | null> | null };
+export type ExistingRow = { full_name: string; documents: Record<string, string | null> | null };
 
 function rowDupKey(row: ImportRow): string {
   return row.data.nik ? `N:${row.data.nik}` : `N:${normalizeNameForDup(row.data.full_name)}`;

@@ -2,10 +2,15 @@
 
 import { useAdminBottomBar } from "@/app/admin/AdminChrome";
 
-import Image from "next/image";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   getRegistrationList,
+  getRegistrationPage,
+  getSpmbAggregates,
+  getPipelineRows,
+  getDuplicateCandidates,
+  getRegistrationsByIds,
+  clientSearchRemainder,
   updateRegistrationStatus,
   updateRegistrationBulkStatus,
   deleteRegistration,
@@ -36,159 +41,80 @@ import {
   revalidatePaths,
 } from "@/lib/queries";
 import { usePermissions } from "@/app/admin/PermissionsProvider";
-import { SlideOver, SkeletonBlock } from "@/components/ui";
+import { SlideOver } from "@/components/ui";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { SortableList } from "@/components/admin/sortable/SortableList";
 import { SortableRow } from "@/components/admin/sortable/SortableRow";
 import { SortableGrip } from "@/components/admin/sortable/SortableGrip";
 import { useReorder } from "@/lib/admin/useReorder";
-import { normalizeName, normalizeSchool } from "@/lib/format-name";
-import { formatRelativeTime, daysSince, PENDING_SLA_DAYS } from "@/lib/admin-display";
 import type { SpmbDocumentKey, SpmbDocumentVerification, SpmbRegistration, SpmbWave, SpmbFormField, SpmbFieldType } from "@/lib/supabase";
 import type { SpmbMessageTemplate } from "@/lib/queries";
 import type { RegistrationPath } from "@/lib/queries";
-import { SPMB_DOCUMENT_KEYS, SPMB_DOCUMENT_LABELS, SPMB_PROGRAMS } from "@/lib/spmb-registration";
-import { filterSpmbRegistrations, spmbGenderLabel, SPMB_NO_PROGRAM } from "@/lib/spmb-filter";
+import type { SpmbAdminListRow, SpmbAggregateRow, SpmbListQuery } from "@/lib/queries/spmb-list";
+import { findDuplicateGroups, duplicateIdSet } from "@/lib/spmb-duplicates";
+import { parseSpmbListParams, serializeSpmbListParams, SPMB_LIST_DEFAULTS, type SpmbListUiParams } from "@/lib/spmb-list-params";
+import { getSavedViewsForModule, type AdminSavedView } from "@/lib/queries/saved-views";
+import { supabase } from "@/lib/supabase";
+import { SavedViewsDropdown } from "@/components/admin/SavedViews";
+import { SPMB_PROGRAMS } from "@/lib/spmb-registration";
+import { SPMB_NO_PROGRAM } from "@/lib/spmb-filter";
 import { buildSpmbMonthlyRecap, buildSpmbRecapCsv } from "@/lib/admin-reports";
 import { downloadCsv } from "@/lib/download-csv";
 import { fillSpmbTemplate, spmbWhatsappHref } from "@/lib/spmb-message";
 import { useToast } from "@/components/ui/Toast";
 import {
-  MagnifyingGlass,
-  Download,
-  Eye,
   CheckCircle,
   XCircle,
   Clock,
   Users,
-  X,
   FileText,
-  Clock as CalendarIcon,
-  Phone,
-  Envelope,
-  MapPin,
   GraduationCap,
   Plus,
   Compass,
   Tag,
-  Gear,
-  NotePencil,
   PencilSimple,
   Trash,
   Warning,
-  FloppyDisk,
   ArrowUp,
   ArrowDown,
-  SortAscending,
-  Checks,
   CalendarBlank,
-  Upload,
-  WhatsappLogo,
-  SquaresFour,
+  FloppyDisk,
 } from "@/components/Icons";
 import { PipelineBoard } from "./PipelineBoard";
 import { BroadcastWaModal } from "./BroadcastWaModal";
 import {
   MobileFilterBar,
-  MobilePagination,
   MobilePickButton,
-  MobileListRow,
-  LongPressHint,
-  SelectionMark,
-  MobileSelectBar,
-  RowActionsMenu,
-  StatusDot,
-  QuietBadge,
-  type RowAction,
-  type StatusTone,
 } from "@/components/admin/mobile";
-import { DesktopPagination } from "@/components/admin/mobile";
 import { FilterBar } from "@/components/admin/FilterBar";
 import { RegistrationFormSlideOver } from "@/components/admin/RegistrationFormSlideOver";
 import { ImportRegistrationsModal } from "@/components/admin/ImportRegistrationsModal";
+import { PageHeader } from "./PageHeader";
+import { pathLabels, waveStatusConfig, ExternalIcon, fieldTypeLabel } from "./shared";
+import { SpmbBulkBar, SpmbMobileBulkBar } from "./BulkBars";
+import { SpmbDesktopTable } from "./SpmbDesktopTable";
+import { SpmbMobileList } from "./SpmbMobileList";
+import { SpmbDetailModal } from "./SpmbDetailModal";
+import { SpmbModals } from "./SpmbModals";
+import type { MainTab, SortField, SortDir, WaveFormState, FieldDraft } from "./types";
+
+/**
+ * Baca query string URL sekali (lazy initializer useState) — filter bisa
+ * dibagikan/bookmark. Aman SSR: tanpa window → default.
+ */
+function readInitialParams(): SpmbListUiParams {
+  if (typeof window === "undefined") return SPMB_LIST_DEFAULTS;
+  try {
+    return parseSpmbListParams(new URLSearchParams(window.location.search));
+  } catch {
+    return SPMB_LIST_DEFAULTS;
+  }
+}
 
 
-/* Ikon "buka di tab baru" — SVG inline gaya file ini (sama dengan tombol Buka pada preview lampiran). */
-const ExternalIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-);
-
-const statusConfig: Record<string, { label: string; color: string; bg: string; icon: React.ElementType }> = {
-  pending: { label: "Menunggu", color: "text-amber-700", bg: "bg-amber-50 border-amber-200", icon: Clock },
-  accepted: { label: "Diterima", color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200", icon: CheckCircle },
-  rejected: { label: "Ditolak", color: "text-red-700", bg: "bg-red-50 border-red-200", icon: XCircle },
-};
-
-const pathLabels: Record<string, string> = {
-  reguler: "Reguler",
-  prestasi: "Prestasi",
-  beasiswa: "Beasiswa",
-};
-
-/** Warna titik status pada avatar baris mobile: amber = menunggu,
- *  hijau = diterima, merah = ditolak. */
-const DOT_TONE: Record<SpmbRegistration["status"], StatusTone> = {
-  pending: "pending",
-  accepted: "active",
-  rejected: "danger",
-};
-
-const pathColors: Record<string, string> = {
-  reguler: "bg-slate-100 text-slate-700",
-  prestasi: "bg-blue-50 text-blue-700",
-  beasiswa: "bg-purple-50 text-purple-700",
-};
-
-/** Warna chip jenis kelamin: biru = Putra, rose = Putri. */
-const genderStyles: Record<string, string> = {
-  L: "border-blue-200 bg-blue-50 text-blue-700",
-  P: "border-rose-200 bg-rose-50 text-rose-700",
-};
-
-type SortField = "created_at" | "full_name" | "status" | "registration_path" | "gender";
-type SortDir = "asc" | "desc";
-
-/** Tab utama halaman: daftar pendaftar atau pengelolaan gelombang. */
-type MainTab = "registrations" | "pipeline" | "waves" | "form" | "settings";
-
-/** State form tambah/edit gelombang pendaftaran. */
-type WaveFormState = {
-  name: string;
-  start_date: string;
-  end_date: string;
-  note: string;
-  is_published: boolean;
-  quota: string;
-  registration_fee: string;
-  announcement_at: string;
-  result_at: string;
-  is_archived: boolean;
-};
-
-/** Draft form tambah/edit pertanyaan custom (builder alа Google Form). */
-type FieldDraft = {
-  label: string;
-  type: SpmbFieldType;
-  required: boolean;
-  active: boolean;
-  placeholder: string;
-  help: string;
-  /** Daftar opsi untuk select/radio/checkbox — satu opsi per baris. */
-  optionsText: string;
-};
-
-/** Label tipe pertanyaan custom untuk badge daftar. */
-const fieldTypeLabel = (t: SpmbFieldType): string =>
-  SPMB_FIELD_TYPES.find((x) => x.value === t)?.label || t;
-
-/** Batas jumlah pertanyaan custom (sinkron dengan normalizeSpmbFormSchema). */
+/* Konstanta tampilan baris (statusConfig, pathLabels, dst.) kini di ./shared;
+   tipe di ./types — definisi duplikat di sini sudah dipindah. */
 const FIELD_MAX = 50;
-
-const waveStatusConfig: Record<string, { label: string; cls: string }> = {
-  upcoming: { label: "Akan Datang", cls: "border-blue-200 bg-blue-50 text-blue-700" },
-  open: { label: "Dibuka", cls: "border-emerald-200 bg-emerald-50 text-emerald-700" },
-  closed: { label: "Ditutup", cls: "border-slate-200 bg-slate-100 text-slate-500" },
-};
 
 /** Format "YYYY-MM-DD" → "20 Okt 2026" (id-ID), tanpa geser zona waktu. */
 function formatWaveDate(dateStr: string): string {
@@ -210,18 +136,36 @@ export default function AdminSPMBPage() {
   const permExport = can("spmb:export");
   const permDelete = can("spmb:delete");
   const permSensitive = can("spmb:view_sensitive");
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<string>("all");
-  const [pathFilter, setPathFilter] = useState<string>("all");
-  const [programFilter, setProgramFilter] = useState<string>("all");
-  const [genderFilter, setGenderFilter] = useState<string>("all");
-  const [data, setData] = useState<SpmbRegistration[]>([]);
+  const [search, setSearch] = useState(() => readInitialParams().q);
+  /** Kata kunci yang sudah di-debounce — inilah yang dikirim ke server. */
+  const [debouncedSearch, setDebouncedSearch] = useState(() => readInitialParams().q);
+  const [filter, setFilter] = useState<string>(() => readInitialParams().status);
+  const [pathFilter, setPathFilter] = useState<string>(() => readInitialParams().path);
+  const [programFilter, setProgramFilter] = useState<string>(() => readInitialParams().program);
+  const [genderFilter, setGenderFilter] = useState<string>(() => readInitialParams().gender);
+  /** Filter cepat "perlu tindakan" (server-side, lihat SpmbListQuery.action). */
+  const [actionFilter, setActionFilter] = useState<string>(() => readInitialParams().action);
+  /** Filter wawancara (server-side, lihat SpmbListQuery.interview). */
+  const [interviewFilter, setInterviewFilter] = useState<string>(() => readInitialParams().interview);
+  /** Baris halaman aktif dari server (bukan lagi load-all). */
+  const [rows, setRows] = useState<SpmbAdminListRow[]>([]);
+  const [total, setTotal] = useState(0);
+  /** Agregat ringan — stats pills, facet filter, insight. */
+  const [aggregates, setAggregates] = useState<SpmbAggregateRow[]>([]);
+  /** Id duplikat (dari kandidat NISN/NIK/telepon) — dipakai action=duplicates. */
+  const [duplicateIds, setDuplicateIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [sortField, setSortField] = useState<SortField>("created_at");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [page, setPage] = useState(() => readInitialParams().page);
+  const [pageSize, setPageSize] = useState(() => readInitialParams().size);
+  const [sortField, setSortField] = useState<SortField>(() => {
+    const [sf] = readInitialParams().sort.split(":");
+    return (sf || "created_at") as SortField;
+  });
+  const [sortDir, setSortDir] = useState<SortDir>(() => {
+    const [, sd] = readInitialParams().sort.split(":");
+    return sd === "asc" ? "asc" : "desc";
+  });
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -259,7 +203,7 @@ export default function AdminSPMBPage() {
   const [editItem, setEditItem] = useState<SpmbRegistration | null>(null);
 
   // Gelombang pendaftaran
-  const [mainTab, setMainTab] = useState<MainTab>("registrations");
+  const [mainTab, setMainTab] = useState<MainTab>(() => readInitialParams().tab as MainTab);
   const [broadcastOpen, setBroadcastOpen] = useState(false);
   /** Mode sumber pendaftaran (kartu "Sumber Pendaftaran" di tab Gelombang). */
   const [regMode, setRegMode] = useState<"google_form" | "internal">("google_form");
@@ -311,18 +255,225 @@ export default function AdminSPMBPage() {
   const [fieldSaving, setFieldSaving] = useState(false);
   const [deleteFieldItem, setDeleteFieldItem] = useState<SpmbFormField | null>(null);
 
-  const fetchData = useCallback(async () => {
-    setLoadError("");
-    try {
-      const registrations = await getRegistrationList();
-      setData(registrations);
-    } catch (e) {
-      setData([]);
-      setLoadError(e instanceof Error && e.message ? e.message : "Gagal memuat data pendaftar.");
-    } finally {
-      setLoading(false);
-    }
+  /** Parameter list server-side dari state filter/sort/page aktif. */
+  const listParams: SpmbListQuery = useMemo(
+    () => ({
+      search: debouncedSearch,
+      status: filter,
+      path: pathFilter,
+      program: programFilter,
+      gender: genderFilter,
+      action: actionFilter as SpmbListQuery["action"],
+      interview: interviewFilter as SpmbListQuery["interview"],
+      duplicateIds,
+      page,
+      pageSize,
+      sortField,
+      sortDir,
+    }),
+    [debouncedSearch, filter, pathFilter, programFilter, genderFilter, actionFilter, interviewFilter, duplicateIds, page, pageSize, sortField, sortDir]
+  );
+
+  /** Muat SATU halaman dari server (filter/search/sort/paginasi di DB). */
+  const fetchPage = useCallback((params: SpmbListQuery) => {
+    // Tanpa spinner tiap ganti filter (stale-while-revalidate): daftar lama
+    // tetap tampil sampai halaman baru datang. setState hanya di callback
+    // promise (pola halaman Logs/Notifications), bukan sinkron di effect.
+    return getRegistrationPage(params).then(
+      (res) => {
+        setRows(res.rows);
+        setTotal(res.total);
+        // Sinkronkan badge verifikasi dari kolom view (tanpa query tambahan).
+        setDocSummary((prev) => {
+          const next: typeof prev = { ...prev };
+          for (const r of res.rows) {
+            next[r.id] = {
+              total: r.doc_total,
+              verified: r.doc_verified,
+              rejected: r.doc_rejected,
+              pending: r.doc_pending,
+            };
+          }
+          return next;
+        });
+        setLoadError("");
+        setLoading(false);
+      },
+      (e: unknown) => {
+        setRows([]);
+        setTotal(0);
+        setLoadError(e instanceof Error && e.message ? e.message : "Gagal memuat data pendaftar.");
+        setLoading(false);
+      }
+    );
   }, []);
+
+  /** Debounce pencarian 350ms — halaman selalu kembali ke 1. */
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function handleSearchChange(v: string) {
+    setSearch(v);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      setDebouncedSearch(v);
+      setPage(1);
+    }, 350);
+  }
+
+  /** Muat ulang halaman setiap filter/sort/page berubah. */
+  useEffect(() => {
+    void fetchPage(listParams);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchPage, debouncedSearch, filter, pathFilter, programFilter, genderFilter, actionFilter, interviewFilter, duplicateIds, page, pageSize, sortField, sortDir]);
+
+  /** Muat agregat ringan + kandidat duplikat; gagal → biarkan data lama. */
+  const fetchAggregates = useCallback(async () => {
+    try {
+      const aggr = await getSpmbAggregates();
+      setAggregates(aggr);
+      try {
+        const cands = await getDuplicateCandidates();
+        const groups = findDuplicateGroups(
+          cands.map((c) => ({ id: c.id, full_name: c.full_name, phone: c.phone, documents: { nisn: c.nisn, nik: c.nik } }))
+        );
+        setDuplicateIds(Array.from(duplicateIdSet(groups)));
+      } catch {
+        setDuplicateIds([]);
+      }
+    } catch (e) {
+      toast(e instanceof Error && e.message ? e.message : "Gagal memuat ringkasan.", "error");
+    }
+  }, [toast]);
+
+  /** Alias kompatibilitas — semua mutasi memanggil ini untuk refresh. */
+  const fetchData = useCallback(async () => {
+    await fetchPage(listParams);
+    await fetchAggregates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchPage, fetchAggregates]);
+
+  /** Baris penuh untuk pipeline (dimuat saat tab pipeline dibuka). */
+  const [pipelineRows, setPipelineRows] = useState<SpmbAdminListRow[]>([]);
+  const fetchPipeline = useCallback(() => {
+    // setState hanya di callback promise (pola halaman Logs/Notifications).
+    return getPipelineRows().then(
+      (list) => setPipelineRows(list),
+      () => setPipelineRows([])
+    );
+  }, []);
+
+  // Muat pipeline saat tab dibuka / data berubah (kartu butuh nama lengkap).
+  useEffect(() => {
+    if (mainTab !== "pipeline") return;
+    void fetchPipeline();
+  }, [mainTab, fetchPipeline]);
+
+  // ── URL sync + saved views ─────────────────────────────────────────────
+  // State filter/sort/page/tab diinisialisasi dari query string (lazy,
+  // readInitialParams) — tanpa setState di effect. Perubahan ditulis balik
+  // ke URL (debounce) agar filter bisa dibagikan/bookmark.
+  const [savedViews, setSavedViews] = useState<AdminSavedView[]>([]);
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
+
+  // Muat tampilan tersimpan modul "admission" sekali.
+  useEffect(() => {
+    let alive = true;
+    getSavedViewsForModule(supabase, "admission")
+      .then((views) => {
+        if (alive) setSavedViews(views);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // Tulis state ke URL (debounce 500ms) — filter bisa dibagikan/bookmark.
+  const uiParams: SpmbListUiParams = useMemo(
+    () => ({
+      q: search,
+      status: filter,
+      path: pathFilter,
+      program: programFilter,
+      gender: genderFilter,
+      action: actionFilter,
+      interview: interviewFilter,
+      sort: `${sortField}:${sortDir}`,
+      page,
+      size: pageSize,
+      tab: mainTab,
+    }),
+    [search, filter, pathFilter, programFilter, genderFilter, actionFilter, interviewFilter, sortField, sortDir, page, pageSize, mainTab]
+  );
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        const qs = serializeSpmbListParams(uiParams);
+        const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+        window.history.replaceState(null, "", url);
+      } catch {
+        // history API tak tersedia (test) → abaikan.
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [uiParams]);
+
+  /** Terapkan saved view ke state filter. */
+  function applySavedView(view: AdminSavedView | null) {
+    setActiveViewId(view?.id ?? null);
+    if (!view) return;
+    const p = view.params as Record<string, string | number>;
+    const str = (k: string, fb: string) => (typeof p[k] === "string" && p[k] ? (p[k] as string) : fb);
+    setSearch(str("q", ""));
+    setDebouncedSearch(str("q", ""));
+    setFilter(str("status", "all"));
+    setPathFilter(str("path", "all"));
+    setProgramFilter(str("program", "all"));
+    setGenderFilter(str("gender", "all"));
+    setActionFilter(str("action", "all"));
+    setInterviewFilter(str("interview", "all"));
+    const [sf, sd] = str("sort", "created_at:desc").split(":");
+    if (sf) setSortField(sf as SortField);
+    if (sd === "asc" || sd === "desc") setSortDir(sd);
+    resetPage();
+  }
+
+  async function refreshSavedViews() {
+    try {
+      setSavedViews(await getSavedViewsForModule(supabase, "admission"));
+    } catch {
+      // abaikan — dropdown tetap menampilkan yang lama
+    }
+  }
+
+  /** Kandidat impor (nama + NIK) — dimuat saat modal impor dibuka. */  const [importCandidates, setImportCandidates] = useState<{ full_name: string; documents: Record<string, string | null> | null }[]>([]);
+  useEffect(() => {
+    if (!importOpen) return;
+    (async () => {
+      try {
+        const cands = await getDuplicateCandidates();
+        setImportCandidates(cands.map((c) => ({ full_name: c.full_name, documents: { nik: c.nik || null } })));
+      } catch {
+        setImportCandidates([]);
+      }
+    })();
+  }, [importOpen]);
+
+  /** Data penuh untuk broadcast — diambil sesuai cakupan saat modal dibuka. */
+  const [broadcastRows, setBroadcastRows] = useState<SpmbRegistration[]>([]);
+  useEffect(() => {
+    if (!broadcastOpen) return;
+    (async () => {
+      try {
+        if (selectedIds.size > 0) {
+          setBroadcastRows(await getRegistrationsByIds(Array.from(selectedIds)));
+        } else {
+          setBroadcastRows(await getRegistrationList());
+        }
+      } catch {
+        setBroadcastRows([]);
+      }
+    })();
+  }, [broadcastOpen, selectedIds]);
 
   /** Muat agregat verifikasi berkas (badge daftar); gagal → biarkan lama. */
   const fetchDocSummary = useCallback(async () => {
@@ -335,10 +486,10 @@ export default function AdminSPMBPage() {
 
   useEffect(() => {
     (async () => {
-      await fetchData();
+      await fetchAggregates();
       await fetchDocSummary();
     })().catch(() => {});
-  }, [fetchData, fetchDocSummary]);
+  }, [fetchAggregates, fetchDocSummary]);
 
   const fetchWaves = useCallback(async () => {
     setWavesLoading(true);
@@ -733,38 +884,44 @@ export default function AdminSPMBPage() {
     })();
   }, [viewItem]);
 
-  // Filtered + Sorted
-  const filtered = useMemo(() => {
-    const result = filterSpmbRegistrations(data, {
-      search,
-      status: filter,
-      path: pathFilter,
-      program: programFilter,
-      gender: genderFilter,
-    });
+  // Filter & sort dikerjakan server (view). Sisa pencarian yang tak bisa
+  // diekspresikan di `.or()` (jawaban cf_*, alias gender panjang) disaring
+  // di sini sebagai lapis kedua atas baris halaman aktif.
+  const filtered = useMemo(
+    () => rows.filter((r) => clientSearchRemainder(r, debouncedSearch)),
+    [rows, debouncedSearch]
+  );
 
-    result.sort((a, b) => {
-      let cmp = 0;
-      if (sortField === "full_name") cmp = a.full_name.localeCompare(b.full_name);
-      else if (sortField === "status") cmp = a.status.localeCompare(b.status);
-      else if (sortField === "registration_path") cmp = (a.registration_path || "").localeCompare(b.registration_path || "");
-      else if (sortField === "gender") cmp = (a.gender || "").localeCompare(b.gender || "");
-      else cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      return sortDir === "asc" ? cmp : -cmp;
-    });
+  // Halaman aktif = hasil server (paginasi di DB); lapis client hanya
+  // menyaring sisa kata kunci di atasnya.
+  const paginated = filtered;
 
-    return result;
-  }, [data, search, filter, pathFilter, programFilter, genderFilter, sortField, sortDir]);
+  const stats = useMemo(() => {
+    let pending = 0;
+    let accepted = 0;
+    let rejected = 0;
+    for (const a of aggregates) {
+      if (a.status === "pending") pending += 1;
+      else if (a.status === "accepted") accepted += 1;
+      else if (a.status === "rejected") rejected += 1;
+    }
+    return { total: aggregates.length, pending, accepted, rejected };
+  }, [aggregates]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
-
-  const stats = {
-    total: data.length,
-    pending: data.filter((d) => d.status === "pending").length,
-    accepted: data.filter((d) => d.status === "accepted").length,
-    rejected: data.filter((d) => d.status === "rejected").length,
-  };
+  /** Hitungan "perlu tindakan" dari agregat — badge chips cepat. */
+  const actionCounts = useMemo(() => {
+    let overdue = 0;
+    let docsRejected = 0;
+    let docsIncomplete = 0;
+    let noWave = 0;
+    for (const a of aggregates) {
+      if (a.status === "pending" && a.is_overdue) overdue += 1;
+      if (a.doc_rejected > 0) docsRejected += 1;
+      if (a.uploaded_docs < 5 || a.doc_verified < 5 || a.doc_rejected > 0) docsIncomplete += 1;
+      if (!a.wave_id) noWave += 1;
+    }
+    return { overdue, docsRejected, docsIncomplete, noWave, duplicates: duplicateIds.length };
+  }, [aggregates, duplicateIds]);
 
   // Opsi dropdown filter — dipakai toolbar desktop & mobile agar seragam.
   // Label "Semua ..." sengaja menyebut dimensinya supaya tiga pill tidak
@@ -777,11 +934,11 @@ export default function AdminSPMBPage() {
   ];
 
   const pathOptions = [
-    { key: "all", label: "Semua Jalur", count: data.length },
+    { key: "all", label: "Semua Jalur", count: aggregates.length },
     ...Object.entries(pathLabels).map(([key, label]) => ({
       key,
       label,
-      count: data.filter((d) => d.registration_path === key).length,
+      count: aggregates.filter((d) => d.registration_path === key).length,
     })),
   ];
 
@@ -789,33 +946,54 @@ export default function AdminSPMBPage() {
     ...SPMB_PROGRAMS,
     ...Array.from(
       new Set(
-        data
-          .map((d) => d.documents?.program)
+        aggregates
+          .map((d) => d.program)
           .filter((p): p is string => !!p && !SPMB_PROGRAMS.includes(p))
       )
     ),
   ];
   const programOptions = [
-    { key: "all", label: "Semua Program", count: data.length },
+    { key: "all", label: "Semua Program", count: aggregates.length },
     ...programValues.map((program) => ({
       key: program,
       label: program,
-      count: data.filter((d) => d.documents?.program === program).length,
+      count: aggregates.filter((d) => d.program === program).length,
     })),
-    ...(data.some((d) => !d.documents?.program)
+    ...(aggregates.some((d) => !d.program)
       ? [{
           key: SPMB_NO_PROGRAM,
           label: "Tanpa Program",
-          count: data.filter((d) => !d.documents?.program).length,
+          count: aggregates.filter((d) => !d.program).length,
         }]
       : []),
   ];
 
   const genderOptions = [
-    { key: "all", label: "Semua Jenis Kelamin", count: data.length },
-    { key: "L", label: "Putra", count: data.filter((d) => d.gender === "L").length },
-    { key: "P", label: "Putri", count: data.filter((d) => d.gender === "P").length },
+    { key: "all", label: "Semua Jenis Kelamin", count: aggregates.length },
+    { key: "L", label: "Putra", count: aggregates.filter((d) => d.gender === "L").length },
+    { key: "P", label: "Putri", count: aggregates.filter((d) => d.gender === "P").length },
   ];
+
+  const actionOptions = [
+    { key: "all", label: "Semua Kondisi", count: aggregates.length },
+    { key: "overdue", label: "Lewat SLA", count: actionCounts.overdue },
+    { key: "docs_rejected", label: "Berkas ditolak", count: actionCounts.docsRejected },
+    { key: "docs_incomplete", label: "Berkas kurang", count: actionCounts.docsIncomplete },
+    { key: "no_wave", label: "Tanpa gelombang", count: actionCounts.noWave },
+    { key: "duplicates", label: "Duplikat", count: actionCounts.duplicates },
+  ];
+
+  const interviewOptions = [
+    { key: "all", label: "Semua Jadwal", count: aggregates.length },
+    { key: "scheduled", label: "Terjadwal", count: aggregates.filter((d) => !!d.interview_at).length },
+    { key: "unscheduled", label: "Belum terjadwal", count: aggregates.filter((d) => d.status === "pending" && !d.interview_at).length },
+  ];
+
+  /** Reset halaman + seleksi setiap filter berubah (server-side). */
+  function resetPage() {
+    setPage(1);
+    setSelectedIds(new Set());
+  }
 
   const allVisibleSelected = paginated.length > 0 && paginated.every((item) => selectedIds.has(item.id));
 
@@ -859,81 +1037,62 @@ export default function AdminSPMBPage() {
     else { setSortField(field); setSortDir("asc"); }
   }
 
-  /** Export daftar (mengikuti filter + pencarian aktif) ke CSV — bisa dibuka langsung di Excel. */
-  function handleExportCsv() {
-    const customCols = formFields.map((f) => ({ key: spmbAnswerKey(f.id), label: f.label }));
-    const exportRows = selectedIds.size > 0
-      ? filtered.filter((r) => selectedIds.has(r.id))
-      : filtered;
-    const headers = [
-      "No", "Nama Lengkap", "Jenis Kelamin", "NISN", "NIK", "Email", "Telepon", "Orang Tua/Wali", "Asal Sekolah",
-      "Program", "Jalur", "Gelombang", "Status", "Tanggal Daftar",
-      "Berkas Lengkap", "Berkas Terverifikasi", "Catatan Admin",
-      ...customCols.map((c) => c.label),
-    ];
-    /**
-     * Sel CSV:
-     * - CSV injection: sel yang diawali = + - @ diberi awalan `'` agar
-     *   tidak dieksekusi sebagai formula oleh Excel/Sheets.
-     * - forceText (telepon): awalan `'` menahan angka sebagai teks supaya
-     *   0 di depan tidak hilang saat dibuka di Excel.
-     */
-    const cell = (v: unknown, forceText = false) => {
-      let s = String(v ?? "");
-      if (forceText || /^[=+\-@]/.test(s)) s = `'${s}`;
-      return `"${s.replace(/"/g, '""')}"`;
-    };
-    const lines = [headers.map((h) => cell(h)).join(";")];
-    exportRows.forEach((r, i) => {
-      const docCount = SPMB_DOCUMENT_KEYS.filter((k) => {
-        const v = r.documents?.[k];
-        return typeof v === "string" && v.length > 0;
-      }).length;
-      const ds = docSummary[r.id];
-      const verifiedCell = ds && ds.total > 0
-        ? `${ds.verified}/${SPMB_DOCUMENT_KEYS.length}${ds.rejected ? ` (${ds.rejected} ditolak)` : ""}`
-        : "-";
-      lines.push(
-        [
-          i + 1,
-          normalizeName(r.full_name),
-          spmbGenderLabel(r.gender),
-          cell(r.documents?.nisn ?? "", true),
-          cell(r.documents?.nik ?? "", true),
-          r.email,
-          cell(r.phone, true),
-          normalizeName(r.parent_name),
-          normalizeSchool(r.previous_school),
-          r.documents?.program ?? "",
-          pathLabels[r.registration_path] || r.registration_path,
-          waveLabel(r.wave_id) || "-",
-          statusConfig[r.status]?.label || r.status,
-          new Date(r.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
-          `${docCount}/${SPMB_DOCUMENT_KEYS.length}`,
-          verifiedCell,
-          r.admin_notes ?? "",
-          ...customCols.map((c) => (r.documents?.[c.key] ?? "").toString()),
-        ]
-          .map((v) => cell(v))
-          .join(";")
+  /** Unduh berkas dari API route ekspor (CSV/XLSX dibuat di server). */
+  async function downloadExport(format: "csv" | "xlsx") {
+    try {
+      const res = await fetch("/api/admin/spmb/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          format,
+          selectedIds: selectedIds.size > 0 ? Array.from(selectedIds) : undefined,
+          filters:
+            selectedIds.size > 0
+              ? undefined
+              : {
+                  status: filter,
+                  path: pathFilter,
+                  program: programFilter,
+                  gender: genderFilter,
+                },
+        }),
+      });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        toast(j.error || "Gagal mengekspor.", "error");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `pendaftar-spmb-${new Date().toISOString().slice(0, 10)}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast(
+        `Ekspor ${format.toUpperCase()} dimulai${selectedIds.size > 0 ? ` (${selectedIds.size} terpilih)` : ""}.`,
+        "success"
       );
-    });
-    // BOM agar Excel membaca UTF-8; pemisah ";" mengikuti lokalitas Excel Indonesia.
-    const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `pendaftar-spmb-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    toast(`${exportRows.length} pendaftar diekspor ke CSV${selectedIds.size > 0 ? " (terpilih)" : ""}`, "success");
+    } catch {
+      toast("Gagal mengekspor.", "error");
+    }
+  }
+
+  /** Export daftar (mengikuti filter aktif / terpilih) ke CSV via server. */
+  function handleExportCsv() {
+    void downloadExport("csv");
+  }
+
+  /** Export daftar ke Excel multi-sheet via server. */
+  function handleExportXlsx() {
+    void downloadExport("xlsx");
   }
 
   /** Rekap bulanan siap cetak: total/menunggu/diterima/ditolak per bulan daftar. */
   function handleExportRecap() {
-    const recap = buildSpmbMonthlyRecap(data);
+    const recap = buildSpmbMonthlyRecap(aggregates);
     if (recap.length === 0) {
       toast("Belum ada data pendaftar untuk direkap.", "error");
       return;
@@ -1228,13 +1387,6 @@ export default function AdminSPMBPage() {
     revalidatePaths(["/admission"]).catch(() => { });
   }
 
-  const sortIcon = (field: SortField) => {
-    if (sortField !== field) return <SortAscending className="h-3 w-3 text-slate-300" />;
-    return sortDir === "asc"
-      ? <ArrowUp className="h-3 w-3 text-[var(--brand-accent)]" />
-      : <ArrowDown className="h-3 w-3 text-[var(--brand-accent)]" />;
-  };
-
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Header + Tab */}
@@ -1242,6 +1394,7 @@ export default function AdminSPMBPage() {
         active={mainTab}
         onSelect={setMainTab}
         onExport={handleExportCsv}
+        onExportXlsx={handleExportXlsx}
         onRecap={handleExportRecap}
         onAdd={() => setAddOpen(true)}
         onImport={() => setImportOpen(true)}
@@ -2035,25 +2188,19 @@ export default function AdminSPMBPage() {
           </StatPillGroup>
 
           {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
-          {selectedIds.size > 0 && (
-            <div className="mb-4 hidden items-center gap-2 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/5 px-4 py-2.5 md:flex md:flex-nowrap md:overflow-x-auto">
-              <Checks className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
-              <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-[var(--brand-primary)]">{selectedIds.size} dipilih</span>
-              {permVerify && (
-                <>
-                  <button onClick={() => setConfirmAction({ id: "bulk", status: "accepted" })} aria-label={`Terima ${selectedIds.size} pendaftar terpilih`} className="whitespace-nowrap rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700">Terima</button>
-                  <button onClick={() => setConfirmAction({ id: "bulk", status: "rejected" })} aria-label={`Tolak ${selectedIds.size} pendaftar terpilih`} className="whitespace-nowrap rounded-lg bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-700">Tolak</button>
-                  <button onClick={() => { setBulkWaveId(""); setBulkWaveOpen(true); }} aria-label={`Pindahkan ${selectedIds.size} pendaftar terpilih ke gelombang lain`} className="whitespace-nowrap rounded-lg border border-[var(--brand-primary)]/30 bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5">Pindah gelombang</button>
-                  <button onClick={() => { setBulkPath(""); setBulkPathOpen(true); }} aria-label={`Ubah jalur ${selectedIds.size} pendaftar terpilih`} className="whitespace-nowrap rounded-lg border border-[var(--brand-primary)]/30 bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5">Jalur</button>
-                  <button onClick={handleBulkSetPending} disabled={bulkPendingSaving} aria-label={`Kembalikan ${selectedIds.size} pendaftar terpilih ke Menunggu`} className="whitespace-nowrap rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Menunggu</button>
-                </>
-              )}
-              {permDelete && (
-                <button onClick={() => setBulkDelete(true)} aria-label={`Hapus ${selectedIds.size} pendaftar terpilih`} className="whitespace-nowrap rounded-lg bg-slate-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-slate-700">Hapus</button>
-              )}
-              <button onClick={() => setSelectedIds(new Set())} aria-label="Batalkan pilihan" title="Batalkan pilihan" className="ml-auto rounded-lg p-1 text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
-            </div>
-          )}
+          <SpmbBulkBar
+            count={selectedIds.size}
+            canVerify={permVerify}
+            canDelete={permDelete}
+            bulkPendingSaving={bulkPendingSaving}
+            onAccept={() => setConfirmAction({ id: "bulk", status: "accepted" })}
+            onReject={() => setConfirmAction({ id: "bulk", status: "rejected" })}
+            onMoveWave={() => { setBulkWaveId(""); setBulkWaveOpen(true); }}
+            onMovePath={() => { setBulkPath(""); setBulkPathOpen(true); }}
+            onSetPending={handleBulkSetPending}
+            onDelete={() => setBulkDelete(true)}
+            onClear={() => setSelectedIds(new Set())}
+          />
 
           {/* Filter + Search (desktop md+) — gaya Portal: pencarian di kiri,
               status sebagai pill dropdown berjumlah di kanan. */}
@@ -2062,34 +2209,84 @@ export default function AdminSPMBPage() {
               placeholder="Cari nama, NISN/NIK, sekolah, program, jalur, putra/putri…"
               searchLabel="Cari nama, NISN/NIK, sekolah, program, jalur, jenis kelamin, email, atau telepon"
               query={search}
-              onQueryChange={(v) => { setSearch(v); setPage(1); }}
+              onQueryChange={handleSearchChange}
+              action={
+                <SavedViewsDropdown
+                  module="admission"
+                  currentParams={uiParams as unknown as Record<string, unknown>}
+                  views={savedViews}
+                  activeViewId={activeViewId}
+                  onSelectView={applySavedView}
+                  onRefresh={() => void refreshSavedViews()}
+                />
+              }
               filters={[
                 {
                   value: filter,
                   options: statusOptions,
-                  onChange: (k) => { setFilter(k); setPage(1); setSelectedIds(new Set()); },
+                  onChange: (k) => { setFilter(k); resetPage(); },
                   menuLabel: "Filter status",
                 },
                 {
                   value: pathFilter,
                   options: pathOptions,
-                  onChange: (k) => { setPathFilter(k); setPage(1); setSelectedIds(new Set()); },
+                  onChange: (k) => { setPathFilter(k); resetPage(); },
                   menuLabel: "Filter jalur",
                 },
                 {
                   value: programFilter,
                   options: programOptions,
-                  onChange: (k) => { setProgramFilter(k); setPage(1); setSelectedIds(new Set()); },
+                  onChange: (k) => { setProgramFilter(k); resetPage(); },
                   menuLabel: "Filter program",
                 },
                 {
                   value: genderFilter,
                   options: genderOptions,
-                  onChange: (k) => { setGenderFilter(k); setPage(1); setSelectedIds(new Set()); },
+                  onChange: (k) => { setGenderFilter(k); resetPage(); },
                   menuLabel: "Filter jenis kelamin",
+                },
+                {
+                  value: actionFilter,
+                  options: actionOptions,
+                  onChange: (k) => { setActionFilter(k); resetPage(); },
+                  menuLabel: "Filter perlu tindakan",
+                },
+                {
+                  value: interviewFilter,
+                  options: interviewOptions,
+                  onChange: (k) => { setInterviewFilter(k); resetPage(); },
+                  menuLabel: "Filter wawancara",
                 },
               ]}
             />
+          </div>
+
+          {/* Chips cepat "Perlu Tindakan" — satu klik ke filter server-side. */}
+          <div className="mb-4 flex flex-wrap items-center gap-1.5">
+            {[
+              { key: "all", label: "Semua Kondisi", count: aggregates.length },
+              { key: "overdue", label: "Lewat SLA", count: actionCounts.overdue },
+              { key: "docs_rejected", label: "Berkas ditolak", count: actionCounts.docsRejected },
+              { key: "docs_incomplete", label: "Berkas kurang", count: actionCounts.docsIncomplete },
+              { key: "no_wave", label: "Tanpa gelombang", count: actionCounts.noWave },
+              { key: "duplicates", label: "Duplikat", count: actionCounts.duplicates },
+            ].map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                onClick={() => { setActionFilter(c.key); resetPage(); }}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                  actionFilter === c.key
+                    ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-[var(--brand-accent)]/40"
+                }`}
+              >
+                {c.label}
+                <span className={`rounded-full px-1 tabular-nums ${actionFilter === c.key ? "bg-white/20" : "bg-slate-100 text-slate-500"}`}>
+                  {c.count}
+                </span>
+              </button>
+            ))}
           </div>
 
           {/* Toolbar mobile (<md): pencarian + filter ikon 1 baris + urut & Pilih */}
@@ -2097,35 +2294,35 @@ export default function AdminSPMBPage() {
             placeholder="Cari nama, NISN/NIK, sekolah, program, jalur, putra/putri…"
             searchLabel="Cari nama, NISN/NIK, sekolah, program, jalur, jenis kelamin, email, atau telepon"
             query={search}
-            onQueryChange={(v) => { setSearch(v); setPage(1); }}
+            onQueryChange={handleSearchChange}
             compactFilters
             filter={{
               value: filter,
               options: statusOptions,
-              onChange: (k) => { setFilter(k); setPage(1); setSelectedIds(new Set()); },
+              onChange: (k) => { setFilter(k); resetPage(); },
               menuLabel: "Filter status",
               icon: <Tag className="h-4 w-4" />,
             }}
             filter2={{
               value: pathFilter,
               options: pathOptions,
-              onChange: (k) => { setPathFilter(k); setPage(1); setSelectedIds(new Set()); },
+              onChange: (k) => { setPathFilter(k); resetPage(); },
               menuLabel: "Filter jalur",
               icon: <Compass className="h-4 w-4" />,
             }}
             filter3={{
               value: programFilter,
               options: programOptions,
-              onChange: (k) => { setProgramFilter(k); setPage(1); setSelectedIds(new Set()); },
+              onChange: (k) => { setProgramFilter(k); resetPage(); },
               menuLabel: "Filter program",
               icon: <GraduationCap className="h-4 w-4" />,
             }}
             filter4={{
-              value: genderFilter,
-              options: genderOptions,
-              onChange: (k) => { setGenderFilter(k); setPage(1); setSelectedIds(new Set()); },
-              menuLabel: "Filter jenis kelamin",
-              icon: <Users className="h-4 w-4" />,
+              value: actionFilter,
+              options: actionOptions,
+              onChange: (k) => { setActionFilter(k); resetPage(); },
+              menuLabel: "Filter perlu tindakan",
+              icon: <Warning className="h-4 w-4" />,
             }}
             sort={{
               value: `${sortField}:${sortDir}`,
@@ -2154,611 +2351,112 @@ export default function AdminSPMBPage() {
             onSelectAllVisible={toggleSelectAll}
           />
 
-          {/* Tabel desktop (md+) — tampilan & perilaku sama seperti sebelumnya */}
-          <div className="hidden overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:block">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="border-b border-slate-200/80 bg-slate-50/80">
-                  <tr>
-                    {/* hidden sm:table-cell — checkbox & No hanya untuk tablet/desktop; di
-                    bawah 640px sisa kolom biar lega, sama seperti
-                    agenda/teachers/users/announcements/facilities. */}
-                    <th className="hidden w-12 px-2 py-3 text-center md:table-cell">
-                      <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
-                        className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
-                    </th>
-                    <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell">No</th>
-                    <th className="cursor-pointer px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none" onClick={() => toggleSort("full_name")}>
-                      <span className="flex items-center gap-1">Nama {sortIcon("full_name")}</span>
-                    </th>
-                    <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none" onClick={() => toggleSort("gender")}>
-                      <span className="flex items-center gap-1">L/P {sortIcon("gender")}</span>
-                    </th>
-                    <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 md:table-cell">Asal Sekolah</th>
-                    <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 sm:table-cell cursor-pointer select-none" onClick={() => toggleSort("registration_path")}>
-                      <span className="flex items-center gap-1">Jalur {sortIcon("registration_path")}</span>
-                    </th>
-                    <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 cursor-pointer select-none" onClick={() => toggleSort("status")}>
-                      <span className="flex items-center gap-1">Status {sortIcon("status")}</span>
-                    </th>
-                    <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 lg:table-cell cursor-pointer select-none" onClick={() => toggleSort("created_at")}>
-                      <span className="flex items-center gap-1">Tanggal {sortIcon("created_at")}</span>
-                    </th>
-                    <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {loading ? (
-                    <tr><td colSpan={9} className="px-4 py-16 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
-                        <p className="text-sm text-slate-500">Memuat data pendaftar...</p>
-                      </div>
-                    </td></tr>
-                  ) : loadError ? (
-                    <tr><td colSpan={9} className="px-4 py-16 text-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
-                          <Warning className="h-6 w-6 text-red-400" />
-                        </div>
-                        <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
-                        <p className="mt-0.5 max-w-md text-xs text-slate-500">{loadError}</p>
-                        <button onClick={() => void fetchData()} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
-                          Coba lagi
-                        </button>
-                      </div>
-                    </td></tr>
-                  ) : paginated.length === 0 ? (
-                    <tr><td colSpan={9} className="px-4 py-16 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-                          <Users className="h-8 w-8 text-slate-300" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
-                          <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada pendaftar SPMB"}</p>
-                        </div>
-                      </div>
-                    </td></tr>
-                  ) : (
-                    paginated.map((item, index) => {
-                        const st = statusConfig[item.status] || statusConfig.pending;
-                        const StatusIcon = st.icon;
-                        // Nama & asal sekolah judul dinormalisasi untuk tampilan — data DB tidak diubah saat render.
-                        const name = normalizeName(item.full_name);
-                        const pendingDays = item.status === "pending" ? daysSince(item.created_at) : 0;
-                        const late = pendingDays >= PENDING_SLA_DAYS;
-                        const ds = docSummary[item.id];
-                      return (
-                        <tr key={item.id} className={`group transition-colors hover:bg-slate-50/80 ${selectedIds.has(item.id) ? "bg-[var(--brand-primary)]/[0.03]" : ""}`}>
-                          <td className="hidden w-12 px-2 py-3.5 text-center md:table-cell" onClick={(e) => e.stopPropagation()}>
-                            <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)}
-                              className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]" />
-                          </td>
-                          <td className="hidden px-4 py-3.5 text-sm text-slate-400 sm:table-cell">{(page - 1) * pageSize + index + 1}</td>
-                          <td className="px-4 py-3.5 cursor-pointer" onClick={() => openDetail(item)}>
-                            <p className="text-sm font-medium text-slate-800">{name}</p>
-                            {(item.documents?.input_source === "admin" || item.documents?.input_source === "import" || item.documents?.program) && (
-                              <p className="mt-0.5 flex flex-wrap gap-1">
-                                {item.documents?.input_source === "admin" && (
-                                  <span className="inline-block rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500" title="Ditambahkan manual oleh admin">
-                                    Manual
-                                  </span>
-                                )}
-                              {item.documents?.input_source === "import" && (
-                                <span className="ml-1.5 inline-block rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-500" title="Diimpor massal dari ekspor Google Form">
-                                  Impor
-                                </span>
-                              )}
-                                {item.documents?.program && (
-                                  <span
-                                    title="Pilihan program"
-                                    className="inline-block whitespace-nowrap rounded-md border border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--brand-primary)]"
-                                  >
-                                    {item.documents.program}
-                                  </span>
-                                )}
-                              </p>
-                            )}
-                            {ds && ds.total > 0 && (
-                              <p className={`mt-0.5 text-[11px] font-medium ${ds.rejected > 0 ? "text-red-600" : ds.verified === SPMB_DOCUMENT_KEYS.length ? "text-emerald-600" : "text-slate-400"}`}>
-                                Berkas {ds.verified}/{SPMB_DOCUMENT_KEYS.length}
-                                {ds.rejected > 0 && ` · ${ds.rejected} ditolak`}
-                                {ds.pending > 0 && ` · ${ds.pending} menunggu`}
-                              </p>
-                            )}
-                          </td>
-                          <td className="hidden px-4 py-3.5 sm:table-cell">
-                            <span className={`inline-block rounded-md border px-2 py-0.5 text-[11px] font-semibold ${genderStyles[item.gender] || "border-slate-200 bg-slate-100 text-slate-600"}`}>
-                              {spmbGenderLabel(item.gender)}
-                            </span>
-                          </td>
-                          <td className="hidden px-4 py-3.5 text-sm text-slate-600 md:table-cell">{normalizeSchool(item.previous_school) || "-"}</td>
-                          <td className="hidden px-4 py-3.5 sm:table-cell">
-                            <span className={`inline-block rounded-md px-2 py-0.5 text-[11px] font-semibold ${pathColors[item.registration_path] || "bg-slate-100 text-slate-600"}`}>
-                              {pathLabels[item.registration_path] || item.registration_path}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                            {permVerify ? (
-                              <button
-                                onClick={() => {
-                                  if (item.status === "rejected") handleSetPending(item);
-                                  else setConfirmAction({
-                                    id: item.id,
-                                    status: item.status === "pending" ? "accepted" : "rejected",
-                                  });
-                                }}
-                                title={item.status === "rejected" ? "Kembalikan ke Menunggu" : "Ubah status (dengan konfirmasi)"}
-                                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${st.bg} ${st.color} hover:opacity-80`}>
-                                <StatusIcon className="h-3 w-3" />
-                                {st.label}
-                              </button>
-                            ) : (
-                              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${st.bg} ${st.color}`}>
-                                <StatusIcon className="h-3 w-3" />
-                                {st.label}
-                              </span>
-                            )}
-                          </td>
-                          <td
-                            className="hidden whitespace-nowrap px-4 py-3.5 text-sm text-slate-500 lg:table-cell"
-                            title={new Date(item.created_at).toLocaleString("id-ID", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" })}
-                          >
-                            {formatRelativeTime(item.created_at)}
-                            {late && (
-                              <span className="ml-2 rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-amber-700" title={`Menunggu ${pendingDays} hari`}>
-                                Lewat {PENDING_SLA_DAYS} hari
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-end gap-1">
-                              <button onClick={() => openDetail(item)} aria-label={`Lihat detail ${name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600" title="Detail">
-                                <Eye className="h-4 w-4" />
-                              </button>
-                              {permUpdate && (
-                                <button onClick={() => setEditItem(item)} aria-label={`Edit data ${name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Edit Data">
-                                  <PencilSimple className="h-4 w-4" />
-                                </button>
-                              )}
-                              {permDelete && (
-                                <button onClick={() => setDeleteItem(item)} aria-label={`Hapus pendaftaran ${name}`} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Hapus">
-                                  <Trash className="h-4 w-4" />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {!loading && filtered.length > 0 && (
-              <DesktopPagination
-                page={page}
-                totalPages={totalPages}
-                total={filtered.length}
-                from={(page - 1) * pageSize + 1}
-                to={Math.min(page * pageSize, filtered.length)}
-                pageSize={pageSize}
-                onPageChange={setPage}
-                onPageSizeChange={setPageSize}
-                itemLabel="pendaftar"
-              />
-            )}
-          </div>
+          {/* Tabel desktop (md+) — komponen SpmbDesktopTable */}
+          <SpmbDesktopTable
+            rows={paginated}
+            loading={loading}
+            loadError={loadError}
+            search={search}
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            selectedIds={selectedIds}
+            allVisibleSelected={allVisibleSelected}
+            docSummary={docSummary}
+            sortField={sortField}
+            sortDir={sortDir}
+            canVerify={permVerify}
+            canEdit={permUpdate}
+            canDelete={permDelete}
+            onToggleSelectAll={toggleSelectAll}
+            onToggleSelect={toggleSelect}
+            onToggleSort={toggleSort}
+            onDetail={openDetail}
+            onEdit={setEditItem}
+            onDelete={setDeleteItem}
+            onSetStatus={(r, s) => {
+              if (s === "pending") handleSetPending(r);
+              else setConfirmAction({ id: r.id, status: s });
+            }}
+            onRetry={() => void fetchData()}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
 
-          {/* Daftar mobile (<md) — baris ringkas: avatar + titik status, nama,
-              badge jalur + asal sekolah/email + tanggal, status lewat titik di
-              pojok avatar (tanpa ubah status sekali tap), aksi via menu ⋯.
-              Tanpa scroll horizontal, semua fitur tabel tetap ada. */}
-          <LongPressHint />
-          <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white md:hidden">
-            <div role="list" aria-label="Daftar pendaftar SPMB">
-              {loading ? (
-                <div className="space-y-3 px-3 py-4" aria-hidden="true">
-                  {Array.from({ length: 4 }, (_, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <SkeletonBlock className="h-10 w-10 rounded-full" />
-                      <div className="min-w-0 flex-1 space-y-1.5">
-                        <SkeletonBlock className="h-3.5 w-2/3 rounded" />
-                        <SkeletonBlock className="h-3 w-1/2 rounded" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : loadError ? (
-                <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
-                    <Warning className="h-6 w-6 text-red-400" />
-                  </div>
-                  <p className="text-sm font-medium text-slate-600">Gagal memuat data</p>
-                  <p className="mt-0.5 max-w-md text-xs text-slate-500">{loadError}</p>
-                  <button onClick={() => void fetchData()} className="mt-1 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
-                    Coba lagi
-                  </button>
-                </div>
-              ) : paginated.length === 0 ? (
-                <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
-                    <Users className="h-7 w-7 text-slate-300" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-600">Tidak ada data ditemukan</p>
-                    <p className="mt-1 text-xs text-slate-400">{search ? "Coba kata kunci lain" : "Belum ada pendaftar SPMB"}</p>
-                  </div>
-                </div>
-              ) : (
-                paginated.map((item) => (
-                  <RegistrationMobileRow
-                    key={item.id}
-                    item={item}
-                    docSummary={docSummary[item.id]}
-                    selected={selectedIds.has(item.id)}
-                    selectMode={pickMode}
-                    onEnterPickMode={enterPickMode}
-                    onToggleSelect={toggleSelect}
-                    onDetail={openDetail}
-                    onEditData={setEditItem}
-                    onSetStatus={(r, s) => {
-                      // Terima/Tolak lewat modal konfirmasi; "Jadikan Menunggu"
-                      // langsung dijalankan (kembalikan ke antrean review).
-                      if (s === "pending") handleSetPending(r);
-                      else setConfirmAction({ id: r.id, status: s });
-                    }}
-                    onDelete={setDeleteItem}
-                    canEdit={permUpdate}
-                    canVerify={permVerify}
-                    canDelete={permDelete}
-                  />
-                ))
-              )}
-            </div>
-            {!loading && filtered.length > 0 && (
-              <MobilePagination
-                page={page}
-                totalPages={totalPages}
-                total={filtered.length}
-                from={(page - 1) * pageSize + 1}
-                to={Math.min(page * pageSize, filtered.length)}
-                onPageChange={setPage}
-                pageSize={pageSize}
-                onPageSizeChange={setPageSize}
-                itemLabel="pendaftar"
-              />
-            )}
-          </div>
+
+          {/* Daftar mobile (<md) — komponen SpmbMobileList */}
+          <SpmbMobileList
+            rows={paginated}
+            loading={loading}
+            loadError={loadError}
+            search={search}
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            selectedIds={selectedIds}
+            pickMode={pickMode}
+            docSummary={docSummary}
+            canEdit={permUpdate}
+            canVerify={permVerify}
+            canDelete={permDelete}
+            onEnterPickMode={enterPickMode}
+            onToggleSelect={toggleSelect}
+            onDetail={openDetail}
+            onEdit={setEditItem}
+            onDelete={setDeleteItem}
+            onSetStatus={(r, s) => {
+              // Terima/Tolak lewat modal konfirmasi; Jadikan Menunggu langsung.
+              if (s === 'pending') handleSetPending(r);
+              else setConfirmAction({ id: r.id, status: s });
+            }}
+            onRetry={() => void fetchData()}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
 
           {pickMode && (
-            <MobileSelectBar
+            <SpmbMobileBulkBar
               count={selectedIds.size}
-              onDelete={permDelete ? () => setBulkDelete(true) : undefined}
-              deleteIconOnly
+              canVerify={permVerify}
+              canDelete={permDelete}
+              bulkPendingSaving={bulkPendingSaving}
+              onAccept={() => setConfirmAction({ id: 'bulk', status: 'accepted' })}
+              onReject={() => setConfirmAction({ id: 'bulk', status: 'rejected' })}
+              onMoveWave={() => { setBulkWaveId(''); setBulkWaveOpen(true); }}
+              onMovePath={() => { setBulkPath(''); setBulkPathOpen(true); }}
+              onSetPending={handleBulkSetPending}
+              onDelete={() => setBulkDelete(true)}
               onCancel={exitPickMode}
-            >
-              {permVerify && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmAction({ id: "bulk", status: "accepted" })}
-                    disabled={selectedIds.size === 0}
-                    aria-label="Terima pendaftar terpilih"
-                    title="Terima terpilih"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-200 bg-white text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-                  >
-                    <CheckCircle className="h-5 w-5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmAction({ id: "bulk", status: "rejected" })}
-                    disabled={selectedIds.size === 0}
-                    aria-label="Tolak pendaftar terpilih"
-                    title="Tolak terpilih"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-red-200 bg-white text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-                  >
-                    <XCircle className="h-5 w-5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setBulkWaveId(""); setBulkWaveOpen(true); }}
-                    disabled={selectedIds.size === 0}
-                    aria-label="Pindahkan pendaftar terpilih ke gelombang lain"
-                    title="Ubah gelombang"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--brand-primary)]/30 bg-white text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/5 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-                  >
-                    <CalendarBlank className="h-5 w-5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setBulkPath(""); setBulkPathOpen(true); }}
-                    disabled={selectedIds.size === 0}
-                    aria-label="Ubah jalur pendaftar terpilih"
-                    title="Ubah jalur"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--brand-primary)]/30 bg-white text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)]/5 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-                  >
-                    <Compass className="h-5 w-5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleBulkSetPending}
-                    disabled={selectedIds.size === 0 || bulkPendingSaving}
-                    aria-label="Kembalikan pendaftar terpilih ke Menunggu"
-                    title="Kembalikan ke status Menunggu"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
-                  >
-                    <Clock className="h-5 w-5" />
-                  </button>
-                </>
-              )}
-            </MobileSelectBar>
+            />
           )}
         </>
       )}
 
       {/* ── MODALS & SLIDE-OVERS (SHARED ANTAR TAB) ──────────────────── */}
 
-      {/* ── VIEW MODAL ──────────────────────────────── */}
+      {/* ── VIEW MODAL — komponen SpmbDetailModal ───────── */}
       {viewItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setViewItem(null)}>
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                {/* Profile Header */}
-                <div className="bg-gradient-to-r from-[var(--brand-primary)] via-[var(--brand-primary-light)] to-[var(--brand-accent)] px-6 py-5 text-white">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-xl font-bold">
-                      {normalizeName(viewItem.full_name).split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h2 className="text-lg font-bold truncate">{normalizeName(viewItem.full_name)}</h2>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-white/70">
-                        {viewItem.documents?.nisn && <span className="flex items-center gap-1"><FileText className="h-3 w-3" />{viewItem.documents.nisn}</span>}
-                        {viewItem.documents?.nisn && viewItem.phone && <span>&middot;</span>}
-                        {viewItem.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{viewItem.phone}</span>}
-                      </div>
-                      <div className="mt-1.5 flex flex-wrap gap-2">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusConfig[viewItem.status]?.bg} ${statusConfig[viewItem.status]?.color}`}>
-                          {(() => { const SI = statusConfig[viewItem.status]?.icon; return SI ? <SI className="h-2.5 w-2.5" /> : null; })()}
-                          {statusConfig[viewItem.status]?.label}
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white">
-                          {pathLabels[viewItem.registration_path] || viewItem.registration_path}
-                        </span>
-                        {waveLabel(viewItem.wave_id) && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white">
-                            <CalendarBlank className="h-2.5 w-2.5" />
-                            {waveLabel(viewItem.wave_id)}
-                          </span>
-                        )}
-                        {viewItem.documents?.program && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white" title="Pilihan program">
-                            {viewItem.documents.program}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <button onClick={() => setViewItem(null)} className="ml-auto shrink-0 rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white"><X className="h-5 w-5" /></button>
-                  </div>
-                </div>
+        <SpmbDetailModal
+          item={viewItem}
+          viewTab={viewTab}
+          customAnswers={customAnswers}
+          signedUrls={signedUrls}
+          docVerifs={docVerifs}
+          docVerifSaving={docVerifSaving}
+          waTemplates={waTemplates}
+          waveName={waveLabel(viewItem.wave_id)}
+          canEdit={permUpdate}
+          canVerify={permVerify}
+          canSeeSensitive={permSensitive}
+          onClose={() => setViewItem(null)}
+          onTabChange={setViewTab}
+          onVerifyDoc={handleVerifyDoc}
+          onSendWa={handleSendWaTemplate}
+          onEdit={() => { setViewItem(null); setEditItem(viewItem); }}
+          onConfirmStatus={(id, status) => { setViewItem(null); setConfirmAction({ id, status }); }}
+        />
+      )}
 
-                {/* Tabs */}
-                {(() => {
-                  const tabs = [
-                    { key: "siswa" as const, label: "Siswa" },
-                    { key: "kontak" as const, label: "Kontak" },
-                    { key: "ayah" as const, label: "Ayah" },
-                    { key: "ibu" as const, label: "Ibu" },
-                    // Hanya tampil bila pendaftar mengisi pertanyaan tambahan.
-                    ...(customAnswers.length > 0 ? [{ key: "tambahan" as const, label: "Tambahan" }] : []),
-                    // Berkas = dokumen pribadi (KK, akta, KTP ortu) → data sensitif.
-                    ...(permSensitive ? [{ key: "berkas" as const, label: "Berkas" }] : []),
-                  ];
-                  const docCount = viewItem.documents ? [viewItem.documents.kk, viewItem.documents.akta, viewItem.documents.surat_sekolah, viewItem.documents.ktp_ortu, viewItem.documents.bukti_transfer].filter((v) => typeof v === "string" && v.length > 0).length : 0;
-                  // flex-wrap, BUKAN overflow-x-auto: tab aktif ditandai garis
-                  // absolute -bottom-px yang menimpa border. overflow menciptakan
-                  // clip edge di padding box sehingga separuh garis itu terpotong
-                  // (sama seperti bug ring stats card). Dengan wrap, ke-7 tab tetap
-                  // terjangkau di 360px tanpa mengorbankan indikatornya.
-                  return (
-                    <div className="flex flex-wrap border-b border-slate-100 px-6">
-                      {tabs.map((t) => (
-                        <button key={t.key} onClick={() => setViewTab(t.key)}
-                          className={`relative whitespace-nowrap px-4 py-2.5 text-xs font-semibold transition-colors ${viewTab === t.key ? "text-[var(--brand-primary)]" : "text-slate-400 hover:text-slate-600"}`}>
-                          {t.label}
-                          {t.key === "berkas" && docCount > 0 && <span className="ml-1 rounded-full bg-[var(--brand-primary)]/10 px-1.5 text-[10px] text-[var(--brand-primary)]">{docCount}</span>}
-                          {t.key === "tambahan" && <span className="ml-1 rounded-full bg-[var(--brand-primary)]/10 px-1.5 text-[10px] text-[var(--brand-primary)]">{customAnswers.length}</span>}
-                          {viewTab === t.key && <div className="absolute inset-x-2 -bottom-px h-0.5 bg-[var(--brand-primary)]" />}
-                        </button>
-                      ))}
-                    </div>
-                  );
-                })()}
-
-                {/* Tab Content */}
-                <div className="max-h-[60vh] overflow-y-auto px-6 py-5">
-                  {viewTab === "siswa" && (
-                    <div className="space-y-1">
-                      <div className="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
-                        <InfoRow icon={MapPin} label="Tempat Lahir" value={viewItem.birth_place || "-"} />
-                        <InfoRow icon={CalendarIcon} label="Tanggal Lahir" value={viewItem.birth_date ? new Date(viewItem.birth_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"} />
-                        <InfoRow icon={Users} label="Jenis Kelamin" value={viewItem.gender === "L" ? "Laki-laki" : "Perempuan"} />
-                        <InfoRow icon={GraduationCap} label="Program" value={viewItem.documents?.program || "-"} />
-                        <InfoRow icon={GraduationCap} label="Jalur" value={pathLabels[viewItem.registration_path] || viewItem.registration_path} />
-                      </div>
-                      <div className="my-3 h-px bg-slate-100" />
-                      <div className="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
-                        <InfoRow icon={Users} label="Nama Panggilan" value={normalizeName(viewItem.documents?.nickname) || "-"} />
-                        <InfoRow icon={CheckCircle} label="Golongan Darah" value={viewItem.documents?.blood_type || "-"} />
-                        <InfoRow icon={FileText} label="NISN" value={viewItem.documents?.nisn || "-"} />
-                        <InfoRow icon={FileText} label="NIK" value={viewItem.documents?.nik || "-"} />
-                        <InfoRow icon={ArrowUp} label="Tinggi Badan" value={viewItem.documents?.height ? `${viewItem.documents.height} cm` : "-"} />
-                        <InfoRow icon={ArrowDown} label="Berat Badan" value={viewItem.documents?.weight ? `${viewItem.documents.weight} kg` : "-"} />
-                        <InfoRow icon={MagnifyingGlass} label="Bahasa Sehari-hari" value={viewItem.documents?.language || "-"} />
-                        <InfoRow icon={Eye} label="Hobi" value={viewItem.documents?.hobby || "-"} />
-                        <InfoRow icon={GraduationCap} label="Cita-cita" value={viewItem.documents?.ambition || "-"} />
-                        <InfoRow icon={Users} label="Anak Ke-" value={viewItem.documents?.child_order ? `${viewItem.documents.child_order} dari ${viewItem.documents.siblings || "?"} bersaudara` : "-"} />
-                        <InfoRow icon={Warning} label="Yatim/Piatu" value={viewItem.documents?.orphan_status === "tidak" ? "Tidak" : viewItem.documents?.orphan_status === "yatim" ? "Yatim" : viewItem.documents?.orphan_status === "piatu" ? "Piatu" : viewItem.documents?.orphan_status === "yatim_piatu" ? "Yatim Piatu" : "-"} />
-                      </div>
-                    </div>
-                  )}
-
-                  {viewTab === "kontak" && (
-                    <div className="space-y-1">
-                      <InfoRow icon={MapPin} label="Alamat" value={viewItem.address || "-"} />
-                      <InfoRow icon={Phone} label="Telepon" value={viewItem.phone || "-"} />
-                      <InfoRow icon={Envelope} label="Email" value={viewItem.email || "-"} />
-                      <div className="my-3 h-px bg-slate-100" />
-                      <InfoRow icon={GraduationCap} label="Asal Sekolah" value={normalizeSchool(viewItem.previous_school) || "-"} />
-                    </div>
-                  )}
-
-                  {viewTab === "ayah" && (
-                    <div className="space-y-1">
-                      <InfoRow icon={Users} label="Nama" value={normalizeName(viewItem.parent_name?.split(" / ")[0]) || "-"} />
-                      <InfoRow icon={MapPin} label="Tempat Lahir" value={viewItem.documents?.father_birth_place || "-"} />
-                      <InfoRow icon={CalendarIcon} label="Tanggal Lahir" value={viewItem.documents?.father_birth_date ? new Date(viewItem.documents.father_birth_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"} />
-                      <InfoRow icon={GraduationCap} label="Pendidikan Terakhir" value={viewItem.documents?.father_education || "-"} />
-                      <InfoRow icon={FileText} label="Pekerjaan" value={viewItem.parent_occupation || "-"} />
-                      <InfoRow icon={FloppyDisk} label="Penghasilan/bulan" value={viewItem.documents?.father_income ? `Rp ${Number(viewItem.documents.father_income).toLocaleString("id-ID")}` : "-"} />
-                    </div>
-                  )}
-
-                  {viewTab === "ibu" && (
-                    <div className="space-y-1">
-                      <InfoRow icon={Users} label="Nama" value={normalizeName(viewItem.parent_name?.split(" / ")[1]) || "-"} />
-                      <InfoRow icon={MapPin} label="Tempat Lahir" value={viewItem.documents?.mother_birth_place || "-"} />
-                      <InfoRow icon={CalendarIcon} label="Tanggal Lahir" value={viewItem.documents?.mother_birth_date ? new Date(viewItem.documents.mother_birth_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"} />
-                      <InfoRow icon={GraduationCap} label="Pendidikan Terakhir" value={viewItem.documents?.mother_education || "-"} />
-                      <InfoRow icon={FileText} label="Pekerjaan" value={viewItem.documents?.mother_job || "-"} />
-                      <InfoRow icon={FloppyDisk} label="Penghasilan/bulan" value={viewItem.documents?.mother_income ? `Rp ${Number(viewItem.documents.mother_income).toLocaleString("id-ID")}` : "-"} />
-                    </div>
-                  )}
-
-                  {viewTab === "tambahan" && customAnswers.length > 0 && (
-                    <div className="space-y-1">
-                      {customAnswers.map((a) => (
-                        <InfoRow key={a.key} icon={FileText} label={a.label} value={a.value} />
-                      ))}
-                    </div>
-                  )}
-
-                  {viewTab === "berkas" && permSensitive && (
-                    <div className="space-y-2">
-                      {SPMB_DOCUMENT_KEYS.map((key) => {
-                        const label = SPMB_DOCUMENT_LABELS[key];
-                        const url = signedUrls[key];
-                        const hasFile = !!url;
-                        const ext = hasFile ? url.split(".").pop()?.split("?")[0]?.toLowerCase() || "" : "";
-                        const isImage = ["jpg", "jpeg", "png", "gif", "webp"].includes(ext);
-                        const isPdf = ext === "pdf";
-                        const v = docVerifs[key];
-                        return (
-                          <div key={key} className="rounded-xl border border-slate-100 p-2">
-                            <BerkasItem label={label} url={hasFile ? url : null} isImage={isImage} isPdf={isPdf} />
-                            {permVerify && hasFile && (
-                              <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-1">
-                                {v?.status === "verified" ? (
-                                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                                    <CheckCircle className="h-3 w-3" /> Valid
-                                  </span>
-                                ) : v?.status === "rejected" ? (
-                                  <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700">
-                                    <XCircle className="h-3 w-3" /> Ditolak
-                                  </span>
-                                ) : (
-                                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
-                                    Belum diverifikasi
-                                  </span>
-                                )}
-                                <button
-                                  type="button"
-                                  disabled={docVerifSaving === key}
-                                  onClick={() => handleVerifyDoc(key, "verified")}
-                                  className="rounded-lg border border-emerald-200 bg-white px-2 py-1 text-[10px] font-semibold text-emerald-700 disabled:opacity-50"
-                                >
-                                  Valid
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={docVerifSaving === key}
-                                  onClick={() => handleVerifyDoc(key, "rejected")}
-                                  className="rounded-lg border border-red-200 bg-white px-2 py-1 text-[10px] font-semibold text-red-700 disabled:opacity-50"
-                                >
-                                  Tolak
-                                </button>
-                                {v && v.status !== "pending" && (
-                                  <button
-                                    type="button"
-                                    disabled={docVerifSaving === key}
-                                    onClick={() => handleVerifyDoc(key, "pending")}
-                                    className="text-[10px] font-semibold text-slate-400 hover:underline disabled:opacity-50"
-                                  >
-                                    Reset
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Catatan Admin */}
-                  {viewItem.admin_notes && (
-                    <div className="mt-4 border-t border-slate-100 pt-4">
-                      <p className="mb-1 text-xs font-semibold text-slate-400">Catatan Admin</p>
-                      <p className="text-sm text-slate-600">{viewItem.admin_notes}</p>
-                    </div>
-                  )}
-
-                  {/* Kirim pesan WhatsApp memakai template (migrasi 0015) */}
-                  {permVerify && waTemplates.length > 0 && (
-                    <div className="mt-4 border-t border-slate-100 pt-4">
-                      <p className="mb-2 text-xs font-semibold text-slate-400">Kirim Pesan WhatsApp</p>
-                      <div className="flex flex-wrap gap-2">
-                        {waTemplates.map((t) => (
-                          <button
-                            key={t.key}
-                            type="button"
-                            onClick={() => handleSendWaTemplate(t)}
-                            title={viewItem.phone ? `Kirim ke ${viewItem.phone}` : "Nomor kosong — pesan disalin"}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100"
-                          >
-                            <WhatsappLogo className="h-3.5 w-3.5" />
-                            {t.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Footer */}
-                <div className="flex gap-3 border-t border-slate-100 px-6 py-4">
-                  {permUpdate && (
-                    <button onClick={() => { setViewItem(null); setEditItem(viewItem); }}
-                      className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                      <PencilSimple className="h-4 w-4" /> Edit Data
-                    </button>
-                  )}
-                  {permVerify && viewItem.status === "pending" && (
-                    <>
-                      <button onClick={() => { setViewItem(null); setConfirmAction({ id: viewItem.id, status: "rejected" }); }}
-                        className="flex-1 rounded-xl border border-red-200 bg-red-50 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100">
-                        Tolak
-                      </button>
-                      <button onClick={() => { setViewItem(null); setConfirmAction({ id: viewItem.id, status: "accepted" }); }}
-                        className="flex-1 rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700">
-                        Terima
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* ── TAMBAH / EDIT PENDAFTAR (SLIDE-OVER) ────── */}
           {addOpen && (
@@ -2798,147 +2496,46 @@ export default function AdminSPMBPage() {
             <ImportRegistrationsModal
               open
               onClose={() => setImportOpen(false)}
-              existing={data}
+              existing={importCandidates}
               onImported={fetchData}
             />
           )}
 
-          {/* ── DELETE CONFIRM ──────────────────────────── */}
-          {deleteItem && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setDeleteItem(null)}>
-              <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto">
-                  <Warning className="h-6 w-6 text-red-600" />
-                </div>
-                <h3 className="text-center text-lg font-bold text-slate-800">Hapus Pendaftar?</h3>
-                <p className="mt-2 text-center text-sm text-slate-500">&ldquo;{normalizeName(deleteItem.full_name)}&rdquo; akan dihapus permanen.</p>
-                <div className="mt-6 flex gap-3">
-                  <button onClick={() => setDeleteItem(null)} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Batal</button>
-                  <button onClick={handleDelete} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700">Ya, Hapus</button>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* ── MODAL KONFIRMASI — komponen SpmbModals ──── */}
+          <SpmbModals
+            deleteItem={deleteItem}
+            bulkDelete={bulkDelete}
+            bulkPathOpen={bulkPathOpen}
+            bulkPath={bulkPath}
+            bulkPathSaving={bulkPathSaving}
+            bulkWaveOpen={bulkWaveOpen}
+            bulkWaveId={bulkWaveId}
+            bulkWaveSaving={bulkWaveSaving}
+            confirmAction={confirmAction}
+            selectedCount={selectedIds.size}
+            waves={waves}
+            onCloseDelete={() => setDeleteItem(null)}
+            onConfirmDelete={handleDelete}
+            onCloseBulkDelete={() => setBulkDelete(false)}
+            onConfirmBulkDelete={handleBulkDelete}
+            onCloseBulkPath={() => setBulkPathOpen(false)}
+            onBulkPathChange={setBulkPath}
+            onConfirmBulkPath={handleBulkMovePath}
+            onCloseBulkWave={() => setBulkWaveOpen(false)}
+            onBulkWaveChange={setBulkWaveId}
+            onConfirmBulkWave={handleBulkMoveWave}
+            onCloseConfirm={() => setConfirmAction(null)}
+            onConfirmStatus={() => {
+              if (!confirmAction) return;
+              if (confirmAction.id === 'bulk') handleBulkStatus(confirmAction.status);
+              else handleUpdateStatus(confirmAction.id, confirmAction.status);
+            }}
+          />
 
-          {/* ── BULK MOVE PATH MODAL ────────────────────── */}
-          {bulkPathOpen && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => !bulkPathSaving && setBulkPathOpen(false)}>
-              <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--brand-primary)]/10 mx-auto">
-                  <GraduationCap className="h-6 w-6 text-[var(--brand-primary)]" />
-                </div>
-                <h3 className="text-center text-lg font-bold text-slate-800">Ubah Jalur {selectedIds.size} Pendaftar?</h3>
-                <p className="mt-2 text-center text-sm text-slate-500">Pilih jalur pendaftaran untuk pendaftar terpilih.</p>
-                <select
-                  value={bulkPath}
-                  onChange={(e) => setBulkPath(e.target.value as RegistrationPath | "")}
-                  disabled={bulkPathSaving}
-                  className="mt-4 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
-                >
-                  <option value="">Pilih jalur…</option>
-                  <option value="reguler">Reguler</option>
-                  <option value="prestasi">Prestasi</option>
-                  <option value="beasiswa">Beasiswa</option>
-                </select>
-                <div className="mt-6 flex gap-3">
-                  <button onClick={() => setBulkPathOpen(false)} disabled={bulkPathSaving} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Batal</button>
-                  <button onClick={handleBulkMovePath} disabled={bulkPathSaving || !bulkPath} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-50">
-                    {bulkPathSaving ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : "Ubah Jalur"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── BULK MOVE WAVE MODAL ────────────────────── */}
-          {bulkWaveOpen && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => !bulkWaveSaving && setBulkWaveOpen(false)}>
-              <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--brand-primary)]/10 mx-auto">
-                  <CalendarIcon className="h-6 w-6 text-[var(--brand-primary)]" />
-                </div>
-                <h3 className="text-center text-lg font-bold text-slate-800">Pindah {selectedIds.size} Pendaftar?</h3>
-                <p className="mt-2 text-center text-sm text-slate-500">Pilih gelombang tujuan untuk pendaftar terpilih.</p>
-                <select
-                  value={bulkWaveId}
-                  onChange={(e) => setBulkWaveId(e.target.value)}
-                  disabled={bulkWaveSaving}
-                  className="mt-4 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
-                >
-                  <option value="">Tanpa gelombang</option>
-                  {waves.map((w) => (
-                    <option key={w.id} value={w.id}>{w.name}{w.is_published ? "" : " (draf)"}</option>
-                  ))}
-                </select>
-                <div className="mt-6 flex gap-3">
-                  <button onClick={() => setBulkWaveOpen(false)} disabled={bulkWaveSaving} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Batal</button>
-                  <button onClick={handleBulkMoveWave} disabled={bulkWaveSaving} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-50">
-                    {bulkWaveSaving ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : "Pindahkan"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── BULK DELETE CONFIRM ─────────────────────── */}
-          {bulkDelete && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setBulkDelete(false)}>
-              <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto">
-                  <Warning className="h-6 w-6 text-red-600" />
-                </div>
-                <h3 className="text-center text-lg font-bold text-slate-800">Hapus {selectedIds.size} Pendaftar?</h3>
-                <p className="mt-2 text-center text-sm text-slate-500">Semua pendaftar yang dipilih akan dihapus permanen.</p>
-                <div className="mt-6 flex gap-3">
-                  <button onClick={() => setBulkDelete(false)} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Batal</button>
-                  <button onClick={handleBulkDelete} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700">Ya, Hapus</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── STATUS CONFIRM MODAL ────────────────────── */}
-          {confirmAction && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setConfirmAction(null)}>
-              <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-full mx-auto ${confirmAction.status === "accepted" ? "bg-emerald-100" : "bg-red-100"}`}>
-                  {confirmAction.status === "accepted" ? (
-                    <CheckCircle className="h-6 w-6 text-emerald-600" />
-                  ) : (
-                    <XCircle className="h-6 w-6 text-red-600" />
-                  )}
-                </div>
-                <h3 className="text-center text-lg font-bold text-slate-800">
-                  {confirmAction.id === "bulk"
-                    ? `${confirmAction.status === "accepted" ? "Terima" : "Tolak"} ${selectedIds.size} Pendaftar?`
-                    : confirmAction.status === "accepted" ? "Terima Pendaftar?" : "Tolak Pendaftar?"}
-                </h3>
-                <p className="mt-2 text-center text-sm text-slate-500">
-                  {confirmAction.status === "accepted"
-                    ? "Pendaftar akan diterima sebagai calon siswa baru."
-                    : "Pendaftar akan ditolak."}
-                </p>
-                <div className="mt-6 flex gap-3">
-                  <button onClick={() => setConfirmAction(null)} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Batal</button>
-                  <button
-                    onClick={() => {
-                      if (confirmAction.id === "bulk") {
-                        handleBulkStatus(confirmAction.status);
-                      } else {
-                        handleUpdateStatus(confirmAction.id, confirmAction.status);
-                      }
-                    }}
-                    className={`flex-1 rounded-xl py-2.5 text-sm font-semibold text-white ${confirmAction.status === "accepted" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-600 hover:bg-red-700"}`}>
-                    Ya, {confirmAction.status === "accepted" ? "Terima" : "Tolak"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
       {mainTab === "pipeline" && (
         <PipelineBoard
-          registrations={data}
+          registrations={pipelineRows}
           docSummary={docSummary}
           onOpenDetail={openDetail}
           onOpenConfirmStatus={(id, status) => setConfirmAction({ id, status })}
@@ -2950,404 +2547,9 @@ export default function AdminSPMBPage() {
         <BroadcastWaModal
           isOpen={broadcastOpen}
           onClose={() => setBroadcastOpen(false)}
-          registrations={data}
+          registrations={broadcastRows}
         />
       )}
-    </div>
-  );
-}
-
-/** Header halaman + tab "Pendaftar" / "Gelombang Pendaftaran". */
-function PageHeader({ active, onSelect, onExport, onRecap, onAdd, onImport, onBroadcast, canCreate, canImport, canExport }: {
-  active: MainTab;
-  onSelect: (tab: MainTab) => void;
-  onExport: () => void;
-  onRecap: () => void;
-  onAdd: () => void;
-  onImport: () => void;
-  onBroadcast?: () => void;
-  /** Izin aksi tombol header — sembunyikan yang tidak dimiliki. */
-  canCreate: boolean;
-  canImport: boolean;
-  canExport: boolean;
-}) {
-  const tabs: { key: MainTab; label: string; icon: React.ElementType }[] = [
-    { key: "registrations", label: "Pendaftar", icon: Users },
-    { key: "pipeline", label: "Pipeline", icon: SquaresFour },
-    { key: "waves", label: "Gelombang", icon: CalendarBlank },
-    { key: "form", label: "Formulir", icon: NotePencil },
-    { key: "settings", label: "Pengaturan", icon: Gear },
-  ];
-  return (
-    <>
-      {/* Header */}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4ecf6] md:bg-[var(--brand-primary)]/10">
-            <Users className="h-5 w-5 text-[var(--brand-primary)]" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Kelola SPMB</h1>
-            <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">Kelola Pendaftaran Santri Baru</p>
-          </div>
-        </div>
-        {active === "registrations" && (
-          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-            {canCreate && (
-              <button onClick={onAdd} className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] sm:flex-none">
-                <Plus className="h-4 w-4" />
-                Tambah Pendaftar
-              </button>
-            )}
-            {canImport && (
-              <button onClick={onImport} className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:flex-none">
-                <Upload className="h-4 w-4" />
-                Import
-              </button>
-            )}
-            {canExport && (
-              <button onClick={onExport} className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:flex-none">
-                <Download className="h-4 w-4" />
-                Export CSV
-              </button>
-            )}
-            {canExport && (
-              <button onClick={onRecap} title="Unduh rekap total/menunggu/diterima/ditolak per bulan daftar" className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:flex-none">
-                <CalendarBlank className="h-4 w-4" />
-                Rekap Bulanan
-              </button>
-            )}
-            {onBroadcast && (
-              <button onClick={onBroadcast} className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 shadow-sm transition-colors hover:bg-emerald-100 sm:flex-none">
-                <WhatsappLogo className="h-4 w-4" />
-                Broadcast WA
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Tab utama — 4 tab; ikon disembunyikan di layar sempit agar muat */}
-      <div className="mb-6 flex w-full items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 sm:w-fit">
-        {tabs.map((t) => (
-          <button key={t.key} onClick={() => onSelect(t.key)}
-            className={`flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-2 py-2 text-sm font-semibold transition-all sm:flex-none sm:px-4 ${active === t.key ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-            <t.icon className="hidden h-4 w-4 shrink-0 sm:block" />
-            {t.label}
-          </button>
-        ))}
-      </div>
-    </>
-  );
-}
-
-function InfoRow({ icon: Icon, label, value }: { icon?: React.ElementType; label: string; value: string }) {
-  return (
-    <div className="flex items-start gap-2 py-1.5">
-      {Icon && <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" />}
-      <div className="min-w-0">
-        <p className="text-[11px] font-medium text-slate-400">{label}</p>
-        <p className="text-sm text-slate-700">{value}</p>
-      </div>
-    </div>
-  );
-}
-
-const BERKAS_ICONS: Record<string, React.ElementType> = {
-  kk: FileText,
-  akta: FileText,
-  surat_sekolah: FileText,
-  ktp_ortu: FileText,
-  bukti_transfer: Download,
-};
-
-const BERKAS_COLORS: Record<string, string> = {
-  kk: "text-blue-600 bg-blue-100",
-  akta: "text-amber-600 bg-amber-100",
-  surat_sekolah: "text-emerald-600 bg-emerald-100",
-  ktp_ortu: "text-purple-600 bg-purple-100",
-  bukti_transfer: "text-rose-600 bg-rose-100",
-};
-
-function BerkasItem({ label, url, isImage, isPdf }: { label: string; url: string | null; isImage: boolean; isPdf: boolean }) {
-  const [open, setOpen] = useState(false);
-  const berkasKey = label.toLowerCase().includes("kartu") ? "kk"
-    : label.toLowerCase().includes("akta") ? "akta"
-      : label.toLowerCase().includes("surat") ? "surat_sekolah"
-        : label.toLowerCase().includes("ktp") ? "ktp_ortu"
-          : "bukti_transfer";
-  const Icon = BERKAS_ICONS[berkasKey] || FileText;
-  const colorCls = BERKAS_COLORS[berkasKey] || "text-slate-600 bg-slate-100";
-
-  if (!url) {
-    return (
-      <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5">
-        <div className={`flex h-8 min-w-8 items-center justify-center rounded-lg ${colorCls}`}>
-          <Icon className="h-4 w-4" />
-        </div>
-        <span className="text-sm text-red-600">{label}</span>
-        <span className="ml-auto text-[11px] text-red-400">Belum diupload</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-lg border border-slate-200 overflow-hidden">
-      <button onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-slate-50">
-        <div className={`flex h-8 min-w-8 items-center justify-center rounded-lg ${colorCls}`}>
-          <Icon className="h-4 w-4" />
-        </div>
-        <span className="flex-1 text-sm text-slate-700">{label}</span>
-        {isImage && <span className="text-[10px] text-slate-400">Gambar</span>}
-        {isPdf && <span className="text-[10px] text-slate-400">PDF</span>}
-        <svg className={`h-4 w-4 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {open && (
-        <div className="border-t border-slate-100 bg-slate-50 p-3 space-y-3">
-          {isImage && (
-            <div className="rounded-lg border border-slate-200 bg-white p-1">
-              <Image src={url} alt={label} width={640} height={360} sizes="100%" unoptimized className="max-h-72 w-full rounded object-contain" />
-            </div>
-          )}
-          {isPdf && (
-            <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
-              <iframe src={url} className="h-72 w-full" title={label} loading="lazy" />
-            </div>
-          )}
-          {!isImage && !isPdf && (
-            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-500">
-              Preview tidak tersedia untuk file ini
-            </div>
-          )}
-          <div className="flex gap-2">
-            <a href={url} target="_blank" rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50">
-              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-              Buka
-            </a>
-            <a href={url} download
-              className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]">
-              <Download className="h-3.5 w-3.5" />
-              Download
-            </a>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * Baris daftar mobile (SPMB): avatar inisial + titik status 14px di pojoknya
- * (amber = Menunggu, hijau = Diterima, merah = Ditolak), nama, badge jalur +
- * asal sekolah/email + tanggal, QuietBadge "Ditolak" untuk status tidak
- * biasa. Menu ⋯ berisi Detail, Edit Data, pilihan status (Jadikan
- * Menunggu / Terima / Tolak — Terima & Tolak lewat modal konfirmasi), Telepon
- * (bila ada nomor) & Hapus. Tap baris = buka modal detail; tekan lama = mode
- * pilih. Nomor urut & kolom tanggal tetap desktop-saja, sama seperti tabel
- * lamanya.
- */
-function RegistrationMobileRow({
-  item,
-  docSummary,
-  selected,
-  selectMode,
-  onEnterPickMode,
-  onToggleSelect,
-  onDetail,
-  onEditData,
-  onSetStatus,
-  onDelete,
-  canEdit = true,
-  canVerify = true,
-  canDelete = true,
-}: {
-  item: SpmbRegistration;
-  /** Agregat verifikasi berkas registrasi ini (badge kecil). */
-  docSummary?: { total: number; verified: number; rejected: number; pending: number };
-  selected: boolean;
-  selectMode: boolean;
-  onEnterPickMode: (id: string) => void;
-  onToggleSelect: (id: string) => void;
-  onDetail: (r: SpmbRegistration) => void;
-  onEditData: (r: SpmbRegistration) => void;
-  onSetStatus: (r: SpmbRegistration, s: "pending" | "accepted" | "rejected") => void;
-  onDelete: (r: SpmbRegistration) => void;
-  /** `spmb:update` — edit data pendaftar. */
-  canEdit?: boolean;
-  /** `spmb:verify` — ubah status pendaftar. */
-  canVerify?: boolean;
-  /** `spmb:delete` — hapus pendaftar. */
-  canDelete?: boolean;
-}) {
-  const st = statusConfig[item.status] || statusConfig.pending;
-  const StatusIcon = st.icon;
-  // Nama & asal sekolah judul dinormalisasi hanya untuk tampilan.
-  const name = normalizeName(item.full_name);
-  const school = normalizeSchool(item.previous_school);
-  const pendingDays = item.status === "pending" ? daysSince(item.created_at) : 0;
-  const late = pendingDays >= PENDING_SLA_DAYS;
-  const actions: RowAction[] = [
-    { key: "detail", label: "Detail", icon: <Eye className="h-4 w-4" />, run: () => onDetail(item) },
-    ...(canEdit
-      ? [{ key: "edit", label: "Edit Data", icon: <PencilSimple className="h-4 w-4" />, run: () => onEditData(item) } as RowAction]
-      : []),
-    ...(canVerify && item.status !== "pending"
-      ? [{
-          key: "pending",
-          label: "Jadikan Menunggu",
-          icon: <Clock className="h-4 w-4" />,
-          run: () => onSetStatus(item, "pending"),
-        }]
-      : []),
-    ...(canVerify && item.status !== "accepted"
-      ? [{
-          key: "accept",
-          label: "Terima",
-          icon: <CheckCircle className="h-4 w-4" />,
-          run: () => onSetStatus(item, "accepted"),
-        }]
-      : []),
-    ...(canVerify && item.status !== "rejected"
-      ? [{
-          key: "reject",
-          label: "Tolak",
-          icon: <XCircle className="h-4 w-4" />,
-          run: () => onSetStatus(item, "rejected"),
-        }]
-      : []),
-    ...(item.phone
-      ? [{
-          key: "call",
-          label: "Telepon",
-          icon: <Phone className="h-4 w-4" />,
-          run: () => { window.location.href = `tel:${item.phone?.replace(/[^0-9]/g, "")}`; },
-        }]
-      : []),
-    ...(canDelete
-      ? [{ key: "delete", label: "Hapus", icon: <Trash className="h-4 w-4" />, danger: true, run: () => onDelete(item) } as RowAction]
-      : []),
-  ];
-
-  const hasAnomalyBadges =
-    late ||
-    item.documents?.input_source === "admin" ||
-    item.documents?.input_source === "import" ||
-    (docSummary && docSummary.total > 0);
-
-  return (
-    <div role="listitem">
-      <MobileListRow
-        lead={
-          selectMode ? (
-            <SelectionMark selected={selected} />
-          ) : (
-            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center">
-              <span aria-hidden="true" className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-primary)]/10 text-[11px] font-bold text-[var(--brand-primary)]">
-                {name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
-              </span>
-              <StatusDot
-                tone={DOT_TONE[item.status] ?? "pending"}
-                label={st.label}
-                className="absolute bottom-0 right-0"
-              />
-            </span>
-          )
-        }
-        title={name}
-        badge={
-          hasAnomalyBadges ? (
-            <>
-              {late && (
-                <span className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
-                  Lewat {PENDING_SLA_DAYS} hari
-                </span>
-              )}
-              {docSummary && docSummary.total > 0 && (
-                <span
-                  className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${
-                    docSummary.rejected > 0
-                      ? "border-red-200 bg-red-50 text-red-600"
-                      : docSummary.verified === SPMB_DOCUMENT_KEYS.length
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                        : "border-slate-200 bg-slate-50 text-slate-600"
-                  }`}
-                  title={
-                    docSummary.rejected > 0
-                      ? `${docSummary.rejected} berkas ditolak`
-                      : docSummary.verified === SPMB_DOCUMENT_KEYS.length
-                        ? "Semua berkas terverifikasi"
-                        : `${docSummary.verified}/${SPMB_DOCUMENT_KEYS.length} berkas terverifikasi`
-                  }
-                >
-                  Berkas {docSummary.verified}/{SPMB_DOCUMENT_KEYS.length}
-                </span>
-              )}
-              {item.documents?.input_source === "admin" && <QuietBadge>Manual</QuietBadge>}
-              {item.documents?.input_source === "import" && <QuietBadge>Impor</QuietBadge>}
-            </>
-          ) : undefined
-        }
-        subtitle={
-          <>
-            <span className={`inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${pathColors[item.registration_path] || "bg-slate-100 text-slate-600"}`}>
-              {pathLabels[item.registration_path] || item.registration_path}
-            </span>
-            {item.documents?.program && (
-              <span
-                title="Pilihan program"
-                className="inline-flex shrink-0 items-center rounded-md border border-[var(--brand-primary)]/25 bg-[var(--brand-primary)]/5 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--brand-primary)]"
-              >
-                {item.documents.program}
-              </span>
-            )}
-            <span className={`inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${genderStyles[item.gender] || "border-slate-200 bg-slate-100 text-slate-600"}`}>
-              {spmbGenderLabel(item.gender)}
-            </span>
-            {(school || item.email) && (
-              <span className="min-w-0 truncate">{school || item.email}</span>
-            )}
-            <span
-              className="shrink-0 whitespace-nowrap"
-              title={new Date(item.created_at).toLocaleString("id-ID", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" })}
-            >
-              {formatRelativeTime(item.created_at)}
-            </span>
-          </>
-        }
-        status={
-          canVerify ? (
-            <button
-              type="button"
-              onClick={() => {
-                if (item.status === "rejected") onSetStatus(item, "pending");
-                else onSetStatus(item, item.status === "pending" ? "accepted" : "rejected");
-              }}
-              title={item.status === "rejected" ? "Kembalikan ke Menunggu" : "Ubah status (konfirmasi)"}
-              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-colors ${st.bg} ${st.color} hover:opacity-85 active:scale-95`}
-            >
-              <StatusIcon className="h-3 w-3" />
-              <span>{st.label}</span>
-            </button>
-          ) : (
-            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${st.bg} ${st.color}`}>
-              <StatusIcon className="h-3 w-3" />
-              <span>{st.label}</span>
-            </span>
-          )
-        }
-        actions={<RowActionsMenu label={name} actions={actions} disabled={selectMode} />}
-        selected={selected}
-        selectionMode={selectMode}
-        onClick={() => {
-          if (selectMode) onToggleSelect(item.id);
-          else onDetail(item);
-        }}
-        onLongPress={() => onEnterPickMode(item.id)}
-      />
     </div>
   );
 }

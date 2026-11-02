@@ -21,7 +21,7 @@ import {
   STATUS_LABEL, FIELD_LABELS, buildImportPayload, buildImportResult, detectDuplicates, rowStatus,
   updateRowField, type ImportResult, type ImportRow, type RawKey,
 } from "@/lib/spmb-import";
-import type { SpmbRegistration } from "@/lib/supabase";
+import type { ExistingRow } from "@/lib/spmb-import";
 
 type Step = "pick" | "preview" | "running" | "done";
 
@@ -46,8 +46,8 @@ export function ImportRegistrationsModal({
 }: {
   open: boolean;
   onClose: () => void;
-  /** Pendaftar tersimpan — dipakai deteksi duplikat vs database. */
-  existing: SpmbRegistration[];
+  /** Pendaftar tersimpan (nama + NIK) — dipakai deteksi duplikat vs database. */
+  existing: ExistingRow[];
   /** Dipanggil setelah import selesai (refresh daftar). */
   onImported: () => void;
 }) {
