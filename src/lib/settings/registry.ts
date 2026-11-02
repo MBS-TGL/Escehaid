@@ -25,10 +25,26 @@ import {
 } from "./legal-defaults";
 
 /** Tipe nilai yang dikenal form admin. `richtext` = editor WYSIWYG (HTML). */
-export type SettingType = "text" | "textarea" | "richtext" | "url" | "email" | "image" | "color";
+export type SettingType =
+  | "text"
+  | "textarea"
+  | "richtext"
+  | "url"
+  | "email"
+  | "image"
+  | "color"
+  /** Saklar on/off; tersimpan sebagai "true"/"false" (string) di site_settings. */
+  | "boolean";
 
-/** Enam grup tampil sebagai tab di /admin/settings. */
-export type SettingGroup = "identitas" | "kontak" | "media_sosial" | "seo" | "footer" | "tema";
+/** Grup tampil sebagai tab di /admin/settings. */
+export type SettingGroup =
+  | "identitas"
+  | "kontak"
+  | "media_sosial"
+  | "seo"
+  | "footer"
+  | "tema"
+  | "tampilan_3d";
 
 export interface SettingField {
   /** Kunci snake_case; = primary key di tabel site_settings. */
@@ -63,6 +79,7 @@ export const SETTING_GROUPS: SettingGroup[] = [
   "seo",
   "footer",
   "tema",
+  "tampilan_3d",
 ];
 
 export const SETTING_GROUP_META: Record<
@@ -93,6 +110,10 @@ export const SETTING_GROUP_META: Record<
     label: "Tema",
     description: "Warna merek situs. Diterapkan lewat variabel CSS — pratinjau langsung terlihat sebelum disimpan.",
   },
+  tampilan_3d: {
+    label: "Tampilan 3D",
+    description: "Saklar dan warna ornamen partikel 3D. Saklar darurat: matikan tanpa deploy bila ada masalah performa.",
+  },
 };
 
 const URL_LIKE = /^(https?:\/\/|\/|mailto:|tel:)/i;
@@ -109,6 +130,9 @@ const validateEmail = (v: string): string | null =>
 
 const validateColor = (v: string): string | null =>
   normalizeHex(v) ? null : "Warna harus berupa heksadesimal, mis. #082b59.";
+
+const validateBoolean = (v: string): string | null =>
+  ["true", "false"].includes(v) ? null : "Nilai harus true atau false.";
 
 const validateNpsn = (v: string): string | null =>
   /^\d{8,10}$/.test(v) ? null : "NPSN harus 8-10 digit angka.";
@@ -488,6 +512,56 @@ export const SETTING_FIELDS: SettingField[] = [
     help: "Dipakai untuk penanda dekoratif kecil — garis, garis bawah judul, dan aksen di atas bidang warna gelap.",
     default: "#f4d21f",
     validate: validateColor,
+  },
+
+  // ── Tampilan 3D ─────────────────────────────────────────────────────────
+  // Semua default MATI: ornamen 3D baru tampil setelah admin menyalakannya.
+  // Saklar = jalur darurat matikan-tanpa-deploy (keputusan pemilik).
+  {
+    key: "three_enabled",
+    group: "tampilan_3d",
+    type: "boolean",
+    label: "Ornamen 3D aktif (saklar induk)",
+    help: "Saklar darurat utama. false = seluruh ornamen 3D disembunyikan di semua halaman, tanpa deploy.",
+    default: "false",
+    validate: validateBoolean,
+  },
+  {
+    key: "three_portal_enabled",
+    group: "tampilan_3d",
+    type: "boolean",
+    label: "Ornamen 3D di halaman Portal",
+    help: "Saklar per lokasi. Butuh saklar induk aktif. Perangkat lemah (RAM ≤3 GB / ≤4 core) tetap otomatis di-skip.",
+    default: "false",
+    validate: validateBoolean,
+  },
+  {
+    key: "three_color",
+    group: "tampilan_3d",
+    type: "color",
+    label: "Warna pola bintang",
+    help: "Warna titik partikel pola Rub el Hizb.",
+    default: "#082b59",
+    validate: validateColor,
+  },
+  {
+    key: "three_accent_color",
+    group: "tampilan_3d",
+    type: "color",
+    label: "Warna debu partikel",
+    help: "Warna partikel debu halus di sekitar pola. Disarankan warna aksen tema.",
+    default: "#1767b1",
+    validate: validateColor,
+  },
+  {
+    key: "three_poster_url",
+    group: "tampilan_3d",
+    type: "image",
+    label: "Gambar fallback (opsional)",
+    help: "Gambar statis sebagai latar fallback saat WebGL mati / perangkat lemah. Kosong = gradasi CSS bawaan.",
+    default: "/og-image.jpg",
+    validate: validateImage,
+    maxLength: 300,
   },
 ];
 

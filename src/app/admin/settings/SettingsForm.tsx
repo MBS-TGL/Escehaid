@@ -39,6 +39,7 @@ import {
   Globe,
   NotePencil,
   Palette,
+  Atom,
   FloppyDisk,
   ArrowUUpLeft,
   CheckCircle,
@@ -53,6 +54,7 @@ const GROUP_ICONS: Record<SettingGroup, typeof Buildings> = {
   seo: Globe,
   footer: NotePencil,
   tema: Palette,
+  tampilan_3d: Atom,
 };
 
 /** Lencana jumlah perubahan belum disimpan (dipakai trigger & opsi dropdown). */
@@ -487,6 +489,29 @@ function Field({
           disabled={disabled}
           onChange={onChange}
         />
+      ) : field.type === "boolean" ? (
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={value === "true"}
+            aria-labelledby={field.key}
+            disabled={disabled}
+            onClick={() => onChange(value === "true" ? "false" : "true")}
+            className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
+              value === "true" ? "bg-[var(--brand-accent)]" : "bg-slate-300"
+            } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
+          >
+            <span
+              className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                value === "true" ? "left-6" : "left-1"
+              }`}
+            />
+          </button>
+          <span className={`text-sm font-medium ${value === "true" ? "text-emerald-600" : "text-slate-500"}`}>
+            {value === "true" ? "Aktif" : "Nonaktif"}
+          </span>
+        </div>
       ) : field.type === "color" ? (
         <div className="flex items-center gap-3">
           <input
