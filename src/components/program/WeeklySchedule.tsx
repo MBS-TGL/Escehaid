@@ -114,7 +114,7 @@ export default function WeeklySchedule({ slots = SLOTS }: { slots?: Slot[] } = {
         <div
           role="tablist"
           aria-label="Pilih hari"
-          className="flex max-w-full flex-wrap gap-1.5 lg:flex-nowrap"
+          className="flex max-w-full flex-nowrap gap-1 overflow-x-hidden sm:gap-1.5"
         >
           {DAYS.map((day, index) => (
             <button
@@ -130,7 +130,7 @@ export default function WeeklySchedule({ slots = SLOTS }: { slots?: Slot[] } = {
               tabIndex={day === activeDay ? 0 : -1}
               onClick={() => setSelectedDay(day)}
               onKeyDown={(e) => onTabKeyDown(e, index)}
-              className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${
+              className={`min-w-0 flex-1 shrink-0 whitespace-nowrap rounded-lg px-1.5 py-2 text-[11px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] sm:flex-none sm:px-3 sm:text-xs ${
                 day === activeDay
                   ? "bg-[var(--brand-primary)] text-white"
                   : "bg-white text-slate-600 hover:bg-[var(--brand-accent)]/10"
