@@ -1,14 +1,18 @@
 "use client";
 
+import Link from "next/link";
 import { Megaphone } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, useCallback } from "react";
+import type { AnnouncementLink } from "@/lib/queries/announcements";
 
 const SPEED_PX_PER_SEC = 70; // ganti di sini kalau mau lebih cepet/lambat
 const MIN_COPIES = 2; // minimal 2 salinan biar loop selalu punya "pasangan"
 
 /** Teks pengumuman aktif diambil di server (layout) dan dilempar sebagai prop,
- *  supaya komponen client ini tidak menarik supabase-js. */
-export function RunningText({ items }: { items: string[] }) {
+ *  supaya komponen client ini tidak menarik supabase-js.
+ *  Item bisa membawa `href` opsional (hasil parseAnnouncementLink): format
+ *  admin `Teks tampil | /tujuan` atau auto-link keyword SPMB/prestasi. */
+export function RunningText({ items }: { items: AnnouncementLink[] }) {
   const [paused, setPaused] = useState(false);
   // Jumlah salinan teks yang di-render, dihitung dinamis dari lebar
   // container vs lebar 1 teks — supaya track SELALU penuh dari ujung ke
@@ -104,13 +108,17 @@ export function RunningText({ items }: { items: string[] }) {
 
   if (items.length === 0) return null;
 
+  const label = items.map((a) => a.text).join(". ");
+
   return (
     <div
       className="relative overflow-hidden bg-[var(--brand-primary)] py-2 text-white"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={() => setPaused(false)}
       role="marquee"
-      aria-label={items.join(". ")}
+      aria-label={label}
     >
       {/* Solid badge — fully opaque, so it always fully hides whatever
           text is underneath. No gradient here: a translucent color would
@@ -135,7 +143,6 @@ export function RunningText({ items }: { items: string[] }) {
           ref={contentRef}
           className="flex w-max will-change-transform"
           style={{ transform: "translateX(100%)" }}
-          aria-hidden="true"
         >
           {Array.from({ length: copies }).map((_, i) => (
             // Each copy renders the FULL set of announcements. The separator
@@ -143,14 +150,39 @@ export function RunningText({ items }: { items: string[] }) {
             // offsetWidth already includes every announcement + separator.
             // That keeps itemWidth (used for the loop-wrap math) automatically
             // correct — no separate gap constant to keep in sync.
+            // Hanya salinan pertama yang terekspos ke AT/keyboard (salinan
+            // 2+ aria-hidden) agar tidak ada tab-stop/link duplikat.
             <span
               key={i}
               ref={i === 0 ? firstItemRef : undefined}
+              aria-hidden={i > 0 || undefined}
               className="flex shrink-0 items-center whitespace-nowrap text-xs font-medium tracking-wide"
             >
-              {items.map((t, j) => (
+              {items.map((a, j) => (
                 <span key={j} className="flex items-center">
-                  {t}
+                  {a.href ? (
+                    a.href.startsWith("http") ? (
+                      <a
+                        href={a.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        tabIndex={i > 0 ? -1 : undefined}
+                        className="underline decoration-[var(--brand-highlight)]/70 underline-offset-4 transition-colors hover:text-[var(--brand-highlight)]"
+                      >
+                        {a.text}
+                      </a>
+                    ) : (
+                      <Link
+                        href={a.href}
+                        tabIndex={i > 0 ? -1 : undefined}
+                        className="underline decoration-[var(--brand-highlight)]/70 underline-offset-4 transition-colors hover:text-[var(--brand-highlight)]"
+                      >
+                        {a.text}
+                      </Link>
+                    )
+                  ) : (
+                    a.text
+                  )}
                   <span className="mx-6 text-[var(--brand-highlight)]">•</span>
                 </span>
               ))}

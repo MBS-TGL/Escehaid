@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import { RunningText } from "@/components/RunningText";
 import type { PublicBrand } from "@/lib/settings";
+import type { AnnouncementLink } from "@/lib/queries/announcements";
 
 export default function PublicShell({
   children,
@@ -14,7 +15,7 @@ export default function PublicShell({
 }: {
   children: React.ReactNode;
   brand: PublicBrand;
-  announcements: string[];
+  announcements: AnnouncementLink[];
   /** Footer di-render di server (layout) dan diteruskan sebagai slot —
    *  supaya komponen ini tetap client tanpa membundling Footer. */
   footer: React.ReactNode;

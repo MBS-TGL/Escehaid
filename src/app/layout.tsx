@@ -12,7 +12,7 @@ import { ADMIN_DARK_INIT_SCRIPT } from "@/lib/admin-dark-mode";
 import { isFeatureEnabled } from "@/lib/flags";
 import { DEFAULT_THEME } from "@/lib/settings/theme";
 import { getSchoolProfile } from "@/lib/queries/profile";
-import { getActiveAnnouncements } from "@/lib/queries/announcements";
+import { getActiveAnnouncements, parseAnnouncementLink } from "@/lib/queries/announcements";
 
 const jakartaSans = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -124,7 +124,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   ]);
   // Announcements & footer disiapkan di sini (server) — PublicShell tetap
   // client, tetapi keduanya tiba sebagai slot/prop siap render.
-  const announcements = rawAnnouncements.map((t) => t.trim()).filter(Boolean);
+  // Teks mentah di-parse jadi {text, href} (format `Teks | /tujuan` atau
+  // auto-link SPMB/prestasi) supaya bar berjalan bisa diklik tanpa migrasi DB.
+  const announcements = rawAnnouncements
+    .map((t) => parseAnnouncementLink(t))
+    .filter((a) => a.text.length > 0);
   const brand = toPublicBrand(settings);
   const footer = (
     <Footer

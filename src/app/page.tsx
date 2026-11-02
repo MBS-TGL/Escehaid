@@ -3,7 +3,7 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import type { Metadata } from "next";
 import { ArrowUpRight, CaretRight, Star, GraduationCap, BookOpen, ImageSquare, House, ChatCircle, ChartBar, Megaphone, CalendarBlank, Trophy, Clock, Quotes, Eye } from "@/components/Icons";
-import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList, getActiveAgendaEvents, filterUpcomingEvents, getEkskulList } from "@/lib/queries";
+import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeacherList, getSchoolProfile, getAchievementList, getActiveAgendaEvents, filterUpcomingEvents, getEkskulList, getPublishedWaves, getWaveStatus, registrationHref } from "@/lib/queries";
 import { detectPrincipalGreeting, keepTogether } from "@/lib/principal-quote";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
@@ -60,6 +60,23 @@ const NEWS_BADGE = (key?: string | null) => {
   const c = newsCategory(key);
   return `${c.border} ${c.bg} ${c.color}`;
 };
+
+/** Sisa hari sampai tanggal selesai (inklusif), dihitung berdasarkan tanggal WIB. */
+function daysLeftWIB(endDate: string): number {
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+  const utc = (s: string) => {
+    const [y, m, d] = s.split("-").map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.round((utc(endDate) - utc(today)) / 86400000);
+}
+
+/** "YYYY-MM-DD" → "20 Okt 2026", tanpa geser zona waktu. */
+function formatWaveDateShort(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  if (!y || !m || !d) return dateStr;
+  return new Date(y, m - 1, d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+}
 
 /**
  * content-visibility: lewati render section di luar layar; containIntrinsicSize
@@ -151,7 +168,7 @@ export default async function Home() {
   // lebih ringan — terutama saat dibuka dari HP. Guru sengaja TANPA limit: daftar
   // "Tim Pengajar" harus memuat seluruh pendidik & tendik aktif (dulu `12` membuat
   // baris ke-12+ hilang, apalagi setelah Kepala Sekolah difilter di render).
-  const [beritaRaw, dbFacilities, activities, articles, teachers, profile, achievements, settings, agendaEvents, ekskulList, programBlocks, faqDbItems] =
+  const [beritaRaw, dbFacilities, activities, articles, teachers, profile, achievements, settings, agendaEvents, ekskulList, programBlocks, faqDbItems, waves] =
     await Promise.all([
       getNewsList(4) as Promise<NewsItem[]>,
       getFacilityList(5),
@@ -167,6 +184,8 @@ export default async function Home() {
       // FAQ dari tabel `faqs` (scope 'home'); null (tabel kosong/error) →
       // section FAQ tidak dirender.
       getActiveFaqs("home"),
+      // Gelombang SPMB untuk strip spotlight di bawah hero; gagal → [] (strip hilang).
+      getPublishedWaves(),
     ]);
 
   // Kartu agenda harian: dari tabel agenda_blocks (supabase/program.sql); bila
@@ -190,6 +209,16 @@ export default async function Home() {
 
   // Hanya acara yang belum dimulai yang layak ditayangkan di countdown.
   const upcomingEvents = filterUpcomingEvents(agendaEvents);
+
+  // Spotlight SPMB: gelombang yang sedang dibuka (pola sama dengan /admission).
+  // Tidak ada wave open → strip tidak dirender sama sekali (tanpa ruang kosong).
+  const openWave = waves.find((w) => getWaveStatus(w) === "open") ?? null;
+  const spmbRemaining = openWave ? daysLeftWIB(openWave.end_date) : null;
+  const nextUpcomingWave =
+    waves
+      .filter((w) => getWaveStatus(w) === "upcoming")
+      .sort((a, b) => a.start_date.localeCompare(b.start_date))[0] ?? null;
+  const spmbRegisterHref = registrationHref(profile);
 
   // Tagline & identitas dari Pengaturan Situs (bukan lagi konstanta kode).
   const brand = toPublicBrand(settings);
@@ -309,6 +338,75 @@ export default async function Home() {
       </section>
 
       <CountdownEvent events={upcomingEvents} />
+
+      {/* ── SPOTLIGHT SPMB — strip statis pengganti popup ──────
+          Hanya tampil bila ada gelombang open (gelombang = sumber kebenaran
+          yang sama dengan /admission). Tanpa wave open → null, tanpa ruang
+          kosong. Bila wave open belum ada tapi ada upcoming → tampil versi
+          "segera dibuka" agar info jadwal tetap terangkat ke beranda. */}
+      {openWave ? (
+        <section aria-label="Pendaftaran SPMB sedang dibuka" className="border-b border-[#dce3ed] bg-emerald-50/70">
+          <div className="mx-auto flex max-w-7xl flex-col gap-2.5 px-6 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-600 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden="true" />
+                Dibuka
+              </span>
+              <span className="font-semibold text-[var(--brand-primary)]">
+                SPMB {openWave.name}
+              </span>
+              <span className="text-slate-500">
+                <time dateTime={openWave.start_date}>{formatWaveDateShort(openWave.start_date)}</time>
+                {" – "}
+                <time dateTime={openWave.end_date}>{formatWaveDateShort(openWave.end_date)}</time>
+                {spmbRemaining !== null && spmbRemaining <= 30 && (
+                  <span className="font-semibold text-amber-700">
+                    {" · "}{spmbRemaining <= 0 ? "Hari terakhir" : `Tersisa ${spmbRemaining} hari`}
+                  </span>
+                )}
+              </span>
+            </p>
+            <div className="flex shrink-0 items-center gap-3">
+              <Link
+                href="/admission/status"
+                className="text-xs font-semibold text-slate-500 underline underline-offset-4 transition-colors hover:text-[var(--brand-primary)]"
+              >
+                Cek status
+              </Link>
+              <Link
+                href={spmbRegisterHref}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-accent)] px-4 py-2 text-xs font-bold text-white transition-all hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
+              >
+                Daftar Sekarang
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          </div>
+        </section>
+      ) : nextUpcomingWave ? (
+        <section aria-label="Pendaftaran SPMB segera dibuka" className="border-b border-[#dce3ed] bg-[#f6f8fb]">
+          <div className="mx-auto flex max-w-7xl flex-col gap-2.5 px-6 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+              <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[var(--brand-accent)]">
+                Segera dibuka
+              </span>
+              <span className="font-semibold text-[var(--brand-primary)]">
+                SPMB {nextUpcomingWave.name}
+              </span>
+              <span className="text-slate-500">
+                mulai <time dateTime={nextUpcomingWave.start_date}>{formatWaveDateShort(nextUpcomingWave.start_date)}</time>
+              </span>
+            </p>
+            <Link
+              href="/admission"
+              className="inline-flex shrink-0 items-center gap-1.5 text-xs font-bold text-[var(--brand-accent)] underline underline-offset-4 transition-colors hover:text-[var(--brand-primary)]"
+            >
+              Lihat jadwal
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </section>
+      ) : null}
 
       {/* ── SAMBUTAN KEPALA SEKOLAH ───────────────────────── */}
       <section className="relative overflow-hidden bg-[var(--surface-muted)] py-16 md:py-24" style={CV_TALL}>

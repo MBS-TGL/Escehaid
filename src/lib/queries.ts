@@ -29,6 +29,8 @@ export * from "./queries/shared";
 export * from "./queries/trash";
 export * from "./queries/spmb";
 export * from "./queries/spmb-status";
+export * from "./queries/spmb-lifecycle";
+export * from "./queries/spmb-list";
 export * from "./queries/teachers";
 export * from "./queries/users";
 export * from "./queries/waves";

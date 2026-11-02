@@ -27,6 +27,7 @@ import {
   getActiveAnnouncements,
   getPortalApps,
   getSchoolProfile,
+  parseAnnouncementLink,
 } from "@/lib/queries";
 import type { PortalApp } from "@/lib/queries";
 import { formatActivityDate, toJakartaDateKey } from "@/lib/activity-types";
@@ -232,8 +233,11 @@ export default async function PortalPage() {
   const upcomingAgenda = filterUpcomingEvents(agenda).slice(0, 5);
 
   // Info tambahan di bawah banner SPMB — pengumuman aktif yang relevan (satu baris).
+  // Teks mentah di-parse dulu agar format `Teks | /tujuan` tidak bocor ke tampilan.
   const spmbNote =
-    announcements.find((text) => /spmb|daftar\s*ulang/i.test(text)) ?? null;
+    announcements
+      .map((text) => parseAnnouncementLink(text))
+      .find((a) => /spmb|daftar\s*ulang/i.test(a.text))?.text ?? null;
 
   // Nomor WhatsApp sekolah dari profil (kontak umum, fallback panitia SPMB).
   const waRaw = profile?.phone?.trim() || profile?.spmb_contact_phone?.trim() || "";

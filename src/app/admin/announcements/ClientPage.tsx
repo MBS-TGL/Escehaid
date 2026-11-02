@@ -207,11 +207,15 @@ export default function AdminAnnouncementsPage() {
     setFormOpen(false);
     setFormSaving(false);
     fetchItems();
+    // Bar berjalan ada di root layout (ISR) — tanpa ini teks baru tidak
+    // muncul sampai revalidate 300s beranda/layout berikutnya.
+    revalidatePaths(["/"], "layout").catch(() => {});
   }
 
   async function handleToggle(item: Announcement) {
     await updateAnnouncement(item.id, { is_active: !item.is_active });
     fetchItems();
+    revalidatePaths(["/"], "layout").catch(() => {});
   }
 
   async function handleDelete() {
@@ -221,6 +225,7 @@ export default function AdminAnnouncementsPage() {
     setDeleteItem(null);
     setSelectedIds((s) => { const n = new Set(s); n.delete(deleteItem.id); return n; });
     fetchItems();
+    revalidatePaths(["/"], "layout").catch(() => {});
   }
 
   async function handleBulkDelete() {
@@ -231,6 +236,7 @@ export default function AdminAnnouncementsPage() {
     exitPickMode();
     setBulkDelete(false);
     fetchItems();
+    revalidatePaths(["/"], "layout").catch(() => {});
   }
 
 
@@ -526,9 +532,9 @@ export default function AdminAnnouncementsPage() {
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Teks Pengumuman <span className="text-red-500">*</span></label>
             <input type="text" value={formText} onChange={(e) => setFormText(e.target.value)}
-              placeholder="Contoh: SPMB 2026/2027 Sudah Dibuka!" autoComplete="off"
+              placeholder="Contoh: SPMB 2026/2027 Sudah Dibuka! | /admission" autoComplete="off"
               className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
-            <p className="mt-1.5 text-xs text-slate-400">Teks ini akan ditampilkan di bar berjalan (marquee) di atas website</p>
+            <p className="mt-1.5 text-xs text-slate-400">Teks ini akan ditampilkan di bar berjalan (marquee) di atas website. Tambahkan <code className="rounded bg-slate-100 px-1 font-mono">| /tujuan</code> di akhir agar bisa diklik (mis. <code className="rounded bg-slate-100 px-1 font-mono">| /admission</code>). Kata SPMB/pendaftaran otomatis tertaut ke SPMB, kata prestasi/juara ke Prestasi.</p>
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Berlaku sampai (opsional)</label>

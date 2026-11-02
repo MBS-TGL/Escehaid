@@ -56,6 +56,11 @@ export interface SchoolProfile {
    * → form memakai langkah bawaan tanpa "Pertanyaan Tambahan".
    */
   spmb_form_schema?: SpmbFormField[] | null;
+  /** Otomatisasi SPMB (migrasi 0024) — toggle script terjadwal spmb-jobs. */
+  spmb_auto_publish_results?: boolean | null;
+  spmb_reminder_enabled?: boolean | null;
+  spmb_reminder_days?: number | null;
+  spmb_digest_enabled?: boolean | null;
   vision: string;
   mission: string;
   history: string;
@@ -94,6 +99,14 @@ export interface SpmbRegistration {
   interview_at?: string | null;
   interview_note?: string;
   interviewed_by?: string | null;
+  /** Daftar ulang & pembayaran (migrasi 0022, admin-only). */
+  reregistration_status?: "not_started" | "invited" | "submitted" | "verified" | "declined";
+  reregistration_at?: string | null;
+  reregistration_note?: string;
+  payment_status?: "unpaid" | "pending" | "verified" | "rejected";
+  payment_amount?: number | null;
+  paid_at?: string | null;
+  payment_note?: string;
   created_at: string;
   updated_at: string;
 }

@@ -117,4 +117,16 @@ export const LEDGER_MIGRATIONS: readonly LedgerMigration[] = [
     file: "supabase/migrations/0021_contact_messages_archive.sql",
     description: "Arsip pesan kontak (is_archived) — alternatif hapus permanen",
   },
+  {
+    file: "supabase/migrations/0022_spmb_reregistration_payment.sql",
+    description: "Daftar ulang & pembayaran SPMB + template WA tambahan",
+  },
+  {
+    file: "supabase/migrations/0023_spmb_admin_list_view.sql",
+    description: "View daftar admin SPMB + index pencarian/filter",
+  },
+  {
+    file: "supabase/migrations/0024_spmb_automation.sql",
+    description: "Pengaturan otomatisasi SPMB + run log + realtime pendaftar",
+  },
 ] as const;

@@ -156,7 +156,31 @@ export async function getAuditLogs(filters: AuditLogFilters = {}): Promise<Audit
 }
 
 /** Statistik ringkas (total + hari ini) untuk kartu di atas tabel. */
-export async function getAuditStats(): Promise<{ total: number; today: number } | null> {
+
+/**
+ * Riwayat satu entitas — dipakai tab "Riwayat" di detail pendaftar SPMB.
+ * Mengembalikan baris terbaru dulu; [] bila tabel belum tersedia.
+ */
+export async function getAuditLogsForEntity(
+  entityType: string,
+  entityId: string,
+  limit = 50
+): Promise<AuditLogRow[]> {
+  const available = await auditLogsAvailable();
+  if (!available) return [];
+  const { data, error } = await supabase
+    .from("audit_logs")
+    .select("*")
+    .eq("entity_type", entityType)
+    .eq("entity_id", entityId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("Error fetching entity audit logs:", error.message);
+    return [];
+  }
+  return (data ?? []) as AuditLogRow[];
+}export async function getAuditStats(): Promise<{ total: number; today: number } | null> {
   const available = await auditLogsAvailable();
   if (!available) return null;
 

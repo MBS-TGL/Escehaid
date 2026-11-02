@@ -13,6 +13,45 @@ export interface Announcement {
   deleted_at?: string | null;
 }
 
+/** Item pengumuman siap render: teks + tautan opsional.
+ *  `href` hanya terisi bila teks memakai pemisah `|` (mis. `SPMB dibuka! | /admission`)
+ *  atau cocok aturan auto-link (SPMB → /admission, prestasi → /achievements). */
+export interface AnnouncementLink {
+  text: string;
+  href?: string;
+}
+
+const AUTO_LINK_RULES: { pattern: RegExp; href: string }[] = [
+  { pattern: /spmb|ppdb|penerimaan murid|daftar ulang|pendaftaran/i, href: "/admission" },
+  { pattern: /prestasi|juara|medali|olimpiade|penghargaan/i, href: "/achievements" },
+];
+
+/** Validasi href aman: path internal `/...` atau URL http(s) penuh. */
+function isSafeHref(raw: string): boolean {
+  const v = raw.trim();
+  if (/^https?:\/\/[^\s]+$/i.test(v)) return true;
+  return /^\/[a-z0-9\-/_#?=&.%]*$/i.test(v);
+}
+
+/**
+ * Parse satu baris pengumuman menjadi teks + tautan opsional (tanpa migrasi DB).
+ * - Format eksplisit: `Teks tampil | /tujuan` (pemisah `|` terakhir; href tak valid → teks polos).
+ * - Tanpa pemisah: auto-link keyword SPMB → /admission, prestasi → /achievements.
+ */
+export function parseAnnouncementLink(raw: string): AnnouncementLink {
+  const trimmed = raw.trim();
+  if (!trimmed) return { text: "" };
+  const sepIdx = trimmed.lastIndexOf("|");
+  if (sepIdx > 0) {
+    const text = trimmed.slice(0, sepIdx).trim();
+    const href = trimmed.slice(sepIdx + 1).trim();
+    if (text && href && isSafeHref(href)) return { text, href };
+    if (text) return { text };
+  }
+  const rule = AUTO_LINK_RULES.find((r) => r.pattern.test(trimmed));
+  return rule ? { text: trimmed, href: rule.href } : { text: trimmed };
+}
+
 /** Tanggal hari ini (zona WIB) sebagai "YYYY-MM-DD" — pola sama dengan admission/page.tsx. */
 function todayWIB(): string {
   return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
