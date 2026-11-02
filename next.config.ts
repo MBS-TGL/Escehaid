@@ -137,7 +137,7 @@ const nextConfig: NextConfig = {
     "/api/revalidate": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
     "/auth/callback": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
   },
-  allowedDevOrigins: ["192.168.2.106"],
+  allowedDevOrigins: ["192.168.2.106", "10.126.208.118"],
   devIndicators: {
     position: "bottom-right",
   },
