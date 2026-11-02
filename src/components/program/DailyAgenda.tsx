@@ -48,7 +48,7 @@ export default function DailyAgenda({
             key={block.key}
             className="flex h-full flex-col rounded-2xl border border-[#dce3ed] bg-slate-50/60 p-5"
           >
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col items-start gap-2">
               <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-3 py-1 text-[11px] font-semibold text-white">
                 <MoonStars className="h-3 w-3" aria-hidden="true" />
                 {block.title}
