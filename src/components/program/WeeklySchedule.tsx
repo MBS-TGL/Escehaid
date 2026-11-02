@@ -288,6 +288,10 @@ export default function WeeklySchedule({ slots = SLOTS }: { slots?: Slot[] } = {
                     const badgeHere = rowActive && col === ownerCol;
                     const colTint = col === activeDayCol;
                     const dayItems = itemsForDay(slot, day);
+                    const dotTitle =
+                      activeDayCol === ownerCol
+                        ? "Berlangsung"
+                        : `Sedang berjalan pada ${DAYS[ownerCol]}`;
                     return (
                       <td
                         key={day}
@@ -295,25 +299,22 @@ export default function WeeklySchedule({ slots = SLOTS }: { slots?: Slot[] } = {
                           colTint ? "bg-[var(--brand-highlight)]/[0.07]" : ""
                         }`}
                       >
-                        {badgeHere && currentSlot && (
-                          <span className="mb-0.5 inline-flex">
-                            <LiveDot
-                              title={
-                                activeDayCol === ownerCol
-                                  ? "Berlangsung"
-                                  : `Sedang berjalan pada ${DAYS[ownerCol]}`
-                              }
-                            />
-                          </span>
-                        )}
                         {dayItems.length > 0 ? (
                           <ul className="space-y-0.5">
-                            {dayItems.map((item) => (
-                              <li key={`${day}-${item.label}`} className="text-slate-700">
+                            {dayItems.map((item, i) => (
+                              <li
+                                key={`${day}-${item.label}`}
+                                className="inline-flex items-center gap-1.5 text-slate-700"
+                              >
                                 {item.label}
+                                {i === 0 && badgeHere && currentSlot && (
+                                  <LiveDot title={dotTitle} />
+                                )}
                               </li>
                             ))}
                           </ul>
+                        ) : badgeHere && currentSlot ? (
+                          <LiveDot title={dotTitle} />
                         ) : (
                           <span aria-hidden="true" className="text-slate-300">&ndash;</span>
                         )}
