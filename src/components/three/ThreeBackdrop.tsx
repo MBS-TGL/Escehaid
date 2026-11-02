@@ -53,9 +53,12 @@ export default function ThreeBackdrop({
     weak: isWeakDevice(),
   }));
 
-  const ok = enabled && device.webgl && !device.weak;
+  // Saklar mati → SEMBUNYIKAN TOTAL (null): nol perubahan visual di situs,
+  // sesuai semantik saklar darurat. Fallback gradasi hanya untuk kasus
+  // saklar aktif tapi perangkat tidak sanggup (lemah / tanpa WebGL).
+  if (!enabled) return null;
 
-  if (!ok) {
+  if (!device.webgl || device.weak) {
     return (
       <div
         className={className}
