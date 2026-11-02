@@ -209,7 +209,7 @@ export function RichTextEditor({
   };
 
   return (
-    <div className={`overflow-hidden rounded-xl border border-slate-200 bg-white transition-colors focus-within:border-[var(--brand-accent)] focus-within:ring-2 focus-within:ring-[var(--brand-accent)]/20 ${className}`}>
+    <div className={`overflow-hidden rounded-b-xl border border-slate-200 bg-white transition-colors focus-within:border-[var(--brand-accent)] focus-within:ring-2 focus-within:ring-[var(--brand-accent)]/20 ${className}`}>
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-0.5 border-b border-slate-100 bg-slate-50/80 px-3 py-2">
         {/* History */}

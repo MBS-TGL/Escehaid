@@ -1187,7 +1187,8 @@ html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .prose :where(th, 
    Toolbar & footer wrapper sudah gelap via aturan permukaan netral. */
 html[data-admin-dark="true"]:has(#admin-sidebar, .admin-boot) .tiptap-editor {
   background-color: var(--admin-inset);
-  border-radius: 0.75rem;
+  /* Atas siku mengikuti wrapper (rounded-b-xl), bawah tetap rounded. */
+  border-radius: 0 0 0.75rem 0.75rem;
   color: var(--admin-text);
 }
 /* EditorContent membawa text-slate-700 eksplisit + dikecualikan dari aturan
