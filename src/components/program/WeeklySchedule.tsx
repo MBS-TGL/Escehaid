@@ -5,6 +5,10 @@
  * + toggle "Per Hari | Sepekan" (desktop, default Sepekan). Mobile/tablet selalu
  * mode tab.
  *
+ * Mode "Per Hari" = timeline vertikal 1 kolom, dikelompokkan per fase waktu
+ * (Dini hari, Pagi, Siang, Sore, Malam). Jam di kiri, garis + titik di tengah,
+ * kegiatan di kanan.
+ *
  * Aturan hydration: server merender dengan tab "Senin", tanpa badge; setelah
  * mount, tab otomatis pindah ke hari ini (Asia/Jakarta) dan badge "Berlangsung"
  * baru dirender — data waktu tidak pernah ikut HTML awal.
@@ -58,6 +62,44 @@ function LiveDot({ title }: { title?: string }) {
   );
 }
 
+/* ── Pengelompokan fase waktu untuk timeline ─────────────────────────── */
+
+/** Menit sejak 00:00 dari label seperti "03.00-05.30" (ambil jam mulai). */
+function startMinutes(timeLabel: string): number {
+  const m = timeLabel.match(/(\d{1,2})[.:](\d{2})/);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : 0;
+}
+
+/** Pecah "03.00-05.30" jadi [mulai, selesai]; selesai null bila format tak dikenali. */
+function splitTime(timeLabel: string): [string, string | null] {
+  const parts = timeLabel.split(/\s*[-–—]\s*/);
+  return parts.length === 2 ? [parts[0], parts[1]] : [timeLabel, null];
+}
+
+const PHASES: Array<{ label: string; until: number }> = [
+  { label: "Dini hari", until: 6 * 60 },
+  { label: "Pagi", until: 11 * 60 + 45 },
+  { label: "Siang", until: 15 * 60 },
+  { label: "Sore", until: 18 * 60 },
+  { label: "Malam", until: 24 * 60 },
+];
+
+function phaseOf(slot: Slot): string {
+  const start = startMinutes(formatSlotTime(slot));
+  return (PHASES.find((p) => start < p.until) ?? PHASES[PHASES.length - 1]).label;
+}
+
+function groupByPhase(slots: Slot[]): Array<{ label: string; slots: Slot[] }> {
+  const groups: Array<{ label: string; slots: Slot[] }> = [];
+  for (const slot of slots) {
+    const label = phaseOf(slot);
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) last.slots.push(slot);
+    else groups.push({ label, slots: [slot] });
+  }
+  return groups;
+}
+
 const TAB_KEYS_TO_FOCUS: Record<string, (i: number) => number> = {
   ArrowRight: (i) => (i + 1) % DAYS.length,
   ArrowLeft: (i) => (i - 1 + DAYS.length) % DAYS.length,
@@ -83,6 +125,7 @@ export default function WeeklySchedule({ slots = SLOTS }: { slots?: Slot[] } = {
   );
 
   const slotsOfDay = useMemo(() => slotsForDay(slots, activeDay), [slots, activeDay]);
+  const phaseGroups = useMemo(() => groupByPhase(slotsOfDay), [slotsOfDay]);
 
   const onTabKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -176,54 +219,97 @@ export default function WeeklySchedule({ slots = SLOTS }: { slots?: Slot[] } = {
         </div>
       </div>
 
-      {/* Panel per hari — selalu tampil di mobile/tablet; di desktop hanya mode "Per Hari" */}
+      {/* Panel per hari — timeline 1 kolom. Selalu tampil di mobile/tablet;
+          di desktop hanya mode "Per Hari". */}
       <div
         id="mbs-day-panel"
         role="tabpanel"
         aria-labelledby={`mbs-tab-${activeDay}`}
-        className={`mt-4 ${listVisible ? "" : "lg:hidden"}`}
+        className={`mt-5 ${listVisible ? "" : "lg:hidden"}`}
       >
-        <ol className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {slotsOfDay.map((slot) => {
-            const isNow = currentSlot?.slot?.id === slot.id;
-            return (
-              <li
-                key={`${slot.id}-${activeDay}`}
-                className={`rounded-xl border p-4 ${
-                  isNow
-                    ? "border-emerald-300 bg-emerald-50/50"
-                    : "border-[#dce3ed] bg-white"
-                }`}
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="shrink-0 whitespace-nowrap rounded-md bg-[var(--brand-primary)]/10 px-2 py-0.5 text-xs font-bold tabular-nums text-[var(--brand-primary)]">
-                    {formatSlotTime(slot)}
-                  </span>
-                  {isSlotCrossingMidnight(slot) && (
-                    <span className="text-[11px] font-medium text-slate-500">
-                      berlanjut hingga pagi
-                    </span>
-                  )}
-                  {isNow && <LiveDot />}
-                </div>
-                <ul className="mt-2 flex flex-wrap gap-1.5">
-                  {itemsForDay(slot, activeDay).map((item) => (
+        <div className="lg:columns-2 lg:gap-x-12">
+          {phaseGroups.map((group) => (
+            <section key={group.label} aria-label={group.label} className="mb-5 break-inside-avoid rounded-2xl border border-[#dce3ed] bg-white p-4 sm:p-5">
+              <h4 className="mb-4 text-sm font-bold text-[var(--brand-primary)]">
+                {group.label}
+              </h4>
+              <ol>
+                {group.slots.map((slot, i) => {
+                  const isNow = currentSlot?.slot?.id === slot.id;
+                  const isLast = i === group.slots.length - 1;
+                  const [start, end] = splitTime(formatSlotTime(slot));
+                  return (
                     <li
-                      key={item.label}
-                      className={`rounded-lg border px-2.5 py-1 text-[13px] font-medium ${
-                        isNow
-                          ? "border-emerald-200 bg-white"
-                          : "border-[#e5ebf2] bg-slate-50/60"
-                      } text-slate-700`}
+                      key={`${slot.id}-${activeDay}`}
+                      className="flex"
                     >
-                      {item.label}
+                      {/* Jam */}
+                      <div className="w-[3.25rem] shrink-0 pt-1.5 text-right leading-tight sm:w-14">
+                        <span className="block text-sm font-bold tabular-nums text-[var(--brand-primary)]">
+                          {start}
+                        </span>
+                        {end && (
+                          <span className="block text-[11px] tabular-nums text-slate-400">
+                            {end}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Garis + titik */}
+                      <div className="relative flex w-6 shrink-0 justify-center sm:w-7">
+                        {!isLast && (
+                          <span
+                            aria-hidden="true"
+                            className="absolute bottom-0 top-3 w-px bg-[#dce3ed]"
+                          />
+                        )}
+                        <span className="relative z-10 mt-[0.6rem] flex h-3 w-3 items-center justify-center bg-white">
+                          {isNow ? (
+                            <LiveDot />
+                          ) : (
+                            <span
+                              aria-hidden="true"
+                              className="h-2.5 w-2.5 rounded-full border-2 border-[var(--brand-primary)]/50 bg-white"
+                            />
+                          )}
+                        </span>
+                      </div>
+
+                      {/* Kegiatan */}
+                      <div className={`min-w-0 flex-1 ${isLast ? "pb-0" : "pb-4"}`}>
+                        <div
+                          className={`rounded-xl px-3 py-2 ${
+                            isNow ? "bg-emerald-50" : ""
+                          }`}
+                        >
+                          <ul className="flex flex-wrap gap-1.5">
+                            {itemsForDay(slot, activeDay).map((item) => (
+                              <li
+                                key={item.label}
+                                className={`rounded-lg border px-2.5 py-1 text-[13px] font-medium text-slate-700 ${
+                                  isNow
+                                    ? "border-emerald-200 bg-white"
+                                    : "border-[#e5ebf2] bg-slate-50/60"
+                                }`}
+                              >
+                                {item.label}
+                              </li>
+                            ))}
+                          </ul>
+                          {isSlotCrossingMidnight(slot) && (
+                            <p className="mt-1.5 text-[11px] font-medium text-slate-500">
+                              berlanjut hingga pagi
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </li>
-                  ))}
-                </ul>
-              </li>
-            );
-          })}
-        </ol>
+                  );
+                })}
+              </ol>
+            </section>
+          ))}
+        </div>
       </div>
 
       {/* Tabel sepekan — desktop (mode Sepekan). Baris slot aktif + kolom hari
@@ -288,10 +374,6 @@ export default function WeeklySchedule({ slots = SLOTS }: { slots?: Slot[] } = {
                     const badgeHere = rowActive && col === ownerCol;
                     const colTint = col === activeDayCol;
                     const dayItems = itemsForDay(slot, day);
-                    const dotTitle =
-                      activeDayCol === ownerCol
-                        ? "Berlangsung"
-                        : `Sedang berjalan pada ${DAYS[ownerCol]}`;
                     return (
                       <td
                         key={day}
@@ -299,25 +381,30 @@ export default function WeeklySchedule({ slots = SLOTS }: { slots?: Slot[] } = {
                           colTint ? "bg-[var(--brand-highlight)]/[0.07]" : ""
                         }`}
                       >
-                        {dayItems.length > 0 ? (
-                          <ul className="space-y-0.5">
-                            {dayItems.map((item, i) => (
-                              <li
-                                key={`${day}-${item.label}`}
-                                className="inline-flex items-center gap-1.5 text-slate-700"
-                              >
-                                {item.label}
-                                {i === 0 && badgeHere && currentSlot && (
-                                  <LiveDot title={dotTitle} />
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        ) : badgeHere && currentSlot ? (
-                          <LiveDot title={dotTitle} />
-                        ) : (
-                          <span aria-hidden="true" className="text-slate-300">&ndash;</span>
-                        )}
+                        <div className="flex items-start gap-2">
+                          {badgeHere && currentSlot && (
+                            <span className="flex h-[1lh] shrink-0 items-center">
+                              <LiveDot
+                                title={
+                                  activeDayCol === ownerCol
+                                    ? "Berlangsung"
+                                    : `Sedang berjalan pada ${DAYS[ownerCol]}`
+                                }
+                              />
+                            </span>
+                          )}
+                          {dayItems.length > 0 ? (
+                            <ul className="min-w-0 space-y-0.5">
+                              {dayItems.map((item) => (
+                                <li key={`${day}-${item.label}`} className="text-slate-700">
+                                  {item.label}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <span aria-hidden="true" className="text-slate-300">&ndash;</span>
+                          )}
+                        </div>
                       </td>
                     );
                   })}
