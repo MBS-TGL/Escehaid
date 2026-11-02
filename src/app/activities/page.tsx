@@ -12,7 +12,7 @@ import {
   toJakartaDateKey,
 } from "@/lib/activity-types";
 import { CSSStagger } from "@/components/CSSAnimations";
-import { CalendarBlank, Clock, MapPin, ArrowRight } from "@/components/Icons";
+import { CalendarBlank, Clock, MapPin } from "@/components/Icons";
 import PageHero from "@/components/public/PageHero";
 import FilterBar, { type FilterChip } from "@/components/public/FilterBar";
 import ContentCard from "@/components/public/ContentCard";
@@ -41,14 +41,16 @@ export async function generateMetadata(): Promise<Metadata> {
 export const revalidate = 300;
 
 const PAGE_SIZE = 9;
+/** Bila kegiatan terdekat ≤ angka ini, tampil sebagai kartu sorot lebar; lebih dari itu → grid biasa. */
+const FEATURED_MAX = 2;
 
-const monthShort = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+type Badge = { label: string; cls: string; live?: boolean };
 
-function activityBadges(item: Activity): { label: string; cls: string; live?: boolean }[] {
+function activityBadges(item: Activity): Badge[] {
   const status = activityStatus(item.activity_date, item.end_date);
   const days = daysUntilActivity(item.activity_date);
   const isLive = isActivityLiveActive(item.live_url, item.activity_date, item.end_date);
-  const badges: { label: string; cls: string; live?: boolean }[] = [
+  const badges: Badge[] = [
     { label: activityTypeLabel(item.activity_type), cls: `border ${activityTypeBadge(item.activity_type)}` },
   ];
   if (item.is_featured) badges.push({ label: "Unggulan", cls: "bg-[var(--brand-primary)] text-white" });
@@ -59,7 +61,30 @@ function activityBadges(item: Activity): { label: string; cls: string; live?: bo
   return badges;
 }
 
-/** Kartu grid untuk seksi "Sudah Berlangsung" — pakai kartu konten kanonik. */
+/** Deretan badge status/tipe kegiatan. */
+function ActivityBadges({ item }: { item: Activity }) {
+  return (
+    <>
+      {activityBadges(item).map((b) => (
+        <span
+          key={`${item.id}-${b.label}`}
+          className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${b.cls}`}
+        >
+          {b.live ? (
+            <>
+              <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" aria-hidden="true" />
+              {b.label}
+            </>
+          ) : (
+            b.label
+          )}
+        </span>
+      ))}
+    </>
+  );
+}
+
+/** Kartu kegiatan — pakai kartu konten kanonik (sama dengan halaman Berita). */
 function ActivityCard({ item }: { item: Activity }) {
   return (
     <div className="h-full min-w-0">
@@ -69,25 +94,7 @@ function ActivityCard({ item }: { item: Activity }) {
         description={item.description}
         imageUrl={item.image_url || "/images/Ruang-Kelas.jpg"}
         imageAlt={item.title}
-        badges={
-          <>
-            {activityBadges(item).map((b) => (
-              <span
-                key={`${item.id}-${b.label}`}
-                className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${b.cls}`}
-              >
-                {b.live ? (
-                  <>
-                    <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" aria-hidden="true" />
-                    {b.label}
-                  </>
-                ) : (
-                  b.label
-                )}
-              </span>
-            ))}
-          </>
-        }
+        badges={<ActivityBadges item={item} />}
         meta={
           <>
             {item.activity_date && (
@@ -110,62 +117,75 @@ function ActivityCard({ item }: { item: Activity }) {
 }
 
 /**
- * Baris agenda "Akan Datang" — identitas kegiatan: kotak tanggal kiri
- * (bulan-des) + konten kanan, bukan grid kartu identik.
+ * Kartu sorot lebar (gambar kiri, teks kanan) untuk kegiatan yang sedang berlangsung
+ * atau paling dekat. Bentuknya sengaja beda dari kartu grid di bawahnya, sehingga
+ * tidak mungkin tertukar dengan "Kegiatan Sebelumnya".
  */
-function ActivityTimelineRow({ item }: { item: Activity }) {
-  const raw = new Date(item.activity_date);
-  const valid = !Number.isNaN(raw.getTime());
-  const day = valid ? raw.getDate() : null;
-  const month = valid ? monthShort[raw.getMonth()] : "";
+function FeaturedActivityCard({ item }: { item: Activity }) {
   return (
     <Link
       href={`/activities/${item.slug}`}
-      className="group flex items-center gap-4 rounded-xl p-3 transition-colors hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] sm:gap-6 sm:p-4"
+      className="group grid min-w-0 overflow-hidden rounded-2xl border border-[var(--brand-accent)]/25 bg-white shadow-sm transition-shadow hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] md:grid-cols-5"
     >
-      {/* Kotak tanggal */}
-      <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl border border-[var(--brand-accent)]/20 bg-white shadow-sm sm:h-[76px] sm:w-[76px]">
-        <span className="text-[9px] font-bold uppercase tracking-widest text-[var(--brand-accent)]">{month}</span>
-        <span className="text-xl font-black leading-none text-[var(--brand-primary)]">{day ?? "-"}</span>
+      <div className="relative aspect-[16/10] overflow-hidden bg-slate-100 md:col-span-2 md:aspect-auto md:min-h-[260px]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={item.image_url || "/images/Ruang-Kelas.jpg"}
+          alt={item.title}
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
       </div>
-      <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 flex-col justify-center gap-3 p-5 md:col-span-3 md:p-8">
         <div className="flex flex-wrap items-center gap-1.5">
-          {activityBadges(item).map((b) => (
-              <span
-                key={`${item.id}-${b.label}`}
-                className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${b.cls}`}
-              >
-                {b.live ? (
-                  <>
-                    <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" aria-hidden="true" />
-                    {b.label}
-                  </>
-                ) : (
-                  b.label
-                )}
-              </span>
-            ))}
+          <ActivityBadges item={item} />
         </div>
-        <h3 className="mt-1.5 truncate text-base font-bold text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)] sm:text-lg">
+        <h3 className="text-xl font-bold leading-snug text-[var(--brand-primary)] transition-colors group-hover:text-[var(--brand-accent)] md:text-2xl">
           {item.title}
         </h3>
-        <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
+        {item.description && (
+          <p className="line-clamp-3 text-sm leading-relaxed text-slate-600 md:text-base">{item.description}</p>
+        )}
+        <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-slate-500">
           {item.activity_date && (
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
+            <span className="flex items-center gap-1.5">
+              <CalendarBlank className="h-4 w-4" />
               {formatActivityDateRange(item.activity_date, item.end_date)}
             </span>
           )}
           {item.location && (
-            <span className="flex items-center gap-1">
-              <MapPin className="h-3 w-3" />
+            <span className="flex items-center gap-1.5">
+              <MapPin className="h-4 w-4" />
               {item.location}
             </span>
           )}
         </div>
       </div>
-      <ArrowRight className="hidden h-5 w-5 shrink-0 text-slate-300 transition-all group-hover:translate-x-0.5 group-hover:text-[var(--brand-accent)] sm:block" />
     </Link>
+  );
+}
+
+/** Judul seksi: ikon + judul + jumlah. */
+function SectionHeading({
+  icon,
+  title,
+  count,
+  tone,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  count: number;
+  tone: "accent" | "muted";
+}) {
+  const iconCls = tone === "accent" ? "bg-[var(--brand-accent)] text-white" : "bg-slate-200 text-slate-600";
+  const countCls =
+    tone === "accent" ? "bg-[var(--brand-accent)]/10 text-[var(--brand-accent)]" : "bg-slate-100 text-slate-500";
+  return (
+    <div className="mb-3 flex items-center gap-2.5">
+      <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${iconCls}`}>{icon}</span>
+      <h2 className="text-lg font-bold text-[var(--brand-primary)]">{title}</h2>
+      <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${countCls}`}>{count}</span>
+    </div>
   );
 }
 
@@ -210,6 +230,17 @@ export default async function ActivitiesPage({
   const frontFirst = (a: Activity, b: Activity) => Number(b.is_featured) - Number(a.is_featured);
   const upcomingItems = [...upcoming].sort(frontFirst);
   const pastItems = [...past].sort(frontFirst);
+
+  const upCount = upcomingItems.length;
+
+  // Judul seksi mengikuti isinya: hanya yang hari ini/berlangsung → "Sedang Berlangsung",
+  // hanya yang belum mulai → "Akan Datang", campuran → "Agenda Terdekat".
+  const nowCount = upcomingItems.filter((a) => {
+    const s = activityStatus(a.activity_date, a.end_date);
+    return s === "today" || s === "ongoing";
+  }).length;
+  const upcomingTitle =
+    nowCount === 0 ? "Akan Datang" : nowCount === upCount ? "Sedang Berlangsung" : "Agenda Terdekat";
 
   const pastTotalPages = Math.max(1, Math.ceil(pastItems.length / PAGE_SIZE));
   const outOfRange = page > pastTotalPages;
@@ -311,38 +342,41 @@ export default async function ActivitiesPage({
           />
         ) : (
           <>
-            {/* Akan datang — agenda timeline (hanya halaman 1) */}
-            {page === 1 && upcomingItems.length > 0 && (
+            {/* Terdekat / sedang berlangsung (hanya halaman 1).
+                ≤ FEATURED_MAX → kartu sorot lebar; lebih banyak → grid kartu biasa. */}
+            {page === 1 && upCount > 0 && (
               <div>
-                <div className="mb-3 flex items-center gap-2.5">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--brand-accent)] text-white">
-                    <CalendarBlank className="h-4 w-4" weight="fill" />
-                  </span>
-                  <h2 className="text-lg font-bold text-[var(--brand-primary)]">Akan Datang</h2>
-                  <span className="rounded-full bg-[var(--brand-accent)]/10 px-2.5 py-0.5 text-xs font-bold text-[var(--brand-accent)]">
-                    {upcomingItems.length}
-                  </span>
-                </div>
-                <CSSStagger stagger={60} className="rounded-2xl border border-[#dce3ed] bg-slate-50/50 p-2">
-                  {upcomingItems.map((item) => (
-                    <ActivityTimelineRow key={item.id} item={item} />
-                  ))}
-                </CSSStagger>
+                <SectionHeading
+                  icon={<CalendarBlank className="h-4 w-4" weight="fill" />}
+                  title={upcomingTitle}
+                  count={upCount}
+                  tone="accent"
+                />
+                {upCount <= FEATURED_MAX ? (
+                  <CSSStagger stagger={60} className="grid gap-5">
+                    {upcomingItems.map((item) => (
+                      <FeaturedActivityCard key={item.id} item={item} />
+                    ))}
+                  </CSSStagger>
+                ) : (
+                  <CSSStagger stagger={60} className="grid items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                    {upcomingItems.map((item) => (
+                      <ActivityCard key={item.id} item={item} />
+                    ))}
+                  </CSSStagger>
+                )}
               </div>
             )}
 
-            {/* Sudah berlangsung — grid kartu kanonik + pagination shared */}
+            {/* Kegiatan sebelumnya — grid kartu kanonik + pagination shared */}
             {pastItems.length > 0 && (
-              <div className={page === 1 && upcomingItems.length > 0 ? "mt-10" : ""}>
-                <div className="mb-3 flex items-center gap-2.5">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-200 text-slate-600">
-                    <Clock className="h-4 w-4" weight="fill" />
-                  </span>
-                  <h2 className="text-lg font-bold text-[var(--brand-primary)]">Sudah Berlangsung</h2>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-500">
-                    {pastItems.length}
-                  </span>
-                </div>
+              <div className={page === 1 && upCount > 0 ? "mt-12" : ""}>
+                <SectionHeading
+                  icon={<Clock className="h-4 w-4" weight="fill" />}
+                  title="Kegiatan Sebelumnya"
+                  count={pastItems.length}
+                  tone="muted"
+                />
                 <CSSStagger stagger={60} className="grid items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3">
                   {pastPageItems.map((item) => (
                     <ActivityCard key={item.id} item={item} />
