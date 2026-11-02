@@ -1,20 +1,23 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { CSSFadeIn } from "@/components/CSSAnimations";
 import { CaretRight } from "@/components/Icons";
 
 /**
  * Heading seksi yang konsisten: garis aksen + judul + deskripsi opsional
- * + tautan "Lihat semua" opsional di kanan.
+ * + slot kanan opsional ("action" berupa tautan, atau "aside" bebas konten).
  */
 export default function SectionHeading({
   title,
   description,
   action,
+  aside,
   className = "",
 }: {
   title: string;
   description?: string;
   action?: { href: string; label: string };
+  aside?: ReactNode;
   className?: string;
 }) {
   return (
@@ -24,6 +27,7 @@ export default function SectionHeading({
         <h2 className="text-2xl font-black tracking-tight text-[var(--brand-primary)] md:text-3xl">{title}</h2>
         {description && <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-slate-500">{description}</p>}
       </div>
+      {aside && <div className="shrink-0 sm:self-center">{aside}</div>}
       {action && (
         <Link
           href={action.href}

@@ -36,6 +36,20 @@ export default function QuranPillars({
         title={QURAN_SECTION_META.heading}
         description={QURAN_SECTION_META.subheading}
         className="md:mb-8"
+        aside={
+          <div className="flex flex-col items-start gap-1 sm:items-center">
+            <Image
+              src="/images/Logo-Wafa.png"
+              alt="Logo Wafa Indonesia"
+              width={400}
+              height={228}
+              className="h-14 w-auto md:h-20"
+            />
+            <span className="text-[11px] font-medium text-slate-500">
+              Bekerja sama dengan Wafa Indonesia
+            </span>
+          </div>
+        }
       />
 
       <CSSStagger
@@ -70,18 +84,7 @@ export default function QuranPillars({
             </dl>
           </article>
         ))}
-      </CSSStagger>
-
-      <p className="mt-6 flex items-center gap-2 text-xs text-slate-500">
-        <Image
-          src="/images/Logo-Wafa.png"
-          alt="Logo Wafa Indonesia"
-          width={400}
-          height={228}
-          className="h-7 w-auto"
-        />
-        Bekerja sama dengan Wafa Indonesia
-      </p>
-    </div>
+        </CSSStagger>
+      </div>
   );
 }
