@@ -28,11 +28,33 @@ import {
 function subscribeNoop(): () => void {
   return () => {};
 }
+
 function useMounted(): boolean {
   return useSyncExternalStore(
     subscribeNoop,
     () => true,
     () => false
+  );
+}
+
+/**
+ * Dot hijau berkedip — penanda slot yang sedang berlangsung (dot solid +
+ * gelombang animate-ping). Teks "Berlangsung" tetap ada untuk screen reader;
+ * motion-reduce mematikan kedipan sesuai preferensi pengguna.
+ */
+function LiveDot({ title }: { title?: string }) {
+  return (
+    <span title={title} className="relative inline-flex h-2.5 w-2.5 shrink-0">
+      <span
+        aria-hidden="true"
+        className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75 motion-reduce:animate-none"
+      />
+      <span
+        aria-hidden="true"
+        className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-600"
+      />
+      <span className="sr-only">Berlangsung</span>
+    </span>
   );
 }
 
@@ -161,15 +183,18 @@ export default function WeeklySchedule({ slots = SLOTS }: { slots?: Slot[] } = {
         aria-labelledby={`mbs-tab-${activeDay}`}
         className={`mt-4 ${listVisible ? "" : "lg:hidden"}`}
       >
-        <ol className="relative space-y-3 border-l border-[#dce3ed] pl-6">
+        <ol className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {slotsOfDay.map((slot) => {
             const isNow = currentSlot?.slot?.id === slot.id;
             return (
-              <li key={`${slot.id}-${activeDay}`} className="relative">
-                <span
-                  aria-hidden="true"
-                  className="absolute -left-[calc(1.5rem+5px)] top-2 h-2.5 w-2.5 rounded-full bg-[var(--brand-accent)]"
-                />
+              <li
+                key={`${slot.id}-${activeDay}`}
+                className={`rounded-xl border p-4 ${
+                  isNow
+                    ? "border-emerald-300 bg-emerald-50/50"
+                    : "border-[#dce3ed] bg-white"
+                }`}
+              >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="shrink-0 whitespace-nowrap rounded-md bg-[var(--brand-primary)]/10 px-2 py-0.5 text-xs font-bold tabular-nums text-[var(--brand-primary)]">
                     {formatSlotTime(slot)}
@@ -179,17 +204,17 @@ export default function WeeklySchedule({ slots = SLOTS }: { slots?: Slot[] } = {
                       berlanjut hingga pagi
                     </span>
                   )}
-                  {isNow && (
-                    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
-                      Berlangsung
-                    </span>
-                  )}
+                  {isNow && <LiveDot />}
                 </div>
-                <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                <ul className="mt-2 flex flex-wrap gap-1.5">
                   {itemsForDay(slot, activeDay).map((item) => (
                     <li
                       key={item.label}
-                      className="rounded-lg border border-[#e5ebf2] bg-white px-2.5 py-1 text-[13px] font-medium text-slate-700"
+                      className={`rounded-lg border px-2.5 py-1 text-[13px] font-medium ${
+                        isNow
+                          ? "border-emerald-200 bg-white"
+                          : "border-[#e5ebf2] bg-slate-50/60"
+                      } text-slate-700`}
                     >
                       {item.label}
                     </li>
@@ -271,11 +296,14 @@ export default function WeeklySchedule({ slots = SLOTS }: { slots?: Slot[] } = {
                         }`}
                       >
                         {badgeHere && currentSlot && (
-                          <span
-                            className="mb-0.5 inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-bold text-white"
-                            title={activeDayCol === ownerCol ? undefined : `Sedang berjalan pada ${DAYS[ownerCol]}`}
-                          >
-                            Berlangsung
+                          <span className="mb-0.5 inline-flex">
+                            <LiveDot
+                              title={
+                                activeDayCol === ownerCol
+                                  ? "Berlangsung"
+                                  : `Sedang berjalan pada ${DAYS[ownerCol]}`
+                              }
+                            />
                           </span>
                         )}
                         {dayItems.length > 0 ? (
