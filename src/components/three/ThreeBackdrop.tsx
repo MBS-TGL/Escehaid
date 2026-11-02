@@ -21,7 +21,7 @@
 import { useState } from "react";
 import IslamicParticles, { isWeakDevice, checkWebglSupported } from "./IslamicParticles";
 
-type Props = {
+export type Props = {
   /** Nilai gabungan saklar induk + per lokasi dari settings. false = mati total. */
   enabled: boolean;
   /** Warna pola bintang (settings `three_color`). */

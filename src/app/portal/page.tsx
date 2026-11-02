@@ -33,6 +33,7 @@ import type { PortalApp } from "@/lib/queries";
 import { formatActivityDate, toJakartaDateKey } from "@/lib/activity-types";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import PageHero from "@/components/public/PageHero";
+import ThreeOrnament from "@/components/three/ThreeOrnament";
 import { getSiteSettings } from "@/lib/settings";
 import { waLink } from "@/lib/site-config";
 import { ogImageOverride, pageOpenGraph } from "@/lib/seo";
@@ -246,6 +247,12 @@ export default async function PortalPage() {
   // JSON-LD breadcrumb jangan hardcode domain — ikuti Pengaturan Situs.
   const siteBase = (settings.values.site_url.trim() || "https://www.smpmuh4tanggul.sch.id").replace(/\/+$/, "");
 
+  // Ornamen 3D — butuh saklar induk + saklar Portal sama-sama aktif (settings).
+  // Default registry "false" → nol perubahan visual sampai admin menyalakan.
+  const threeOn =
+    settings.values.three_enabled === "true" &&
+    settings.values.three_portal_enabled === "true";
+
   return (
     <div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{
@@ -266,7 +273,19 @@ export default async function PortalPage() {
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Portal" }]}
       />
 
-      <section className="mx-auto max-w-5xl px-6 py-10 sm:py-12">
+      <section className="relative overflow-hidden mx-auto max-w-5xl px-6 py-10 sm:py-12">
+        {/* Ornamen partikel 3D — dekoratif di belakang seluruh konten section
+            (banner SPMB + grid aplikasi). NormalBlending untuk latar terang.
+            Saklar mati / perangkat lemah / tanpa WebGL → fallback gradasi CSS
+            berukuran sama; teks & CTA tetap HTML di depan (bukan canvas). */}
+        <ThreeOrnament
+          enabled={threeOn}
+          color={settings.values.three_color}
+          accentColor={settings.values.three_accent_color}
+          className="absolute inset-0 -z-10"
+          blending="normal"
+        />
+
         {/* SPMB — layanan publik, dipisah dari aplikasi */}
         <CSSFadeIn>
           <Link
