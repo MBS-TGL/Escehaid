@@ -3,6 +3,19 @@
 import { useRouter } from "next/navigation";
 import type { SqlMigrationStatus } from "@/lib/queries/sql-status";
 import { Code, CheckCircle, XCircle, ArrowsCounterClockwise } from "@/components/Icons";
+import { MobileListRow } from "@/components/admin/mobile";
+
+function StatusPill({ applied }: { applied: boolean }) {
+  return applied ? (
+    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+      <CheckCircle className="h-3 w-3" /> Sudah
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+      <XCircle className="h-3 w-3" /> Belum
+    </span>
+  );
+}
 
 /**
  * Status migrasi SQL — daftar file SQL di repo + apakah EFEKnya sudah ada
@@ -77,8 +90,8 @@ export default function SqlStatusClientPage({ statuses }: { statuses: SqlMigrati
         )}
       </div>
 
-      {/* Daftar */}
-      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
+      {/* Daftar — desktop: tabel */}
+      <div className="hidden overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:block">
         <table className="w-full">
           <thead className="border-b border-slate-200/80 bg-slate-50/80">
             <tr>
@@ -117,20 +130,51 @@ export default function SqlStatusClientPage({ statuses }: { statuses: SqlMigrati
                   )}
                 </td>
                 <td className="px-4 py-3.5 text-center">
-                  {s.applied ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-                      <CheckCircle className="h-3 w-3" /> Sudah
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
-                      <XCircle className="h-3 w-3" /> Belum
-                    </span>
-                  )}
+                  <StatusPill applied={s.applied} />
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile: kartu vertikal per file — nama file wrap, deskripsi di
+          bawah, pill status di kanan (tidak berdesakan seperti tabel). */}
+      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:hidden">
+        {statuses.map((s) => (
+          <MobileListRow
+            key={s.file}
+            title={
+              <span className="break-all font-mono text-[13px] font-semibold text-slate-700">
+                {s.file}
+                {s.source === "ledger" && (
+                  <span className="ml-1.5 rounded bg-[var(--brand-accent)]/10 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-[var(--brand-accent)]">
+                    runner
+                  </span>
+                )}
+              </span>
+            }
+            subtitle={
+              <>
+                <span className="block text-[13px] text-slate-600">{s.description}</span>
+                {(s.appliedAt || s.appliedBy || s.checksum) && (
+                  <span className="mt-0.5 block text-[11px] text-slate-400">
+                    {s.appliedAt && (
+                      <>Dijalankan {new Date(s.appliedAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}</>
+                    )}
+                    {s.appliedBy && <> · oleh {s.appliedBy}</>}
+                    {s.checksum && (
+                      <span className="ml-1 font-mono" title={s.checksum}>
+                        · {s.checksum.slice(0, 10)}…
+                      </span>
+                    )}
+                  </span>
+                )}
+              </>
+            }
+            status={<StatusPill applied={s.applied} />}
+          />
+        ))}
       </div>
 
       <p className="mt-4 text-xs text-slate-400">
