@@ -3,6 +3,29 @@
 > Baca file ini dulu sebelum menyentuh kode. Konteks penuh ada di `docs/ANALISIS-THREEJS.md` (201 baris, sumber kebenaran).
 > File ini = instruksi eksekusi Fase 0 → Fase 1. Fase 2+ hanya sketsa.
 
+## 0. STATUS EKSEKUSI (diperbarui 2026-11-03) — Fase 0, 1, 2, 2.5 SELESAI
+
+- **Fase 0** `d4759e8` — fondasi: three + fiber v9 terinstal, tipe `boolean` + grup `tampilan_3d`
+  (saklar induk + per lokasi, semua default `false`), `ThreeBackdrop` (gate saklar + WebGL +
+  kill-switch RAM ≤3 GB/core ≤4), perbaikan 5 item `IslamicParticles.tsx`.
+- **Fase 1** `5f30177` — Portal: backdrop partikel `NormalBlending` di belakang banner SPMB +
+  grid AppCard via `ThreeOrnament` (dynamic import `ssr:false` + skeleton anti-CLS).
+  Fix `8f8816a`: saklar mati = `null` total (bukan fallback gradasi).
+- **Fase 2** `3b45df1` — visi beranda + kartu visi `/profile#visi-misi` (`AdditiveBlending`,
+  bidang gelap) + dua section `/program` (`NormalBlending`, latar terang; konten dibuat
+  `relative` agar di atas ornamen). Saklar baru: `three_visi_enabled`, `three_profile_enabled`,
+  `three_program_enabled`.
+- **Fase 2.5** — lapisan prosedural tanpa model (`SceneExtras.tsx`): bintang Rub el Hizb 3D
+  solid (`ExtrudeGeometry`) + 2 ring arabeske `LineLoop` untuk bidang gelap, dan gelombang
+  shader GLSL halus untuk latar terang. Semua di dalam gate/kill-switch yang sama, nol file,
+  nol settings baru, 3–4 draw call tambahan.
+- **Fase 3 (.glb via R2) DIBATALKAN** — aset model belum ada; dibuka lagi hanya bila pemilik
+  menyediakan `.glb` <20 MB (Draco) + izin pipeline R2.
+- Semua commit di atas: CI + deploy Vercel hijau. Nol perubahan visual produksi sampai admin
+  menyalakan saklar di `/admin/settings` → tab **Tampilan 3D**.
+- Verifikasi yang masih milik pemilik: uji HP RAM 2–3 GB, `prefers-reduced-motion`,
+  LCP sebelum/sesudah (ambang pembatal +100 ms).
+
 ## 1. Misi
 
 Pasang ornamen 3D prosedural ringan (partikel Rub el Hizb) di halaman **/portal** website SMP Muhammadiyah 4 Tanggul,
