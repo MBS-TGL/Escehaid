@@ -116,6 +116,43 @@ export default function DiagnosticsClientPage({ data }: { data: Diagnostics }) {
           ))}
         </SectionCard>
 
+        {/* Kesehatan pencarian — probe kanonik v3 (#41). Merah = outage
+            user-visible (kata umum tanpa hasil); kuning = drift ambang. */}
+        <SectionCard
+          title="Kesehatan pencarian (probe kanonik v3)"
+          desc="Ekspektasi sql/pg-trgm.sql — ambang word_similarity 0,50"
+        >
+          {!data.searchProbe ? (
+            <p className="py-2 text-xs text-slate-500">
+              Probe tidak dapat dijalankan (database tidak terjangkau).
+            </p>
+          ) : (
+            <>
+              {data.searchProbe.cases.map((c) => (
+                <Row key={c.key}>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <Dot tone={c.pass ? "ok" : "fail"} />
+                    <span className="min-w-0">
+                      <span className="block truncate font-mono text-xs font-semibold text-slate-700">{c.key}</span>
+                      <span className="block text-xs text-slate-400">harap: {c.expected}</span>
+                    </span>
+                  </span>
+                  <span
+                    className={`max-w-[45%] shrink-0 truncate text-xs font-semibold tabular-nums ${c.pass ? "text-emerald-600" : "text-red-500"}`}
+                    title={c.actual}
+                  >
+                    {c.actual}
+                  </span>
+                </Row>
+              ))}
+              <p className="pt-2 text-[11px] text-slate-400">
+                Runbook: jalankan ulang isi <span className="font-mono">sql/pg-trgm.sql</span> di
+                Supabase SQL Editor bila ada baris merah — lalu muat ulang halaman ini.
+              </p>
+            </>
+          )}
+        </SectionCard>
+
         {/* Storage */}
         <SectionCard title="Storage (Cloudflare R2)" desc={`Driver: ${data.storage?.driver ?? "—"} — cache pemakaian 6 jam`}>
           {data.storage && data.storage.buckets.length > 0 ? (

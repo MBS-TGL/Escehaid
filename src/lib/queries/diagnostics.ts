@@ -343,6 +343,8 @@ export type OverallTone = "hijau" | "kuning" | "merah";
 export interface Diagnostics {
   tables: CoreTableStatus[];
   probes: ProbeStatus[];
+  /** Probe kanonik pencarian v3 (#41) — null bila gagal total (DB down). */
+  searchProbe: import("./search-probe").CanonicalProbe | null;
   storage: R2Usage | null;
   github: GithubStatus | null;
   envs: EnvStatus[];
@@ -359,12 +361,15 @@ function backupAgeDays(manifest: Awaited<ReturnType<typeof getBackupManifest>>):
 /** Kumpulkan semua aspek — tiap aspek aman-tergagal (tidak melempar). */
 export async function collectDiagnostics(): Promise<Diagnostics> {
   const t0 = Date.now();
-  const [tables, probes, storage, github, manifest] = await Promise.all([
+  const [tables, probes, storage, github, manifest, searchProbe] = await Promise.all([
     checkCoreTables(),
     checkFeatureProbes(),
     getR2Usage().catch(() => null),
     getGithubStatus().catch(() => null),
     getBackupManifest().catch(() => null),
+    // Probe kanonik pencarian v3 (#41) — gagal total (DB down) → null,
+    // bukan throw, agar halaman diagnostics tetap tampil.
+    import("./search-probe").then((m) => m.runCanonicalSearchProbe().catch(() => null)),
   ]);
 
   const { error: latencyError } = await supabase.from("site_settings").select("key").limit(1);
@@ -374,14 +379,17 @@ export async function collectDiagnostics(): Promise<Diagnostics> {
   const tablesOk = tables.every((t) => t.ok);
   const envMissingRequired = getEnvStatus().some((e) => !e.set && !e.optional);
 
-  // Merah: tabel inti gagal ATAU DB tak terjangkau.
+  // Merah: tabel inti gagal ATAU DB tak terjangkau ATAU pencarian nyata mati
+  //         (probe kanonik outage = user tidak dapat hasil untuk kata umum).
   // Kuning: tabel ok tapi ada probe migrasi yang belum jalan / env wajib
-  //         kosong / backup >7 hari / storage bucket bermasalah.
+  //         kosong / backup >7 hari / storage bucket bermasalah / drift ambang
+  //         pencarian (probe kanonik gagal tapi bukan outage).
   // Hijau: selainnya.
   let overall: OverallTone = "hijau";
-  if (!tablesOk || dbLatencyMs === null) overall = "merah";
+  if (!tablesOk || dbLatencyMs === null || searchProbe?.outage) overall = "merah";
   else if (
     probes.some((p) => !p.ok) ||
+    (searchProbe !== null && !searchProbe.pass) ||
     envMissingRequired ||
     (ageDays !== null && ageDays > 7) ||
     storage?.buckets.some((b) => b.error)
@@ -392,6 +400,7 @@ export async function collectDiagnostics(): Promise<Diagnostics> {
   return {
     tables,
     probes,
+    searchProbe,
     storage,
     github,
     envs: getEnvStatus(),
