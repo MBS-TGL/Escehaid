@@ -27,6 +27,7 @@ import {
   ChartLine,
 } from "@/components/Icons";
 import { StatCard, StatCardGroup, statGridClass } from "@/components/ui";
+import { WidgetErrorBoundary, WidgetErrorCard, WidgetErrorStrip } from "./WidgetErrorBoundary";
 import { getBackupManifest } from "@/lib/queries/backup";
 import { getGithubStatus } from "@/lib/queries/diagnostics";
 
@@ -793,15 +794,26 @@ export default async function AdminPage() {
 
       {/* Perlu perhatian — stream sendiri (count di-cache, dipakai juga statistik) */}
       {(isAdmin || canPublish) && (
-        <Suspense fallback={<TodoSkeleton />}>
-          <TodoRail supabase={supabase} isAdmin={isAdmin} canPublish={canPublish} />
-        </Suspense>
+        <WidgetErrorBoundary name="todo" fallback={<WidgetErrorStrip />}>
+          <Suspense fallback={<TodoSkeleton />}>
+            <TodoRail supabase={supabase} isAdmin={isAdmin} canPublish={canPublish} />
+          </Suspense>
+        </WidgetErrorBoundary>
       )}
 
       {/* Statistik — stream sendiri */}
-      <Suspense fallback={<StatsSkeleton count={statCount} />}>
-        <StatsSection supabase={supabase} isAdmin={isAdmin} canPublish={canPublish} />
-      </Suspense>
+      <WidgetErrorBoundary
+        name="stats"
+        fallback={
+          <div role="alert" className="mb-6 flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-4 py-3">
+            <span className="flex-1 text-xs font-medium text-slate-500">Statistik gagal dimuat.</span>
+          </div>
+        }
+      >
+        <Suspense fallback={<StatsSkeleton count={statCount} />}>
+          <StatsSection supabase={supabase} isAdmin={isAdmin} canPublish={canPublish} />
+        </Suspense>
+      </WidgetErrorBoundary>
 
       {/* Daftar terbaru — tiap kartu stream independen; kartu Status Sistem
           (admin) menjadi item grid ke-5 sehingga xl:grid-cols-3 terisi 3+2.
@@ -810,30 +822,40 @@ export default async function AdminPage() {
       {(isAdmin || canPublish) && (
         <div className={`grid gap-4 lg:gap-6 ${listGridClass}`}>
           {isAdmin && (
-            <Suspense fallback={<ListCardSkeleton />}>
-              <RecentSpmbCard supabase={supabase} />
-            </Suspense>
+            <WidgetErrorBoundary name="recent-spmb" fallback={<WidgetErrorCard title="Pendaftar SPMB terbaru" href="/admin/admission" />}>
+              <Suspense fallback={<ListCardSkeleton />}>
+                <RecentSpmbCard supabase={supabase} />
+              </Suspense>
+            </WidgetErrorBoundary>
           )}
           {isAdmin && (
-            <Suspense fallback={<ListCardSkeleton />}>
-              <RecentMessagesCard supabase={supabase} />
-            </Suspense>
+            <WidgetErrorBoundary name="recent-messages" fallback={<WidgetErrorCard title="Pesan masuk terbaru" href="/admin/contact" />}>
+              <Suspense fallback={<ListCardSkeleton />}>
+                <RecentMessagesCard supabase={supabase} />
+              </Suspense>
+            </WidgetErrorBoundary>
           )}
           {canPublish && (
-            <Suspense fallback={<ListCardSkeleton />}>
-              <RecentNewsCard supabase={supabase} />
-            </Suspense>
+            <WidgetErrorBoundary name="recent-news" fallback={<WidgetErrorCard title="Berita terbaru" href="/admin/news" />}>
+              <Suspense fallback={<ListCardSkeleton />}>
+                <RecentNewsCard supabase={supabase} />
+              </Suspense>
+            </WidgetErrorBoundary>
           )}
           {canPublish && (
-            <Suspense fallback={null}>
-              <AgendaCard supabase={supabase} />
-            </Suspense>
+            <WidgetErrorBoundary name="agenda" fallback={null}>
+              <Suspense fallback={null}>
+                <AgendaCard supabase={supabase} />
+              </Suspense>
+            </WidgetErrorBoundary>
           )}
           {/* Status sistem — ringkasan diagnostik (admin saja; detail di /admin/diagnostics) */}
           {isAdmin && (
-            <Suspense fallback={null}>
-              <SystemStatusCard supabase={supabase} />
-            </Suspense>
+            <WidgetErrorBoundary name="system-status" fallback={null}>
+              <Suspense fallback={null}>
+                <SystemStatusCard supabase={supabase} />
+              </Suspense>
+            </WidgetErrorBoundary>
           )}
         </div>
       )}
