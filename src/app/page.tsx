@@ -145,6 +145,33 @@ function bentoSpanClass(index: number, total: number): string {
 const SALAM_BUKA = "Assalamu'alaikum Warahmatullahi Wabarakatuh.";
 const SALAM_TUTUP = "Wassalamu'alaikum Warahmatullahi Wabarakatuh.";
 
+/** Pita statistik ringkas di bawah strip SPMB. Hanya angka yang benar-benar
+ *  ada dari DB/profil yang tampil — stat bernilai 0 dihilangkan; semua 0 →
+ *  pita tidak dirender (tanpa angka karangan). */
+function StatsBand({ stats }: { stats: { label: string; value: number }[] }) {
+  const visible = stats.filter((s) => Number.isFinite(s.value) && s.value > 0);
+  if (visible.length === 0) return null;
+  return (
+    <section
+      aria-label="Statistik sekolah"
+      className="bg-gradient-to-r from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary)]"
+    >
+      <div className="mx-auto grid max-w-[1296px] grid-cols-2 gap-y-8 px-6 py-10 md:grid-cols-4 md:px-10 md:py-12">
+        {visible.map((s) => (
+          <div key={s.label} className="flex flex-col items-center text-center">
+            <span className="text-3xl font-black tracking-tight text-white md:text-4xl">
+              {s.value.toLocaleString("id-ID")}
+            </span>
+            <span className="mt-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-white/70 md:text-xs">
+              {s.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   // Judul beranda memakai `absolute` agar TIDAK ikut template `%s | <nama>`
   // dari root layout — kalau tidak, nama sekolah muncul dua kali.
@@ -209,6 +236,15 @@ export default async function Home() {
 
   // Hanya acara yang belum dimulai yang layak ditayangkan di countdown.
   const upcomingEvents = filterUpcomingEvents(agendaEvents);
+
+  // Pita statistik: angka nyata dari profil sekolah + hitungan DB (guru dan
+  // ekskul di-fetch tanpa limit, jadi length-nya = jumlah aktif sesungguhnya).
+  const homeStats = [
+    { label: "Santri Aktif", value: profile?.total_students ?? 0 },
+    { label: "Rombongan Belajar", value: profile?.total_classes ?? 0 },
+    { label: "Guru & Staff", value: teachers.length },
+    { label: "Ekstrakurikuler", value: ekskulList.length },
+  ];
 
   // Spotlight SPMB: gelombang yang sedang dibuka (pola sama dengan /admission).
   // Tidak ada wave open → strip tidak dirender sama sekali (tanpa ruang kosong).
@@ -407,6 +443,9 @@ export default async function Home() {
           </div>
         </section>
       ) : null}
+
+      {/* ── STATISTIK RINGKAS ─────────────────────────────── */}
+      <StatsBand stats={homeStats} />
 
       {/* ── SAMBUTAN KEPALA SEKOLAH ───────────────────────── */}
       <section className="relative overflow-hidden bg-[var(--surface-muted)] py-16 md:py-24" style={CV_TALL}>
