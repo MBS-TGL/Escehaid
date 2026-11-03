@@ -395,7 +395,7 @@ export function RolesTab() {
         </div>
 
         {/* Footer ringkasan */}
-        <div className="flex items-center gap-2 border-t border-slate-200/80 bg-slate-50/50 px-5 py-3 text-xs text-slate-500 sticky bottom-0 z-10">
+        <div className="flex items-center gap-2 border-t border-slate-200/80 bg-slate-50/80 px-5 pt-3 pb-4 text-xs text-slate-500 sticky bottom-0 z-10 rounded-b-xl">
           {dirty ? (
             <>
               <Warning className="h-3.5 w-3.5 text-amber-500" />
