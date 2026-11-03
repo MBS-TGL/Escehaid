@@ -337,9 +337,8 @@ export default async function Home() {
         </div>
       </section>
 
-      <CountdownEvent events={upcomingEvents} />
-
-      {/* ── SPOTLIGHT SPMB — strip statis pengganti popup ──────
+      {/* ── SPOTLIGHT SPMB — strip statis pengganti popup, tepat di
+          bawah hero sebelum countdown ────────────────────────────
           Hanya tampil bila ada gelombang open (gelombang = sumber kebenaran
           yang sama dengan /admission). Tanpa wave open → null, tanpa ruang
           kosong. Bila wave open belum ada tapi ada upcoming → tampil versi
@@ -407,6 +406,8 @@ export default async function Home() {
           </div>
         </section>
       ) : null}
+
+      <CountdownEvent events={upcomingEvents} />
 
       {/* ── SAMBUTAN KEPALA SEKOLAH ───────────────────────── */}
       <section className="relative overflow-hidden bg-[var(--surface-muted)] py-16 md:py-24" style={CV_TALL}>
