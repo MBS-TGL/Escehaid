@@ -21,7 +21,6 @@ import {
   createWave,
   updateWave,
   deleteWave,
-  getWaveStatus,
   getSchoolProfile,
   getDocumentVerifications,
   getDocumentVerificationSummary,
@@ -45,9 +44,6 @@ import {
 import { usePermissions } from "@/app/admin/PermissionsProvider";
 import { SlideOver } from "@/components/ui";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
-import { SortableList } from "@/components/admin/sortable/SortableList";
-import { SortableRow } from "@/components/admin/sortable/SortableRow";
-import { SortableGrip } from "@/components/admin/sortable/SortableGrip";
 import { useReorder } from "@/lib/admin/useReorder";
 import type { SpmbDocumentKey, SpmbDocumentVerification, SpmbRegistration, SpmbWave, SpmbFormField, SpmbFieldType } from "@/lib/supabase";
 import type { SpmbMessageTemplate } from "@/lib/queries";
@@ -69,17 +65,10 @@ import {
   XCircle,
   Clock,
   Users,
-  FileText,
   GraduationCap,
-  Plus,
   Compass,
   Tag,
-  PencilSimple,
-  Trash,
   Warning,
-  ArrowUp,
-  ArrowDown,
-  CalendarBlank,
   FloppyDisk,
 } from "@/components/Icons";
 import { PipelineBoard } from "./PipelineBoard";
@@ -95,7 +84,10 @@ import { FilterBar } from "@/components/admin/FilterBar";
 import { RegistrationFormSlideOver } from "@/components/admin/RegistrationFormSlideOver";
 import { ImportRegistrationsModal } from "@/components/admin/ImportRegistrationsModal";
 import { PageHeader } from "./PageHeader";
-import { pathLabels, waveStatusConfig, ExternalIcon, fieldTypeLabel } from "./shared";
+import { WavesTab } from "./WavesTab";
+import { FormTab } from "./FormTab";
+import { SettingsTab } from "./SettingsTab";
+import { pathLabels } from "./shared";
 import { SpmbBulkBar, SpmbMobileBulkBar } from "./BulkBars";
 import { SpmbDesktopTable } from "./SpmbDesktopTable";
 import { SpmbMobileList } from "./SpmbMobileList";
@@ -120,13 +112,6 @@ function readInitialParams(): SpmbListUiParams {
 /* Konstanta tampilan baris (statusConfig, pathLabels, dst.) kini di ./shared;
    tipe di ./types — definisi duplikat di sini sudah dipindah. */
 const FIELD_MAX = 50;
-
-/** Format "YYYY-MM-DD" → "20 Okt 2026" (id-ID), tanpa geser zona waktu. */
-function formatWaveDate(dateStr: string): string {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  if (!y || !m || !d) return dateStr;
-  return new Date(y, m - 1, d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
-}
 
 export default function AdminSPMBPage() {
   const { toast } = useToast();
@@ -1493,7 +1478,327 @@ export default function AdminSPMBPage() {
         canExport={permExport}
       />
 
-      {/* ── MODAL LINK GOOGLE FORM ─────────────────────── */}
+      {/* ── TAB: PENDAFTAR ── */}
+      {mainTab === "registrations" && (
+        <>
+          {/* Stats — StatPillGroup: pill kompak satu baris */}
+          <StatPillGroup>
+            <StatPill icon={Users} label="Total" value={stats.total} tone="neutral" />
+            <StatPill icon={Clock} label="Menunggu" value={stats.pending} tone="warning" />
+            <StatPill icon={CheckCircle} label="Diterima" value={stats.accepted} tone="success" />
+            <StatPill icon={XCircle} label="Ditolak" value={stats.rejected} tone="danger" />
+          </StatPillGroup>
+
+          {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
+          <SpmbBulkBar
+            count={selectedIds.size}
+            canVerify={permVerify}
+            canDelete={permDelete}
+            bulkPendingSaving={bulkPendingSaving}
+            onAccept={() => setConfirmAction({ id: "bulk", status: "accepted" })}
+            onReject={() => setConfirmAction({ id: "bulk", status: "rejected" })}
+            onMoveWave={() => { setBulkWaveId(""); setBulkWaveOpen(true); }}
+            onMovePath={() => { setBulkPath(""); setBulkPathOpen(true); }}
+            onSetPending={handleBulkSetPending}
+            onScheduleInterview={() => setInterviewTarget("bulk")}
+            onDelete={() => setBulkDelete(true)}
+            onClear={() => setSelectedIds(new Set())}
+          />
+
+          {/* Filter + Search (desktop md+) — gaya Portal: pencarian di kiri,
+              status sebagai pill dropdown berjumlah di kanan. */}
+          <div className="hidden md:block">
+            <FilterBar
+              placeholder="Cari nama, NISN/NIK, sekolah, program, jalur, putra/putri…"
+              searchLabel="Cari nama, NISN/NIK, sekolah, program, jalur, jenis kelamin, email, atau telepon"
+              query={search}
+              onQueryChange={handleSearchChange}
+              action={
+                <SavedViewsDropdown
+                  module="admission"
+                  currentParams={uiParams as unknown as Record<string, unknown>}
+                  views={savedViews}
+                  activeViewId={activeViewId}
+                  onSelectView={applySavedView}
+                  onRefresh={() => void refreshSavedViews()}
+                />
+              }
+              filters={[
+                {
+                  value: filter,
+                  options: statusOptions,
+                  onChange: (k) => { setFilter(k); resetPage(); },
+                  menuLabel: "Filter status",
+                },
+                {
+                  value: pathFilter,
+                  options: pathOptions,
+                  onChange: (k) => { setPathFilter(k); resetPage(); },
+                  menuLabel: "Filter jalur",
+                },
+                {
+                  value: programFilter,
+                  options: programOptions,
+                  onChange: (k) => { setProgramFilter(k); resetPage(); },
+                  menuLabel: "Filter program",
+                },
+                {
+                  value: genderFilter,
+                  options: genderOptions,
+                  onChange: (k) => { setGenderFilter(k); resetPage(); },
+                  menuLabel: "Filter jenis kelamin",
+                },
+                {
+                  value: actionFilter,
+                  options: actionOptions,
+                  onChange: (k) => { setActionFilter(k); resetPage(); },
+                  menuLabel: "Filter perlu tindakan",
+                },
+                {
+                  value: interviewFilter,
+                  options: interviewOptions,
+                  onChange: (k) => { setInterviewFilter(k); resetPage(); },
+                  menuLabel: "Filter wawancara",
+                },
+              ]}
+            />
+          </div>
+
+          {/* Chips cepat "Perlu Tindakan" — satu klik ke filter server-side. */}
+          <div className="mb-4 flex flex-wrap items-center gap-1.5">
+            {[
+              { key: "all", label: "Semua Kondisi", count: aggregates.length },
+              { key: "overdue", label: "Lewat SLA", count: actionCounts.overdue },
+              { key: "docs_rejected", label: "Berkas ditolak", count: actionCounts.docsRejected },
+              { key: "docs_incomplete", label: "Berkas kurang", count: actionCounts.docsIncomplete },
+              { key: "no_wave", label: "Tanpa gelombang", count: actionCounts.noWave },
+              { key: "duplicates", label: "Duplikat", count: actionCounts.duplicates },
+            ].map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                onClick={() => { setActionFilter(c.key); resetPage(); }}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                  actionFilter === c.key
+                    ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-[var(--brand-accent)]/40"
+                }`}
+              >
+                {c.label}
+                <span className={`rounded-full px-1 tabular-nums ${actionFilter === c.key ? "bg-white/20" : "bg-slate-100 text-slate-500"}`}>
+                  {c.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Toolbar mobile (<md): pencarian + filter ikon 1 baris + urut & Pilih */}
+          <MobileFilterBar
+            placeholder="Cari nama, NISN/NIK, sekolah, program, jalur, putra/putri…"
+            searchLabel="Cari nama, NISN/NIK, sekolah, program, jalur, jenis kelamin, email, atau telepon"
+            query={search}
+            onQueryChange={handleSearchChange}
+            compactFilters
+            filter={{
+              value: filter,
+              options: statusOptions,
+              onChange: (k) => { setFilter(k); resetPage(); },
+              menuLabel: "Filter status",
+              icon: <Tag className="h-4 w-4" />,
+            }}
+            filter2={{
+              value: pathFilter,
+              options: pathOptions,
+              onChange: (k) => { setPathFilter(k); resetPage(); },
+              menuLabel: "Filter jalur",
+              icon: <Compass className="h-4 w-4" />,
+            }}
+            filter3={{
+              value: programFilter,
+              options: programOptions,
+              onChange: (k) => { setProgramFilter(k); resetPage(); },
+              menuLabel: "Filter program",
+              icon: <GraduationCap className="h-4 w-4" />,
+            }}
+            filter4={{
+              value: actionFilter,
+              options: actionOptions,
+              onChange: (k) => { setActionFilter(k); resetPage(); },
+              menuLabel: "Filter perlu tindakan",
+              icon: <Warning className="h-4 w-4" />,
+            }}
+            sort={{
+              value: `${sortField}:${sortDir}`,
+              options: [
+                { key: "created_at:desc", label: "Terbaru" },
+                { key: "created_at:asc", label: "Terlama" },
+                { key: "full_name:asc", label: "Nama A–Z" },
+                { key: "full_name:desc", label: "Nama Z–A" },
+                { key: "status:asc", label: "Status A–Z" },
+                { key: "status:desc", label: "Status Z–A" },
+                { key: "registration_path:asc", label: "Jalur A–Z" },
+                { key: "registration_path:desc", label: "Jalur Z–A" },
+                { key: "gender:asc", label: "Putra dulu" },
+                { key: "gender:desc", label: "Putri dulu" },
+              ],
+              onChange: (k) => {
+                const [f, d] = k.split(":");
+                setSortField(f as SortField);
+                setSortDir(d as SortDir);
+              },
+            }}
+            action={<MobilePickButton onClick={() => setPickMode(true)} />}
+            selectMode={pickMode}
+            selectedCount={selectedIds.size}
+            allSelected={allVisibleSelected}
+            onSelectAllVisible={toggleSelectAll}
+          />
+
+          {/* Tabel desktop (md+) — komponen SpmbDesktopTable */}
+          <SpmbDesktopTable
+            rows={paginated}
+            loading={loading}
+            loadError={loadError}
+            search={search}
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            selectedIds={selectedIds}
+            allVisibleSelected={allVisibleSelected}
+            docSummary={docSummary}
+            sortField={sortField}
+            sortDir={sortDir}
+            canVerify={permVerify}
+            canEdit={permUpdate}
+            canDelete={permDelete}
+            onToggleSelectAll={toggleSelectAll}
+            onToggleSelect={toggleSelect}
+            onToggleSort={toggleSort}
+            onDetail={openDetail}
+            onEdit={setEditItem}
+            onDelete={setDeleteItem}
+            onSetStatus={(r, s) => {
+              if (s === "pending") handleSetPending(r);
+              else setConfirmAction({ id: r.id, status: s });
+            }}
+            onRetry={() => void fetchData()}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+
+
+          {/* Daftar mobile (<md) — komponen SpmbMobileList */}
+          <SpmbMobileList
+            rows={paginated}
+            loading={loading}
+            loadError={loadError}
+            search={search}
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            selectedIds={selectedIds}
+            pickMode={pickMode}
+            docSummary={docSummary}
+            canEdit={permUpdate}
+            canVerify={permVerify}
+            canDelete={permDelete}
+            onEnterPickMode={enterPickMode}
+            onToggleSelect={toggleSelect}
+            onDetail={openDetail}
+            onEdit={setEditItem}
+            onDelete={setDeleteItem}
+            onSetStatus={(r, s) => {
+              // Terima/Tolak lewat modal konfirmasi; Jadikan Menunggu langsung.
+              if (s === 'pending') handleSetPending(r);
+              else setConfirmAction({ id: r.id, status: s });
+            }}
+            onRetry={() => void fetchData()}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+
+          {pickMode && (
+            <SpmbMobileBulkBar
+              count={selectedIds.size}
+              canVerify={permVerify}
+              canDelete={permDelete}
+              bulkPendingSaving={bulkPendingSaving}
+              onAccept={() => setConfirmAction({ id: 'bulk', status: 'accepted' })}
+              onReject={() => setConfirmAction({ id: 'bulk', status: 'rejected' })}
+              onMoveWave={() => { setBulkWaveId(''); setBulkWaveOpen(true); }}
+              onMovePath={() => { setBulkPath(''); setBulkPathOpen(true); }}
+              onSetPending={handleBulkSetPending}
+              onScheduleInterview={() => setInterviewTarget("bulk")}
+              onDelete={() => setBulkDelete(true)}
+              onCancel={exitPickMode}
+            />
+          )}
+        </>
+      )}
+
+      {/* ── TAB: GELOMBANG (komponen ./WavesTab) ── */}
+      {mainTab === "waves" && (
+        <WavesTab
+          waves={waves}
+          wavesLoading={wavesLoading}
+          wavesError={wavesError}
+          dragDisabled={dragDisabled}
+          permUpdate={permUpdate}
+          permVerify={permVerify}
+          onReorderWaves={onReorderWaves}
+          onAdd={() => openWaveForm()}
+          onEdit={(w) => openWaveForm(w)}
+          onToggleWave={(w) => void handleToggleWave(w)}
+          onDelete={(w) => setDeleteWaveItem(w)}
+          onPublishResult={(w) => setResultWave(w)}
+        />
+      )}
+
+      {/* ── TAB: FORMULIR (komponen ./FormTab) ── */}
+      {mainTab === "form" && (
+        <FormTab
+          regMode={regMode}
+          regModeSaving={regModeSaving}
+          regUrl={regUrl}
+          formFields={formFields}
+          fieldMax={FIELD_MAX}
+          onOpenGoogleModal={() => setGoogleModal(true)}
+          onChangeRegMode={(m) => void handleChangeRegMode(m)}
+          onAddField={() => openFieldForm()}
+          onEditField={(f) => openFieldForm(f)}
+          onToggleField={(f) => void handleToggleField(f)}
+          onMoveField={(i, d) => void handleMoveField(i, d)}
+          onDeleteField={(f) => setDeleteFieldItem(f)}
+        />
+      )}
+
+      {/* ── TAB: PENGATURAN (komponen ./SettingsTab) ── */}
+      {mainTab === "settings" && (
+        <SettingsTab
+          docBrochure={docBrochure}
+          docBrochureErr={docBrochureErr}
+          docOffline={docOffline}
+          docOfflineErr={docOfflineErr}
+          docPhone={docPhone}
+          docPhoneErr={docPhoneErr}
+          docHighlight={docHighlight}
+          docSaving={docSaving}
+          docDirty={docDirty}
+          waTemplates={waTemplates}
+          waDrafts={waDrafts}
+          waSavingKey={waSavingKey}
+          permUpdate={permUpdate}
+          onDocBrochureChange={(v) => { setDocBrochure(v); setDocBrochureErr(null); }}
+          onDocOfflineChange={(v) => { setDocOffline(v); setDocOfflineErr(null); }}
+          onDocPhoneChange={(v) => { setDocPhone(v); setDocPhoneErr(null); }}
+          onDocHighlightChange={setDocHighlight}
+          onSaveDocs={() => void handleSaveDocs()}
+          onWaDraftChange={(k, v) => setWaDrafts((prev) => ({ ...prev, [k]: v }))}
+          onSaveTemplate={(k) => void handleSaveTemplate(k)}
+        />
+      )}
+
+      {/* ── MODALS & SLIDE-OVERS (SHARED ANTAR TAB) ──────────────────── */}
       {googleModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
           onClick={() => !regModeSaving && setGoogleModal(false)}>
@@ -1531,405 +1836,6 @@ export default function AdminSPMBPage() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* ── TAB: GELOMBANG ── */}
-      {mainTab === "waves" && (
-        <>
-          {/* Toolbar */}
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-slate-500">
-              Atur gelombang pendaftaran yang tampil di halaman Penerimaan Santri Baru.
-            </p>
-            {permUpdate && (
-              <button onClick={() => openWaveForm()}
-                className="flex min-h-11 sm:min-h-0 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]">
-                <Plus className="h-4 w-4" />
-                Tambah Gelombang
-              </button>
-            )}
-          </div>
-
-          {/* Error memuat data */}
-          {wavesError && (
-            <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              <Warning className="h-4 w-4 shrink-0" />
-              {wavesError}
-            </div>
-          )}
-
-          {/* Daftar gelombang */}
-          <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
-            {wavesLoading ? (
-              <div className="flex flex-col items-center gap-3 px-4 py-16 text-center">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
-                <p className="text-sm text-slate-500">Memuat data gelombang...</p>
-              </div>
-            ) : waves.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 px-4 py-16 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-                  <CalendarBlank className="h-8 w-8 text-slate-300" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-600">Belum ada gelombang pendaftaran</p>
-                  <p className="mt-1 text-xs text-slate-400">Klik &ldquo;Tambah Gelombang&rdquo; untuk membuat gelombang pertama.</p>
-                </div>
-              </div>
-            ) : (
-              <SortableList ids={waves.map((w) => w.id)} onReorder={onReorderWaves}>
-              <ul className="divide-y divide-slate-100">
-                {waves.map((w, index) => {
-                  const st = waveStatusConfig[getWaveStatus(w)] || waveStatusConfig.upcoming;
-                  return (
-                    <SortableRow key={w.id} id={w.id} disabled={dragDisabled}>
-                      {({ setNodeRef, style, isDragging, attributes, listeners }) => (
-                        <li
-                          ref={setNodeRef}
-                          style={style}
-                          className={`flex flex-wrap items-start gap-3 p-4 transition-colors sm:flex-nowrap sm:items-center ${isDragging ? "bg-slate-50 opacity-70" : ""}`}
-                        >
-                          <SortableGrip
-                            index={index}
-                            label={w.name}
-                            disabled={dragDisabled}
-                            attributes={attributes}
-                            listeners={listeners}
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-sm font-semibold text-slate-800">{w.name}</span>
-                              <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${st.cls}`}>{st.label}</span>
-                              {!w.is_published && (
-                                <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
-                                  Disembunyikan
-                                </span>
-                              )}
-                              {w.result_published_at && (
-                                <span className="rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-[11px] font-semibold text-purple-700">
-                                  Hasil Ditayangkan
-                                </span>
-                              )}
-                            </div>
-                            <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
-                              <CalendarBlank className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                              {formatWaveDate(w.start_date)} &ndash; {formatWaveDate(w.end_date)}
-                            </p>
-                            {w.note && <p className="mt-1 text-xs text-slate-400">{w.note}</p>}
-                          </div>
-
-                          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-                            {permUpdate && (
-                              <button onClick={() => handleToggleWave(w)}
-                                title={w.is_published ? "Sembunyikan dari website" : "Tampilkan di website"}
-                                className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${w.is_published ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100"}`}>
-                                <span className={`relative inline-block h-4 w-7 rounded-full transition-colors ${w.is_published ? "bg-emerald-500" : "bg-slate-300"}`}>
-                                  <span className={`absolute left-0.5 top-1 h-2 w-2 rounded-full bg-white transition-transform ${w.is_published ? "translate-x-3" : ""}`} />
-                                </span>
-                                {w.is_published ? "Tampil" : "Sembunyi"}
-                              </button>
-                            )}
-                            {permVerify && (
-                              <button onClick={() => setResultWave(w)}
-                                title={w.result_published_at ? "Tarik hasil seleksi dari publik" : "Publikasikan hasil seleksi gelombang ini"}
-                                className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${w.result_published_at ? "border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100" : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100"}`}>
-                                <CheckCircle className="h-3.5 w-3.5" />
-                                {w.result_published_at ? "Hasil: Tayang" : "Hasil: Belum"}
-                              </button>
-                            )}
-                            {permUpdate && (
-                              <>
-                                <button onClick={() => openWaveForm(w)} title="Edit Gelombang"
-                                  className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600">
-                                  <PencilSimple className="h-4 w-4" />
-                                </button>
-                                <button onClick={() => setDeleteWaveItem(w)} title="Hapus"
-                                  className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600">
-                                  <Trash className="h-4 w-4" />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </li>
-                      )}
-                    </SortableRow>
-                  );
-                })}
-              </ul>
-              </SortableList>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* ── TAB: FORMULIR ── */}
-      {mainTab === "form" && (
-        <>
-          {/* ── SUMBER PENDAFTARAN (MODE REGISTRASI) ─────────── */}
-          <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-[var(--brand-primary)]">Sumber Pendaftaran</p>
-              <p className="mt-0.5 text-xs text-slate-500">
-                Pilih tujuan tombol Daftar di website. Klik Google Form untuk mengatur link formulir; mode ini juga mengalihkan halaman form bawaan ke Google Form.
-              </p>
-              {regMode === "google_form" && (
-                <p className="mt-1 truncate text-[11px] text-slate-400" title={regUrl}>{regUrl}</p>
-              )}
-            </div>
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              <button onClick={() => setGoogleModal(true)} disabled={regModeSaving}
-                className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${regMode === "google_form" ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"}`}>
-                Google Form
-              </button>
-              <button onClick={() => handleChangeRegMode("internal")} disabled={regModeSaving}
-                className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${regMode === "internal" ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"}`}>
-                Form Internal
-              </button>
-            </div>
-          </div>
-
-          {/* ── BUILDER PERTANYAAN TAMBAHAN (ALA GOOGLE FORM) ── */}
-          <div className="mb-4 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-[var(--brand-primary)]">Pertanyaan Tambahan Formulir</p>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  Susun pertanyaan custom untuk form pendaftaran (seperti Google Form). Pertanyaan aktif tampil
-                  sebagai langkah &ldquo;Pertanyaan Tambahan&rdquo; di halaman pendaftaran.
-                </p>
-              </div>
-              <button onClick={() => openFieldForm()} disabled={formFields.length >= FIELD_MAX}
-                className="flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--brand-accent)]">
-                <Plus className="h-4 w-4" />
-                Tambah Pertanyaan
-              </button>
-            </div>
-
-            {formFields.length === 0 ? (
-              <div className="mt-4 flex flex-col items-center gap-2 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center">
-                <FileText className="h-7 w-7 text-slate-300" />
-                <p className="text-sm font-medium text-slate-600">Belum ada pertanyaan tambahan</p>
-                <p className="max-w-md text-xs text-slate-400">
-                  Formulir pendaftar memakai langkah bawaan (Program, Data Siswa, Data Orang Tua, Upload Berkas).
-                  Klik &ldquo;Tambah Pertanyaan&rdquo; untuk membuat pertanyaan pertama.
-                </p>
-              </div>
-            ) : (
-              <ul className="mt-4 divide-y divide-slate-100 rounded-xl border border-slate-200/80">
-                {formFields.map((f, i) => (
-                  <li key={f.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/10 text-[11px] font-bold text-[var(--brand-primary)]">
-                      {i + 1}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className={`text-sm font-semibold ${f.active ? "text-slate-800" : "text-slate-400"}`}>
-                          {f.label}
-                        </span>
-                        <span className="rounded-full border border-[var(--brand-accent)]/20 bg-[var(--brand-accent)]/5 px-2 py-0.5 text-[10px] font-semibold text-[var(--brand-accent)]">
-                          {fieldTypeLabel(f.type)}
-                        </span>
-                        {f.required && (
-                          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-                            Wajib
-                          </span>
-                        )}
-                        {!f.active && (
-                          <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
-                            Nonaktif
-                          </span>
-                        )}
-                      </div>
-                      {spmbFieldNeedsOptions(f.type) && !!f.options?.length && (
-                        <p className="mt-0.5 truncate text-xs text-slate-400" title={f.options.join(", ")}>
-                          Opsi: {f.options.join(", ")}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
-                      <button onClick={() => handleToggleField(f)}
-                        title={f.active ? "Sembunyikan dari form" : "Tampilkan di form"}
-                        className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${f.active ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100"}`}>
-                        <span className={`relative inline-block h-4 w-7 rounded-full transition-colors ${f.active ? "bg-emerald-500" : "bg-slate-300"}`}>
-                          <span className={`absolute left-0.5 top-1 h-2 w-2 rounded-full bg-white transition-transform ${f.active ? "translate-x-3" : ""}`} />
-                        </span>
-                        {f.active ? "Tampil" : "Sembunyi"}
-                      </button>
-                      <button onClick={() => handleMoveField(i, -1)} disabled={i === 0} title="Naik"
-                        className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600">
-                        <ArrowUp className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => handleMoveField(i, 1)} disabled={i === formFields.length - 1} title="Turun"
-                        className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600">
-                        <ArrowDown className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => openFieldForm(f)} title="Edit"
-                        className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600">
-                        <PencilSimple className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => setDeleteFieldItem(f)} title="Hapus"
-                        className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600">
-                        <Trash className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* ── TAB: PENGATURAN ── */}
-      {mainTab === "settings" && (
-        <>
-          {/* ── PENGATURAN SPMB (DOKUMEN + KONTAK + SOROTAN) ──── */}
-          <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm">
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-[var(--brand-primary)]">Pengaturan SPMB</p>
-              <p className="mt-0.5 text-xs text-slate-500">
-                Tautan dokumen, nomor WhatsApp panitia, dan sorotan yang tampil di halaman SPMB.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="doc-brochure" className="mb-1 block text-xs font-semibold text-slate-700">Link brosur SPMB</label>
-                <div className="flex gap-2">
-                  <input id="doc-brochure" type="url" inputMode="url" maxLength={500} value={docBrochure}
-                    onChange={(e) => { setDocBrochure(e.target.value); setDocBrochureErr(null); }}
-                    aria-invalid={!!docBrochureErr} aria-describedby="doc-brochure-desc"
-                    placeholder="https://drive.google.com/file/d/..." disabled={docSaving}
-                    className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
-                  {docBrochure.trim().startsWith("https://") && (
-                    <a href={docBrochure.trim()} target="_blank" rel="noopener noreferrer"
-                      aria-label="Buka link di tab baru" title="Buka link di tab baru"
-                      className="flex shrink-0 items-center justify-center rounded-lg border border-slate-200 px-2.5 text-slate-500 transition-colors hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent)]">
-                      <ExternalIcon className="h-3.5 w-3.5" />
-                    </a>
-                  )}
-                </div>
-                {docBrochureErr ? (
-                  <p id="doc-brochure-desc" className="mt-1 text-xs font-medium text-red-600">{docBrochureErr}</p>
-                ) : (
-                  <p id="doc-brochure-desc" className="mt-1 text-xs text-slate-400">
-                    Dipakai pada tautan &ldquo;brosur resmi sekolah&rdquo; di halaman SPMB. Kosongkan untuk memakai halaman info SPMB di website sekolah.
-                  </p>
-                )}
-              </div>
-              <div>
-                <label htmlFor="doc-offline" className="mb-1 block text-xs font-semibold text-slate-700">Link formulir offline</label>
-                <div className="flex gap-2">
-                  <input id="doc-offline" type="url" inputMode="url" maxLength={500} value={docOffline}
-                    onChange={(e) => { setDocOffline(e.target.value); setDocOfflineErr(null); }}
-                    aria-invalid={!!docOfflineErr} aria-describedby="doc-offline-desc"
-                    placeholder="https://drive.google.com/file/d/..." disabled={docSaving}
-                    className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
-                  {docOffline.trim().startsWith("https://") && (
-                    <a href={docOffline.trim()} target="_blank" rel="noopener noreferrer"
-                      aria-label="Buka link di tab baru" title="Buka link di tab baru"
-                      className="flex shrink-0 items-center justify-center rounded-lg border border-slate-200 px-2.5 text-slate-500 transition-colors hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent)]">
-                      <ExternalIcon className="h-3.5 w-3.5" />
-                    </a>
-                  )}
-                </div>
-                {docOfflineErr ? (
-                  <p id="doc-offline-desc" className="mt-1 text-xs font-medium text-red-600">{docOfflineErr}</p>
-                ) : (
-                  <p id="doc-offline-desc" className="mt-1 text-xs text-slate-400">
-                    Kosongkan untuk menyembunyikan tombol Formulir Offline. Link Google Drive otomatis diubah menjadi link unduh langsung saat disimpan.
-                  </p>
-                )}
-              </div>
-              <div>
-                <label htmlFor="doc-phone" className="mb-1 block text-xs font-semibold text-slate-700">Nomor WhatsApp panitia</label>
-                <input id="doc-phone" type="tel" inputMode="tel" maxLength={20} value={docPhone}
-                  onChange={(e) => { setDocPhone(e.target.value); setDocPhoneErr(null); }}
-                  aria-invalid={!!docPhoneErr} aria-describedby="doc-phone-desc"
-                  placeholder="0858-0673-8160" disabled={docSaving}
-                  className="w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
-                {docPhoneErr ? (
-                  <p id="doc-phone-desc" className="mt-1 text-xs font-medium text-red-600">{docPhoneErr}</p>
-                ) : (
-                  <p id="doc-phone-desc" className="mt-1 text-xs text-slate-400">
-                    Dipakai pada tautan Hubungi Panitia dan footer. Contoh: 0858-0673-8160.
-                  </p>
-                )}
-              </div>
-              <div>
-                <label htmlFor="doc-highlight" className="mb-1 block text-xs font-semibold text-slate-700">Sorotan hasil seleksi</label>
-                <textarea id="doc-highlight" rows={2} value={docHighlight}
-                  onChange={(e) => setDocHighlight(e.target.value)}
-                  aria-describedby="doc-highlight-desc" disabled={docSaving}
-                  placeholder="Pada SPMB Indent 2027/2028, 35 calon murid telah dinyatakan diterima."
-                  className="w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-base md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20" />
-                <p id="doc-highlight-desc" className="mt-1 text-xs text-slate-400">
-                  Tampil di halaman SPMB. Kosongkan untuk menyembunyikan.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              <button data-solid data-busy={docSaving ? "" : undefined} onClick={handleSaveDocs} disabled={docSaving || !docDirty}
-                className="flex items-center justify-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-accent)]">
-                {docSaving ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  "Simpan"
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* ── TEMPLATE PESAN WHATSAPP ─────────────────── */}
-          {permUpdate && (
-            <div className="mb-4 rounded-2xl border border-[#dce3ed] bg-white p-4 shadow-sm">
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-[var(--brand-primary)]">Template Pesan WhatsApp</p>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  Pesan siap pakai untuk menghubungi wali/pendaftar. Placeholder yang didukung:{" "}
-                  <code className="rounded bg-slate-100 px-1">{"{orang_tua}"}</code>{" "}
-                  <code className="rounded bg-slate-100 px-1">{"{nama}"}</code>{" "}
-                  <code className="rounded bg-slate-100 px-1">{"{gelombang}"}</code>{" "}
-                  <code className="rounded bg-slate-100 px-1">{"{jalur}"}</code>{" "}
-                  <code className="rounded bg-slate-100 px-1">{"{program}"}</code>{" "}
-                  <code className="rounded bg-slate-100 px-1">{"{nisn}"}</code>.
-                </p>
-              </div>
-              {waTemplates.length === 0 ? (
-                <p className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-6 text-center text-xs text-slate-400">
-                  Template belum tersedia — jalankan migrasi SQL 0015.
-                </p>
-              ) : (
-                <div className="mt-3 space-y-3">
-                  {waTemplates.map((t) => {
-                    const draft = waDrafts[t.key] ?? "";
-                    const dirty = draft !== t.body;
-                    return (
-                      <div key={t.key} className="rounded-xl border border-slate-100 p-3">
-                        <div className="mb-1.5 flex items-center justify-between gap-2">
-                          <label htmlFor={`wa-${t.key}`} className="text-xs font-semibold text-slate-700">{t.label}</label>
-                          <button
-                            type="button"
-                            onClick={() => handleSaveTemplate(t.key)}
-                            disabled={!dirty || waSavingKey === t.key}
-                            className="rounded-lg bg-[var(--brand-primary)] px-3 py-1 text-[11px] font-semibold text-white hover:bg-[var(--brand-accent)] disabled:opacity-40"
-                          >
-                            {waSavingKey === t.key ? "Menyimpan…" : "Simpan"}
-                          </button>
-                        </div>
-                        <textarea
-                          id={`wa-${t.key}`}
-                          rows={3}
-                          value={draft}
-                          onChange={(e) => setWaDrafts((prev) => ({ ...prev, [t.key]: e.target.value }))}
-                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-base leading-relaxed md:text-sm focus:border-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20"
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-        </>
       )}
 
       {/* ── FORM TAMBAH/EDIT GELOMBANG (SLIDE-OVER) ─────── */}
@@ -2264,266 +2170,6 @@ export default function AdminSPMBPage() {
           </div>
         </div>
       )}
-
-      {/* ── TAB: PENDAFTAR ── */}
-      {mainTab === "registrations" && (
-        <>
-          {/* Stats — StatPillGroup: pill kompak satu baris */}
-          <StatPillGroup>
-            <StatPill icon={Users} label="Total" value={stats.total} tone="neutral" />
-            <StatPill icon={Clock} label="Menunggu" value={stats.pending} tone="warning" />
-            <StatPill icon={CheckCircle} label="Diterima" value={stats.accepted} tone="success" />
-            <StatPill icon={XCircle} label="Ditolak" value={stats.rejected} tone="danger" />
-          </StatPillGroup>
-
-          {/* Bulk actions — desktop; mobile memakai bar sticky saat mode pilih */}
-          <SpmbBulkBar
-            count={selectedIds.size}
-            canVerify={permVerify}
-            canDelete={permDelete}
-            bulkPendingSaving={bulkPendingSaving}
-            onAccept={() => setConfirmAction({ id: "bulk", status: "accepted" })}
-            onReject={() => setConfirmAction({ id: "bulk", status: "rejected" })}
-            onMoveWave={() => { setBulkWaveId(""); setBulkWaveOpen(true); }}
-            onMovePath={() => { setBulkPath(""); setBulkPathOpen(true); }}
-            onSetPending={handleBulkSetPending}
-            onScheduleInterview={() => setInterviewTarget("bulk")}
-            onDelete={() => setBulkDelete(true)}
-            onClear={() => setSelectedIds(new Set())}
-          />
-
-          {/* Filter + Search (desktop md+) — gaya Portal: pencarian di kiri,
-              status sebagai pill dropdown berjumlah di kanan. */}
-          <div className="hidden md:block">
-            <FilterBar
-              placeholder="Cari nama, NISN/NIK, sekolah, program, jalur, putra/putri…"
-              searchLabel="Cari nama, NISN/NIK, sekolah, program, jalur, jenis kelamin, email, atau telepon"
-              query={search}
-              onQueryChange={handleSearchChange}
-              action={
-                <SavedViewsDropdown
-                  module="admission"
-                  currentParams={uiParams as unknown as Record<string, unknown>}
-                  views={savedViews}
-                  activeViewId={activeViewId}
-                  onSelectView={applySavedView}
-                  onRefresh={() => void refreshSavedViews()}
-                />
-              }
-              filters={[
-                {
-                  value: filter,
-                  options: statusOptions,
-                  onChange: (k) => { setFilter(k); resetPage(); },
-                  menuLabel: "Filter status",
-                },
-                {
-                  value: pathFilter,
-                  options: pathOptions,
-                  onChange: (k) => { setPathFilter(k); resetPage(); },
-                  menuLabel: "Filter jalur",
-                },
-                {
-                  value: programFilter,
-                  options: programOptions,
-                  onChange: (k) => { setProgramFilter(k); resetPage(); },
-                  menuLabel: "Filter program",
-                },
-                {
-                  value: genderFilter,
-                  options: genderOptions,
-                  onChange: (k) => { setGenderFilter(k); resetPage(); },
-                  menuLabel: "Filter jenis kelamin",
-                },
-                {
-                  value: actionFilter,
-                  options: actionOptions,
-                  onChange: (k) => { setActionFilter(k); resetPage(); },
-                  menuLabel: "Filter perlu tindakan",
-                },
-                {
-                  value: interviewFilter,
-                  options: interviewOptions,
-                  onChange: (k) => { setInterviewFilter(k); resetPage(); },
-                  menuLabel: "Filter wawancara",
-                },
-              ]}
-            />
-          </div>
-
-          {/* Chips cepat "Perlu Tindakan" — satu klik ke filter server-side. */}
-          <div className="mb-4 flex flex-wrap items-center gap-1.5">
-            {[
-              { key: "all", label: "Semua Kondisi", count: aggregates.length },
-              { key: "overdue", label: "Lewat SLA", count: actionCounts.overdue },
-              { key: "docs_rejected", label: "Berkas ditolak", count: actionCounts.docsRejected },
-              { key: "docs_incomplete", label: "Berkas kurang", count: actionCounts.docsIncomplete },
-              { key: "no_wave", label: "Tanpa gelombang", count: actionCounts.noWave },
-              { key: "duplicates", label: "Duplikat", count: actionCounts.duplicates },
-            ].map((c) => (
-              <button
-                key={c.key}
-                type="button"
-                onClick={() => { setActionFilter(c.key); resetPage(); }}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-                  actionFilter === c.key
-                    ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-[var(--brand-accent)]/40"
-                }`}
-              >
-                {c.label}
-                <span className={`rounded-full px-1 tabular-nums ${actionFilter === c.key ? "bg-white/20" : "bg-slate-100 text-slate-500"}`}>
-                  {c.count}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* Toolbar mobile (<md): pencarian + filter ikon 1 baris + urut & Pilih */}
-          <MobileFilterBar
-            placeholder="Cari nama, NISN/NIK, sekolah, program, jalur, putra/putri…"
-            searchLabel="Cari nama, NISN/NIK, sekolah, program, jalur, jenis kelamin, email, atau telepon"
-            query={search}
-            onQueryChange={handleSearchChange}
-            compactFilters
-            filter={{
-              value: filter,
-              options: statusOptions,
-              onChange: (k) => { setFilter(k); resetPage(); },
-              menuLabel: "Filter status",
-              icon: <Tag className="h-4 w-4" />,
-            }}
-            filter2={{
-              value: pathFilter,
-              options: pathOptions,
-              onChange: (k) => { setPathFilter(k); resetPage(); },
-              menuLabel: "Filter jalur",
-              icon: <Compass className="h-4 w-4" />,
-            }}
-            filter3={{
-              value: programFilter,
-              options: programOptions,
-              onChange: (k) => { setProgramFilter(k); resetPage(); },
-              menuLabel: "Filter program",
-              icon: <GraduationCap className="h-4 w-4" />,
-            }}
-            filter4={{
-              value: actionFilter,
-              options: actionOptions,
-              onChange: (k) => { setActionFilter(k); resetPage(); },
-              menuLabel: "Filter perlu tindakan",
-              icon: <Warning className="h-4 w-4" />,
-            }}
-            sort={{
-              value: `${sortField}:${sortDir}`,
-              options: [
-                { key: "created_at:desc", label: "Terbaru" },
-                { key: "created_at:asc", label: "Terlama" },
-                { key: "full_name:asc", label: "Nama A–Z" },
-                { key: "full_name:desc", label: "Nama Z–A" },
-                { key: "status:asc", label: "Status A–Z" },
-                { key: "status:desc", label: "Status Z–A" },
-                { key: "registration_path:asc", label: "Jalur A–Z" },
-                { key: "registration_path:desc", label: "Jalur Z–A" },
-                { key: "gender:asc", label: "Putra dulu" },
-                { key: "gender:desc", label: "Putri dulu" },
-              ],
-              onChange: (k) => {
-                const [f, d] = k.split(":");
-                setSortField(f as SortField);
-                setSortDir(d as SortDir);
-              },
-            }}
-            action={<MobilePickButton onClick={() => setPickMode(true)} />}
-            selectMode={pickMode}
-            selectedCount={selectedIds.size}
-            allSelected={allVisibleSelected}
-            onSelectAllVisible={toggleSelectAll}
-          />
-
-          {/* Tabel desktop (md+) — komponen SpmbDesktopTable */}
-          <SpmbDesktopTable
-            rows={paginated}
-            loading={loading}
-            loadError={loadError}
-            search={search}
-            page={page}
-            pageSize={pageSize}
-            total={total}
-            selectedIds={selectedIds}
-            allVisibleSelected={allVisibleSelected}
-            docSummary={docSummary}
-            sortField={sortField}
-            sortDir={sortDir}
-            canVerify={permVerify}
-            canEdit={permUpdate}
-            canDelete={permDelete}
-            onToggleSelectAll={toggleSelectAll}
-            onToggleSelect={toggleSelect}
-            onToggleSort={toggleSort}
-            onDetail={openDetail}
-            onEdit={setEditItem}
-            onDelete={setDeleteItem}
-            onSetStatus={(r, s) => {
-              if (s === "pending") handleSetPending(r);
-              else setConfirmAction({ id: r.id, status: s });
-            }}
-            onRetry={() => void fetchData()}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
-          />
-
-
-          {/* Daftar mobile (<md) — komponen SpmbMobileList */}
-          <SpmbMobileList
-            rows={paginated}
-            loading={loading}
-            loadError={loadError}
-            search={search}
-            page={page}
-            pageSize={pageSize}
-            total={total}
-            selectedIds={selectedIds}
-            pickMode={pickMode}
-            docSummary={docSummary}
-            canEdit={permUpdate}
-            canVerify={permVerify}
-            canDelete={permDelete}
-            onEnterPickMode={enterPickMode}
-            onToggleSelect={toggleSelect}
-            onDetail={openDetail}
-            onEdit={setEditItem}
-            onDelete={setDeleteItem}
-            onSetStatus={(r, s) => {
-              // Terima/Tolak lewat modal konfirmasi; Jadikan Menunggu langsung.
-              if (s === 'pending') handleSetPending(r);
-              else setConfirmAction({ id: r.id, status: s });
-            }}
-            onRetry={() => void fetchData()}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
-          />
-
-          {pickMode && (
-            <SpmbMobileBulkBar
-              count={selectedIds.size}
-              canVerify={permVerify}
-              canDelete={permDelete}
-              bulkPendingSaving={bulkPendingSaving}
-              onAccept={() => setConfirmAction({ id: 'bulk', status: 'accepted' })}
-              onReject={() => setConfirmAction({ id: 'bulk', status: 'rejected' })}
-              onMoveWave={() => { setBulkWaveId(''); setBulkWaveOpen(true); }}
-              onMovePath={() => { setBulkPath(''); setBulkPathOpen(true); }}
-              onSetPending={handleBulkSetPending}
-              onScheduleInterview={() => setInterviewTarget("bulk")}
-              onDelete={() => setBulkDelete(true)}
-              onCancel={exitPickMode}
-            />
-          )}
-        </>
-      )}
-
-      {/* ── MODALS & SLIDE-OVERS (SHARED ANTAR TAB) ──────────────────── */}
 
       {/* ── VIEW MODAL — komponen SpmbDetailModal ───────── */}
       {viewItem && (
