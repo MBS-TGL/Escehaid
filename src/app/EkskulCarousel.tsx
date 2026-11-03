@@ -104,7 +104,7 @@ export default function EkskulCarousel({ ekskuls }: { ekskuls: Ekskul[] }) {
                 return (
                   <div key={item.id} className="splide__slide">
                     <Link
-                      href={`/ekskul/${item.slug}`}
+                      href={`/extracurricular/${item.slug}`}
                       className="group/card relative block aspect-[9/16] overflow-hidden bg-[var(--brand-primary)] shadow-md transition-shadow duration-500 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
                     >
                       {/* Foto portrait 9:16 atau placeholder gradient */}

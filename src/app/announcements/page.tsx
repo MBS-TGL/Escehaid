@@ -15,12 +15,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Pengumuman",
     description,
-    alternates: { canonical: "/pengumuman" },
+    alternates: { canonical: "/announcements" },
     robots: items.length === 0 ? { index: false, follow: true } : undefined,
     openGraph: pageOpenGraph({
       title: "Pengumuman",
       description,
-      url: "/pengumuman",
+      url: "/announcements",
       image: await ogImageOverride(),
     }),
   };
@@ -122,7 +122,7 @@ export default async function PengumumanPage({
   const totalPages = Math.max(1, Math.ceil(expired.length / PAGE_SIZE));
   const outOfRange = page > totalPages;
   const expiredPageItems = expired.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const makeHref = (p: number) => (p > 1 ? `/pengumuman?page=${p}` : "/pengumuman");
+  const makeHref = (p: number) => (p > 1 ? `/announcements?page=${p}` : "/announcements");
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -136,7 +136,7 @@ export default async function PengumumanPage({
             "@type": "BreadcrumbList",
             itemListElement: [
               { "@type": "ListItem", position: 1, name: "Beranda", item: "https://www.smpmuh4tanggul.sch.id" },
-              { "@type": "ListItem", position: 2, name: "Pengumuman", item: "https://www.smpmuh4tanggul.sch.id/pengumuman" },
+              { "@type": "ListItem", position: 2, name: "Pengumuman", item: "https://www.smpmuh4tanggul.sch.id/announcements" },
             ],
           }),
         }}
@@ -162,7 +162,7 @@ export default async function PengumumanPage({
             icon={Megaphone}
             title="Halaman tidak ditemukan"
             description="Coba buka halaman pertama."
-            action={{ href: "/pengumuman", label: "Halaman pertama" }}
+            action={{ href: "/announcements", label: "Halaman pertama" }}
           />
         ) : (
           <div className="space-y-10">

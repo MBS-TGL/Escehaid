@@ -13,12 +13,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Guru & Staff",
     description,
-    alternates: { canonical: "/guru" },
+    alternates: { canonical: "/teachers" },
     robots: teachers.length === 0 ? { index: false, follow: true } : undefined,
     openGraph: pageOpenGraph({
       title: "Guru & Staff",
       description,
-      url: "/guru",
+      url: "/teachers",
       image: await ogImageOverride(),
     }),
   };
@@ -41,7 +41,7 @@ export default async function GuruPage() {
             "@type": "BreadcrumbList",
             itemListElement: [
               { "@type": "ListItem", position: 1, name: "Beranda", item: "https://www.smpmuh4tanggul.sch.id" },
-              { "@type": "ListItem", position: 2, name: "Guru & Staff", item: "https://www.smpmuh4tanggul.sch.id/guru" },
+              { "@type": "ListItem", position: 2, name: "Guru & Staff", item: "https://www.smpmuh4tanggul.sch.id/teachers" },
             ],
           }),
         }}

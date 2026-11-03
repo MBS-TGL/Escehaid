@@ -11,11 +11,11 @@ const NAV_GROUPS: { title: string; links: [href: string, label: string][] }[] = 
     title: "Sekolah",
     links: [
       ["/profile", "Profil sekolah"],
-      ["/fasilitas", "Fasilitas"],
-      ["/guru", "Guru & staff"],
+      ["/facilities", "Fasilitas"],
+      ["/teachers", "Guru & staff"],
       ["/program", "Program"],
       ["/activities", "Kegiatan"],
-      ["/ekskul", "Ekstrakurikuler"],
+      ["/extracurricular", "Ekstrakurikuler"],
       ["/achievements", "Prestasi"],
       ["/gallery", "Galeri"],
     ],
@@ -25,7 +25,7 @@ const NAV_GROUPS: { title: string; links: [href: string, label: string][] }[] = 
     links: [
       ["/news", "Berita"],
       ["/articles", "Artikel"],
-      ["/pengumuman", "Pengumuman"],
+      ["/announcements", "Pengumuman"],
       ["/agenda", "Agenda"],
       ["/downloads", "Unduhan"],
     ],

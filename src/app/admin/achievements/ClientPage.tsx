@@ -1293,7 +1293,7 @@ export default function AdminAchievementsPage() {
               placeholder="mis. FLS2N tingkat kabupaten" />
           </div>
 
-          {/* Ekskul terkait — tautan FK ke tabel ekskuls (halaman detail /ekskul/[slug]) */}
+          {/* Ekskul terkait — tautan FK ke tabel ekskuls (halaman detail /extracurricular/[slug]) */}
           <div>
             <Select
               label="Ekskul terkait"

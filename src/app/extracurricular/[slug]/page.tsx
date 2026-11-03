@@ -12,7 +12,7 @@ import { AchievementItemsCardPreview } from "@/components/AchievementItemsList";
 import { dynamicOgImageUrl, ogImageEntry } from "@/lib/seo";
 
 /**
- * Halaman detail ekskul `/ekskul/[slug]` — hero (ikon + nama + jadwal +
+ * Halaman detail ekskul `/extracurricular/[slug]` — hero (ikon + nama + jadwal +
  * pembina), sejarah (kolom `history`, paragraf dipisah baris kosong) dan
  * prestasi terkait dari tabel `achievements` (FK `ekskul_id` → supabase/
  * ekskul.sql). Dynamic (ƒ) tanpa ISR — DB dipanggil tiap request, jadi
@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     openGraph: {
       title: `${ekskul.name} — Ekstrakurikuler`,
       description,
-      url: `/ekskul/${ekskul.slug}`,
+      url: `/extracurricular/${ekskul.slug}`,
       images: [
         ekskul.image_url
           ? { url: ekskul.image_url, alt: ekskul.image_alt || ekskul.name }
@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
             ),
       ],
     },
-    alternates: { canonical: `/ekskul/${ekskul.slug}` },
+    alternates: { canonical: `/extracurricular/${ekskul.slug}` },
   };
 }
 
@@ -78,7 +78,7 @@ export default async function EkskulDetailPage({ params }: { params: Promise<{ s
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Beranda", item: "https://www.smpmuh4tanggul.sch.id" },
       { "@type": "ListItem", position: 2, name: "Profil Sekolah", item: "https://www.smpmuh4tanggul.sch.id/profile" },
-      { "@type": "ListItem", position: 3, name: ekskul.name, item: `https://www.smpmuh4tanggul.sch.id/ekskul/${ekskul.slug}` },
+      { "@type": "ListItem", position: 3, name: ekskul.name, item: `https://www.smpmuh4tanggul.sch.id/extracurricular/${ekskul.slug}` },
     ],
   };
 

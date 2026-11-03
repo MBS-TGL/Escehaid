@@ -14,14 +14,14 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Ekstrakurikuler",
     description,
-    alternates: { canonical: "/ekskul" },
+    alternates: { canonical: "/extracurricular" },
     // Kosong → noindex (pola halaman Prestasi) agar Google tidak mengindeks
     // daftar tanpa isi.
     robots: ekskul.length === 0 ? { index: false, follow: true } : undefined,
     openGraph: pageOpenGraph({
       title: "Ekstrakurikuler",
       description,
-      url: "/ekskul",
+      url: "/extracurricular",
       image: await ogImageOverride(),
     }),
   };
@@ -44,7 +44,7 @@ export default async function EkskulPage() {
             "@type": "BreadcrumbList",
             itemListElement: [
               { "@type": "ListItem", position: 1, name: "Beranda", item: "https://www.smpmuh4tanggul.sch.id" },
-              { "@type": "ListItem", position: 2, name: "Ekstrakurikuler", item: "https://www.smpmuh4tanggul.sch.id/ekskul" },
+              { "@type": "ListItem", position: 2, name: "Ekstrakurikuler", item: "https://www.smpmuh4tanggul.sch.id/extracurricular" },
             ],
           }),
         }}
@@ -61,7 +61,7 @@ export default async function EkskulPage() {
                 "@type": "ListItem",
                 position: i + 1,
                 name: e.name,
-                url: `https://www.smpmuh4tanggul.sch.id/ekskul/${e.slug}`,
+                url: `https://www.smpmuh4tanggul.sch.id/extracurricular/${e.slug}`,
               })),
             }),
           }}
@@ -86,7 +86,7 @@ export default async function EkskulPage() {
           />
         ) : (
           /* Kartu portrait 9:16 kanonik (sama dengan grid Profil) — klik
-             mengarah ke halaman detail /ekskul/[slug]. */
+             mengarah ke halaman detail /extracurricular/[slug]. */
           <CSSStagger
             stagger={60}
             className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 xl:grid-cols-5"

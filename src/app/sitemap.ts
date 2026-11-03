@@ -59,7 +59,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     },
     {
-      url: `${BASE_URL}/ekskul`,
+      url: `${BASE_URL}/extracurricular`,
       changeFrequency: "monthly",
       priority: 0.7,
     },
@@ -69,17 +69,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     },
     {
-      url: `${BASE_URL}/pengumuman`,
+      url: `${BASE_URL}/announcements`,
       changeFrequency: "daily",
       priority: 0.8,
     },
     {
-      url: `${BASE_URL}/fasilitas`,
+      url: `${BASE_URL}/facilities`,
       changeFrequency: "monthly",
       priority: 0.6,
     },
     {
-      url: `${BASE_URL}/guru`,
+      url: `${BASE_URL}/teachers`,
       changeFrequency: "monthly",
       priority: 0.6,
     },
@@ -140,7 +140,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
     })),
     ...ekskul.map((item) => ({
-      url: `${BASE_URL}/ekskul/${item.slug}`,
+      url: `${BASE_URL}/extracurricular/${item.slug}`,
       changeFrequency: "monthly" as const,
       priority: 0.6,
     })),

@@ -29,8 +29,8 @@ const NAV_ITEMS: NavEntry[] = [
     label: "Profil",
     children: [
       { href: "/profile", label: "Profil Sekolah" },
-      { href: "/fasilitas", label: "Fasilitas" },
-      { href: "/guru", label: "Guru & Staff" },
+      { href: "/facilities", label: "Fasilitas" },
+      { href: "/teachers", label: "Guru & Staff" },
       { href: "/faq", label: "Tanya Jawab" },
     ],
   },
@@ -39,7 +39,7 @@ const NAV_ITEMS: NavEntry[] = [
     children: [
       { href: "/program", label: "Program Unggulan" },
       { href: "/activities", label: "Kegiatan" },
-      { href: "/ekskul", label: "Ekstrakurikuler" },
+      { href: "/extracurricular", label: "Ekstrakurikuler" },
     ],
   },
   {
@@ -47,7 +47,7 @@ const NAV_ITEMS: NavEntry[] = [
     children: [
       { href: "/news", label: "Berita" },
       { href: "/articles", label: "Artikel" },
-      { href: "/pengumuman", label: "Pengumuman" },
+      { href: "/announcements", label: "Pengumuman" },
       { href: "/agenda", label: "Agenda" },
       { href: "/achievements", label: "Prestasi" },
     ],

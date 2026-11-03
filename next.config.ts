@@ -11,6 +11,20 @@ import { withSentryConfig } from "@sentry/nextjs/config";
 setDefaultResultOrder("ipv4first");
 
 const nextConfig: NextConfig = {
+  // Rute publik dipadamkan ke penamaan Inggris (Nov 2026): /ekskul →
+  // /extracurricular, /pengumuman → /announcements, /fasilitas → /facilities,
+  // /guru → /teachers. 308 permanen agar URL lama yang sudah terindeks mesin
+  // pencari (dan tautan manual di isi pengumuman/berita) tetap hidup; query
+  // string (?page, ?q) otomatis mengalir ke tujuan.
+  async redirects() {
+    return [
+      { source: "/ekskul", destination: "/extracurricular", permanent: true },
+      { source: "/ekskul/:slug", destination: "/extracurricular/:slug", permanent: true },
+      { source: "/pengumuman", destination: "/announcements", permanent: true },
+      { source: "/fasilitas", destination: "/facilities", permanent: true },
+      { source: "/guru", destination: "/teachers", permanent: true },
+    ];
+  },
   // Supabase berhenti jadi env publik (pemisahan Fase 4): URL & anon key hanya
   // dibaca server. Nilai di-inject lewat `env` supaya proxy.ts (Edge, sebagai
   // bagian build) tetap bisa membacanya di dev & self-host — TIDAK memakai
@@ -90,7 +104,13 @@ const nextConfig: NextConfig = {
     "/admission/status": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
     "/contact": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
     "/downloads": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
-    "/ekskul/[slug]": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/extracurricular": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/extracurricular/[slug]": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/agenda": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/announcements": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/facilities": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/teachers": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
+    "/faq": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
     "/gallery": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
     "/portal": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],
     "/profile": ["**/node_modules/@aws-sdk/**", "**/node_modules/@smithy/**"],

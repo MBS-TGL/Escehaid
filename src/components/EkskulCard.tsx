@@ -8,7 +8,7 @@ import type { Ekskul } from "@/lib/supabase";
 /**
  * Kartu ekskul halaman Profil (grid statis). Data dari tabel
  * `public.ekskuls` (panel admin /admin/ekskul). Klik → halaman detail
- * `/ekskul/[slug]`.
+ * `/extracurricular/[slug]`.
  *
  * Bahasa visual disamakan dengan kartu carousel beranda
  * (`EkskulCarousel`): foto full-card portrait 9:16 + scrim sinematik +
@@ -20,7 +20,7 @@ export default function EkskulCard({ item }: { item: Ekskul }) {
 
   return (
     <Link
-      href={`/ekskul/${item.slug}`}
+      href={`/extracurricular/${item.slug}`}
       className="group relative block h-full aspect-[9/16] overflow-hidden rounded-2xl bg-[var(--brand-primary)] shadow-md transition-shadow duration-500 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)]"
     >
       {/* Foto portrait 9:16 atau placeholder gradient */}

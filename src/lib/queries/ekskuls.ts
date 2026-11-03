@@ -79,7 +79,7 @@ export async function getEkskulListAll(): Promise<Ekskul[]> {
 
 /**
  * Satu ekskul aktif berdasarkan slug — dipakai halaman detail
- * `/ekskul/[slug]` (termasuk kolom `history`). Baris nonaktif/tak ada → null.
+ * `/extracurricular/[slug]` (termasuk kolom `history`). Baris nonaktif/tak ada → null.
  */
 export async function getEkskulBySlug(slug: string): Promise<Ekskul | null> {
   const { data, error } = await supabase

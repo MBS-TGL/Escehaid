@@ -197,7 +197,7 @@ export async function searchAllContent(query: string): Promise<SearchItem[]> {
         id: e.id,
         kind: "ekskul" as const,
         title: e.name,
-        href: `/ekskul/${e.slug}`,
+        href: `/extracurricular/${e.slug}`,
         // Ekskul tak punya tanggal relevan — null agar tampilan menyembunyikannya.
         date: null,
         excerpt: e.description || null,

@@ -172,10 +172,10 @@ export function reorderAnnouncements(
 }
 
 // ============================================================
-// Arsip publik /pengumuman
+// Arsip publik /announcements
 // ============================================================
 
-/** Baris arsip untuk halaman publik /pengumuman. */
+/** Baris arsip untuk halaman publik /announcements. */
 export interface AnnouncementArchiveItem {
   id: string;
   text: string;
@@ -185,7 +185,7 @@ export interface AnnouncementArchiveItem {
 }
 
 /**
- * Arsip pengumuman publik (/pengumuman): seluruh baris aktif yang tidak
+ * Arsip pengumuman publik (/announcements): seluruh baris aktif yang tidak
  * di-soft-delete, TERMASUK yang sudah lewat `expires_at` — bagian "sudah
  * berlalu" halaman memakainya sebagai riwayat. Urutan `sort_order` (kurasi
  * yang sama dengan bar berjalan). Tangguh seperti `getActiveAnnouncements`:

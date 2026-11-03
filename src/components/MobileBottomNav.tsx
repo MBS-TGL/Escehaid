@@ -49,18 +49,18 @@ const SHEET_GROUPS: { title: string; links: sheetLink[] }[] = [
     title: "Sekolah",
     links: [
       { href: "/profile", label: "Profil", icon: User },
-      { href: "/fasilitas", label: "Fasilitas", icon: House },
-      { href: "/guru", label: "Guru & Staff", icon: GraduationCap },
+      { href: "/facilities", label: "Fasilitas", icon: House },
+      { href: "/teachers", label: "Guru & Staff", icon: GraduationCap },
       { href: "/program", label: "Program", icon: BookOpen },
       { href: "/activities", label: "Kegiatan", icon: CalendarBlank },
-      { href: "/ekskul", label: "Ekstrakurikuler", icon: UsersThree },
+      { href: "/extracurricular", label: "Ekstrakurikuler", icon: UsersThree },
       { href: "/achievements", label: "Prestasi", icon: Trophy },
     ],
   },
   {
     title: "Informasi",
     links: [
-      { href: "/pengumuman", label: "Pengumuman", icon: Megaphone },
+      { href: "/announcements", label: "Pengumuman", icon: Megaphone },
       { href: "/agenda", label: "Agenda", icon: CalendarBlank },
       { href: "/articles", label: "Artikel", icon: Note },
       { href: "/downloads", label: "Unduhan", icon: Download },

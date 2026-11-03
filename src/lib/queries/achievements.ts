@@ -85,7 +85,7 @@ export function achievementsHasEkskulColumn(): Promise<boolean> {
 
 /**
  * Prestasi yang terhubung ke ekskul tertentu — dipakai halaman detail
- * `/ekskul/[slug]`. Urut tahun terbaru, gagal → [] (bagian prestasi
+ * `/extracurricular/[slug]`. Urut tahun terbaru, gagal → [] (bagian prestasi
  * otomatis disembunyikan).
  */
 export async function getAchievementsByEkskul(
