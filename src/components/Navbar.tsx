@@ -4,21 +4,69 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import BrandLogo from "@/components/BrandLogo";
-import { MagnifyingGlass } from "@/components/Icons";
+import { MagnifyingGlass, CaretDown } from "@/components/Icons";
 import SearchOverlay from "@/components/SearchOverlay";
 import type { PublicBrand } from "@/lib/settings";
 
-const navLinks = [
+type NavLeaf = { href: string; label: string };
+/** Entri top-level: tautan langsung ATAU dropdown berisi anak-anak halaman. */
+type NavEntry =
+  | NavLeaf
+  | { label: string; hideOnMd?: boolean; children: NavLeaf[] };
+
+const isDropdown = (entry: NavEntry): entry is Exclude<NavEntry, NavLeaf> =>
+  "children" in entry;
+
+/**
+ * Navbar desktop diringkas dengan dropdown: 6 slot + tombol SPMB (sebelumnya
+ * 9 tautan datar dan terus bertambah setiap halaman publik baru). Halaman
+ * Portal & Unduhan tetap terjangkau lewat dropdown "Layanan" (hanya lg+),
+ * footer, dan sheet mobile.
+ */
+const NAV_ITEMS: NavEntry[] = [
   { href: "/", label: "Beranda" },
-  { href: "/profile", label: "Profil" },
-  { href: "/program", label: "Program", hideOnMd: true },
-  { href: "/achievements", label: "Prestasi" },
-  { href: "/news", label: "Berita" },
-  { href: "/articles", label: "Artikel" },
-  { href: "/activities", label: "Kegiatan", hideOnMd: true },
+  {
+    label: "Profil",
+    children: [
+      { href: "/profile", label: "Profil Sekolah" },
+      { href: "/fasilitas", label: "Fasilitas" },
+      { href: "/guru", label: "Guru & Staff" },
+      { href: "/faq", label: "Tanya Jawab" },
+    ],
+  },
+  {
+    label: "Program",
+    children: [
+      { href: "/program", label: "Program Unggulan" },
+      { href: "/activities", label: "Kegiatan" },
+      { href: "/ekskul", label: "Ekstrakurikuler" },
+    ],
+  },
+  {
+    label: "Informasi",
+    children: [
+      { href: "/news", label: "Berita" },
+      { href: "/articles", label: "Artikel" },
+      { href: "/pengumuman", label: "Pengumuman" },
+      { href: "/agenda", label: "Agenda" },
+      { href: "/achievements", label: "Prestasi" },
+    ],
+  },
   { href: "/gallery", label: "Galeri" },
   { href: "/contact", label: "Kontak" },
+  {
+    label: "Layanan",
+    hideOnMd: true,
+    children: [
+      { href: "/portal", label: "Portal Layanan" },
+      { href: "/downloads", label: "Unduhan" },
+    ],
+  },
 ];
+
+/** Tautan aktif bila pathname = href atau berawalan href (kecuali beranda). */
+const matchesPath = (href: string, pathname: string) =>
+  href !== "/" && (pathname === href || pathname.startsWith(href));
 
 export default function Navbar({ brand }: { brand: PublicBrand }) {
   const [scrolled, setScrolled] = useState(false);
@@ -83,21 +131,75 @@ export default function Navbar({ brand }: { brand: PublicBrand }) {
             {/* Kanan: nav desktop + pintu pencarian (ikon tetap tampil di mobile) */}
             <div className="flex items-center gap-1 md:gap-2">
               <div className={`hidden items-center gap-1 md:flex ${hoveredIndex !== null ? "nav-hovering" : ""}`}>
-                {navLinks.map((link, i) => {
-                  const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
+                {NAV_ITEMS.map((entry, i) => {
+                  if (isDropdown(entry)) {
+                    const childActive = entry.children.some((c) => matchesPath(c.href, pathname));
+                    return (
+                      <div
+                        key={entry.label}
+                        className={`group relative ${entry.hideOnMd ? "hidden lg:block" : ""}`}
+                        onMouseEnter={() => setHoveredIndex(i)}
+                        onMouseLeave={() => setHoveredIndex(null)}
+                      >
+                        {/* Pemicu dropdown — hover (desktop) dan fokus keyboard
+                            (focus-within) sama-sama membuka panel di bawahnya. */}
+                        <button
+                          type="button"
+                          aria-haspopup="true"
+                          aria-current={childActive ? "page" : undefined}
+                          className={`nav-link flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors lg:px-3.5 ${childActive
+                              ? "nav-link-active text-[var(--brand-primary)]"
+                              : "text-slate-500 hover:text-[var(--brand-primary)]"
+                            }`}
+                        >
+                          {entry.label}
+                          <CaretDown
+                            className="h-3 w-3 text-slate-400 transition-transform duration-300 group-hover:rotate-180 motion-reduce:transition-none"
+                            weight="fill"
+                          />
+                        </button>
+
+                        {/* Panel: wrapper memakai pt agar celah trigger→panel
+                            tetap "area hover" (panel tidak tutup saat kursor
+                            melewati celah). */}
+                        <div className="invisible absolute left-0 top-full pt-2 opacity-0 transition-all duration-200 focus-within:visible focus-within:opacity-100 group-hover:visible group-hover:opacity-100 motion-reduce:transition-none">
+                          <div className="min-w-[190px] rounded-xl border border-[#dce3ed] bg-white p-1.5 shadow-xl shadow-[var(--brand-primary)]/10">
+                            {entry.children.map((child) => {
+                              const active = matchesPath(child.href, pathname);
+                              return (
+                                <Link
+                                  key={child.href}
+                                  href={child.href}
+                                  aria-current={active ? "page" : undefined}
+                                  className={`block rounded-lg px-3 py-2 text-sm transition-colors ${active
+                                      ? "bg-[var(--brand-primary)]/5 font-semibold text-[var(--brand-primary)]"
+                                      : "text-slate-600 hover:bg-slate-50 hover:text-[var(--brand-primary)]"
+                                    }`}
+                                >
+                                  {child.label}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const isActive = pathname === entry.href || matchesPath(entry.href, pathname);
                   return (
                     <Link
-                      key={link.href}
-                      href={link.href}
+                      key={entry.href}
+                      href={entry.href}
                       aria-current={isActive ? "page" : undefined}
                       onMouseEnter={() => setHoveredIndex(i)}
                       onMouseLeave={() => setHoveredIndex(null)}
                       className={`nav-link rounded-lg px-3 py-2 text-sm font-medium transition-colors lg:px-3.5 ${isActive
                           ? "nav-link-active text-[var(--brand-primary)]"
                           : "text-slate-500 hover:text-[var(--brand-primary)]"
-                        } ${link.hideOnMd ? "hidden lg:block" : ""}`}
+                        }`}
                     >
-                      {link.label}
+                      {entry.label}
                     </Link>
                   );
                 })}

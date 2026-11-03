@@ -11,9 +11,12 @@ const NAV_GROUPS: { title: string; links: [href: string, label: string][] }[] = 
     title: "Sekolah",
     links: [
       ["/profile", "Profil sekolah"],
+      ["/fasilitas", "Fasilitas"],
+      ["/guru", "Guru & staff"],
       ["/program", "Program"],
-      ["/achievements", "Prestasi"],
       ["/activities", "Kegiatan"],
+      ["/ekskul", "Ekstrakurikuler"],
+      ["/achievements", "Prestasi"],
       ["/gallery", "Galeri"],
     ],
   },
@@ -22,6 +25,8 @@ const NAV_GROUPS: { title: string; links: [href: string, label: string][] }[] = 
     links: [
       ["/news", "Berita"],
       ["/articles", "Artikel"],
+      ["/pengumuman", "Pengumuman"],
+      ["/agenda", "Agenda"],
       ["/downloads", "Unduhan"],
     ],
   },
@@ -30,6 +35,7 @@ const NAV_GROUPS: { title: string; links: [href: string, label: string][] }[] = 
     links: [
       ["/admission", "SPMB online"],
       ["/portal", "Portal"],
+      ["/faq", "Tanya jawab"],
       ["/contact", "Kontak"],
     ],
   },

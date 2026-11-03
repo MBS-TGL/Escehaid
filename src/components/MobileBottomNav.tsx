@@ -18,6 +18,11 @@ import {
   SquaresFour,
   CalendarBlank,
   BookOpen,
+  GraduationCap,
+  UsersThree,
+  Megaphone,
+  Download,
+  Info,
 } from "@/components/Icons";
 
 /**
@@ -31,14 +36,44 @@ import {
 
 type NavIcon = React.ComponentType<{ className?: string; weight?: "regular" | "fill" }>;
 
-const sheetLinks = [
-  { href: "/portal", label: "Portal", icon: SquaresFour },
-  { href: "/profile", label: "Profil", icon: User },
-  { href: "/program", label: "Program", icon: BookOpen },
-  { href: "/achievements", label: "Prestasi", icon: Trophy },
-  { href: "/activities", label: "Kegiatan", icon: CalendarBlank },
-  { href: "/articles", label: "Artikel", icon: Note },
-  { href: "/contact", label: "Kontak", icon: ChatCircle },
+type sheetLink = { href: string; label: string; icon: NavIcon };
+
+/**
+ * Isi sheet "Lainnya" dikelompokkan menurut tujuan pengunjung (selaras grup
+ * footer). Berita & Galeri tidak diulang di sini — keduanya sudah slot tetap
+ * bar utama. Semua halaman publik baru (fasilitas, guru, ekskul, pengumuman,
+ * agenda, faq, unduhan) terjangkau dari sheet ini.
+ */
+const SHEET_GROUPS: { title: string; links: sheetLink[] }[] = [
+  {
+    title: "Sekolah",
+    links: [
+      { href: "/profile", label: "Profil", icon: User },
+      { href: "/fasilitas", label: "Fasilitas", icon: House },
+      { href: "/guru", label: "Guru & Staff", icon: GraduationCap },
+      { href: "/program", label: "Program", icon: BookOpen },
+      { href: "/activities", label: "Kegiatan", icon: CalendarBlank },
+      { href: "/ekskul", label: "Ekstrakurikuler", icon: UsersThree },
+      { href: "/achievements", label: "Prestasi", icon: Trophy },
+    ],
+  },
+  {
+    title: "Informasi",
+    links: [
+      { href: "/pengumuman", label: "Pengumuman", icon: Megaphone },
+      { href: "/agenda", label: "Agenda", icon: CalendarBlank },
+      { href: "/articles", label: "Artikel", icon: Note },
+      { href: "/downloads", label: "Unduhan", icon: Download },
+    ],
+  },
+  {
+    title: "Layanan",
+    links: [
+      { href: "/portal", label: "Portal", icon: SquaresFour },
+      { href: "/faq", label: "Tanya Jawab", icon: Info },
+      { href: "/contact", label: "Kontak", icon: ChatCircle },
+    ],
+  },
 ];
 
 function BottomLink({
@@ -266,28 +301,37 @@ export default function MobileBottomNav() {
               <X className="h-4 w-4" />
             </button>
           </div>
-          <ul className="space-y-1 px-4 pb-6 pt-2">
-            {sheetLinks.map(({ href, label, icon: Icon }) => {
-              const active = isActive(href);
-              return (
-                <li key={href}>
-                  <Link
-                    href={href}
-                    onClick={() => setSheetOpen(false)}
-                    aria-current={active ? "page" : undefined}
-                    className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${active
-                        ? "bg-[var(--brand-primary)]/5 text-[var(--brand-primary)]"
-                        : "text-slate-500 hover:bg-slate-50 hover:text-[var(--brand-primary)]"
-                      }`}
-                  >
-                    <Icon className="h-5 w-5" weight={active ? "fill" : "regular"} />
-                    {label}
-                    <CaretRight className="ml-auto h-4 w-4 text-slate-300" />
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="max-h-[70vh] overflow-y-auto overscroll-contain px-4 pb-6 pt-2">
+            {SHEET_GROUPS.map((group) => (
+              <div key={group.title}>
+                <p className="px-3 pb-1 pt-4 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                  {group.title}
+                </p>
+                <ul className="space-y-1">
+                  {group.links.map(({ href, label, icon: Icon }) => {
+                    const active = isActive(href);
+                    return (
+                      <li key={href}>
+                        <Link
+                          href={href}
+                          onClick={() => setSheetOpen(false)}
+                          aria-current={active ? "page" : undefined}
+                          className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${active
+                              ? "bg-[var(--brand-primary)]/5 text-[var(--brand-primary)]"
+                              : "text-slate-500 hover:bg-slate-50 hover:text-[var(--brand-primary)]"
+                            }`}
+                        >
+                          <Icon className="h-5 w-5" weight={active ? "fill" : "regular"} />
+                          {label}
+                          <CaretRight className="ml-auto h-4 w-4 text-slate-300" />
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </>
