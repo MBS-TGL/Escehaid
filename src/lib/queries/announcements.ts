@@ -172,5 +172,58 @@ export function reorderAnnouncements(
 }
 
 // ============================================================
+// Arsip publik /pengumuman
+// ============================================================
+
+/** Baris arsip untuk halaman publik /pengumuman. */
+export interface AnnouncementArchiveItem {
+  id: string;
+  text: string;
+  created_at: string;
+  /** Null bila tanpa kedaluwarsa ATAU kolomnya belum dimigrasi. */
+  expires_at: string | null;
+}
+
+/**
+ * Arsip pengumuman publik (/pengumuman): seluruh baris aktif yang tidak
+ * di-soft-delete, TERMASUK yang sudah lewat `expires_at` — bagian "sudah
+ * berlalu" halaman memakainya sebagai riwayat. Urutan `sort_order` (kurasi
+ * yang sama dengan bar berjalan). Tangguh seperti `getActiveAnnouncements`:
+ * kolom `expires_at` belum ada → fallback tanpa kolom; error lain → []
+ * (halaman tampil kosong, bukan 500).
+ */
+export async function getAnnouncementArchive(): Promise<AnnouncementArchiveItem[]> {
+  const primary = await supabase
+    .from("announcements")
+    .select("id, text, created_at, expires_at")
+    .eq("is_active", true)
+    .is("deleted_at", null)
+    .order("sort_order", { ascending: true });
+
+  if (primary.error && (primary.error.code === "PGRST204" || /expires_at|42703|schema cache/i.test(primary.error.message || ""))) {
+    const fallback = await supabase
+      .from("announcements")
+      .select("id, text, created_at")
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .order("sort_order", { ascending: true });
+    if (fallback.error) {
+      console.error("Error fetching announcement archive:", fallback.error);
+      return [];
+    }
+    // Kolom expires_at belum ada → semua dianggap tanpa kedaluwarsa.
+    return ((fallback.data || []) as Omit<AnnouncementArchiveItem, "expires_at">[]).map((d) => ({
+      ...d,
+      expires_at: null,
+    }));
+  }
+  if (primary.error) {
+    console.error("Error fetching announcement archive:", primary.error);
+    return [];
+  }
+  return (primary.data || []) as AnnouncementArchiveItem[];
+}
+
+// ============================================================
 // Agenda Events (countdown timer homepage)
 // ============================================================
