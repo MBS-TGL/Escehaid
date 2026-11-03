@@ -82,6 +82,26 @@ async function main() {
         .select("id", { count: "exact", head: true })
         .eq("is_published", false);
       observedValue = count ?? 0;
+    } else if (rule.metric_key === "search_canonical_failed") {
+      // Probe kanonik v3 via RPC (setara katalog; 2 asersi full-text API
+      // hanya di diagnostics on-demand agar cron tetap murah). Gagal RPC
+      // dihitung gagal — lebih baik alarm palsu daripada outage diam.
+      let failed = 0;
+      const rpc = async (fn, params) => {
+        try {
+          const { data, error } = await supabase.rpc(fn, params);
+          if (error) return null;
+          return data;
+        } catch {
+          return null;
+        }
+      };
+      if ((await rpc("search_trgm_enabled")) !== true) failed++;
+      const spmb = await rpc("search_news_ids", { tokens: ["spmb"] });
+      if (!Array.isArray(spmb) || spmb.length === 0) failed++;
+      const tapak = await rpc("search_news_ids", { tokens: ["tapak"] });
+      if (!Array.isArray(tapak) || tapak.length !== 0) failed++;
+      observedValue = failed;
     }
 
     // Periksa kondisi

@@ -133,4 +133,8 @@ export const LEDGER_MIGRATIONS: readonly LedgerMigration[] = [
     file: "supabase/migrations/0025_remove_three_settings.sql",
     description: "Hapus override settings ornamen 3D (fase clear-up Three.js)",
   },
+  {
+    file: "supabase/migrations/0026_search_probe_alert.sql",
+    description: "Seed aturan alert probe pencarian kanonik v3 (#41)",
+  },
 ] as const;

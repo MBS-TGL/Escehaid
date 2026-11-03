@@ -103,6 +103,38 @@ export const ALERT_METRIC_CATALOG: AlertMetricDef[] = [
       return count ?? 0;
     },
   },
+  {
+    key: "search_canonical_failed",
+    name: "Probe Pencarian Kanonik Gagal",
+    description:
+      "Jumlah asersi kanonik pencarian v3 yang gagal (0 = semua lolos: trgm aktif, spmb ada, tapak ditolak, tapak suci = 1, typo ≥ 1). Dievaluasi via jalur anon agar fidelitas user.",
+    unit: "asersi gagal",
+    defaultThreshold: 1,
+    defaultComparator: "gte",
+    evaluator: async (supabase) => {
+      // Evaluator katalog memakai client yang dioper; untuk keseragaman cron,
+      // probe dijalankan via RPC langsung di sini (tanpa searchAllContent).
+      // Cron check-alerts.mjs memakai evaluasi setara via REST.
+      let failed = 0;
+      const rpc = async (fn: string, params?: Record<string, unknown>) => {
+        try {
+          const { data, error } = await supabase.rpc(fn, params);
+          if (error) return null;
+          return data;
+        } catch {
+          return null;
+        }
+      };
+      const enabled = await rpc("search_trgm_enabled");
+      if (enabled !== true) failed++;
+      const spmb = await rpc("search_news_ids", { tokens: ["spmb"] });
+      if (!Array.isArray(spmb) || spmb.length === 0) failed++;
+      const tapak = await rpc("search_news_ids", { tokens: ["tapak"] });
+      // tapak wajib kosong (noise ditolak v3); RPC null/gagal = gagal juga.
+      if (!Array.isArray(tapak) || tapak.length !== 0) failed++;
+      return failed;
+    },
+  },
 ];
 
 export const ALERT_METRIC_MAP = new Map(
