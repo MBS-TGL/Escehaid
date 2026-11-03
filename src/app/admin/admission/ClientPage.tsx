@@ -66,8 +66,6 @@ import {
   Clock,
   Users,
   GraduationCap,
-  Compass,
-  Tag,
   Warning,
   FloppyDisk,
 } from "@/components/Icons";
@@ -1506,13 +1504,14 @@ export default function AdminSPMBPage() {
           />
 
           {/* Filter + Search (desktop md+) — gaya Portal: pencarian di kiri,
-              status sebagai pill dropdown berjumlah di kanan. */}
+              6 pill filter boleh wrap di layar sedang (prop wrap). */}
           <div className="hidden md:block">
             <FilterBar
               placeholder="Cari nama, NISN/NIK, sekolah, program, jalur, putra/putri…"
               searchLabel="Cari nama, NISN/NIK, sekolah, program, jalur, jenis kelamin, email, atau telepon"
               query={search}
               onQueryChange={handleSearchChange}
+              wrap
               action={
                 <SavedViewsDropdown
                   module="admission"
@@ -1564,68 +1563,38 @@ export default function AdminSPMBPage() {
             />
           </div>
 
-          {/* Chips cepat "Perlu Tindakan" — satu klik ke filter server-side. */}
-          <div className="mb-4 flex flex-wrap items-center gap-1.5">
-            {[
-              { key: "all", label: "Semua Kondisi", count: aggregates.length },
-              { key: "overdue", label: "Lewat SLA", count: actionCounts.overdue },
-              { key: "docs_rejected", label: "Berkas ditolak", count: actionCounts.docsRejected },
-              { key: "docs_incomplete", label: "Berkas kurang", count: actionCounts.docsIncomplete },
-              { key: "no_wave", label: "Tanpa gelombang", count: actionCounts.noWave },
-              { key: "duplicates", label: "Duplikat", count: actionCounts.duplicates },
-            ].map((c) => (
-              <button
-                key={c.key}
-                type="button"
-                onClick={() => { setActionFilter(c.key); resetPage(); }}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-                  actionFilter === c.key
-                    ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-[var(--brand-accent)]/40"
-                }`}
-              >
-                {c.label}
-                <span className={`rounded-full px-1 tabular-nums ${actionFilter === c.key ? "bg-white/20" : "bg-slate-100 text-slate-500"}`}>
-                  {c.count}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* Toolbar mobile (<md): pencarian + filter ikon 1 baris + urut & Pilih */}
+          {/* Toolbar mobile (<md): 4 filter + urut + Pilih; baris dipecah
+              otomatis (stackedControls): [status·tindakan] /
+              [jalur·program] / [urut·Pilih]. Tanpa compactFilters agar label
+              terbaca, bukan ikon saja. */}
           <MobileFilterBar
             placeholder="Cari nama, NISN/NIK, sekolah, program, jalur, putra/putri…"
             searchLabel="Cari nama, NISN/NIK, sekolah, program, jalur, jenis kelamin, email, atau telepon"
             query={search}
             onQueryChange={handleSearchChange}
-            compactFilters
             filter={{
               value: filter,
               options: statusOptions,
               onChange: (k) => { setFilter(k); resetPage(); },
               menuLabel: "Filter status",
-              icon: <Tag className="h-4 w-4" />,
             }}
             filter2={{
-              value: pathFilter,
-              options: pathOptions,
-              onChange: (k) => { setPathFilter(k); resetPage(); },
-              menuLabel: "Filter jalur",
-              icon: <Compass className="h-4 w-4" />,
-            }}
-            filter3={{
-              value: programFilter,
-              options: programOptions,
-              onChange: (k) => { setProgramFilter(k); resetPage(); },
-              menuLabel: "Filter program",
-              icon: <GraduationCap className="h-4 w-4" />,
-            }}
-            filter4={{
               value: actionFilter,
               options: actionOptions,
               onChange: (k) => { setActionFilter(k); resetPage(); },
               menuLabel: "Filter perlu tindakan",
-              icon: <Warning className="h-4 w-4" />,
+            }}
+            filter3={{
+              value: pathFilter,
+              options: pathOptions,
+              onChange: (k) => { setPathFilter(k); resetPage(); },
+              menuLabel: "Filter jalur",
+            }}
+            filter4={{
+              value: programFilter,
+              options: programOptions,
+              onChange: (k) => { setProgramFilter(k); resetPage(); },
+              menuLabel: "Filter program",
             }}
             sort={{
               value: `${sortField}:${sortDir}`,

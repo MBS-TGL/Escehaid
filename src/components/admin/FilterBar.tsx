@@ -120,6 +120,7 @@ export function FilterBar({
   searchLabel = "Cari",
   filters,
   action,
+  wrap = false,
 }: {
   query: string;
   onQueryChange: (value: string) => void;
@@ -129,9 +130,15 @@ export function FilterBar({
   filters: FilterGroup[];
   /** Aksi tambahan di ujung kanan (mis. tombol "Pilih"). */
   action?: ReactNode;
+  /**
+   * Izinkan pill filter wrap ke baris berikut di layar sedang (mis. SPMB
+   * dengan 6 pill di 768–1100px). Default false = perilaku lama
+   * (satu baris, halaman dengan sedikit pill tidak berubah).
+   */
+  wrap?: boolean;
 }) {
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-2 sm:flex-nowrap sm:gap-3">
+    <div className={`mb-4 flex flex-wrap items-center justify-between gap-2 sm:gap-3 ${wrap ? "" : "sm:flex-nowrap"}`}>
       <div className="relative w-full min-w-0 sm:w-auto sm:max-w-sm sm:flex-1">
         <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input
@@ -157,7 +164,7 @@ export function FilterBar({
       {/* flex-wrap: bila pill + aksi tetap tidak muat (layar sangat sempit),
           aksi turun ke baris berikutnya dan tetap terlihat — bukan terpotong
           di luar layar. */}
-      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
+      <div className={`flex w-full flex-wrap items-center gap-2 sm:w-auto ${wrap ? "" : "sm:flex-nowrap"}`}>
         {filters.map((group) => (
           <FilterDropdown key={group.menuLabel} group={group} />
         ))}
