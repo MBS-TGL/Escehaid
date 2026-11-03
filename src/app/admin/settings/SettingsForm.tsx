@@ -39,7 +39,6 @@ import {
   Globe,
   NotePencil,
   Palette,
-  Atom,
   FloppyDisk,
   ArrowUUpLeft,
   CheckCircle,
@@ -54,7 +53,6 @@ const GROUP_ICONS: Record<SettingGroup, typeof Buildings> = {
   seo: Globe,
   footer: NotePencil,
   tema: Palette,
-  tampilan_3d: Atom,
 };
 
 /** Lencana jumlah perubahan belum disimpan (dipakai trigger & opsi dropdown). */

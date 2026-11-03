@@ -635,7 +635,7 @@ Prinsip yang dipakai sepanjang dokumen (karena sudah terbukti di repo ini):
 
 - **545. "Waktu sekolah" dashboard** — widget berubah sesuai jam pelajaran berjalan: jam 07.30 tampilkan presensi, jam 12.00 tampilkan kantin.
 - **546. Koran sekolah harian** — PDF 1 halaman tiap sore: agenda besok, berita hari ini, angka penting — auto-compose.
-- **547. Etalase piala 3D** — three.js yang sudah ada dipakai vitrina virtual prestasi di situs publik; kurasi dari admin.
+- **547. Etalase piala 3D** — ~~three.js yang sudah ada dipakai vitrina virtual prestasi di situs publik; kurasi dari admin.~~ DIBATALKAN (seluruh runtime Three.js dihapus dari proyek, Nov 2026).
 - **548. Digital signage koridor** — mode TV (#48) untuk layar sekolah: agenda, pengumuman, hitung mundur, foto kegiatan.
 - **549. QR "scan to know" fasilitas** — tiap ruang punya QR ke halaman cerita + jadwal pemakaiannya.
 - **550. Widget waktu sholat** — jadwal sholat area setempat + penyesuaian agenda kegiatan di sekitarnya.

@@ -7,7 +7,6 @@ import { getNewsList, getFacilityList, getActivityList, getArticleList, getTeach
 import { detectPrincipalGreeting, keepTogether } from "@/lib/principal-quote";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
-import ThreeOrnament from "@/components/three/ThreeOrnament";
 // EkskulCard tidak dipakai di beranda — diganti EkskulCarousel (carousel portrait 9:16)
 import HeroBackground from "./HeroBackground";
 import HeroVideoModal from "./HeroVideoModal";
@@ -1063,15 +1062,6 @@ export default async function Home() {
       {/* ── WHY MUH4TA — Visi & Misi (dari school_profile) ── */}
       {hasVisionMission && (
       <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] text-white" style={CV_VISION}>
-        {/* Ornamen partikel 3D (additive glow di bidang gelap) — saklar
-            three_enabled + three_visi_enabled; di bawah watermark & konten. */}
-        <ThreeOrnament
-          enabled={settings.values.three_enabled === "true" && settings.values.three_visi_enabled === "true"}
-          color={settings.values.three_color}
-          accentColor={settings.values.three_accent_color}
-          className="absolute inset-0"
-          blending="additive"
-        />
         <div aria-hidden="true" className="pointer-events-none absolute -right-8 -top-8 select-none text-white/[0.04] md:-right-12 md:-top-12">
           <Quotes weight="fill" className="h-64 w-64 md:h-80 md:w-80" />
         </div>

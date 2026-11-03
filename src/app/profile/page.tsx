@@ -7,7 +7,6 @@ import { VISION_FALLBACK } from "@/lib/site-content";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import PageHero from "@/components/public/PageHero";
-import ThreeOrnament from "@/components/three/ThreeOrnament";
 import TeacherGrid from "./TeacherGrid";
 import FacilityGrid from "./FacilityGrid";
 import EkskulCard from "@/components/EkskulCard";
@@ -296,15 +295,6 @@ export default async function ProfilPage() {
           {/* 1. Hero Visi Card (Full Width Banner) */}
           <CSSFadeIn delay={0.05}>
             <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-mid)] to-[var(--brand-primary-light)] p-5 text-white shadow-xl shadow-[var(--brand-primary)]/15 sm:p-8 md:p-12 lg:p-14">
-              {/* Ornamen partikel 3D (additive glow di bidang gelap) — saklar
-                  three_enabled + three_profile_enabled; di bawah watermark. */}
-              <ThreeOrnament
-                enabled={settings.values.three_enabled === "true" && settings.values.three_profile_enabled === "true"}
-                color={settings.values.three_color}
-                accentColor={settings.values.three_accent_color}
-                className="absolute inset-0"
-                blending="additive"
-              />
               {/* Watermark aksen latar belakang */}
               <div
                 aria-hidden="true"

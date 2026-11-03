@@ -129,4 +129,8 @@ export const LEDGER_MIGRATIONS: readonly LedgerMigration[] = [
     file: "supabase/migrations/0024_spmb_automation.sql",
     description: "Pengaturan otomatisasi SPMB + run log + realtime pendaftar",
   },
+  {
+    file: "supabase/migrations/0025_remove_three_settings.sql",
+    description: "Hapus override settings ornamen 3D (fase clear-up Three.js)",
+  },
 ] as const;
