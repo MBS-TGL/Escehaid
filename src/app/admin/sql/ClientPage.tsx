@@ -7,25 +7,59 @@ import { formatRelativeTime } from "@/lib/admin-display";
 import { useToast } from "@/components/ui/Toast";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
 import { FilterBar } from "@/components/admin/FilterBar";
-import { MobileFilterBar, MobileListRow } from "@/components/admin/mobile";
 import {
+  DesktopPagination,
+  MobileFilterBar,
+  MobileListRow,
+  MobilePagination,
+} from "@/components/admin/mobile";
+import {
+  ArrowDown,
+  ArrowUp,
   ArrowsCounterClockwise,
   CaretDown,
   ChartPie,
   CheckCircle,
   Code,
   Copy,
+  SortAscending,
   XCircle,
 } from "@/components/Icons";
 
 const CMD_MIGRATE = "npm run db:migrate";
 const CMD_STATUS = "npm run db:migrate:status";
+const PAGE_SIZE_DEFAULT = 20;
 
-/** "0001_nama.sql" → { number, slug } untuk judul ringkas. */
-function parseFile(file: string) {
-  const base = file.split("/").pop() ?? file;
-  const m = base.match(/^(\d{3,5})_(.+)$/);
-  return { base, number: m?.[1] ?? null, slug: m?.[2] ?? base };
+type SortField = "file" | "source" | "appliedAt" | "status";
+type SortDir = "asc" | "desc";
+
+/** Urutan tampilan default: belum dulu, lalu runner, lalu manual, lalu A–Z. */
+function rankOf(s: SqlMigrationStatus): number {
+  if (!s.applied) return 0;
+  return s.source === "ledger" ? 1 : 2;
+}
+
+function compareField(a: SqlMigrationStatus, b: SqlMigrationStatus, field: SortField): number {
+  switch (field) {
+    case "file":
+      return a.file.localeCompare(b.file);
+    case "source":
+      return (a.source === "ledger" ? 0 : 1) - (b.source === "ledger" ? 0 : 1);
+    case "status":
+      return (a.applied ? 1 : 0) - (b.applied ? 1 : 0);
+    case "appliedAt":
+      return 0; // ditangani khusus (nulls-last dua arah) di pemanggil
+  }
+}
+
+function appliedTimestamp(s: SqlMigrationStatus): number {
+  if (!s.appliedAt) return NaN;
+  return new Date(s.appliedAt).getTime();
+}
+
+/** "supabase/migrations/0001_x.sql" → basename untuk aria-label & fallback judul. */
+function baseName(file: string): string {
+  return file.split("/").pop() ?? file;
 }
 
 function formatDateTime(value?: string | Date | null) {
@@ -146,6 +180,10 @@ export default function SqlStatusClientPage({ statuses }: { statuses: SqlMigrati
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [sortField, setSortField] = useState<SortField>("status");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE_DEFAULT);
   const [openFile, setOpenFile] = useState<string | null>(null);
 
   const total = statuses.length;
@@ -156,28 +194,80 @@ export default function SqlStatusClientPage({ statuses }: { statuses: SqlMigrati
   const runnerCount = statuses.filter((s) => s.source === "ledger").length;
   const percent = total === 0 ? 0 : Math.round((applied / total) * 100);
 
+  // Nomor urut kanonis display-only: posisi di prop `statuses`
+  // ([...ledger, ...probe] → runner 01–26, manual 27–…). Stabil terhadap
+  // sort/filter/page; file di disk tidak diubah (nol risiko checksum/test).
+  const orderNo = useMemo(
+    () => new Map(statuses.map((s, i) => [s.file, String(i + 1).padStart(2, "0")])),
+    [statuses]
+  );
+
   const q = query.trim().toLowerCase();
-  const rows = useMemo(() => {
-    const rank = (s: SqlMigrationStatus) => (!s.applied ? 0 : s.source === "ledger" ? 1 : 2);
-    return statuses
-      .filter((s) => {
-        if (statusFilter === "pending" && s.applied) return false;
-        if (statusFilter === "applied" && !s.applied) return false;
-        if (sourceFilter === "runner" && s.source !== "ledger") return false;
-        if (sourceFilter === "manual" && s.source === "ledger") return false;
-        if (q && !`${s.file} ${s.description ?? ""}`.toLowerCase().includes(q)) return false;
-        return true;
-      })
-      .sort((a, b) => rank(a) - rank(b) || a.file.localeCompare(b.file));
-  }, [statuses, statusFilter, sourceFilter, q]);
+  const filtered = useMemo(() => {
+    const list = statuses.filter((s) => {
+      if (statusFilter === "pending" && s.applied) return false;
+      if (statusFilter === "applied" && !s.applied) return false;
+      if (sourceFilter === "runner" && s.source !== "ledger") return false;
+      if (sourceFilter === "manual" && s.source === "ledger") return false;
+      if (q && !`${s.file} ${s.description ?? ""}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+    const tiebreak = (a: SqlMigrationStatus, b: SqlMigrationStatus) =>
+      rankOf(a) - rankOf(b) || a.file.localeCompare(b.file);
+    return list.sort((a, b) => {
+      // appliedAt: nulls-last dua arah (pending selalu di bawah).
+      if (sortField === "appliedAt") {
+        const ta = appliedTimestamp(a);
+        const tb = appliedTimestamp(b);
+        const aNa = Number.isNaN(ta);
+        const bNa = Number.isNaN(tb);
+        if (aNa && bNa) return tiebreak(a, b);
+        if (aNa) return 1;
+        if (bNa) return -1;
+        if (ta !== tb) return sortDir === "asc" ? ta - tb : tb - ta;
+        return tiebreak(a, b);
+      }
+      const c = compareField(a, b, sortField);
+      if (c !== 0) return sortDir === "asc" ? c : -c;
+      return tiebreak(a, b);
+    });
+  }, [statuses, statusFilter, sourceFilter, q, sortField, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paginated = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const from = filtered.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const to = (safePage - 1) * pageSize + paginated.length;
 
   const hasFilter = q.length > 0 || statusFilter !== "all" || sourceFilter !== "all";
+  /** Tiap perubahan query/filter/sort kembali ke halaman 1 (pola Logs/News). */
+  const applyFilter = (fn: () => void) => {
+    fn();
+    setPage(1);
+  };
   const reset = () => {
     setQuery("");
     setStatusFilter("all");
     setSourceFilter("all");
+    setPage(1);
   };
   const toggle = (file: string) => setOpenFile((cur) => (cur === file ? null : file));
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+    setPage(1);
+  };
+  const sortIcon = (field: SortField) => {
+    if (sortField !== field) return <SortAscending className="h-3 w-3 text-slate-300" />;
+    return sortDir === "asc"
+      ? <ArrowUp className="h-3 w-3 text-[var(--brand-accent)]" />
+      : <ArrowDown className="h-3 w-3 text-[var(--brand-accent)]" />;
+  };
+  const ariaSort = (field: SortField): "ascending" | "descending" | "none" =>
+    sortField !== field ? "none" : sortDir === "asc" ? "ascending" : "descending";
 
   const statusOptions = [
     { key: "all", label: "Semua Status" },
@@ -188,6 +278,16 @@ export default function SqlStatusClientPage({ statuses }: { statuses: SqlMigrati
     { key: "all", label: "Semua Sumber" },
     { key: "runner", label: "Runner", count: runnerCount },
     { key: "manual", label: "Manual", count: total - runnerCount },
+  ];
+  const sortOptions = [
+    { key: "status:asc", label: "Belum dulu" },
+    { key: "status:desc", label: "Sudah dulu" },
+    { key: "file:asc", label: "Migrasi A–Z" },
+    { key: "file:desc", label: "Migrasi Z–A" },
+    { key: "source:asc", label: "Runner dulu" },
+    { key: "source:desc", label: "Manual dulu" },
+    { key: "appliedAt:desc", label: "Terbaru" },
+    { key: "appliedAt:asc", label: "Terlama" },
   ];
 
   const emptyState = (
@@ -242,36 +342,30 @@ export default function SqlStatusClientPage({ statuses }: { statuses: SqlMigrati
         <StatPill icon={ChartPie} label="Progres" value={`${percent}%`} tone="info" />
       </StatPillGroup>
 
-      {/* Callout */}
+      {/* Callout — satu baris + salin; detail perintah jadi hint kecil. */}
       {pending === 0 ? (
-        <div className="mb-5 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-semibold text-emerald-700">
           <CheckCircle className="h-4 w-4 shrink-0" /> Semua {total} migrasi sudah dijalankan.
         </div>
       ) : (
-        <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <p className="flex items-start gap-2 text-sm font-semibold text-amber-800">
-            <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-            {pending} dari {total} entri SQL belum terdeteksi di database.
-          </p>
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+          <div className="flex items-center gap-2">
+            <XCircle className="h-4 w-4 shrink-0 text-amber-600" />
+            <p className="min-w-0 flex-1 text-[13px] font-semibold text-amber-800">
+              {pending} dari {total} belum terdeteksi
+              {pendingRunner > 0 && pendingManual > 0 && ` (${pendingRunner} runner · ${pendingManual} manual)`}.
+            </p>
+            {pendingRunner > 0 ? (
+              <CopyBtn text={CMD_MIGRATE} />
+            ) : (
+              <span className="shrink-0 text-xs font-medium text-amber-800/70">Supabase → SQL Editor</span>
+            )}
+          </div>
           {pendingRunner > 0 && (
-            <div className="mt-3 space-y-2">
-              <p className="text-[13px] text-amber-800">
-                {pendingRunner} migrasi berurutan — jalankan di terminal proyek:
-              </p>
-              <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-white/80 py-1.5 pl-3 pr-1.5">
-                <code className="min-w-0 truncate font-mono text-[13px] text-slate-800">{CMD_MIGRATE}</code>
-                <CopyBtn text={CMD_MIGRATE} />
-              </div>
-              <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-white/80 py-1.5 pl-3 pr-1.5">
-                <code className="min-w-0 truncate font-mono text-[13px] text-slate-800">{CMD_STATUS}</code>
-                <CopyBtn text={CMD_STATUS} />
-              </div>
-              <p className="text-xs text-amber-800/70">Perintah kedua hanya memeriksa tanpa menjalankan.</p>
-            </div>
-          )}
-          {pendingManual > 0 && (
-            <p className="mt-3 text-[13px] text-amber-800">
-              {pendingManual} berkas manual: jalankan isinya di Supabase → SQL Editor (idempoten, aman diulang).
+            <p className="mt-1 pl-6 text-xs text-amber-800/70">
+              Jalankan <code className="font-mono">{CMD_MIGRATE}</code> di terminal · cek tanpa
+              menjalankan: <code className="font-mono">{CMD_STATUS}</code>
+              {pendingManual > 0 && " · manual via Supabase → SQL Editor"}
             </p>
           )}
         </div>
@@ -280,79 +374,98 @@ export default function SqlStatusClientPage({ statuses }: { statuses: SqlMigrati
       {/* Toolbar: mobile + desktop */}
       <MobileFilterBar
         query={query}
-        onQueryChange={setQuery}
+        onQueryChange={(v) => applyFilter(() => setQuery(v))}
         placeholder="Cari nama file atau deskripsi…"
         searchLabel="Cari migrasi"
         filter={{
           value: statusFilter,
           options: statusOptions,
-          onChange: setStatusFilter,
+          onChange: (k) => applyFilter(() => setStatusFilter(k)),
           menuLabel: "Filter status",
         }}
         filter2={{
           value: sourceFilter,
           options: sourceOptions,
-          onChange: setSourceFilter,
+          onChange: (k) => applyFilter(() => setSourceFilter(k)),
           menuLabel: "Filter sumber",
+        }}
+        sort={{
+          value: `${sortField}:${sortDir}`,
+          options: sortOptions,
+          onChange: (k) =>
+            applyFilter(() => {
+              const [f, d] = k.split(":");
+              setSortField(f as SortField);
+              setSortDir(d === "desc" ? "desc" : "asc");
+            }),
         }}
       />
       <div className="hidden md:block">
         <FilterBar
           query={query}
-          onQueryChange={setQuery}
+          onQueryChange={(v) => applyFilter(() => setQuery(v))}
           placeholder="Cari nama file atau deskripsi…"
           searchLabel="Cari migrasi"
           filters={[
             {
               value: statusFilter,
               options: statusOptions,
-              onChange: setStatusFilter,
+              onChange: (k) => applyFilter(() => setStatusFilter(k)),
               menuLabel: "Filter status",
             },
             {
               value: sourceFilter,
               options: sourceOptions,
-              onChange: setSourceFilter,
+              onChange: (k) => applyFilter(() => setSourceFilter(k)),
               menuLabel: "Filter sumber",
             },
           ]}
         />
       </div>
 
-      <p role="status" aria-live="polite" className="mb-3 text-xs text-slate-400">
-        Menampilkan {rows.length} dari {total} entri
-        {hasFilter ? " (terfilter)" : ""}
+      <p role="status" aria-live="polite" className="mb-3 hidden text-xs text-slate-400 md:block">
+        Menampilkan {from}–{to} dari {filtered.length} entri
+        {hasFilter ? " (terfilter)" : ""} · Hal {safePage}/{totalPages}
       </p>
 
       {/* Desktop: tabel */}
       <div className="hidden overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:block">
-        {rows.length > 0 ? (
+        {filtered.length > 0 ? (
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] uppercase tracking-wider text-slate-400">
-                <th scope="col" className="px-4 py-3 font-semibold">Migrasi</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Sumber</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Dijalankan</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Status</th>
+                <th scope="col" aria-sort={ariaSort("file")} onClick={() => toggleSort("file")} className="cursor-pointer select-none px-4 py-3 font-semibold">
+                  <span className="flex items-center gap-1">Migrasi {sortIcon("file")}</span>
+                </th>
+                <th scope="col" aria-sort={ariaSort("source")} onClick={() => toggleSort("source")} className="cursor-pointer select-none px-4 py-3 font-semibold">
+                  <span className="flex items-center gap-1">Sumber {sortIcon("source")}</span>
+                </th>
+                <th scope="col" aria-sort={ariaSort("appliedAt")} onClick={() => toggleSort("appliedAt")} className="cursor-pointer select-none px-4 py-3 font-semibold">
+                  <span className="flex items-center gap-1">Dijalankan {sortIcon("appliedAt")}</span>
+                </th>
+                <th scope="col" aria-sort={ariaSort("status")} onClick={() => toggleSort("status")} className="cursor-pointer select-none px-4 py-3 font-semibold">
+                  <span className="flex items-center gap-1">Status {sortIcon("status")}</span>
+                </th>
                 <th scope="col" className="w-12 px-2 py-3"><span className="sr-only">Detail</span></th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((s) => {
-                const p = parseFile(s.file);
+              {paginated.map((s) => {
                 const open = openFile === s.file;
+                const no = orderNo.get(s.file) ?? "–";
                 return (
                   <Fragment key={s.file}>
                     <tr className={`border-b border-slate-100 last:border-0 ${s.applied ? "" : "bg-amber-50/40"} ${open ? "" : "hover:bg-slate-50/60"}`}>
                       <td className="min-w-0 px-4 py-3">
                         <p className="flex items-start gap-2">
-                          {p.number && (
-                            <span className="mt-0.5 shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] font-bold text-slate-600">
-                              {p.number}
-                            </span>
-                          )}
+                          <span
+                            title={`Nomor urut kanonis ${no}`}
+                            className="mt-0.5 shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] font-bold tabular-nums text-slate-600"
+                          >
+                            {no}
+                          </span>
                           <span className="min-w-0 text-sm font-semibold text-slate-800 [overflow-wrap:anywhere]">
-                            {s.description || p.slug}
+                            {s.description || baseName(s.file)}
                           </span>
                         </p>
                         <p className="mt-1 break-all font-mono text-[11px] text-slate-400">{s.file}</p>
@@ -369,7 +482,7 @@ export default function SqlStatusClientPage({ statuses }: { statuses: SqlMigrati
                           type="button"
                           onClick={() => toggle(s.file)}
                           aria-expanded={open}
-                          aria-label={open ? `Tutup detail ${p.base}` : `Lihat detail ${p.base}`}
+                          aria-label={open ? `Tutup detail ${baseName(s.file)}` : `Lihat detail ${baseName(s.file)}`}
                           className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
                         >
                           <CaretDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
@@ -395,46 +508,85 @@ export default function SqlStatusClientPage({ statuses }: { statuses: SqlMigrati
 
       {/* Mobile: daftar baris */}
       <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm md:hidden">
-        {rows.length > 0 ? (
-          rows.map((s) => {
-            const open = openFile === s.file;
-            return (
-              <div key={s.file} className={s.applied ? "" : "bg-amber-50/40"}>
-                <MobileListRow
-                  onClick={() => toggle(s.file)}
-                  title={
-                    <span className="break-all font-mono text-[13px] font-semibold text-slate-700">
-                      {s.file}
-                      {s.source === "ledger" && (
-                        <span className="ml-1.5 rounded bg-[var(--brand-accent)]/10 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-[var(--brand-accent)]">
-                          runner
-                        </span>
-                      )}
-                    </span>
-                  }
-                  subtitle={
-                    <>
-                      <span className="block text-[13px]">{s.description}</span>
-                      {s.applied && <span className="mt-0.5 block text-[11px]">{appliedLabel(s)}</span>}
-                    </>
-                  }
-                  status={<StatusPill applied={s.applied} />}
-                  actions={
-                    <CaretDown className={`h-4 w-4 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
-                  }
-                />
-                {open && (
-                  <div className="border-t border-slate-100 bg-slate-50/70 px-3 py-3">
-                    <RowDetail s={s} />
-                  </div>
-                )}
-              </div>
-            );
-          })
+        {filtered.length > 0 ? (
+          <>
+            {paginated.map((s) => {
+              const open = openFile === s.file;
+              const no = orderNo.get(s.file) ?? "–";
+              return (
+                <div key={s.file} className={s.applied ? "" : "bg-amber-50/40"}>
+                  <MobileListRow
+                    onClick={() => toggle(s.file)}
+                    title={
+                      <span className="break-all font-mono text-[13px] font-semibold text-slate-700">
+                        <span className="mr-1.5 font-sans text-[11px] font-bold tabular-nums text-slate-400">{no}</span>
+                        {s.file}
+                        {s.source === "ledger" && (
+                          <span className="ml-1.5 rounded bg-[var(--brand-accent)]/10 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-[var(--brand-accent)]">
+                            runner
+                          </span>
+                        )}
+                      </span>
+                    }
+                    subtitle={
+                      <>
+                        <span className="block text-[13px]">{s.description}</span>
+                        {s.applied && <span className="mt-0.5 block text-[11px]">{appliedLabel(s)}</span>}
+                      </>
+                    }
+                    status={<StatusPill applied={s.applied} />}
+                    actions={
+                      <CaretDown className={`h-4 w-4 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
+                    }
+                  />
+                  {open && (
+                    <div className="border-t border-slate-100 bg-slate-50/70 px-3 py-3">
+                      <RowDetail s={s} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <MobilePagination
+              page={safePage}
+              totalPages={totalPages}
+              total={filtered.length}
+              from={from}
+              to={to}
+              onPageChange={setPage}
+              pageSize={pageSize}
+              onPageSizeChange={(n) => {
+                setPageSize(n);
+                setPage(1);
+              }}
+              itemLabel="entri"
+            />
+          </>
         ) : (
           emptyState
         )}
       </div>
+
+      {/* Paginasi desktop */}
+      {filtered.length > 0 && (
+        <div className="hidden md:block">
+          <DesktopPagination
+            page={safePage}
+            totalPages={totalPages}
+            total={filtered.length}
+            from={from}
+            to={to}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(n) => {
+              setPageSize(n);
+              setPage(1);
+            }}
+            itemLabel="entri"
+            className="mt-4 rounded-xl border border-slate-200/80"
+          />
+        </div>
+      )}
 
       <p className="mt-4 text-xs text-slate-400">
         Dua sumber status: <strong>runner</strong> (tercatat di tabel{" "}
