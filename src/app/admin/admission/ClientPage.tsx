@@ -66,7 +66,10 @@ import {
   Clock,
   Users,
   GraduationCap,
+  Compass,
+  Tag,
   Warning,
+  CalendarBlank,
   FloppyDisk,
 } from "@/components/Icons";
 import { PipelineBoard } from "./PipelineBoard";
@@ -1504,7 +1507,7 @@ export default function AdminSPMBPage() {
           />
 
           {/* Filter + Search (desktop md+) — gaya Portal: pencarian di kiri,
-              6 pill filter boleh wrap di layar sedang (prop wrap). */}
+              6 pill compact (ikon + label pendek) agar muat 1 baris di ≥1024px. */}
           <div className="hidden md:block">
             <FilterBar
               placeholder="Cari nama, NISN/NIK, sekolah, program, jalur, putra/putri…"
@@ -1512,6 +1515,7 @@ export default function AdminSPMBPage() {
               query={search}
               onQueryChange={handleSearchChange}
               wrap
+              compact
               action={
                 <SavedViewsDropdown
                   module="admission"
@@ -1528,36 +1532,61 @@ export default function AdminSPMBPage() {
                   options: statusOptions,
                   onChange: (k) => { setFilter(k); resetPage(); },
                   menuLabel: "Filter status",
+                  icon: <Tag className="h-3.5 w-3.5" />,
+                  shortLabels: { all: "Sts", pending: "Tunggu", accepted: "Terima", rejected: "Tolak" },
                 },
                 {
                   value: pathFilter,
                   options: pathOptions,
                   onChange: (k) => { setPathFilter(k); resetPage(); },
                   menuLabel: "Filter jalur",
+                  icon: <Compass className="h-3.5 w-3.5" />,
+                  shortLabels: { all: "Jalur", reguler: "Reg", prestasi: "Pres", beasiswa: "Bea" },
                 },
                 {
                   value: programFilter,
                   options: programOptions,
                   onChange: (k) => { setProgramFilter(k); resetPage(); },
                   menuLabel: "Filter program",
+                  icon: <GraduationCap className="h-3.5 w-3.5" />,
+                  shortLabels: {
+                    all: "Prodi",
+                    "SMP Boarding": "Boarding",
+                    "SMP Full Day (Non Boarding)": "Reguler",
+                    "SMA Boarding": "SMA",
+                    [SPMB_NO_PROGRAM]: "Tanpa",
+                  },
                 },
                 {
                   value: genderFilter,
                   options: genderOptions,
                   onChange: (k) => { setGenderFilter(k); resetPage(); },
                   menuLabel: "Filter jenis kelamin",
+                  icon: <Users className="h-3.5 w-3.5" />,
+                  shortLabels: { all: "L/P", L: "L", P: "P" },
                 },
                 {
                   value: actionFilter,
                   options: actionOptions,
                   onChange: (k) => { setActionFilter(k); resetPage(); },
                   menuLabel: "Filter perlu tindakan",
+                  icon: <Warning className="h-3.5 w-3.5" />,
+                  shortLabels: {
+                    all: "Kondisi",
+                    overdue: "SLA",
+                    docs_rejected: "Ditolak",
+                    docs_incomplete: "Kurang",
+                    no_wave: "Gelombang",
+                    duplicates: "Duplikat",
+                  },
                 },
                 {
                   value: interviewFilter,
                   options: interviewOptions,
                   onChange: (k) => { setInterviewFilter(k); resetPage(); },
                   menuLabel: "Filter wawancara",
+                  icon: <CalendarBlank className="h-3.5 w-3.5" />,
+                  shortLabels: { all: "Jadwal", scheduled: "Jadwal", unscheduled: "Belum" },
                 },
               ]}
             />
