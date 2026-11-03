@@ -264,3 +264,122 @@ export function ConfirmModal({
     </Modal>
   );
 }
+
+/* ─── TypeToConfirm ─────────────────────────────────── */
+/**
+ * Konfirmasi KETIK-ULANG untuk aksi destruktif massal/permanen (#537).
+ *
+ * Melengkapi `ConfirmModal` (sekali klik): tombol konfirmasi DISABLED sampai
+ * pengguna mengetik teks persis `requireText` (default "HAPUS"). Mencegah
+ * bencana salah-klik pada hard delete yang tak bisa dipulihkan — trash purge,
+ * hapus pengguna + akun auth, hapus pendaftar + dokumen PII.
+ *
+ * Copywriting pemanggil WAJIB menyebut: jumlah, cakupan (termasuk media/auth/
+ * dokumen ikut terhapus), dan "tidak bisa dipulihkan". Bulk soft-delete yang
+ * masuk Sampah TIDAK perlu ini — tetap `ConfirmModal` biasa.
+ */
+type TypeToConfirmProps = {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  /** Primary body text (alias: `message`) */
+  description?: string;
+  /** Alias for description */
+  message?: string;
+  /** Teks yang wajib diketik persis (case-sensitive, di-trim) */
+  requireText?: string;
+  /** Placeholder input — default `Ketik ${requireText} untuk lanjut` */
+  placeholder?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  variant?: "danger" | "warning";
+  loading?: boolean;
+};
+
+export function TypeToConfirm({
+  open,
+  onClose,
+  onConfirm,
+  title,
+  description,
+  message,
+  requireText = "HAPUS",
+  placeholder,
+  confirmLabel = "Ya, Hapus Permanen",
+  cancelLabel = "Batal",
+  variant,
+  loading = false,
+}: TypeToConfirmProps) {
+  const [typed, setTyped] = useState("");
+  const resolvedDesc = description || message;
+  const resolvedColor = variantColorMap[variant ?? "danger"];
+  // Reset tiap dialog dibuka — jangan warisi ketikan sesi sebelumnya.
+  const [lastOpen, setLastOpen] = useState(open);
+  if (open !== lastOpen) {
+    setLastOpen(open);
+    if (open) setTyped("");
+  }
+  const matched = typed.trim() === requireText;
+
+  return (
+    <Modal open={open} onClose={onClose} size="sm">
+      <div>
+        <h3 className="text-base font-bold tracking-tight text-slate-800">{title}</h3>
+        {resolvedDesc && (
+          <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{resolvedDesc}</p>
+        )}
+        <label className="mt-4 block">
+          <span className="text-xs font-semibold text-slate-600">
+            Ketik <code className="rounded bg-slate-100 px-1 font-mono">{requireText}</code> untuk lanjut
+          </span>
+          <input
+            type="text"
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            placeholder={placeholder ?? `Ketik ${requireText} untuk lanjut`}
+            autoComplete="off"
+            disabled={loading}
+            // Autofocus hanya di desktop (pointer halus): di HP autofocus langsung
+            // membuka keyboard dan menggeser layout saat dialog baru dibuka.
+            ref={(el) => {
+              if (el && typeof window !== "undefined" && window.matchMedia("(pointer: fine)").matches) {
+                el.focus();
+              }
+            }}
+            onKeyDown={(e) => {
+              // Enter hanya submit bila cocok — cegah submit buta.
+              if (e.key === "Enter" && matched && !loading) {
+                e.preventDefault();
+                onConfirm();
+              }
+            }}
+            aria-describedby="type-to-confirm-hint"
+            className="mt-1.5 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 font-mono text-sm text-slate-800 placeholder:font-sans placeholder:text-slate-400 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100"
+          />
+          <span id="type-to-confirm-hint" className="mt-1 block text-[11px] text-slate-400">
+            Tindakan ini tidak bisa dipulihkan.
+          </span>
+        </label>
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            {cancelLabel}
+          </button>
+          <button
+            data-busy={loading ? "" : undefined}
+            onClick={onConfirm}
+            disabled={loading || !matched}
+            title={matched ? undefined : `Ketik ${requireText} dulu untuk mengaktifkan`}
+            className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${resolvedColor} disabled:cursor-not-allowed disabled:opacity-40`}
+          >
+            {loading ? "Memproses..." : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}

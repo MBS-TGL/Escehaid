@@ -54,7 +54,7 @@ import {
   type RowAction,
 } from "@/components/admin/mobile";
 import { useToast } from "@/components/ui/Toast";
-import { ConfirmModal } from "@/components/ui";
+import { ConfirmModal, TypeToConfirm } from "@/components/ui";
 import { Input } from "@/components/ui/Input";
 import { formatRelativeTime } from "@/lib/admin-display";
 import {
@@ -1812,12 +1812,12 @@ function UsersTab({ currentUserId }, ref) {
       )}
 
       {/* ── HAPUS PENGGUNA ──────────────────────────── */}
-      <ConfirmModal
+      <TypeToConfirm
         open={!!deleteItem}
         onClose={() => setDeleteItem(null)}
         onConfirm={handleDelete}
         title="Hapus Pengguna?"
-        description={`"${deleteItem?.full_name}" akan dihapus permanen.`}
+        description={`"${deleteItem?.full_name}" akan dihapus permanen beserta akun auth-nya. Tidak bisa dipulihkan lagi.`}
         confirmLabel="Ya, Hapus"
         variant="danger"
         loading={busyId === deleteItem?.id}
@@ -1834,12 +1834,12 @@ function UsersTab({ currentUserId }, ref) {
         variant="danger"
         loading={bulkBusy}
       />
-      <ConfirmModal
+      <TypeToConfirm
         open={bulkConfirm === "delete"}
         onClose={() => setBulkConfirm(null)}
         onConfirm={() => { setBulkConfirm(null); handleBulkDelete(); }}
         title={`Hapus ${selectedIds.size} pengguna?`}
-        message="Pengguna terpilih dihapus permanen beserta akun auth-nya. Akun sendiri & Super Admin terakhir otomatis dilewati."
+        message="Pengguna terpilih dihapus permanen beserta akun auth-nya. Tidak bisa dipulihkan lagi. Akun sendiri & Super Admin terakhir otomatis dilewati."
         confirmLabel="Ya, Hapus Permanen"
         variant="danger"
         loading={bulkBusy}

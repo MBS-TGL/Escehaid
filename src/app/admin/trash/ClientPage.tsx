@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getTrashItems, restoreItem, purgeItem } from "@/lib/queries";
 import type { TrashEntry } from "@/lib/queries";
-import { ConfirmModal, SkeletonBlock } from "@/components/ui";
+import { ConfirmModal, TypeToConfirm, SkeletonBlock } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
 import { usePermissions } from "@/app/admin/PermissionsProvider";
 import { formatRelativeTime } from "@/lib/admin-display";
@@ -436,7 +436,7 @@ export default function TrashClientPage() {
         </div>
       */}
 
-      <ConfirmModal
+      <TypeToConfirm
         open={purgeTarget !== null}
         onClose={() => setPurgeTarget(null)}
         onConfirm={handlePurge}
@@ -447,7 +447,7 @@ export default function TrashClientPage() {
         loading={purging}
       />
 
-      <ConfirmModal
+      <TypeToConfirm
         open={bulkPurge}
         onClose={() => setBulkPurge(false)}
         onConfirm={handleBulkPurge}

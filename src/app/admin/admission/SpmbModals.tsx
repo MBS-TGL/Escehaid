@@ -3,10 +3,10 @@
 import {
   CheckCircle,
   XCircle,
-  Warning,
   GraduationCap,
   CalendarBlank as CalendarIcon,
 } from "@/components/Icons";
+import { TypeToConfirm } from "@/components/ui";
 import { normalizeName } from "@/lib/format-name";
 import type { SpmbRegistration, SpmbWave } from "@/lib/supabase";
 import type { RegistrationPath } from "@/lib/queries";
@@ -51,22 +51,15 @@ export function SpmbModals(props: SpmbModalsProps) {
 
   return (
     <>
-      {/* ── DELETE CONFIRM ──────────────────────────── */}
-      {deleteItem && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onCloseDelete}>
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto">
-              <Warning className="h-6 w-6 text-red-600" />
-            </div>
-            <h3 className="text-center text-lg font-bold text-slate-800">Hapus Pendaftar?</h3>
-            <p className="mt-2 text-center text-sm text-slate-500">&ldquo;{normalizeName(deleteItem.full_name)}&rdquo; akan dihapus permanen.</p>
-            <div className="mt-6 flex gap-3">
-              <button onClick={onCloseDelete} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Batal</button>
-              <button onClick={onConfirmDelete} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700">Ya, Hapus</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── DELETE CONFIRM (hard delete + dokumen — wajib ketik HAPUS) ── */}
+      <TypeToConfirm
+        open={deleteItem !== null}
+        onClose={onCloseDelete}
+        onConfirm={onConfirmDelete}
+        title="Hapus Pendaftar?"
+        message={`"${deleteItem ? normalizeName(deleteItem.full_name) : ""}" akan dihapus permanen beserta dokumennya. Tidak bisa dipulihkan lagi.`}
+        confirmLabel="Ya, Hapus"
+      />
 
       {/* ── BULK MOVE PATH MODAL ────────────────────── */}
       {bulkPathOpen && (
@@ -128,22 +121,15 @@ export function SpmbModals(props: SpmbModalsProps) {
         </div>
       )}
 
-      {/* ── BULK DELETE CONFIRM ─────────────────────── */}
-      {bulkDelete && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onCloseBulkDelete}>
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto">
-              <Warning className="h-6 w-6 text-red-600" />
-            </div>
-            <h3 className="text-center text-lg font-bold text-slate-800">Hapus {selectedCount} Pendaftar?</h3>
-            <p className="mt-2 text-center text-sm text-slate-500">Semua pendaftar yang dipilih akan dihapus permanen.</p>
-            <div className="mt-6 flex gap-3">
-              <button onClick={onCloseBulkDelete} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Batal</button>
-              <button onClick={onConfirmBulkDelete} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700">Ya, Hapus</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── BULK DELETE CONFIRM (hard delete massal — wajib ketik HAPUS) */}
+      <TypeToConfirm
+        open={bulkDelete}
+        onClose={onCloseBulkDelete}
+        onConfirm={onConfirmBulkDelete}
+        title={`Hapus ${selectedCount} Pendaftar?`}
+        message="Semua pendaftar yang dipilih akan dihapus permanen beserta dokumennya. Tidak bisa dipulihkan lagi."
+        confirmLabel="Ya, Hapus Semua"
+      />
 
       {/* ── STATUS CONFIRM MODAL ────────────────────── */}
       {confirmAction && (

@@ -4,7 +4,7 @@ export { DatePicker } from "./DatePicker";
 export { FileUpload } from "./FileUpload";
 export { StatCard, StatCardGroup, StatCardRow } from "./StatCard";
 export { statGridClass } from "./stat-grid";
-export { Modal, ConfirmModal } from "./Modal";
+export { Modal, ConfirmModal, TypeToConfirm } from "./Modal";
 export { SlideOver } from "./SlideOver";
 export { RichTextEditor } from "./RichTextEditor";
 export { SkeletonBlock, SkeletonCircle, SkeletonText } from "./Skeleton";
