@@ -236,7 +236,7 @@ export default function NotificationsClientPage() {
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs">
+        <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
           <ul className="divide-y divide-slate-100">
             {pageItems.map((n) => {
               const meta = TYPE_META[n.type] ?? TYPE_META.info;
@@ -311,7 +311,6 @@ export default function NotificationsClientPage() {
                 onPageSizeChange={() => {}}
                 pageSizeOptions={[PAGE_SIZE]}
                 itemLabel="notifikasi"
-                className="rounded-b-2xl border-t border-slate-100"
               />
             </>
           )}

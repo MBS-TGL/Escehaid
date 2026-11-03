@@ -544,7 +544,7 @@ export default function AdminGalleryPage() {
               setPage(1);
             }}
             itemLabel="media"
-            className="mt-4 rounded-2xl border border-slate-200/70"
+            className="mt-4 rounded-xl border border-slate-200/70"
           />
           {/*
             <p className="text-xs text-slate-400">
@@ -581,7 +581,7 @@ export default function AdminGalleryPage() {
               setPage(1);
             }}
             itemLabel="media"
-            className="mt-4 rounded-2xl border border-slate-200/70"
+            className="mt-4 rounded-xl border border-slate-200/70"
           />
         </>
       )}

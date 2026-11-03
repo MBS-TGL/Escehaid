@@ -386,22 +386,23 @@ export default function TrashClientPage() {
       </div>
 
       {filtered.length > 0 && (
-        <>
-          <DesktopPagination
-            page={safePage}
-            totalPages={totalPages}
-            total={filtered.length}
-            from={(safePage - 1) * pageSize + 1}
-            to={Math.min(safePage * pageSize, filtered.length)}
-            onPageChange={setPage}
-            pageSize={pageSize}
-            onPageSizeChange={(newSize) => {
-              setPageSize(newSize);
-              setPage(1);
-            }}
-            itemLabel="item"
-            className="mt-4 rounded-xl border border-slate-200"
-          />
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="hidden md:block">
+            <DesktopPagination
+              page={safePage}
+              totalPages={totalPages}
+              total={filtered.length}
+              from={(safePage - 1) * pageSize + 1}
+              to={Math.min(safePage * pageSize, filtered.length)}
+              onPageChange={setPage}
+              pageSize={pageSize}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setPage(1);
+              }}
+              itemLabel="item"
+            />
+          </div>
           <MobilePagination
             page={safePage}
             totalPages={totalPages}
@@ -415,9 +416,8 @@ export default function TrashClientPage() {
               setPage(1);
             }}
             itemLabel="item"
-            className="mt-4 rounded-xl border border-slate-200"
           />
-        </>
+        </div>
       )}
       {/*
         <div className="mt-4 flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5">

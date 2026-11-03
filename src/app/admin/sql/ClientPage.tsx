@@ -502,6 +502,22 @@ export default function SqlStatusClientPage({ statuses }: { statuses: SqlMigrati
         ) : (
           emptyState
         )}
+        {filtered.length > 0 && (
+          <DesktopPagination
+            page={safePage}
+            totalPages={totalPages}
+            total={filtered.length}
+            from={from}
+            to={to}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(n) => {
+              setPageSize(n);
+              setPage(1);
+            }}
+            itemLabel="entri"
+          />
+        )}
       </div>
 
       {/* Mobile: daftar baris */}
@@ -564,27 +580,6 @@ export default function SqlStatusClientPage({ statuses }: { statuses: SqlMigrati
           emptyState
         )}
       </div>
-
-      {/* Paginasi desktop */}
-      {filtered.length > 0 && (
-        <div className="hidden md:block">
-          <DesktopPagination
-            page={safePage}
-            totalPages={totalPages}
-            total={filtered.length}
-            from={from}
-            to={to}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={(n) => {
-              setPageSize(n);
-              setPage(1);
-            }}
-            itemLabel="entri"
-            className="mt-4 rounded-xl border border-slate-200/80"
-          />
-        </div>
-      )}
 
       <p className="mt-4 text-xs text-slate-400">
         Dua sumber status: <strong>runner</strong> (tercatat di tabel{" "}

@@ -482,6 +482,20 @@ function AdminLogsInner() {
                 ))}
               </tbody>
             </table>
+            <DesktopPagination
+              page={page}
+              totalPages={totalPages}
+              total={count}
+              from={count === 0 ? 0 : (page - 1) * pageSize + 1}
+              to={(page - 1) * pageSize + rows.length}
+              onPageChange={setPage}
+              pageSize={pageSize}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setPage(1);
+              }}
+              itemLabel="entri"
+            />
           </div>
 
           {/* Mobile: daftar timeline — avatar inisial, kalimat
@@ -560,24 +574,9 @@ function AdminLogsInner() {
               itemLabel="entri"
             />
           </div>
-
-          {/* Paginasi desktop */}
-          <DesktopPagination
-            page={page}
-            totalPages={totalPages}
-            total={count}
-            from={count === 0 ? 0 : (page - 1) * pageSize + 1}
-            to={(page - 1) * pageSize + rows.length}
-            onPageChange={setPage}
-            pageSize={pageSize}
-            onPageSizeChange={(newSize) => {
-              setPageSize(newSize);
-              setPage(1);
-            }}
-            itemLabel="entri"
-            className="mt-4 rounded-xl border border-slate-200/80"
-          />
           {/*
+            Pagination desktop kini menjadi footer kartu tabel di atas
+            (menyatu, pola News/Contact). Blok manual lama dibuang.
             <span className="text-xs text-slate-400">
               Halaman {page} dari {totalPages}
             </span>
