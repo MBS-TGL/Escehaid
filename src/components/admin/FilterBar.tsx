@@ -72,7 +72,7 @@ function FilterDropdown({ group, compact = false }: { group: FilterGroup; compac
         aria-label={`${group.menuLabel} — ${current?.label ?? ""}`}
         title={`${group.menuLabel} — ${current?.label ?? ""}`}
         onClick={toggle}
-        className={`inline-flex w-full items-center justify-between gap-1.5 rounded-xl border border-slate-200 bg-white transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${compact ? "py-2 pl-2 pr-1.5 text-xs font-semibold text-slate-700 sm:gap-1.5" : "py-2.5 pl-2.5 pr-2 text-sm font-semibold text-slate-700 sm:gap-2 sm:pl-3 sm:pr-2.5"}`}
+        className={`inline-flex w-full items-center justify-between gap-1.5 rounded-xl border border-slate-200 bg-white transition-colors hover:border-[var(--brand-accent)]/40 hover:text-[var(--brand-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] ${compact ? "py-2.5 pl-2 pr-1.5 text-xs font-semibold text-slate-700 sm:gap-1.5" : "py-2.5 pl-2.5 pr-2 text-sm font-semibold text-slate-700 sm:gap-2 sm:pl-3 sm:pr-2.5"}`}
       >
         <span className="flex min-w-0 items-center gap-1.5 sm:gap-2">
           <span className="shrink-0 text-slate-400">
