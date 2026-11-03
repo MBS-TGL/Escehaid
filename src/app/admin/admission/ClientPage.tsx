@@ -51,9 +51,6 @@ import type { RegistrationPath } from "@/lib/queries";
 import type { SpmbAdminListRow, SpmbAggregateRow, SpmbListQuery } from "@/lib/queries/spmb-list";
 import { findDuplicateGroups, duplicateIdSet } from "@/lib/spmb-duplicates";
 import { parseSpmbListParams, serializeSpmbListParams, SPMB_LIST_DEFAULTS, type SpmbListUiParams } from "@/lib/spmb-list-params";
-import { getSavedViewsForModule, type AdminSavedView } from "@/lib/queries/saved-views";
-import { supabase } from "@/lib/supabase";
-import { SavedViewsDropdown } from "@/components/admin/SavedViews";
 import { SPMB_PROGRAMS } from "@/lib/spmb-registration";
 import { SPMB_NO_PROGRAM } from "@/lib/spmb-filter";
 import { buildSpmbMonthlyRecap, buildSpmbRecapCsv } from "@/lib/admin-reports";
@@ -400,26 +397,11 @@ export default function AdminSPMBPage() {
     handleSendWaTemplate(withSchedule);
   }
 
-  // ── URL sync + saved views ─────────────────────────────────────────────
+  // ── URL sync ─────────────────────────────────────────────────────────
   // State filter/sort/page/tab diinisialisasi dari query string (lazy,
   // readInitialParams) — tanpa setState di effect. Perubahan ditulis balik
-  // ke URL (debounce) agar filter bisa dibagikan/bookmark.
-  const [savedViews, setSavedViews] = useState<AdminSavedView[]>([]);
-  const [activeViewId, setActiveViewId] = useState<string | null>(null);
-
-  // Muat tampilan tersimpan modul "admission" sekali.
-  useEffect(() => {
-    let alive = true;
-    getSavedViewsForModule(supabase, "admission")
-      .then((views) => {
-        if (alive) setSavedViews(views);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, []);
-
+  // ke URL (debounce) agar filter bisa dibagikan/bookmark (pengganti
+  // "simpan filter": tanpa DB, tanpa modal).
   // Tulis state ke URL (debounce 500ms) — filter bisa dibagikan/bookmark.
   const uiParams: SpmbListUiParams = useMemo(
     () => ({
@@ -449,34 +431,6 @@ export default function AdminSPMBPage() {
     }, 500);
     return () => clearTimeout(t);
   }, [uiParams]);
-
-  /** Terapkan saved view ke state filter. */
-  function applySavedView(view: AdminSavedView | null) {
-    setActiveViewId(view?.id ?? null);
-    if (!view) return;
-    const p = view.params as Record<string, string | number>;
-    const str = (k: string, fb: string) => (typeof p[k] === "string" && p[k] ? (p[k] as string) : fb);
-    setSearch(str("q", ""));
-    setDebouncedSearch(str("q", ""));
-    setFilter(str("status", "all"));
-    setPathFilter(str("path", "all"));
-    setProgramFilter(str("program", "all"));
-    setGenderFilter(str("gender", "all"));
-    setActionFilter(str("action", "all"));
-    setInterviewFilter(str("interview", "all"));
-    const [sf, sd] = str("sort", "created_at:desc").split(":");
-    if (sf) setSortField(sf as SortField);
-    if (sd === "asc" || sd === "desc") setSortDir(sd);
-    resetPage();
-  }
-
-  async function refreshSavedViews() {
-    try {
-      setSavedViews(await getSavedViewsForModule(supabase, "admission"));
-    } catch {
-      // abaikan — dropdown tetap menampilkan yang lama
-    }
-  }
 
   /** Kandidat impor (nama + NIK) — dimuat saat modal impor dibuka. */  const [importCandidates, setImportCandidates] = useState<{ full_name: string; documents: Record<string, string | null> | null }[]>([]);
   useEffect(() => {
@@ -1516,16 +1470,6 @@ export default function AdminSPMBPage() {
               onQueryChange={handleSearchChange}
               wrap
               compact
-              action={
-                <SavedViewsDropdown
-                  module="admission"
-                  currentParams={uiParams as unknown as Record<string, unknown>}
-                  views={savedViews}
-                  activeViewId={activeViewId}
-                  onSelectView={applySavedView}
-                  onRefresh={() => void refreshSavedViews()}
-                />
-              }
               filters={[
                 {
                   value: filter,
