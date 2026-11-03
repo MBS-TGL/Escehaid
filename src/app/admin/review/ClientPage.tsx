@@ -9,12 +9,11 @@ import {
   Note,
   User,
   Eye,
-  MagnifyingGlass,
-  Funnel,
-  X,
   CalendarBlank,
 } from "@/components/Icons";
 import { StatPill, StatPillGroup } from "@/components/admin/StatPill";
+import { FilterBar } from "@/components/admin/FilterBar";
+import { MobileFilterBar } from "@/components/admin/mobile";
 import { approveAndPublishAction } from "./actions";
 
 interface QueueItem {
@@ -92,67 +91,45 @@ export default function ReviewClientPage({ initialQueue }: { initialQueue: Queue
         <StatPill icon={Note} label="Artikel" value={stats.articles} tone="neutral" />
       </StatPillGroup>
 
-      {/* ── Toolbar Pencarian & Filter Tipe ── */}
-      <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
-          <MagnifyingGlass className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari judul, ringkasan, atau penulis..."
-            className="w-full rounded-xl border border-slate-200/90 bg-slate-50/50 py-2 pl-9.5 pr-8 text-xs text-slate-700 placeholder-slate-400 focus:border-[var(--brand-primary)] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/15 transition-all"
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-200/60 hover:text-slate-600"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-1 text-xs">
-          <span className="px-2 text-[11px] font-medium text-slate-400 flex items-center gap-1">
-            <Funnel className="h-3 w-3" /> Tipe:
-          </span>
-          <button
-            type="button"
-            onClick={() => setTypeFilter("all")}
-            className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all ${
-              typeFilter === "all"
-                ? "bg-white text-slate-800 shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            Semua ({stats.total})
-          </button>
-          <button
-            type="button"
-            onClick={() => setTypeFilter("news")}
-            className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all ${
-              typeFilter === "news"
-                ? "bg-white text-[var(--brand-primary)] shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            Berita ({stats.news})
-          </button>
-          <button
-            type="button"
-            onClick={() => setTypeFilter("articles")}
-            className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all ${
-              typeFilter === "articles"
-                ? "bg-white text-[var(--brand-primary)] shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            Artikel ({stats.articles})
-          </button>
-        </div>
+      {/* ── Filter + pencarian memakai komponen bersama — gaya, label
+          (Capitalize Each Word), dan jumlah opsi konsisten dengan halaman
+          admin lain. Desktop: FilterBar; mobile: MobileFilterBar. ── */}
+      <div className="hidden md:block">
+        <FilterBar
+          placeholder="Cari judul, ringkasan, atau penulis…"
+          searchLabel="Cari antrean"
+          query={search}
+          onQueryChange={setSearch}
+          filters={[
+            {
+              value: typeFilter,
+              options: [
+                { key: "all", label: "Semua Tipe", count: stats.total },
+                { key: "news", label: "Berita", count: stats.news },
+                { key: "articles", label: "Artikel", count: stats.articles },
+              ],
+              onChange: (k) => setTypeFilter(k as "all" | "news" | "articles"),
+              menuLabel: "Filter tipe",
+            },
+          ]}
+        />
       </div>
+      <MobileFilterBar
+        placeholder="Cari judul, ringkasan, atau penulis…"
+        searchLabel="Cari antrean"
+        query={search}
+        onQueryChange={setSearch}
+        filter={{
+          value: typeFilter,
+          options: [
+            { key: "all", label: "Semua Tipe", count: stats.total },
+            { key: "news", label: "Berita", count: stats.news },
+            { key: "articles", label: "Artikel", count: stats.articles },
+          ],
+          onChange: (k) => setTypeFilter(k as "all" | "news" | "articles"),
+          menuLabel: "Filter tipe",
+        }}
+      />
 
       {/* ── Konten Antrean ── */}
       {queue.length === 0 ? (
