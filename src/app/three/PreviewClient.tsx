@@ -7,10 +7,42 @@
  * `enabled` di-hardcode true secara default — bypass settings agar bisa
  * dilihat walau saklar admin mati; halaman produksi tetap ikut saklar.
  */
-import { useState } from "react";
+import { useSyncExternalStore, useState } from "react";
 import Link from "next/link";
 import ThreeOrnament from "@/components/three/ThreeOrnament";
 import { checkWebglSupported, isWeakDevice } from "@/components/three/IslamicParticles";
+
+/**
+ * Snapshot kemampuan perangkat. Server & render klien pertama memakai
+ * `getServerSnapshot` (deterministik: belum di-probe) → render identik, anti
+ * hydration mismatch. Nilai riil (WebGL/perangkat/reduced-motion) hanya dibaca
+ * di `getSnapshot` yang murni klien — pola yang sama dipakai
+ * `HeroBackground.tsx` (useIsMobile/useMounted).
+ */
+function subscribeNoop(): () => void {
+  return () => {};
+}
+
+function getServerDevice() {
+  return { webgl: false, weak: false, reduced: false, probed: false };
+}
+
+let cachedDevice: ReturnType<typeof getServerDevice> | null = null;
+function getClientDevice() {
+  if (!cachedDevice) {
+    cachedDevice = {
+      webgl: checkWebglSupported(),
+      weak: isWeakDevice(),
+      reduced: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+      probed: true,
+    };
+  }
+  return cachedDevice;
+}
+
+function useDevice() {
+  return useSyncExternalStore(subscribeNoop, getClientDevice, getServerDevice);
+}
 
 const DEFAULT_COLOR = "#2f7bff";
 const DEFAULT_ACCENT = "#8fc3ff";
@@ -19,15 +51,7 @@ export default function PreviewClient() {
   const [color, setColor] = useState(DEFAULT_COLOR);
   const [accentColor, setAccentColor] = useState(DEFAULT_ACCENT);
   const [enabled, setEnabled] = useState(true);
-  // Cek kemampuan perangkat sekali di lazy initializer (client-only, tanpa
-  // setState di effect).
-  const [device] = useState(() => ({
-    webgl: checkWebglSupported(),
-    weak: isWeakDevice(),
-    reduced:
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  }));
+  const device = useDevice();
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -47,16 +71,17 @@ export default function PreviewClient() {
           Kanan: bidang terang (normal, seperti /program & /portal).
         </p>
 
-        {/* Status perangkat */}
+        {/* Status perangkat — sebelum probe: placeholder netral yang sama
+            persis di server & klien (anti hydration mismatch). */}
         <div className="mt-6 flex flex-wrap gap-2 text-xs">
-          <span className={`rounded-full px-3 py-1 font-semibold ${device.webgl ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"}`}>
-            WebGL: {device.webgl ? "tersedia" : "tidak tersedia"}
+          <span className={`rounded-full px-3 py-1 font-semibold ${!device.probed ? "bg-slate-500/15 text-slate-300" : device.webgl ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"}`}>
+            WebGL: {!device.probed ? "memeriksa…" : device.webgl ? "tersedia" : "tidak tersedia"}
           </span>
-          <span className={`rounded-full px-3 py-1 font-semibold ${device.weak ? "bg-amber-500/15 text-amber-300" : "bg-emerald-500/15 text-emerald-300"}`}>
-            Perangkat: {device.weak ? "lemah (fallback CSS)" : "mampu"}
+          <span className={`rounded-full px-3 py-1 font-semibold ${!device.probed ? "bg-slate-500/15 text-slate-300" : device.weak ? "bg-amber-500/15 text-amber-300" : "bg-emerald-500/15 text-emerald-300"}`}>
+            Perangkat: {!device.probed ? "memeriksa…" : device.weak ? "lemah (fallback CSS)" : "mampu"}
           </span>
           <span className="rounded-full bg-slate-500/15 px-3 py-1 font-semibold text-slate-300">
-            Reduced motion: {device.reduced ? "aktif (diam)" : "mati (animasi)"}
+            Reduced motion: {!device.probed ? "memeriksa…" : device.reduced ? "aktif (diam)" : "mati (animasi)"}
           </span>
         </div>
 
