@@ -253,9 +253,9 @@ export function RolesTab() {
       </div>
 
       {/* Matriks izin */}
-      <div className="rounded-xl border border-slate-200/80 bg-white">
-        <div className="flex flex-col gap-3 border-b border-slate-200/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+      <div className="min-w-0 overflow-x-clip rounded-xl border border-slate-200/80 bg-white">
+        <div className="flex min-w-0 flex-col gap-3 border-b border-slate-200/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <h2 className="text-base font-bold text-slate-800">{roleLabel(selectedRole)}</h2>
             <p className="text-xs text-slate-500">
               {DEFAULT_ROLES.find((r) => r.key === selectedRole)?.description ??
@@ -265,7 +265,7 @@ export function RolesTab() {
               Perubahan akan berlaku untuk {userCountByRole[selectedRole] ?? 0} pengguna dengan peran ini.
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-2">
             <div className="flex items-center gap-1.5 text-xs text-slate-500 hidden sm:flex">
               <button
                 type="button"
@@ -328,7 +328,7 @@ export function RolesTab() {
             const allChecked = checkedCount === modPerms.length;
             const isCollapsed = collapsedModules.has(mod.key);
              return (
-               <div key={mod.key} className="rounded-xl border border-slate-200/70">
+               <div key={mod.key} className="min-w-0 rounded-xl border border-slate-200/70">
                  <button
                    type="button"
                    onClick={() => toggleModuleCollapse(mod.key)}
@@ -365,7 +365,7 @@ export function RolesTab() {
                    id={`module-${mod.key}`}
                    role="region"
                    aria-label={`${mod.label} actions`}
-                   className={`grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-2 lg:grid-cols-3 transition-all duration-200 ${isCollapsed ? "hidden" : ""}`}
+                    className={`grid min-w-0 grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-2 lg:grid-cols-3 transition-all duration-200 ${isCollapsed ? "hidden" : ""}`}
                  >
                   {mod.actions.map((action) => {
                     const perm = `${mod.key}:${action.key}`;
@@ -373,7 +373,7 @@ export function RolesTab() {
                     return (
                       <label
                         key={perm}
-                        className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm ${
+                        className={`flex min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 text-sm ${
                           isSuper ? "text-slate-400" : "text-slate-600 hover:bg-slate-50"
                         }`}
                       >
@@ -382,9 +382,9 @@ export function RolesTab() {
                           checked={checked}
                           disabled={isSuper}
                           onChange={() => toggle(perm)}
-                          className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]"
+                          className="h-4 w-4 shrink-0 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-accent)]"
                         />
-                        <span>{action.label}</span>
+                        <span className="min-w-0 break-words">{action.label}</span>
                       </label>
                     );
                   })}
