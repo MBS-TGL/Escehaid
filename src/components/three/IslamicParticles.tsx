@@ -13,6 +13,7 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { StarCenterpiece, WaveLayer } from "./SceneExtras";
 
 type Props = {
   /** Warna titik pola bintang (hex). Ambil dari settings `three_color`. */
@@ -239,6 +240,20 @@ export default function IslamicParticles({
             pointer={pointer}
             blending={blending}
           />
+          {/* Fase 2.5 — lapisan prosedural sesuai mode:
+              bidang gelap → bintang Rub el Hizb 3D solid + ring arabeske;
+              bidang terang → gelombang shader halus. Semua masih di dalam
+              gate/kill-switch yang sama. */}
+          {blending === "additive" ? (
+            <StarCenterpiece
+              color={color}
+              accentColor={accentColor}
+              reduced={reduced}
+              pointer={pointer}
+            />
+          ) : (
+            <WaveLayer color={accentColor} reduced={reduced} />
+          )}
         </Canvas>
       )}
     </div>
