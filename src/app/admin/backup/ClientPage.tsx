@@ -66,13 +66,16 @@ export default function BackupClientPage({ manifest }: { manifest: BackupManifes
           </div>
         </div>
         {canTrigger && (
-          <button data-solid
-            onClick={handleTrigger}
-            disabled={triggering}
-            className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)]"
-          >
-            <ArrowsCounterClockwise className="h-4 w-4" /> {triggering ? "Memicu…" : "Backup sekarang"}
-          </button>
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <button
+              data-solid
+              onClick={handleTrigger}
+              disabled={triggering}
+              className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-accent)] sm:flex-none disabled:opacity-50"
+            >
+              <ArrowsCounterClockwise className="h-4 w-4" /> {triggering ? "Memicu…" : "Backup sekarang"}
+            </button>
+          </div>
         )}
       </div>
 

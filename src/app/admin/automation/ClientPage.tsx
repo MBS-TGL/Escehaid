@@ -159,15 +159,15 @@ export default function AutomationClientPage({
           </div>
         </div>
 
-        {/* Action Toolbar */}
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Action Toolbar — kanonis: full-width di HP, auto di desktop */}
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <button
             type="button"
             disabled={testing}
             onClick={() => handleTestSend("webhook")}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 disabled:opacity-50 transition-colors"
+            className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50 transition-colors sm:flex-none"
           >
-            <Globe className="h-3.5 w-3.5 text-blue-500" />
+            <Globe className="h-4 w-4 text-blue-500" />
             <span>Tes Webhook</span>
           </button>
 
@@ -175,9 +175,9 @@ export default function AutomationClientPage({
             type="button"
             disabled={testing}
             onClick={() => handleTestSend("telegram")}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 disabled:opacity-50 transition-colors"
+            className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50 transition-colors sm:flex-none"
           >
-            <Envelope className="h-3.5 w-3.5 text-sky-500" />
+            <Envelope className="h-4 w-4 text-sky-500" />
             <span>Tes Telegram</span>
           </button>
 
@@ -185,18 +185,18 @@ export default function AutomationClientPage({
             type="button"
             disabled={testing}
             onClick={() => handleTestSend("whatsapp")}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 disabled:opacity-50 transition-colors"
+            className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50 transition-colors sm:flex-none"
           >
-            <Envelope className="h-3.5 w-3.5 text-emerald-500" />
+            <Envelope className="h-4 w-4 text-emerald-500" />
             <span>Tes WhatsApp</span>
           </button>
 
           <button
             type="button"
             onClick={() => setModalOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[var(--brand-accent)] transition-all cursor-pointer"
+            className="flex min-h-11 sm:min-h-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--brand-accent)] transition-all sm:flex-none"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-4 w-4" />
             <span>Tambah Aturan</span>
           </button>
         </div>
