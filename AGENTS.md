@@ -38,6 +38,14 @@ pemilik lama-berjalan di sini. Aturan wajib saat bekerja di tree ini:
 - **CI = sumber kebenaran.** Release production adalah Vercel auto-deploy (tidak menunggu CI). Setelah push, cek run GitHub Actions (`/actions/runs?head_sha=`) sampai hijau; jangan klaim selesai kalau CI merah.
 - Pre-commit `.githooks/` memblokir rahasia + lint file staged; escape: `SKIP_SECRET_SCAN=1` / `SKIP_LINT_GUARD=1`.
 
+## Pola halaman admin (hero + tombol 44px)
+
+- Judul: `text-xl font-bold text-slate-800 sm:text-2xl`; subjudul: `text-[13px] text-[#64748b] md:text-sm md:text-slate-500`.
+- Wrapper aksi hero: `flex w-full flex-wrap items-center gap-2 sm:w-auto` (tombol full-width di HP, auto di desktop).
+- Tombol hero kanonis: `flex min-h-11 sm:min-h-0 flex-1 sm:flex-none items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold` + varian primer (`bg-[var(--brand-primary)] text-white ... hover:bg-[var(--brand-accent)]`) atau sekunder (`border border-slate-200 bg-white text-slate-700 ... hover:bg-slate-50`), ikon `h-4 w-4`.
+- Acuan: `src/app/admin/admission/PageHeader.tsx:56-62`, `src/app/admin/contact/ClientPage.tsx:605-615`, `src/app/admin/news/ClientPage.tsx:884-886`.
+- Filter/search wajib pakai `FilterBar` + `MobileFilterBar` bersama; jangan bikin input/select inline per halaman.
+
 ## SQL manual: runner migrasi + `sql/pg-trgm.sql`
 
 Repo ini **tidak punya migration otomatis saat deploy** — rilis SQL sengaja dipisah dari rilis kode. Kode aplikasi dan isi DB bisa tidak sinkron; pada 24 Okt itu mematikan seluruh pencarian DB di produksi dua kali (detail: komentar header `sql/pg-trgm.sql`).

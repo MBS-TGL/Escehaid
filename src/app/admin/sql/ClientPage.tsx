@@ -315,21 +315,19 @@ export default function SqlStatusClientPage({ statuses }: { statuses: SqlMigrati
             <Code className="h-5 w-5 text-[var(--brand-accent)]" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-800 md:text-2xl">Migrasi SQL</h1>
+            <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Migrasi SQL</h1>
             <p className="text-[13px] text-[#64748b] md:text-sm md:text-slate-500">
               Status file SQL di repo — sudah/belum efeknya ada di database
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <button
             type="button"
             onClick={() => router.refresh()}
-            className="min-h-10 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+            className="flex min-h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 sm:min-h-0 sm:flex-none"
           >
-            <span className="inline-flex items-center gap-1.5">
-              <ArrowsCounterClockwise className="h-3.5 w-3.5" /> Muat ulang
-            </span>
+            <ArrowsCounterClockwise className="h-4 w-4" /> Muat ulang
           </button>
         </div>
       </div>
