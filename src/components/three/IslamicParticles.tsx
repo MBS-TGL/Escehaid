@@ -3,15 +3,17 @@
 /**
  * IslamicParticles
  * Partikel prosedural membentuk pola bintang 8 sudut (dua persegi bertumpuk,
- * dikenal sebagai Rub el Hizb) dalam 3 lapis konsentris, ditambah debu partikel.
- * Tanpa model .glb, tanpa gambar: semua dibuat dari kode.
+ * dikenal sebagai Rub el Hizb) dalam 3 lapis konsentris, ditambah debu partikel
+ * sebaran bola. Shader custom: tiap titik berkelip (twinkle) dengan fase acak
+ * + variasi ukuran — tanpa file gambar (sprite dilukis di fragment shader).
+ * Tanpa model .glb, tanpa drei.
  *
  * Dependensi: three, @react-three/fiber
  * Pasang lewat dynamic import (lihat contoh di bawah file).
  */
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { StarCenterpiece, WaveLayer } from "./SceneExtras";
 
@@ -60,8 +62,10 @@ const POINTS_PER_EDGE = 36; // makin kecil makin ringan
 const DUST_COUNT = 260;
 
 /** Titik-titik di sepanjang sisi dua persegi (0° dan 45°) pada tiap lapis. */
-function buildStarPositions(): Float32Array {
+function buildStarPositions(): { positions: Float32Array; phases: Float32Array; scales: Float32Array } {
   const pts: number[] = [];
+  const phases: number[] = [];
+  const scales: number[] = [];
   for (const scale of RINGS) {
     const radius = scale * 2;
     for (const offset of [0, Math.PI / 4]) {
@@ -79,91 +83,145 @@ function buildStarPositions(): Float32Array {
             y1 + (y2 - y1) * t,
             (Math.random() - 0.5) * 0.15 // sedikit kedalaman
           );
+          phases.push(Math.random());
+          // Titik sudut (t≈0) sedikit lebih besar → pola terbaca.
+          scales.push(0.7 + Math.random() * 0.6 + (t < 0.06 ? 0.5 : 0));
         }
       }
     }
   }
-  return new Float32Array(pts);
+  return {
+    positions: new Float32Array(pts),
+    phases: new Float32Array(phases),
+    scales: new Float32Array(scales),
+  };
 }
 
-/** Debu partikel acak di sekitar pola. */
-function buildDustPositions(): Float32Array {
-  const pts = new Float32Array(DUST_COUNT * 3);
+/** Debu partikel sebaran volume bola di sekitar pola. */
+function buildDustPositions(): { positions: Float32Array; phases: Float32Array; scales: Float32Array } {
+  const positions = new Float32Array(DUST_COUNT * 3);
+  const phases = new Float32Array(DUST_COUNT);
+  const scales = new Float32Array(DUST_COUNT);
   for (let i = 0; i < DUST_COUNT; i++) {
-    pts[i * 3] = (Math.random() - 0.5) * 7;
-    pts[i * 3 + 1] = (Math.random() - 0.5) * 4.4;
-    pts[i * 3 + 2] = (Math.random() - 0.5) * 3;
+    // Arah acak + radius akar kubik → sebaran volume merata, bukan kulit bola.
+    const u = Math.random() * 2 - 1;
+    const th = Math.random() * Math.PI * 2;
+    const s = Math.sqrt(1 - u * u);
+    const r = 2.2 + Math.cbrt(Math.random()) * 2.4;
+    positions[i * 3] = s * Math.cos(th) * r;
+    positions[i * 3 + 1] = (u * r * 0.62) + (Math.random() - 0.5) * 0.2;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * 2.4;
+    phases[i] = Math.random();
+    scales[i] = 0.5 + Math.random() * 0.9;
   }
-  return pts;
+  return { positions, phases, scales };
 }
 
-/** Tekstur titik bulat dibuat dari canvas 2D (tanpa file gambar). */
-function createDotTexture(): THREE.CanvasTexture {
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = 64;
-  const ctx = canvas.getContext("2d")!;
-  const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-  g.addColorStop(0, "rgba(255,255,255,1)");
-  g.addColorStop(0.4, "rgba(255,255,255,0.8)");
-  g.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 64, 64);
-  return new THREE.CanvasTexture(canvas);
-}
+const TWINKLE_VERTEX = /* glsl */ `
+  attribute float aPhase;
+  attribute float aScale;
+  uniform float uTime;
+  uniform float uSize;
+  varying float vTwinkle;
+  void main() {
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * mv;
+    float speed = 0.8 + aPhase * 1.6;
+    vTwinkle = 0.55 + 0.45 * sin(uTime * speed + aPhase * 6.2831);
+    gl_PointSize = uSize * aScale * (300.0 / -mv.z);
+  }
+`;
+
+const TWINKLE_FRAGMENT = /* glsl */ `
+  uniform vec3 uColor;
+  uniform float uOpacity;
+  varying float vTwinkle;
+  void main() {
+    // Sprite bulat lembut dilukis di shader (tanpa tekstur gambar).
+    vec2 uv = gl_PointCoord - 0.5;
+    float d = length(uv);
+    float core = smoothstep(0.5, 0.05, d);
+    core = pow(core, 1.6);
+    // Halo tipis di sekeliling inti → kesan glow.
+    float halo = smoothstep(0.5, 0.2, d) * 0.35;
+    float a = (core + halo) * uOpacity * vTwinkle;
+    if (a < 0.01) discard;
+    gl_FragColor = vec4(uColor, a);
+  }
+`;
 
 type PointerRef = RefObject<{ x: number; y: number }>;
 
 function Layer({
-  positions,
+  data,
   color,
   size,
   spin,
+  drift,
   parallax,
   reduced,
   pointer,
   blending,
 }: {
-  positions: Float32Array;
+  data: { positions: Float32Array; phases: Float32Array; scales: Float32Array };
   color: string;
   size: number;
   spin: number;
+  drift: number;
   parallax: number;
   reduced: boolean;
   pointer: PointerRef;
   blending: "additive" | "normal";
 }) {
-  const ref = useRef<THREE.Points>(null);
-  const map = useMemo(() => createDotTexture(), []);
-  useEffect(() => () => map.dispose(), [map]);
+  const group = useRef<THREE.Group>(null);
+  const mat = useRef<THREE.ShaderMaterial>(null);
+  const dpr = useThree((s) => s.viewport.dpr);
+  const geo = useMemo(() => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(data.positions, 3));
+    g.setAttribute("aPhase", new THREE.BufferAttribute(data.phases, 1));
+    g.setAttribute("aScale", new THREE.BufferAttribute(data.scales, 1));
+    return g;
+  }, [data]);
+  const uniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+      uColor: { value: new THREE.Color(color) },
+      uSize: { value: size * dpr },
+      uOpacity: { value: blending === "normal" ? 0.55 : 0.9 },
+    }),
+    [color, size, dpr, blending]
+  );
+  useEffect(() => () => geo.dispose(), [geo]);
 
-  useFrame((_, delta) => {
-    const p = ref.current;
-    if (!p || reduced) return;
-    p.rotation.z += delta * spin;
-    // parallax halus mengikuti kursor / sentuhan
-    p.rotation.x += (pointer.current.y * parallax - p.rotation.x) * 0.05;
-    p.rotation.y += (pointer.current.x * parallax - p.rotation.y) * 0.05;
+  useFrame((state, delta) => {
+    const grp = group.current;
+    if (!grp) return;
+    if (mat.current && !reduced) {
+      mat.current.uniforms.uTime.value = state.clock.elapsedTime;
+    }
+    if (reduced) return;
+    grp.rotation.z += delta * spin;
+    // Drift vertikal pelan (debu naik, pola turun sangat pelan) + parallax.
+    grp.position.y += Math.sin(state.clock.elapsedTime * 0.3) * delta * drift;
+    grp.rotation.x += (pointer.current.y * parallax - grp.rotation.x) * 0.05;
+    grp.rotation.y += (pointer.current.x * parallax - grp.rotation.y) * 0.05;
   });
 
   return (
-    <points ref={ref}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          args={[positions, 3]}
+    <group ref={group}>
+      <points geometry={geo} frustumCulled={false}>
+        <shaderMaterial
+          ref={mat}
+          uniforms={uniforms}
+          vertexShader={TWINKLE_VERTEX}
+          fragmentShader={TWINKLE_FRAGMENT}
+          transparent
+          depthWrite={false}
+          blending={blending === "normal" ? THREE.NormalBlending : THREE.AdditiveBlending}
         />
-      </bufferGeometry>
-      <pointsMaterial
-        map={map}
-        color={color}
-        size={size}
-        sizeAttenuation
-        transparent
-        opacity={0.9}
-        depthWrite={false}
-        blending={blending === "normal" ? THREE.NormalBlending : THREE.AdditiveBlending}
-      />
-    </points>
+      </points>
+    </group>
   );
 }
 
@@ -221,28 +279,30 @@ export default function IslamicParticles({
           gl={{ antialias: false, alpha: true, powerPreference: "low-power" }}
         >
           <Layer
-            positions={star}
+            data={star}
             color={color}
-            size={0.05}
+            size={0.055}
             spin={0.04}
+            drift={-0.008}
             parallax={0.2}
             reduced={reduced}
             pointer={pointer}
             blending={blending}
           />
           <Layer
-            positions={dust}
+            data={dust}
             color={accentColor}
-            size={0.03}
+            size={0.038}
             spin={-0.015}
+            drift={0.02}
             parallax={0.45}
             reduced={reduced}
             pointer={pointer}
             blending={blending}
           />
           {/* Fase 2.5 — lapisan prosedural sesuai mode:
-              bidang gelap → bintang Rub el Hizb 3D solid + ring arabeske;
-              bidang terang → gelombang shader halus. Semua masih di dalam
+              bidang gelap → medallion kaca Rub el Hizb + ring arabeske tabung;
+              bidang terang → gelombang shader ganda. Semua masih di dalam
               gate/kill-switch yang sama. */}
           {blending === "additive" ? (
             <StarCenterpiece
