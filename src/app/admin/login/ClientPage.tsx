@@ -175,8 +175,8 @@ function LoginForm() {
       {/* ── RIGHT PANEL — Form Login / Reset ───────────── */}
       {/* items-start + overflow-y-auto + min-h-dvh: saat keyboard HP terbuka,
           kartu bisa discroll, tak kepotong di tengah layar. */}
-      <div className="flex-1 flex items-start justify-center relative overflow-y-auto p-4 py-8 min-h-dvh bg-white sm:items-center lg:py-4">
-        <div className="absolute top-0 right-0 -mr-40 -mt-40 w-[800px] h-[800px] bg-[#f4f7fb] rounded-full blur-3xl pointer-events-none hidden lg:block lg:opacity-50" />
+      <div className="flex-1 flex items-start justify-center relative overflow-y-auto overflow-x-hidden p-4 py-8 min-h-dvh bg-white sm:items-center lg:py-4">
+        <div className="absolute top-0 right-0 -mr-40 -mt-40 w-[520px] h-[520px] xl:w-[800px] xl:h-[800px] bg-[#f4f7fb] rounded-full blur-3xl pointer-events-none hidden lg:block lg:opacity-50" />
 
         <div className="w-full max-w-md relative z-10 my-auto">
           <div className={`bg-white/80 backdrop-blur-xl border border-[#dce3ed]/60 rounded-2xl shadow-xl p-6 sm:p-8 md:p-10 transition-all duration-700 ease-out ${mounted ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-90 translate-y-4"}`}>
