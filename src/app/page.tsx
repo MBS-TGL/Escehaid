@@ -373,6 +373,10 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* ── STATISTIK RINGKAS — menyatu dengan hero gelap sebagai
+          pembuka "bukti sosial" sebelum konten terang dimulai ── */}
+      <StatsBand stats={homeStats} />
+
       <CountdownEvent events={upcomingEvents} />
 
       {/* ── SPOTLIGHT SPMB — strip statis pengganti popup ──────
@@ -443,9 +447,6 @@ export default async function Home() {
           </div>
         </section>
       ) : null}
-
-      {/* ── STATISTIK RINGKAS ─────────────────────────────── */}
-      <StatsBand stats={homeStats} />
 
       {/* ── SAMBUTAN KEPALA SEKOLAH ───────────────────────── */}
       <section className="relative overflow-hidden bg-[var(--surface-muted)] py-16 md:py-24" style={CV_TALL}>
