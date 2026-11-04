@@ -365,7 +365,9 @@ export default async function Home() {
                 )}
               </span>
             </p>
-            <div className="flex shrink-0 items-center gap-3">
+            {/* CTA hanya di layar ≥sm — di HP dua tombol tidak muat satu baris
+                dan redundan dengan bola SPMB di bottom nav. */}
+            <div className="hidden shrink-0 items-center gap-3 sm:flex">
               <Link
                 href="/admission/status"
                 className="text-xs font-semibold text-slate-500 underline underline-offset-4 transition-colors hover:text-[var(--brand-primary)]"
