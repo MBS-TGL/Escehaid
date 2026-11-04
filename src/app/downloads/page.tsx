@@ -54,7 +54,7 @@ export default async function UnduhanPage({
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="bg-slate-50">
       <script type="application/ld+json" dangerouslySetInnerHTML={{
         __html: JSON.stringify({
           "@context": "https://schema.org",
@@ -74,7 +74,7 @@ export default async function UnduhanPage({
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Unduhan" }]}
       />
 
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 md:py-16" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+      <section className="mx-auto max-w-7xl px-4 pt-12 pb-6 sm:px-6 md:pt-16 md:pb-8" style={{ contentVisibility: "auto" } as React.CSSProperties}>
         {allCategories.length > 1 && (
           <CategoryChips chips={chips} className="mb-8" />
         )}
