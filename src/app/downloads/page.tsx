@@ -74,7 +74,7 @@ export default async function UnduhanPage({
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Unduhan" }]}
       />
 
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6" style={{ contentVisibility: "auto" } as React.CSSProperties}>
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 md:py-16" style={{ contentVisibility: "auto" } as React.CSSProperties}>
         {allCategories.length > 1 && (
           <CategoryChips chips={chips} className="mb-8" />
         )}
@@ -144,7 +144,7 @@ export default async function UnduhanPage({
           </CSSStagger>
         )}
 
-        <p className="mt-10 flex items-center justify-center gap-1.5 text-center text-xs text-slate-400">
+        <p className="mt-12 flex items-center justify-center gap-1.5 text-center text-xs text-slate-400">
           <Info className="h-3.5 w-3.5" />
           Butuh dokumen lain?{" "}
           <Link href="/contact" className={`font-semibold text-[var(--brand-accent)] hover:text-[var(--brand-primary)] ${focusRing}`}>
