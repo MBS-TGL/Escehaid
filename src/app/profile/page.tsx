@@ -1,14 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Users, GraduationCap, Eye, Checks, ArrowUpRight, Trophy, MapPin, Quotes } from "@/components/Icons";
+import { Users, GraduationCap, Eye, Checks, ArrowUpRight, Trophy, MapPin, Quotes, ImageSquare } from "@/components/Icons";
 import { getSchoolProfile, getTeacherList, getFacilityList, getAchievementList, getGalleryList, getEkskulList, registrationHref } from "@/lib/queries";
 import { parseMissionItems } from "@/lib/queries/profile";
 import { VISION_FALLBACK } from "@/lib/site-content";
 import { getSiteSettings, toPublicBrand } from "@/lib/settings";
 import { CSSFadeIn, CSSStagger } from "@/components/CSSAnimations";
 import PageHero from "@/components/public/PageHero";
-import TeacherGrid from "./TeacherGrid";
-import FacilityGrid from "./FacilityGrid";
+import TeacherCard from "../TeacherCard";
 import EkskulCard from "@/components/EkskulCard";
 import HistoryCarousel from "./HistoryCarousel";
 import { detectPrincipalGreeting, keepTogether } from "@/lib/principal-quote";
@@ -69,8 +68,6 @@ export default async function ProfilPage() {
 
   const visionText = settings.values.vision.trim() || VISION_FALLBACK;
   const missionItems = parseMissionItems(settings.values.mission);
-
-  const daftarHref = registrationHref(profil).trim();
 
   return (
     <div>
@@ -399,7 +396,7 @@ export default async function ProfilPage() {
         </div>
       </section>
 
-      {/* Fasilitas Sekolah */}
+      {/* Fasilitas Sekolah — teaser, lengkapnya di /facilities */}
       {facilities.length > 0 && (
         <section id="fasilitas" className="scroll-mt-24 bg-[#f4f7fb] py-14 md:scroll-mt-28 md:py-20" style={CV}>
           <div className="mx-auto max-w-[1296px] px-6 md:px-10">
@@ -409,43 +406,58 @@ export default async function ProfilPage() {
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Infrastruktur</p>
                   <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Fasilitas Sekolah</h2>
                 </div>
-                <span className="hidden rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm md:inline-block">
-                  {facilities.length} Fasilitas
-                </span>
+                <Link href="/facilities" className="hidden items-center gap-1.5 text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)] md:inline-flex">
+                  Lihat semua {facilities.length} fasilitas <ArrowUpRight className="h-4 w-4" />
+                </Link>
               </div>
             </CSSFadeIn>
 
-            <FacilityGrid facilities={facilities} />
-
-            {/* Ajakan lanjut — teks statis, tombol daftar hanya bila href valid */}
-            <CSSFadeIn delay={0.1}>
-              <div className="mt-12 flex flex-col items-center justify-between gap-5 rounded-2xl border border-[#dce3ed] bg-white p-6 sm:flex-row">
-                <p className="text-center text-sm font-medium text-[var(--brand-primary)] sm:text-left sm:text-base">
-                  Ingin melihat langsung suasana sekolah?
-                </p>
-                <div className="flex flex-wrap items-center justify-center gap-3">
+            <CSSStagger stagger={60} className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
+              {facilities.slice(0, 4).map((f) => {
+                const imageSrc = f.image_url?.trim() || "";
+                return (
                   <Link
-                    href="/contact"
-                    className="rounded-xl border border-[#dce3ed] px-5 py-3 text-sm font-semibold text-[var(--brand-primary)] transition hover:border-[var(--brand-primary)] hover:bg-[#f4f7fb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-2"
+                    key={f.id}
+                    href="/facilities"
+                    aria-label={`Lihat fasilitas ${f.name}`}
+                    className="group relative block aspect-square overflow-hidden rounded-2xl bg-slate-900 shadow-md shadow-slate-900/5 ring-1 ring-slate-900/[0.06] transition-transform duration-150 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-accent)] sm:aspect-[4/3]"
                   >
-                    Hubungi Panitia
+                    {imageSrc ? (
+                      <Image
+                        src={imageSrc}
+                        alt={f.name}
+                        fill
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
+                        quality={70}
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[var(--brand-primary)] via-[#0a3570] to-[#0c4482]">
+                        <ImageSquare className="h-8 w-8 text-[var(--brand-highlight)]" />
+                      </div>
+                    )}
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/10 to-transparent" />
+                    <div className="absolute inset-x-0 bottom-0 p-3.5 sm:p-4">
+                      <h3 className="text-sm font-bold leading-snug text-white drop-shadow-sm line-clamp-2 sm:text-base">{f.name}</h3>
+                    </div>
                   </Link>
-                  {daftarHref && (
-                    <Link
-                      href={daftarHref}
-                      className="rounded-xl bg-[var(--brand-accent)] px-5 py-3 text-sm font-bold text-white transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2"
-                    >
-                      Daftar SPMB
-                    </Link>
-                  )}
-                </div>
-              </div>
-            </CSSFadeIn>
+                );
+              })}
+            </CSSStagger>
+
+            <div className="mt-6 md:hidden">
+              <Link
+                href="/facilities"
+                className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)]"
+              >
+                Lihat semua fasilitas <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
         </section>
       )}
 
-      {/* Ekstrakurikuler — hanya dirender bila ada data ekskul aktif */}
+      {/* Ekstrakurikuler — teaser, lengkapnya di /extracurricular. Hanya dirender bila ada data ekskul aktif */}
       {ekskulList.length > 0 && (
         <section id="ekstrakurikuler" className="scroll-mt-24 bg-white py-14 md:scroll-mt-28 md:py-20" style={CV}>
           <div className="mx-auto max-w-[1296px] px-6 md:px-10">
@@ -455,19 +467,28 @@ export default async function ProfilPage() {
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Pengembangan Diri</p>
                   <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Ekstrakurikuler</h2>
                 </div>
-                <span className="hidden rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 md:inline-block">
-                  {ekskulList.length} Ekskul
-                </span>
+                <Link href="/extracurricular" className="hidden items-center gap-1.5 text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)] md:inline-flex">
+                  Lihat semua {ekskulList.length} ekskul <ArrowUpRight className="h-4 w-4" />
+                </Link>
               </div>
             </CSSFadeIn>
 
-            <CSSStagger stagger={80} className="grid grid-cols-2 items-stretch gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 lg:gap-6">
-              {ekskulList.map((item) => (
+            <CSSStagger stagger={80} className="grid grid-cols-2 items-stretch gap-4 sm:gap-5 lg:grid-cols-4 lg:gap-6">
+              {ekskulList.slice(0, 4).map((item) => (
                 <div key={item.id} className="h-full min-w-0">
                   <EkskulCard item={item} />
                 </div>
               ))}
             </CSSStagger>
+
+            <div className="mt-6 md:hidden">
+              <Link
+                href="/extracurricular"
+                className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)]"
+              >
+                Lihat semua ekstrakurikuler <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
         </section>
       )}
@@ -501,13 +522,21 @@ export default async function ProfilPage() {
         </section>
       )}
 
-      {/* Guru & Staff */}
+      {/* Guru & Staff — teaser, daftar lengkap di /teachers */}
       <section id="guru" className="scroll-mt-24 bg-white md:scroll-mt-28" style={CV}>
         <div className="mx-auto max-w-[1296px] px-4 py-10 sm:px-6 sm:py-12 md:px-10 md:py-16">
           <CSSFadeIn>
-            <div className="mb-12 text-center">
-              <h2 className="text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Guru & Staff</h2>
-              <p className="mt-2 text-sm text-slate-500">{teachers.length} pendidik & tenaga kependidikan</p>
+            <div className="mb-8 flex items-end justify-between md:mb-12">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--brand-accent)]">Tenaga Pendidik</p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--brand-primary)] md:text-4xl">Guru & Staff</h2>
+                <p className="mt-2 text-sm text-slate-500">{teachers.length} pendidik & tenaga kependidikan</p>
+              </div>
+              {teachers.length > 0 && (
+                <Link href="/teachers" className="hidden items-center gap-1.5 text-sm font-semibold text-[var(--brand-accent)] transition-colors hover:text-[var(--brand-primary)] md:inline-flex">
+                  Lihat semua <ArrowUpRight className="h-4 w-4" />
+                </Link>
+              )}
             </div>
           </CSSFadeIn>
 
@@ -519,7 +548,25 @@ export default async function ProfilPage() {
               </div>
             </CSSFadeIn>
           ) : (
-            <TeacherGrid teachers={teachers} />
+            <>
+              <CSSStagger stagger={80} className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-5">
+                {teachers.slice(0, 5).map((t, i) => (
+                  // Kartu ke-5 hanya tampil di desktop (5 kolom) agar grid 2 kolom tidak menyisakan 1 kartu yatim.
+                  <div key={t.id} className={i === 4 ? "hidden lg:block" : undefined}>
+                    <TeacherCard teacher={t} />
+                  </div>
+                ))}
+              </CSSStagger>
+
+              <div className="mt-8 md:hidden">
+                <Link
+                  href="/teachers"
+                  className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-accent)]"
+                >
+                  Lihat semua guru & staff <ArrowUpRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </>
           )}
         </div>
       </section>
