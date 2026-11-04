@@ -48,11 +48,10 @@ export default async function FasilitasPage() {
       />
 
       <PageHero
-        variant="photo"
+        variant="compact"
         eyebrow="Sarana & Prasarana"
         title="Fasilitas"
         description="Sarana belajar dan pembinaan santri di kampus putra dan putri — dirancang menunjang kegiatan akademik, tahfidz, dan pengembangan karakter."
-        icon={SquaresFour}
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Fasilitas" }]}
       />
 

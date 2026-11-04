@@ -48,11 +48,10 @@ export default async function GuruPage() {
       />
 
       <PageHero
-        variant="photo"
+        variant="compact"
         eyebrow="Tenaga Pendidik"
         title="Guru & Staff"
         description="Para pendidik dan tenaga kependidikan yang membina santri dengan ilmu, adab, dan keteladanan."
-        icon={GraduationCap}
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Guru & Staff" }]}
       />
 

@@ -69,11 +69,10 @@ export default async function EkskulPage() {
       )}
 
       <PageHero
-        variant="photo"
+        variant="compact"
         eyebrow="Minat & Bakat"
         title="Ekstrakurikuler"
         description="Wadah penumbuhan minat, bakat, dan karakter santri di luar jam pelajaran — dari tahfidz dan keislaman hingga olahraga dan seni."
-        icon={Users}
         breadcrumb={[{ label: "Beranda", href: "/" }, { label: "Ekstrakurikuler" }]}
       />
 
