@@ -1477,7 +1477,7 @@ export default function AdminSPMBPage() {
                   onChange: (k) => { setFilter(k); resetPage(); },
                   menuLabel: "Filter status",
                   icon: <Tag className="h-3.5 w-3.5" />,
-                  shortLabels: { all: "Sts", pending: "Tunggu", accepted: "Terima", rejected: "Tolak" },
+                  shortLabels: { all: "Status", pending: "Tunggu", accepted: "Terima", rejected: "Tolak" },
                 },
                 {
                   value: pathFilter,
