@@ -345,21 +345,25 @@ export default async function Home() {
           "segera dibuka" agar info jadwal tetap terangkat ke beranda. */}
       {openWave ? (
         <section aria-label="Pendaftaran SPMB sedang dibuka" className="border-b border-[#dce3ed] bg-emerald-50/70">
-          <div className="mx-auto flex max-w-7xl flex-col gap-2.5 px-6 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-            <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-600 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
+          {/* Satu baris di semua ukuran layar: di HP padding & tipografi
+              dirapatkan (text-xs, px-3) supaya badge + nama + tanggal muat
+              satu baris; nama gelombang terpotong ellipsis bila layar
+              benar-benar sempit. CTA hanya ≥sm (redundan dgn bola SPMB). */}
+          <div className="mx-auto flex max-w-7xl flex-nowrap items-center gap-2 px-3 py-2.5 sm:justify-between sm:gap-4 sm:px-6">
+            <p className="flex min-w-0 flex-nowrap items-center gap-x-1.5 text-xs sm:gap-x-2 sm:text-sm">
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-600 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden="true" />
                 Dibuka
               </span>
-              <span className="font-semibold text-[var(--brand-primary)]">
+              <span className="truncate font-semibold text-[var(--brand-primary)]">
                 SPMB {openWave.name}
               </span>
-              <span className="text-slate-500">
+              <span className="shrink-0 whitespace-nowrap text-slate-500">
                 <time dateTime={openWave.start_date}>{formatWaveDateShort(openWave.start_date)}</time>
                 {" – "}
                 <time dateTime={openWave.end_date}>{formatWaveDateShort(openWave.end_date)}</time>
                 {spmbRemaining !== null && spmbRemaining <= 30 && (
-                  <span className="font-semibold text-amber-700">
+                  <span className="hidden font-semibold text-amber-700 sm:inline">
                     {" · "}{spmbRemaining <= 0 ? "Hari terakhir" : `Tersisa ${spmbRemaining} hari`}
                   </span>
                 )}
